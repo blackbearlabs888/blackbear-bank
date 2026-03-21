@@ -1,0 +1,265 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth';
+import { db } from '@/lib/db';
+import { generateOrderId, calculatePaymentFee, calculateMarginBreakdown } from '@/lib/auth';
+
+// GET transactions with pagination
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Tidak terautentikasi' },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+    const days = searchParams.get('days');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const offset = (page - 1) * limit;
+
+    const where: Record<string, unknown> = {};
+
+    if (user.role === 'partner') {
+      const partner = await db.partner.findUnique({
+        where: { userId: user.id },
+      });
+      where.partnerId = partner?.id;
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    // Filter by days (e.g., last 30 days)
+    if (days) {
+      const daysAgo = new Date();
+      daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+      where.createdAt = { gte: daysAgo };
+    }
+
+    const [transactions, total] = await Promise.all([
+      db.transaction.findMany({
+        where,
+        include: {
+          customer: true,
+          paymentType: true,
+          marketplace: true,
+          partner: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      db.transaction.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return NextResponse.json({
+      success: true,
+      data: transactions,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
+  } catch (error) {
+    console.error('Get transactions error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Terjadi kesalahan server' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST create transaction
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Tidak terautentikasi' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const {
+      customerId,
+      customerName,
+      customerPhone,
+      customerCity,
+      isNewCustomer,
+      nominal,
+      paymentTypeId,
+      methodTransaction,
+      marketplaceId,
+      partnerId,
+    } = body;
+
+    // Validation
+    if (!nominal || !paymentTypeId || !methodTransaction) {
+      return NextResponse.json(
+        { success: false, error: 'Field wajib harus diisi' },
+        { status: 400 }
+      );
+    }
+
+    // For existing customer, customerId is required
+    if (!isNewCustomer && !customerId) {
+      return NextResponse.json(
+        { success: false, error: 'Customer harus dipilih' },
+        { status: 400 }
+      );
+    }
+
+    // For new customer, name and phone are required
+    if (isNewCustomer && (!customerName || !customerPhone)) {
+      return NextResponse.json(
+        { success: false, error: 'Nama dan nomor customer harus diisi' },
+        { status: 400 }
+      );
+    }
+
+    // Get payment type
+    const paymentType = await db.paymentType.findUnique({
+      where: { id: paymentTypeId },
+    });
+
+    if (!paymentType) {
+      return NextResponse.json(
+        { success: false, error: 'Tipe pembayaran tidak valid' },
+        { status: 400 }
+      );
+    }
+
+    // Get marketplace if provided
+    let platformFee = 0;
+    if (marketplaceId) {
+      const marketplace = await db.marketplace.findUnique({
+        where: { id: marketplaceId },
+      });
+      if (marketplace) {
+        platformFee = nominal * (marketplace.feePercent / 100) + (marketplace.feeFlat || 0);
+      }
+    }
+
+    // Get partner
+    let actualPartnerId = partnerId || null;
+    let partnerRate = 0;
+
+    if (user.role === 'partner') {
+      const partner = await db.partner.findUnique({
+        where: { userId: user.id },
+      });
+      actualPartnerId = partner?.id;
+      partnerRate = partner?.commission || 0;
+    } else if (partnerId) {
+      const partner = await db.partner.findUnique({
+        where: { id: partnerId },
+      });
+      partnerRate = partner?.commission || 0;
+    }
+
+    // Calculate fees
+    const paymentFee = calculatePaymentFee(nominal, paymentType, methodTransaction);
+    const { netMargin, partnerProfit, ownerProfit } = calculateMarginBreakdown(
+      paymentFee,
+      platformFee,
+      partnerRate
+    );
+
+    // Generate order ID
+    const orderId = generateOrderId();
+
+    // Default status: "process" for owner, "pending" for partner/public
+    const defaultStatus = user.role === 'owner' ? 'process' : 'pending';
+
+    // Handle customer - create new or use existing
+    let finalCustomerId = customerId;
+
+    if (isNewCustomer && user.role === 'owner') {
+      // Check if customer with same phone exists
+      const existingCustomer = await db.customer.findFirst({
+        where: { phone: customerPhone },
+      });
+
+      if (existingCustomer) {
+        finalCustomerId = existingCustomer.id;
+      } else {
+        // Create new customer
+        const newCustomer = await db.customer.create({
+          data: {
+            name: customerName,
+            phone: customerPhone,
+            city: customerCity || null,
+            totalVolume: 0,
+            totalTransactions: 0,
+          },
+        });
+        finalCustomerId = newCustomer.id;
+      }
+    }
+
+    // Create transaction
+    const transaction = await db.transaction.create({
+      data: {
+        orderId,
+        customerId: finalCustomerId,
+        partnerId: actualPartnerId,
+        nominal,
+        paymentFee,
+        platformFee,
+        netMargin,
+        partnerProfit,
+        ownerProfit,
+        totalReceived: nominal - paymentFee,
+        paymentTypeId,
+        methodTransaction,
+        marketplaceId: marketplaceId || null,
+        status: defaultStatus,
+      },
+      include: {
+        customer: true,
+        paymentType: true,
+        partner: true,
+        marketplace: true,
+      },
+    });
+
+    // Update customer stats (always track customer activity)
+    await db.customer.update({
+      where: { id: finalCustomerId },
+      data: {
+        totalVolume: { increment: nominal },
+        totalTransactions: { increment: 1 },
+      },
+    });
+
+    // Note: Partner stats (totalProfit, totalVolume) are only updated when transaction status changes to 'success'
+    // This ensures partner targets are based on actual successful transactions
+    // See PATCH handler in /api/transactions/[id]/route.ts for the stats update logic
+
+    return NextResponse.json({
+      success: true,
+      data: transaction,
+      message: `Transaksi berhasil dibuat dengan status ${defaultStatus}`,
+    });
+  } catch (error) {
+    console.error('Create transaction error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Terjadi kesalahan server' },
+      { status: 500 }
+    );
+  }
+}
