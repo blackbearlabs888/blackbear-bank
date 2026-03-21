@@ -283,7 +283,7 @@ export default function OwnerDashboardPage() {
         <div className="relative flex items-center justify-between">
           <div>
             <p className="text-white/80 text-xs sm:text-sm">Selamat datang,</p>
-            <h1 className="text-xl sm:text-3xl font-bold">{user?.name?.split(' ')[0]}! 👋</h1>
+            <h1 className="text-xl sm:text-3xl font-bold">{user?.name?.split(' ')[0]}!</h1>
             <p className="text-white/70 text-xs sm:text-sm mt-1 flex items-center gap-1.5">
               <Calendar className="w-3 h-3" />
               {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
