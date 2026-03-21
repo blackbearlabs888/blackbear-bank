@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
-    "build": "next build",
+    "build": "tsx scripts/prebuild.ts && next build",
     "start": "next start",
     "lint": "eslint .",
     "postinstall": "prisma generate",
@@ -92,6 +92,7 @@
     "eslint": "^9",
     "eslint-config-next": "^16.1.1",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "tw-animate-css": "^1.3.5",
     "typescript": "^5"
   }
