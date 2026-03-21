@@ -7,7 +7,7 @@
     "build": "tsx scripts/prebuild.ts && next build",
     "start": "next start",
     "lint": "eslint .",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate db",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
