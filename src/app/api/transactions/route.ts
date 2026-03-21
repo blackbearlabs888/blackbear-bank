@@ -144,10 +144,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get marketplace if provided
+    // Accept 'none' or '' as signals to not use marketplace
     let platformFee = 0;
-    if (marketplaceId) {
+    const effectiveMarketplaceId = (marketplaceId && marketplaceId !== 'none') ? marketplaceId : null;
+    
+    if (effectiveMarketplaceId) {
       const marketplace = await db.marketplace.findUnique({
-        where: { id: marketplaceId },
+        where: { id: effectiveMarketplaceId },
       });
       if (marketplace) {
         platformFee = nominal * (marketplace.feePercent / 100) + (marketplace.feeFlat || 0);
@@ -226,7 +229,7 @@ export async function POST(request: NextRequest) {
         totalReceived: nominal - paymentFee,
         paymentTypeId,
         methodTransaction,
-        marketplaceId: marketplaceId || null,
+        marketplaceId: effectiveMarketplaceId,
         status: defaultStatus,
       },
       include: {
