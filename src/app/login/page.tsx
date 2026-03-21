@@ -10,12 +10,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Eye, EyeOff, User, Building2, Loader2, ArrowLeft } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Eye, EyeOff, User, Building2, Loader2, ArrowLeft, Shield, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSiteConfig } from '@/hooks/use-site-config';
 
 export default function LoginPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, hasHydrated, setUser, setPartner, hydrate } = useAuthStore();
+  const { config, getInitials } = useSiteConfig();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,7 +26,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [logoError, setLogoError] = useState(false);
   const hasRedirected = useRef(false);
+
+  const siteName = config.websiteTitle || 'Black Bear';
 
   // Run hydration on mount
   useEffect(() => {
@@ -36,7 +42,6 @@ export default function LoginPage() {
   useEffect(() => {
     if (hasHydrated && isAuthenticated && !hasRedirected.current && !loading) {
       hasRedirected.current = true;
-      // Direct redirect based on role
       if (user?.role === 'owner') {
         router.replace('/owner/dashboard');
       } else {
@@ -68,8 +73,6 @@ export default function LoginPage() {
       setUser(data.user);
       setPartner(data.partner);
       
-      // Use replace to avoid back button going back to login
-      // Direct redirect based on role
       if (data.user.role === 'owner') {
         router.replace('/owner/dashboard');
       } else {
@@ -86,8 +89,8 @@ export default function LoginPage() {
     return (
       <div className="min-h-screen flex items-center justify-center gradient-hero">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center shadow-xl animate-pulse">
-            <span className="text-white font-bold text-2xl">BB</span>
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl gradient-primary flex items-center justify-center shadow-xl animate-pulse">
+            <span className="text-white font-bold text-2xl">{getInitials()}</span>
           </div>
           <p className="text-muted-foreground">Memuat...</p>
         </div>
@@ -103,7 +106,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center gradient-hero px-4 py-8 sm:py-12">
       <div className="w-full max-w-md">
-        {/* Back button - mobile */}
+        {/* Back button */}
         <Button 
           variant="ghost" 
           asChild 
@@ -115,36 +118,56 @@ export default function LoginPage() {
           </Link>
         </Button>
 
-        <Card className="glass-card mobile-shadow">
-          <CardHeader className="text-center space-y-3 sm:space-y-4 pt-6 sm:pt-8">
+        <Card className="glass-card mobile-shadow overflow-hidden">
+          {/* Gradient Header */}
+          <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
+          
+          <CardHeader className="text-center space-y-4 pt-6 sm:pt-8">
+            {/* Logo */}
             <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl gradient-primary flex items-center justify-center shadow-xl">
-              <span className="text-white font-bold text-2xl sm:text-3xl">BB</span>
+              {config.logoUrl && !logoError ? (
+                <img 
+                  src={config.logoUrl} 
+                  alt={siteName}
+                  className="w-9 h-9 sm:w-11 sm:h-11 object-contain"
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <span className="text-white font-bold text-xl sm:text-2xl">{getInitials()}</span>
+              )}
             </div>
+            
             <div>
               <CardTitle className="text-xl sm:text-2xl">Selamat Datang</CardTitle>
-              <CardDescription className="text-sm">Login ke akun Black Bear Anda</CardDescription>
+              <CardDescription className="text-sm">Login ke akun {siteName} Anda</CardDescription>
+            </div>
+
+            {/* Trust Badge */}
+            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <Shield className="w-3.5 h-3.5 text-primary" />
+              <span>Login Aman & Terenkripsi</span>
             </div>
           </CardHeader>
           
           <CardContent className="px-4 sm:px-6 pb-6 sm:pb-8">
-            {/* Role Selector - Mobile optimized */}
+            {/* Role Selector */}
             <div className="grid grid-cols-2 gap-3 mb-6">
               <button
                 type="button"
                 onClick={() => setRole('partner')}
                 className={cn(
-                  'p-4 rounded-xl border-2 transition-smooth tap-highlight active-scale',
+                  'p-4 rounded-xl border-2 transition-all duration-300 tap-highlight active-scale',
                   role === 'partner'
-                    ? 'border-primary bg-primary/5'
+                    ? 'border-primary bg-primary/5 shadow-md'
                     : 'border-muted hover:border-primary/50'
                 )}
               >
                 <Building2 className={cn(
-                  'w-6 h-6 mx-auto mb-2',
+                  'w-7 h-7 mx-auto mb-2 transition-colors',
                   role === 'partner' ? 'text-primary' : 'text-muted-foreground'
                 )} />
                 <p className={cn(
-                  'font-medium text-sm',
+                  'font-medium text-sm transition-colors',
                   role === 'partner' ? 'text-primary' : 'text-muted-foreground'
                 )}>Partner</p>
               </button>
@@ -153,25 +176,25 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setRole('owner')}
                 className={cn(
-                  'p-4 rounded-xl border-2 transition-smooth tap-highlight active-scale',
+                  'p-4 rounded-xl border-2 transition-all duration-300 tap-highlight active-scale',
                   role === 'owner'
-                    ? 'border-primary bg-primary/5'
+                    ? 'border-primary bg-primary/5 shadow-md'
                     : 'border-muted hover:border-primary/50'
                 )}
               >
                 <User className={cn(
-                  'w-6 h-6 mx-auto mb-2',
+                  'w-7 h-7 mx-auto mb-2 transition-colors',
                   role === 'owner' ? 'text-primary' : 'text-muted-foreground'
                 )} />
                 <p className={cn(
-                  'font-medium text-sm',
+                  'font-medium text-sm transition-colors',
                   role === 'owner' ? 'text-primary' : 'text-muted-foreground'
                 )}>Owner</p>
               </button>
             </div>
 
             {error && (
-              <Alert variant="destructive" className="mb-6">
+              <Alert variant="destructive" className="mb-5">
                 <AlertDescription className="text-sm">{error}</AlertDescription>
               </Alert>
             )}
@@ -223,7 +246,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full mobile-btn-primary"
+                className="w-full mobile-btn-primary h-12 sm:h-14 text-base"
                 disabled={loading}
               >
                 {loading ? (
@@ -232,7 +255,10 @@ export default function LoginPage() {
                     Memproses...
                   </>
                 ) : (
-                  `Login sebagai ${role === 'owner' ? 'Owner' : 'Partner'}`
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Login sebagai {role === 'owner' ? 'Owner' : 'Partner'}
+                  </>
                 )}
               </Button>
             </form>
@@ -248,27 +274,23 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Demo credentials - mobile friendly */}
-            <div className="mt-6 pt-6 border-t">
-              <p className="text-xs text-muted-foreground text-center mb-3">
+            <Separator className="my-6" />
+
+            {/* Demo credentials */}
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground text-center font-medium">
                 Demo Login:
               </p>
-              <div className="space-y-2">
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    Owner: owner@blackbear.id
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    Pass: owner123
-                  </Badge>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-3 rounded-xl bg-muted/50 text-center">
+                  <Badge variant="outline" className="text-[10px] mb-1.5">Owner</Badge>
+                  <p className="text-xs font-medium">owner@blackbear.id</p>
+                  <p className="text-xs text-muted-foreground">owner123</p>
                 </div>
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    Partner: test@partner.com
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    Pass: partner123
-                  </Badge>
+                <div className="p-3 rounded-xl bg-muted/50 text-center">
+                  <Badge variant="outline" className="text-[10px] mb-1.5">Partner</Badge>
+                  <p className="text-xs font-medium">test@partner.com</p>
+                  <p className="text-xs text-muted-foreground">partner123</p>
                 </div>
               </div>
             </div>

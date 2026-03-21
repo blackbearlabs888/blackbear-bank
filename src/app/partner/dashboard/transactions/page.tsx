@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -46,8 +46,9 @@ import {
   Calculator,
   Percent,
   TrendingDown,
+  BarChart3,
 } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatCompactCurrency, formatDate, formatDateAgo } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 // Types
@@ -197,6 +198,29 @@ export default function PartnerTransactionsPage() {
   const totalProfit = transactions.reduce((sum, tx) => sum + (tx.partnerProfit || 0), 0);
   const totalVolume = transactions.reduce((sum, tx) => sum + (tx.nominal || 0), 0);
   const pendingCount = transactions.filter(tx => tx.status === 'pending' || tx.status === 'verification').length;
+  
+  // Payment type segmentation - group by payment type name
+  const paymentTypeMap = new Map<string, { count: number; volume: number }>();
+  transactions.forEach(tx => {
+    const name = tx.paymentType?.name || 'Unknown';
+    const existing = paymentTypeMap.get(name) || { count: 0, volume: 0 };
+    paymentTypeMap.set(name, {
+      count: existing.count + 1,
+      volume: existing.volume + tx.nominal,
+    });
+  });
+  const paymentTypeSegments = Array.from(paymentTypeMap.entries())
+    .map(([name, data]) => ({ name, ...data }))
+    .sort((a, b) => b.count - a.count);
+  
+  // Status segmentation
+  const statusCounts = {
+    pending: transactions.filter(tx => tx.status === 'pending').length,
+    verification: transactions.filter(tx => tx.status === 'verification').length,
+    process: transactions.filter(tx => tx.status === 'process').length,
+    success: transactions.filter(tx => tx.status === 'success').length,
+    failed: transactions.filter(tx => tx.status === 'failed').length,
+  };
 
   const openTransactionDetail = (tx: Transaction) => {
     setSelectedTransaction(tx);
@@ -234,10 +258,9 @@ export default function PartnerTransactionsPage() {
         <NewTransactionDialog onCreated={fetchTransactions} />
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="glass-card overflow-hidden">
-          <div className="h-1 gradient-primary" />
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="glass-card">
           <CardContent className="p-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -245,33 +268,31 @@ export default function PartnerTransactionsPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Komisi Anda</p>
-                <p className="text-lg font-bold text-primary">{formatCurrency(totalProfit)}</p>
+                <p className="text-sm font-bold text-primary">{formatCurrency(totalProfit)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass-card overflow-hidden">
-          <div className="h-1 bg-blue-500" />
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total Volume</p>
-                <p className="text-lg font-bold">{formatCurrency(totalVolume)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card overflow-hidden">
-          <div className="h-1 bg-green-500" />
+        <Card className="glass-card">
           <CardContent className="p-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <ShoppingBag className="w-5 h-5 text-green-600" />
+                <TrendingUp className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total Volume</p>
+                <p className="text-sm font-bold">{formatCurrency(totalVolume)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <ShoppingBag className="w-5 h-5 text-blue-600" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Total Trx</p>
@@ -282,22 +303,125 @@ export default function PartnerTransactionsPage() {
         </Card>
 
         <Card className={cn(
-          'glass-card overflow-hidden',
-          pendingCount > 0 && 'ring-2 ring-orange-300 dark:ring-orange-700'
+          "glass-card",
+          pendingCount > 0 && "ring-2 ring-amber-400 dark:ring-amber-600"
         )}>
-          <div className={cn('h-1', pendingCount > 0 ? 'bg-orange-500' : 'bg-gray-300')} />
           <CardContent className="p-3">
             <div className="flex items-center gap-3">
               <div className={cn(
-                'w-10 h-10 rounded-xl flex items-center justify-center',
-                pendingCount > 0 ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-gray-100 dark:bg-gray-800'
+                "w-10 h-10 rounded-xl flex items-center justify-center",
+                pendingCount > 0 
+                  ? "bg-amber-100 dark:bg-amber-900/30" 
+                  : "bg-muted"
               )}>
-                <Clock className={cn('w-5 h-5', pendingCount > 0 ? 'text-orange-600' : 'text-gray-400')} />
+                <Clock className={cn(
+                  "w-5 h-5",
+                  pendingCount > 0 ? "text-amber-600" : "text-muted-foreground"
+                )} />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Pending</p>
-                <p className="text-lg font-bold">{pendingCount}</p>
+                <p className={cn(
+                  "text-lg font-bold",
+                  pendingCount > 0 && "text-amber-600"
+                )}>{pendingCount}</p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Segmentation Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Payment Type Segmentation */}
+        <Card className="glass-card">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-primary" />
+              Segmentasi Pembayaran
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {paymentTypeSegments.length > 0 ? (
+              <>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {paymentTypeSegments.map((segment, index) => (
+                    <PaymentTypeBadge 
+                      key={segment.name}
+                      label={segment.name} 
+                      count={segment.count} 
+                      index={index}
+                    />
+                  ))}
+                </div>
+                
+                {/* Progress bar */}
+                <div className="h-3 rounded-full overflow-hidden flex bg-muted">
+                  {paymentTypeSegments.map((segment, index) => (
+                    <div 
+                      key={segment.name}
+                      className={cn("h-full", getPaymentTypeColor(index))}
+                      style={{ width: `${(segment.count / transactions.length) * 100}%` }}
+                    />
+                  ))}
+                </div>
+                
+                {/* Volume info */}
+                <div className="mt-3 space-y-1.5">
+                  {paymentTypeSegments.slice(0, 3).map((segment) => (
+                    <div key={segment.name} className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">{segment.name}</span>
+                      <span className="font-medium">{formatCompactCurrency(segment.volume)}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Belum ada data transaksi
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Transaction Status Segmentation */}
+        <Card className="glass-card">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              Status Transaksi
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="flex flex-wrap gap-2 mb-3">
+              <StatusBadge label="Pending" count={statusCounts.pending} color="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" icon={Clock} />
+              <StatusBadge label="Verifikasi" count={statusCounts.verification} color="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400" icon={AlertCircle} />
+              <StatusBadge label="Proses" count={statusCounts.process} color="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" icon={Loader2} />
+              <StatusBadge label="Berhasil" count={statusCounts.success} color="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" icon={CheckCircle} />
+              <StatusBadge label="Gagal" count={statusCounts.failed} color="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" icon={XCircle} />
+            </div>
+            
+            {/* Progress bar */}
+            <div className="h-3 rounded-full overflow-hidden flex bg-muted">
+              {transactions.length > 0 && (
+                <>
+                  {statusCounts.pending > 0 && (
+                    <div className="bg-amber-400 h-full" style={{ width: `${(statusCounts.pending / transactions.length) * 100}%` }} />
+                  )}
+                  {statusCounts.verification > 0 && (
+                    <div className="bg-violet-400 h-full" style={{ width: `${(statusCounts.verification / transactions.length) * 100}%` }} />
+                  )}
+                  {statusCounts.process > 0 && (
+                    <div className="bg-blue-400 h-full" style={{ width: `${(statusCounts.process / transactions.length) * 100}%` }} />
+                  )}
+                  {statusCounts.success > 0 && (
+                    <div className="bg-green-400 h-full" style={{ width: `${(statusCounts.success / transactions.length) * 100}%` }} />
+                  )}
+                  {statusCounts.failed > 0 && (
+                    <div className="bg-red-400 h-full" style={{ width: `${(statusCounts.failed / transactions.length) * 100}%` }} />
+                  )}
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -384,6 +508,50 @@ export default function PartnerTransactionsPage() {
   );
 }
 
+// Payment Type Badge Component
+function PaymentTypeBadge({ label, count, index }: { label: string; count: number; index: number }) {
+  const colors = [
+    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
+    'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+    'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+    'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+  ];
+  
+  return (
+    <div className={cn('px-3 py-1.5 rounded-full flex items-center gap-2', colors[index % colors.length])}>
+      <CreditCard className="w-3.5 h-3.5" />
+      <span className="text-sm font-medium">{label}</span>
+      <span className="text-sm font-bold">{count}</span>
+    </div>
+  );
+}
+
+// Get payment type progress bar color
+function getPaymentTypeColor(index: number): string {
+  const colors = [
+    'bg-blue-400',
+    'bg-purple-400',
+    'bg-teal-400',
+    'bg-pink-400',
+    'bg-orange-400',
+    'bg-cyan-400',
+  ];
+  return colors[index % colors.length];
+}
+
+// Status Badge Component
+function StatusBadge({ label, count, color, icon: Icon }: { label: string; count: number; color: string; icon: React.ElementType }) {
+  return (
+    <div className={cn('px-3 py-1.5 rounded-full flex items-center gap-2', color)}>
+      <Icon className="w-3.5 h-3.5" />
+      <span className="text-sm font-medium">{label}</span>
+      <span className="text-sm font-bold">{count}</span>
+    </div>
+  );
+}
+
 function TransactionCard({ transaction: tx, onClick }: { transaction: Transaction; onClick: () => void }) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -394,119 +562,133 @@ function TransactionCard({ transaction: tx, onClick }: { transaction: Transactio
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'success': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-      case 'pending': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+      case 'success': 
+        return { 
+          label: 'Berhasil', 
+          bg: 'bg-green-500',
+          lightBg: 'bg-green-100 dark:bg-green-900/30',
+          text: 'text-green-700 dark:text-green-400',
+          dot: 'bg-green-500',
+          icon: CheckCircle,
+        };
+      case 'pending': 
+        return { 
+          label: 'Pending', 
+          bg: 'bg-amber-500',
+          lightBg: 'bg-amber-100 dark:bg-amber-900/30',
+          text: 'text-amber-700 dark:text-amber-400',
+          dot: 'bg-amber-500',
+          icon: Clock,
+        };
       case 'process': 
-      case 'verification': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'failed': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+        return { 
+          label: 'Proses', 
+          bg: 'bg-blue-500',
+          lightBg: 'bg-blue-100 dark:bg-blue-900/30',
+          text: 'text-blue-700 dark:text-blue-400',
+          dot: 'bg-blue-500',
+          icon: Loader2,
+        };
+      case 'verification': 
+        return { 
+          label: 'Verifikasi', 
+          bg: 'bg-violet-500',
+          lightBg: 'bg-violet-100 dark:bg-violet-900/30',
+          text: 'text-violet-700 dark:text-violet-400',
+          dot: 'bg-violet-500',
+          icon: AlertCircle,
+        };
+      case 'failed': 
+        return { 
+          label: 'Gagal', 
+          bg: 'bg-red-500',
+          lightBg: 'bg-red-100 dark:bg-red-900/30',
+          text: 'text-red-700 dark:text-red-400',
+          dot: 'bg-red-500',
+          icon: XCircle,
+        };
+      default: 
+        return { 
+          label: status, 
+          bg: 'bg-gray-500',
+          lightBg: 'bg-gray-100 dark:bg-gray-800',
+          text: 'text-gray-700 dark:text-gray-300',
+          dot: 'bg-gray-500',
+          icon: Clock,
+        };
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'success': return 'Berhasil';
-      case 'pending': return 'Pending';
-      case 'process': return 'Proses';
-      case 'verification': return 'Verifikasi';
-      case 'failed': return 'Gagal';
-      default: return status;
-    }
-  };
-
-  const getProgressPercent = (status: string) => {
-    // Progress mapping: pending (0%) -> verification (25%) -> process (50%) -> success (100%)
-    switch (status) {
-      case 'pending': return 0;
-      case 'verification': return 25;
-      case 'process': return 50;
-      case 'success': return 100;
-      case 'failed': return 0;
-      default: return 0;
-    }
-  };
+  const statusConfig = getStatusConfig(tx.status);
+  const StatusIcon = statusConfig.icon;
 
   return (
     <Card 
-      className="glass-card overflow-hidden tap-highlight active-scale cursor-pointer"
+      className="glass-card overflow-hidden tap-highlight active-scale cursor-pointer border-l-4"
+      style={{ borderLeftColor: tx.status === 'success' ? '#22c55e' : tx.status === 'pending' ? '#f59e0b' : tx.status === 'process' ? '#3b82f6' : tx.status === 'verification' ? '#8b5cf6' : tx.status === 'failed' ? '#ef4444' : '#6b7280' }}
       onClick={onClick}
     >
-      <CardContent className="p-0">
-        <div className="h-1 bg-muted">
-          <div 
-            className={cn(
-              'h-full transition-all duration-300',
-              tx.status === 'success' ? 'bg-green-500' :
-              tx.status === 'failed' ? 'bg-red-500' :
-              'bg-primary'
-            )}
-            style={{ width: `${getProgressPercent(tx.status)}%` }}
-          />
-        </div>
-
-        <div className="flex items-center gap-3 p-3">
+      <CardContent className="p-3">
+        {/* Mobile-Optimized Layout */}
+        <div className="flex items-start gap-3">
+          {/* Status Icon */}
           <div className={cn(
-            'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0',
-            tx.status === 'success' ? 'bg-green-100 dark:bg-green-900/30' :
-            tx.status === 'failed' ? 'bg-red-100 dark:bg-red-900/30' :
-            tx.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
-            'bg-blue-100 dark:bg-blue-900/30'
+            'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
+            statusConfig.lightBg
           )}>
-            {tx.status === 'success' ? (
-              <ArrowUp className="w-5 h-5 text-green-600" />
-            ) : tx.status === 'failed' ? (
-              <ArrowDown className="w-5 h-5 text-red-600" />
-            ) : tx.status === 'pending' ? (
-              <Clock className="w-5 h-5 text-yellow-600" />
-            ) : (
-              <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-            )}
+            <StatusIcon className={cn(
+              'w-5 h-5',
+              statusConfig.text,
+              (tx.status === 'process' || tx.status === 'verification') && 'animate-spin'
+            )} />
           </div>
-
-          <div className="flex-1 min-w-0">
+          
+          {/* Content */}
+          <div className="flex-1 min-w-0 space-y-1.5">
+            {/* Row 1: Customer Name */}
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1 min-w-0">
-                <p className="font-mono text-xs text-muted-foreground truncate">
-                  {tx.orderId}
-                </p>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 flex-shrink-0 tap-highlight active-scale"
-                  onClick={(e) => copyOrderId(tx.orderId, e)}
-                >
-                  {copiedId === tx.orderId ? (
-                    <Check className="w-3 h-3 text-green-600" />
-                  ) : (
-                    <Copy className="w-3 h-3" />
-                  )}
-                </Button>
-              </div>
-              <Badge className={cn('text-[10px] capitalize', getStatusColor(tx.status))}>
-                {getStatusLabel(tx.status)}
+              <p className="font-semibold text-sm truncate">{tx.customer.name}</p>
+              <Badge className={cn('text-[10px] font-medium px-2 py-0.5', statusConfig.lightBg, statusConfig.text)}>
+                {statusConfig.label}
               </Badge>
             </div>
-            <p className="font-medium text-sm truncate">{tx.customer.name}</p>
-            <div className="flex items-center justify-between gap-2 mt-1">
-              <p className="text-xs text-muted-foreground">
-                {tx.paymentType.name} • {tx.methodTransaction}
-              </p>
-              <p className="text-sm font-bold text-primary">
-                +{formatCurrency(tx.partnerProfit)}
-              </p>
+            
+            {/* Row 2: Order ID */}
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-[11px] text-muted-foreground">
+                #{tx.orderId.slice(-8).toUpperCase()}
+              </span>
+              <button
+                onClick={(e) => copyOrderId(tx.orderId, e)}
+                className="p-0.5 rounded hover:bg-muted transition-colors"
+              >
+                {copiedId === tx.orderId ? (
+                  <Check className="w-3 h-3 text-green-600" />
+                ) : (
+                  <Copy className="w-3 h-3 text-muted-foreground" />
+                )}
+              </button>
             </div>
-          </div>
-        </div>
-        
-        <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-t text-xs">
-          <span className="text-muted-foreground">
-            {formatCurrency(tx.nominal)} • {formatDate(tx.createdAt)}
-          </span>
-          <div className="flex items-center gap-1 text-primary">
-            <Eye className="w-3 h-3" />
-            <span>Detail</span>
+            
+            {/* Row 3: Method & Time */}
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span className="truncate">{tx.paymentType.name} • {tx.methodTransaction}</span>
+              <span className="flex-shrink-0 ml-2">{formatDateAgo(tx.createdAt)}</span>
+            </div>
+            
+            {/* Row 4: Nominal & Profit */}
+            <div className="flex items-end justify-between pt-1.5 border-t border-dashed mt-2">
+              <div>
+                <p className="text-[10px] text-muted-foreground">Nominal</p>
+                <p className="text-sm font-bold">{formatCompactCurrency(tx.nominal)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-muted-foreground">Komisi</p>
+                <p className="text-sm font-bold text-primary">+{formatCompactCurrency(tx.partnerProfit)}</p>
+              </div>
+            </div>
           </div>
         </div>
       </CardContent>
@@ -708,11 +890,11 @@ function TransactionDetailView({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-muted-foreground">Nominal</p>
-              <p className="text-xl font-bold">{formatCurrency(tx.nominal)}</p>
+              <p className="text-lg sm:text-xl font-bold">{formatCompactCurrency(tx.nominal)}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-muted-foreground">Komisi Anda</p>
-              <p className="text-xl font-bold text-primary">+{formatCurrency(tx.partnerProfit)}</p>
+              <p className="text-lg sm:text-xl font-bold text-primary">+{formatCompactCurrency(tx.partnerProfit)}</p>
             </div>
           </div>
         </CardContent>
@@ -824,13 +1006,13 @@ function TransactionDetailView({
         </div>
       )}
 
-      <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-muted-foreground pt-2 border-t gap-1">
         <div className="flex items-center gap-1">
           <Calendar className="w-3 h-3" />
-          <span>Dibuat: {formatDate(tx.createdAt)}</span>
+          <span>Dibuat: {formatDateAgo(tx.createdAt)}</span>
         </div>
         <div className="flex items-center gap-1">
-          <span>Update: {formatDate(tx.updatedAt)}</span>
+          <span>Update: {formatDateAgo(tx.updatedAt)}</span>
         </div>
       </div>
 

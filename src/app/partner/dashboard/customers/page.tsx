@@ -3,20 +3,20 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SimplePagination } from '@/components/ui/pagination';
+import { Progress } from '@/components/ui/progress';
 import {
   Users,
   Search,
   UserPlus,
-  ChevronRight,
   Wallet,
   Loader2,
   MapPin,
@@ -29,12 +29,17 @@ import {
   Copy,
   Check,
   Star,
-  Award,
+  Crown,
   Edit,
   X,
+  Activity,
+  Ban,
+  BarChart3,
+  Sparkles,
 } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatCompactCurrency, formatDate, formatDateAgo } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface Customer {
   id: string;
@@ -51,10 +56,22 @@ interface Customer {
   createdAt: string;
 }
 
+interface CustomerStats {
+  totalCustomers: number;
+  totalVolume: number;
+  vipCount: number;
+  newCount: number;
+  regularCount: number;
+  blacklistCount: number;
+  avgTransactionValue: number;
+  topCities: Array<{ city: string; count: number; volume: number }>;
+}
+
 export default function PartnerCustomersPage() {
   const router = useRouter();
   const { user, partner, isAuthenticated, isLoading, hasHydrated, hydrate } = useAuthStore();
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [stats, setStats] = useState<CustomerStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -85,6 +102,7 @@ export default function PartnerCustomersPage() {
   useEffect(() => {
     if (isAuthenticated && hasHydrated && user?.role === 'partner') {
       fetchCustomers();
+      fetchStats();
     }
   }, [isAuthenticated, hasHydrated, user, currentPage]);
 
@@ -93,6 +111,7 @@ export default function PartnerCustomersPage() {
     const handleFocus = () => {
       if (isAuthenticated && hasHydrated && user?.role === 'partner') {
         fetchCustomers();
+        fetchStats();
       }
     };
     window.addEventListener('focus', handleFocus);
@@ -121,6 +140,18 @@ export default function PartnerCustomersPage() {
     }
   };
 
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/customers/stats');
+      const result = await response.json();
+      if (result.success) {
+        setStats(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch stats:', err);
+    }
+  };
+
   const filteredCustomers = customers.filter((c) => {
     const searchLower = searchQuery.toLowerCase();
     return (
@@ -139,7 +170,10 @@ export default function PartnerCustomersPage() {
     return (
       <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
         <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-24 rounded-xl" />
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-24 rounded-xl" />
+          <Skeleton className="h-24 rounded-xl" />
+        </div>
         <Skeleton className="h-12 rounded-xl" />
         <div className="space-y-3">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
@@ -152,9 +186,6 @@ export default function PartnerCustomersPage() {
     return null;
   }
 
-  const totalVolume = customers.reduce((sum, c) => sum + (c.totalVolume || 0), 0);
-  const totalTransactions = customers.reduce((sum, c) => sum + (c.totalTransactions || 0), 0);
-
   return (
     <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
       {/* Header with gradient */}
@@ -163,52 +194,157 @@ export default function PartnerCustomersPage() {
           <h1 className="text-xl sm:text-2xl font-bold">Customer</h1>
           <p className="text-sm text-muted-foreground">Database pelanggan Anda</p>
         </div>
-        <NewCustomerDialog onCreated={fetchCustomers} />
+        <NewCustomerDialog onCreated={() => { fetchCustomers(); fetchStats(); }} />
       </div>
 
-      {/* Stats Card - Enhanced */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card className="glass-card overflow-hidden">
-          <div className="h-1 gradient-primary" />
+      {/* Stats Overview - Same as Owner */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="glass-card">
           <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Users className="w-4 h-4 text-primary" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Users className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-[10px] text-muted-foreground">Total</p>
-                <p className="text-lg font-bold">{totalItems}</p>
+                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-lg font-bold">{stats?.totalCustomers || totalItems}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass-card overflow-hidden">
-          <div className="h-1 bg-blue-500" />
+        <Card className="glass-card">
           <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 text-blue-600" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-[10px] text-muted-foreground">Volume</p>
-                <p className="text-sm font-bold">{formatCurrency(totalVolume)}</p>
+                <p className="text-xs text-muted-foreground">Total Volume</p>
+                <p className="text-sm font-bold">{formatCurrency(stats?.totalVolume || 0)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass-card overflow-hidden">
-          <div className="h-1 bg-green-500" />
+        <Card className="glass-card">
           <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <ShoppingBag className="w-4 h-4 text-green-600" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <Crown className="w-5 h-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-[10px] text-muted-foreground">Trx</p>
-                <p className="text-lg font-bold">{totalTransactions}</p>
+                <p className="text-xs text-muted-foreground">VIP</p>
+                <p className="text-lg font-bold">{stats?.vipCount || 0}</p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
+                <Activity className="w-5 h-5 text-teal-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Avg Trx</p>
+                <p className="text-sm font-bold">{formatCurrency(stats?.avgTransactionValue || 0)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Location & Segmentation Cards - Same as Owner */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Top Locations Card */}
+        <Card className="glass-card">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-primary" />
+              Top Lokasi
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {stats?.topCities && stats.topCities.length > 0 ? (
+              <div className="space-y-2">
+                {stats.topCities.map((city, index) => {
+                  const percentage = stats.totalCustomers > 0 
+                    ? (city.count / stats.totalCustomers) * 100 
+                    : 0;
+                  return (
+                    <div key={city.city} className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold",
+                        index === 0 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+                        index === 1 ? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" :
+                        index === 2 ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" :
+                        "bg-muted text-muted-foreground"
+                      )}>
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium truncate">{city.city}</span>
+                          <span className="text-xs text-muted-foreground">{city.count} customer</span>
+                        </div>
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary rounded-full transition-all"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                      <span className="text-xs font-medium text-primary">
+                        {percentage.toFixed(0)}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Belum ada data lokasi
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Customer Segmentation */}
+        <Card className="glass-card">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              Segmentasi Customer
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="flex flex-wrap gap-2 mb-3">
+              <SegmentBadge label="VIP" count={stats?.vipCount || 0} color="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" icon={Crown} />
+              <SegmentBadge label="Regular" count={stats?.regularCount || 0} color="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" icon={Users} />
+              <SegmentBadge label="New" count={stats?.newCount || 0} color="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" icon={Star} />
+              <SegmentBadge label="Blacklist" count={stats?.blacklistCount || 0} color="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" icon={Ban} />
+            </div>
+            
+            {/* Progress bar */}
+            <div className="h-3 rounded-full overflow-hidden flex bg-muted">
+              {stats && stats.totalCustomers > 0 && (
+                <>
+                  {stats.vipCount > 0 && (
+                    <div className="bg-amber-400 h-full" style={{ width: `${(stats.vipCount / stats.totalCustomers) * 100}%` }} />
+                  )}
+                  {stats.regularCount > 0 && (
+                    <div className="bg-gray-400 h-full" style={{ width: `${(stats.regularCount / stats.totalCustomers) * 100}%` }} />
+                  )}
+                  {stats.newCount > 0 && (
+                    <div className="bg-blue-400 h-full" style={{ width: `${(stats.newCount / stats.totalCustomers) * 100}%` }} />
+                  )}
+                  {stats.blacklistCount > 0 && (
+                    <div className="bg-red-400 h-full" style={{ width: `${(stats.blacklistCount / stats.totalCustomers) * 100}%` }} />
+                  )}
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -227,6 +363,7 @@ export default function PartnerCustomersPage() {
 
       {/* Customer List */}
       <div className="space-y-2">
+        <p className="text-xs text-muted-foreground">{totalItems} customer</p>
         {loading ? (
           [...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
         ) : filteredCustomers.length > 0 ? (
@@ -264,6 +401,7 @@ export default function PartnerCustomersPage() {
               <Users className="w-5 h-5 text-primary" />
               Detail Customer
             </DialogTitle>
+            <DialogDescription>Informasi lengkap customer</DialogDescription>
           </DialogHeader>
           
           {selectedCustomer && (
@@ -278,53 +416,134 @@ export default function PartnerCustomersPage() {
   );
 }
 
+// Segment Badge Component
+function SegmentBadge({ label, count, color, icon: Icon }: { label: string; count: number; color: string; icon: React.ElementType }) {
+  return (
+    <div className={cn('px-3 py-1.5 rounded-full flex items-center gap-2', color)}>
+      <Icon className="w-3.5 h-3.5" />
+      <span className="text-sm font-medium">{label}</span>
+      <span className="text-sm font-bold">{count}</span>
+    </div>
+  );
+}
+
+// Label Badge Component
+function LabelBadge({ label }: { label: string }) {
+  const variants: Record<string, { className: string; icon: React.ReactNode }> = {
+    VIP: {
+      className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200',
+      icon: <Crown className="w-3 h-3" />,
+    },
+    Regular: {
+      className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 border-gray-200',
+      icon: <Users className="w-3 h-3" />,
+    },
+    New: {
+      className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200',
+      icon: <Star className="w-3 h-3" />,
+    },
+    Blacklist: {
+      className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200',
+      icon: <Ban className="w-3 h-3" />,
+    },
+  };
+
+  const variant = variants[label] || variants.Regular;
+
+  return (
+    <Badge variant="outline" className={cn('text-xs gap-1 font-medium', variant.className)}>
+      {variant.icon}
+      {label}
+    </Badge>
+  );
+}
+
 function CustomerCard({ customer, onClick }: { customer: Customer; onClick: () => void }) {
-  const hasBankInfo = customer.bankName || customer.bankAccount || customer.bankHolder;
-  
-  const getLabelColor = (label: string) => {
-    switch (label.toLowerCase()) {
-      case 'vip': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
-      case 'new': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'blacklist': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyPhone = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(customer.phone);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy phone:', err);
     }
   };
-  
+
+  const isBlacklisted = customer.label === 'Blacklist';
+
   return (
     <Card 
-      className="glass-card tap-highlight active-scale cursor-pointer overflow-hidden"
+      className={cn("glass-card overflow-hidden tap-highlight active-scale cursor-pointer", isBlacklisted && "opacity-60")}
       onClick={onClick}
     >
       <CardContent className="p-0">
         <div className="flex items-center gap-3 p-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0">
-            <span className="text-primary font-bold text-lg">
-              {customer.name?.charAt(0).toUpperCase()}
-            </span>
+          {/* Avatar */}
+          <div className={cn(
+            "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+            isBlacklisted ? "bg-red-100 dark:bg-red-900/30" : 
+            customer.label === 'VIP' ? "bg-amber-100 dark:bg-amber-900/30" :
+            "bg-primary/10"
+          )}>
+            {customer.label === 'VIP' ? (
+              <Crown className="w-5 h-5 text-amber-600" />
+            ) : (
+              <span className={cn(
+                "font-bold",
+                isBlacklisted ? "text-red-600" : "text-primary"
+              )}>
+                {customer.name?.charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
+          
+          {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <p className="font-medium truncate">{customer.name}</p>
-              <Badge className={cn('text-[10px]', getLabelColor(customer.label))}>
-                {customer.label}
-              </Badge>
+              <LabelBadge label={customer.label} />
             </div>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Phone className="w-3 h-3" />
-              {customer.phone}
-            </p>
-            {customer.city && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                <MapPin className="w-3 h-3" />
-                {customer.city}
-              </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-xs text-muted-foreground">{customer.phone}</p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 p-0"
+                onClick={handleCopyPhone}
+              >
+                {copied ? (
+                  <Check className="w-3 h-3 text-green-600" />
+                ) : (
+                  <Copy className="w-3 h-3 text-muted-foreground" />
+                )}
+              </Button>
+            </div>
+            {(customer.bankName || customer.city) && (
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                {customer.city && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {customer.city}
+                  </span>
+                )}
+                {customer.bankName && (
+                  <span className="flex items-center gap-1">
+                    <Building2 className="w-3 h-3" />
+                    {customer.bankName}
+                  </span>
+                )}
+              </div>
             )}
           </div>
-          <div className="text-right flex-shrink-0">
-            <p className="text-sm font-bold text-primary">{formatCurrency(customer.totalVolume)}</p>
+
+          {/* Stats */}
+          <div className="text-right hidden sm:block">
+            <p className="text-sm font-bold text-primary">{formatCompactCurrency(customer.totalVolume)}</p>
             <p className="text-xs text-muted-foreground">{customer.totalTransactions} trx</p>
           </div>
-          <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
         </div>
       </CardContent>
     </Card>
@@ -342,7 +561,7 @@ function CustomerDetailView({ customer, onClose }: { customer: Customer; onClose
 
   const getLabelColor = (label: string) => {
     switch (label.toLowerCase()) {
-      case 'vip': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200';
+      case 'vip': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200';
       case 'new': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200';
       case 'blacklist': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200';
       default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-gray-200';
@@ -473,7 +692,7 @@ function CustomerDetailView({ customer, onClose }: { customer: Customer; onClose
           <Card className="glass-card">
             <CardContent className="p-3">
               <p className="text-xs text-muted-foreground">Total Volume</p>
-              <p className="text-lg font-bold text-primary">{formatCurrency(customer.totalVolume)}</p>
+              <p className="text-lg font-bold text-primary">{formatCompactCurrency(customer.totalVolume)}</p>
             </CardContent>
           </Card>
           <Card className="glass-card">
@@ -501,7 +720,7 @@ function CustomerDetailView({ customer, onClose }: { customer: Customer; onClose
       <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
         <div className="flex items-center gap-1">
           <Calendar className="w-3 h-3" />
-          <span>Sejak {formatDate(customer.createdAt)}</span>
+          <span>Sejak {formatDateAgo(customer.createdAt)}</span>
         </div>
       </div>
 
@@ -555,9 +774,13 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
         setOpen(false);
         onCreated();
         setFormData({ name: '', phone: '', bankName: '', bankAccount: '', bankHolder: '', city: '', notes: '' });
+        toast.success('Customer berhasil ditambahkan');
+      } else {
+        toast.error(result.error || 'Gagal menambahkan customer');
       }
     } catch (err) {
       console.error('Failed to create customer:', err);
+      toast.error('Terjadi kesalahan');
     } finally {
       setLoading(false);
     }
@@ -574,9 +797,10 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-primary" />
+            <Sparkles className="w-4 h-4 text-primary" />
             Customer Baru
           </DialogTitle>
+          <DialogDescription>Tambahkan pelanggan baru ke sistem</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -646,7 +870,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
           </div>
 
           <Button type="submit" className="w-full gradient-primary text-white h-11 rounded-xl" disabled={loading}>
-            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
             Simpan Customer
           </Button>
         </form>

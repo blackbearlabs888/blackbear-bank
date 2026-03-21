@@ -10,17 +10,27 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, EyeOff, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Eye, EyeOff, Loader2, CheckCircle2, ArrowLeft, User, CreditCard, MapPin, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSiteConfig } from '@/hooks/use-site-config';
 
 const banks = [
   'BCA', 'Mandiri', 'BRI', 'BNI', 'CIMB Niaga', 'Permata', 'Danamon', 
   'Panin', 'OCBC NISP', 'Jenius', 'Seabank', 'Bank Jago', 'Lainnya'
 ];
 
+const benefits = [
+  { icon: CreditCard, text: 'Komisi 30%' },
+  { icon: User, text: 'Target 5jt' },
+  { icon: Shield, text: 'Aman & Terpercaya' },
+];
+
 export default function RegisterPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading, hasHydrated, setUser, setPartner, hydrate } = useAuthStore();
+  const { config, getInitials } = useSiteConfig();
   const hasRedirected = useRef(false);
   
   const [formData, setFormData] = useState({
@@ -39,6 +49,9 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [logoError, setLogoError] = useState(false);
+
+  const siteName = config.websiteTitle || 'Black Bear';
 
   // Run hydration on mount
   useEffect(() => {
@@ -51,7 +64,6 @@ export default function RegisterPage() {
   useEffect(() => {
     if (hasHydrated && isAuthenticated && !hasRedirected.current && !loading) {
       hasRedirected.current = true;
-      // New registrations are always partners
       router.replace('/partner/dashboard');
     }
   }, [hasHydrated, isAuthenticated, router, loading]);
@@ -99,9 +111,6 @@ export default function RegisterPage() {
 
       setUser(data.user);
       setPartner(data.partner);
-      
-      // Use replace to avoid back button issues
-      // New registrations are always partners
       router.replace('/partner/dashboard');
     } catch {
       setError('Terjadi kesalahan. Silakan coba lagi.');
@@ -114,8 +123,8 @@ export default function RegisterPage() {
     return (
       <div className="min-h-screen flex items-center justify-center gradient-hero">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center shadow-xl animate-pulse">
-            <span className="text-white font-bold text-2xl">BB</span>
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl gradient-primary flex items-center justify-center shadow-xl animate-pulse">
+            <span className="text-white font-bold text-2xl">{getInitials()}</span>
           </div>
           <p className="text-muted-foreground">Memuat...</p>
         </div>
@@ -143,222 +152,257 @@ export default function RegisterPage() {
           </Link>
         </Button>
 
-        <Card className="glass-card mobile-shadow">
-          <CardHeader className="text-center space-y-3 pt-6 sm:pt-8">
+        <Card className="glass-card mobile-shadow overflow-hidden">
+          {/* Gradient Header */}
+          <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
+          
+          <CardHeader className="text-center space-y-4 pt-6 sm:pt-8">
+            {/* Logo */}
             <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl gradient-primary flex items-center justify-center shadow-xl">
-              <span className="text-white font-bold text-2xl sm:text-3xl">BB</span>
-            </div>
-            <div>
-              <CardTitle className="text-xl sm:text-2xl">Daftar Mitra</CardTitle>
-              <CardDescription className="text-sm">Bergabung dengan Black Bear Partner</CardDescription>
+              {config.logoUrl && !logoError ? (
+                <img 
+                  src={config.logoUrl} 
+                  alt={siteName}
+                  className="w-9 h-9 sm:w-11 sm:h-11 object-contain"
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <span className="text-white font-bold text-xl sm:text-2xl">{getInitials()}</span>
+              )}
             </div>
             
-            {/* Benefits - mobile optimized */}
-            <div className="flex justify-center gap-3 sm:gap-4 text-xs sm:text-sm">
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                <span>Komisi 30%</span>
-              </div>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                <span>Target 5jt</span>
-              </div>
+            <div>
+              <CardTitle className="text-xl sm:text-2xl">Daftar Mitra</CardTitle>
+              <CardDescription className="text-sm">Bergabung dengan {siteName}</CardDescription>
+            </div>
+
+            {/* Benefits */}
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+              {benefits.map((benefit, index) => {
+                const Icon = benefit.icon;
+                return (
+                  <Badge 
+                    key={index} 
+                    variant="secondary" 
+                    className="px-3 py-1.5 text-xs sm:text-sm gap-1.5"
+                  >
+                    <Icon className="w-3.5 h-3.5 text-primary" />
+                    {benefit.text}
+                  </Badge>
+                );
+              })}
             </div>
           </CardHeader>
           
           <CardContent className="px-4 sm:px-6 pb-6 sm:pb-8">
             {error && (
-              <Alert variant="destructive" className="mb-6">
+              <Alert variant="destructive" className="mb-5">
                 <AlertDescription className="text-sm">{error}</AlertDescription>
               </Alert>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Personal Info */}
+              {/* Personal Info Section */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-sm flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg gradient-primary flex items-center justify-center">
-                    <span className="text-white text-xs">1</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+                    <span className="text-white text-sm font-bold">1</span>
                   </div>
-                  Data Pribadi
-                </h3>
+                  <div>
+                    <h3 className="font-semibold text-sm">Data Pribadi</h3>
+                    <p className="text-xs text-muted-foreground">Informasi akun Anda</p>
+                  </div>
+                </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm">Nama Lengkap *</Label>
-                  <Input
-                    id="name"
-                    placeholder="Nama lengkap Anda"
-                    value={formData.name}
-                    onChange={(e) => handleChange('name', e.target.value)}
-                    required
-                    className="mobile-input"
-                    autoComplete="name"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-3 pl-11">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm">Email *</Label>
+                    <Label htmlFor="name" className="text-sm">Nama Lengkap *</Label>
                     <Input
-                      id="email"
-                      type="email"
-                      placeholder="email@contoh.com"
-                      value={formData.email}
-                      onChange={(e) => handleChange('email', e.target.value)}
+                      id="name"
+                      placeholder="Nama lengkap Anda"
+                      value={formData.name}
+                      onChange={(e) => handleChange('name', e.target.value)}
                       required
                       className="mobile-input"
-                      autoComplete="email"
+                      autoComplete="name"
                     />
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm">No. WhatsApp *</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="08xxxxxxxxxx"
-                      value={formData.phone}
-                      onChange={(e) => handleChange('phone', e.target.value)}
-                      required
-                      className="mobile-input"
-                      autoComplete="tel"
-                    />
-                  </div>
-                </div>
 
-                {/* Password */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm">Password *</Label>
-                    <div className="relative">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm">Email *</Label>
                       <Input
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Min. 6 karakter"
-                        value={formData.password}
-                        onChange={(e) => handleChange('password', e.target.value)}
+                        id="email"
+                        type="email"
+                        placeholder="email@contoh.com"
+                        value={formData.email}
+                        onChange={(e) => handleChange('email', e.target.value)}
                         required
-                        minLength={6}
-                        className="mobile-input pr-12"
-                        autoComplete="new-password"
+                        className="mobile-input"
+                        autoComplete="email"
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 hover:bg-transparent tap-highlight"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-5 w-5 text-muted-foreground" />
-                        )}
-                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-sm">No. WhatsApp *</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="08xxxxxxxxxx"
+                        value={formData.phone}
+                        onChange={(e) => handleChange('phone', e.target.value)}
+                        required
+                        className="mobile-input"
+                        autoComplete="tel"
+                      />
                     </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="text-sm">Konfirmasi *</Label>
-                    <div className="relative">
-                      <Input
-                        id="confirmPassword"
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        placeholder="Ulangi password"
-                        value={formData.confirmPassword}
-                        onChange={(e) => handleChange('confirmPassword', e.target.value)}
-                        required
-                        minLength={6}
-                        className="mobile-input pr-12"
-                        autoComplete="new-password"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 hover:bg-transparent tap-highlight"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-5 w-5 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-5 w-5 text-muted-foreground" />
-                        )}
-                      </Button>
+
+                  {/* Password Fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="password" className="text-sm">Password *</Label>
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="Min. 6 karakter"
+                          value={formData.password}
+                          onChange={(e) => handleChange('password', e.target.value)}
+                          required
+                          minLength={6}
+                          className="mobile-input pr-12"
+                          autoComplete="new-password"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 hover:bg-transparent tap-highlight"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword" className="text-sm">Konfirmasi *</Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          placeholder="Ulangi password"
+                          value={formData.confirmPassword}
+                          onChange={(e) => handleChange('confirmPassword', e.target.value)}
+                          required
+                          minLength={6}
+                          className="mobile-input pr-12"
+                          autoComplete="new-password"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 hover:bg-transparent tap-highlight"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Bank Info */}
+              <Separator />
+
+              {/* Bank Info Section */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-sm flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg gradient-primary flex items-center justify-center">
-                    <span className="text-white text-xs">2</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                    <span className="text-white text-sm font-bold">2</span>
                   </div>
-                  Data Bank
-                </h3>
+                  <div>
+                    <h3 className="font-semibold text-sm">Data Bank</h3>
+                    <p className="text-xs text-muted-foreground">Untuk transfer komisi</p>
+                  </div>
+                </div>
                 
-                <div className="space-y-2">
-                  <Label className="text-sm">Nama Bank *</Label>
-                  <Select
-                    value={formData.bankName}
-                    onValueChange={(value) => handleChange('bankName', value)}
-                  >
-                    <SelectTrigger className="mobile-input">
-                      <SelectValue placeholder="Pilih bank" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {banks.map((bank) => (
-                        <SelectItem key={bank} value={bank}>
-                          {bank}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-3 pl-11">
                   <div className="space-y-2">
-                    <Label className="text-sm">No. Rekening *</Label>
+                    <Label className="text-sm">Nama Bank *</Label>
+                    <Select
+                      value={formData.bankName}
+                      onValueChange={(value) => handleChange('bankName', value)}
+                    >
+                      <SelectTrigger className="mobile-input">
+                        <SelectValue placeholder="Pilih bank" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {banks.map((bank) => (
+                          <SelectItem key={bank} value={bank}>
+                            {bank}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label className="text-sm">No. Rekening *</Label>
+                      <Input
+                        placeholder="Nomor rekening"
+                        value={formData.bankAccount}
+                        onChange={(e) => handleChange('bankAccount', e.target.value)}
+                        required
+                        className="mobile-input"
+                        inputMode="numeric"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-sm">Nama Pemilik *</Label>
+                      <Input
+                        placeholder="Nama di rekening"
+                        value={formData.bankHolder}
+                        onChange={(e) => handleChange('bankHolder', e.target.value)}
+                        required
+                        className="mobile-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5" />
+                      Kota *
+                    </Label>
                     <Input
-                      placeholder="Nomor rekening"
-                      value={formData.bankAccount}
-                      onChange={(e) => handleChange('bankAccount', e.target.value)}
+                      placeholder="Kota domisili"
+                      value={formData.city}
+                      onChange={(e) => handleChange('city', e.target.value)}
                       required
                       className="mobile-input"
-                      inputMode="numeric"
+                      autoComplete="address-level2"
                     />
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label className="text-sm">Nama Pemilik *</Label>
-                    <Input
-                      placeholder="Nama di rekening"
-                      value={formData.bankHolder}
-                      onChange={(e) => handleChange('bankHolder', e.target.value)}
-                      required
-                      className="mobile-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm">Kota *</Label>
-                  <Input
-                    placeholder="Kota domisili"
-                    value={formData.city}
-                    onChange={(e) => handleChange('city', e.target.value)}
-                    required
-                    className="mobile-input"
-                    autoComplete="address-level2"
-                  />
                 </div>
               </div>
 
+              {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full mobile-btn-primary"
+                className="w-full mobile-btn-primary h-12 sm:h-14 text-base mt-6"
                 disabled={loading}
               >
                 {loading ? (
@@ -367,12 +411,17 @@ export default function RegisterPage() {
                     Memproses...
                   </>
                 ) : (
-                  'Daftar Sekarang'
+                  <>
+                    <CheckCircle2 className="w-5 h-5 mr-2" />
+                    Daftar Sekarang
+                  </>
                 )}
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
+            <Separator className="my-6" />
+
+            <div className="text-center">
               <p className="text-sm text-muted-foreground">
                 Sudah punya akun?{' '}
                 <Link href="/login" className="text-primary font-semibold hover:underline tap-highlight">

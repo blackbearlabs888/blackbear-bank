@@ -67,29 +67,52 @@ export async function PATCH(request: NextRequest) {
       faviconUrl,
       metaTitle,
       metaDescription,
+      footerEmail,
       footerWhatsapp,
       footerInstagram,
       footerFacebook,
+      footerTiktok,
+      footerYoutube,
+      footerThreads,
       maintenanceMode,
     } = body;
 
     // Get existing profile
     let profile = await db.ownerProfile.findFirst();
 
-    // Build update data
-    const updateData: Record<string, unknown> = {};
+    // Build update data for OwnerProfile
+    const profileUpdateData: Record<string, unknown> = {};
     
-    if (name !== undefined) updateData.name = name;
-    if (avatar !== undefined) updateData.avatar = avatar || null;
-    if (websiteTitle !== undefined) updateData.websiteTitle = websiteTitle;
-    if (logoUrl !== undefined) updateData.logoUrl = logoUrl || null;
-    if (faviconUrl !== undefined) updateData.faviconUrl = faviconUrl || null;
-    if (metaTitle !== undefined) updateData.metaTitle = metaTitle || null;
-    if (metaDescription !== undefined) updateData.metaDescription = metaDescription || null;
-    if (footerWhatsapp !== undefined) updateData.footerWhatsapp = footerWhatsapp || null;
-    if (footerInstagram !== undefined) updateData.footerInstagram = footerInstagram || null;
-    if (footerFacebook !== undefined) updateData.footerFacebook = footerFacebook || null;
-    if (maintenanceMode !== undefined) updateData.maintenanceMode = maintenanceMode;
+    if (name !== undefined) profileUpdateData.name = name;
+    if (avatar !== undefined) profileUpdateData.avatar = avatar || null;
+    if (websiteTitle !== undefined) profileUpdateData.websiteTitle = websiteTitle;
+    if (logoUrl !== undefined) profileUpdateData.logoUrl = logoUrl || null;
+    if (faviconUrl !== undefined) profileUpdateData.faviconUrl = faviconUrl || null;
+    if (metaTitle !== undefined) profileUpdateData.metaTitle = metaTitle || null;
+    if (metaDescription !== undefined) profileUpdateData.metaDescription = metaDescription || null;
+    if (footerWhatsapp !== undefined) profileUpdateData.footerWhatsapp = footerWhatsapp || null;
+    if (footerEmail !== undefined) profileUpdateData.footerEmail = footerEmail || null;
+    if (footerInstagram !== undefined) profileUpdateData.footerInstagram = footerInstagram || null;
+    if (footerFacebook !== undefined) profileUpdateData.footerFacebook = footerFacebook || null;
+    if (footerTiktok !== undefined) profileUpdateData.footerTiktok = footerTiktok || null;
+    if (footerYoutube !== undefined) profileUpdateData.footerYoutube = footerYoutube || null;
+    if (footerThreads !== undefined) profileUpdateData.footerThreads = footerThreads || null;
+    if (maintenanceMode !== undefined) profileUpdateData.maintenanceMode = maintenanceMode;
+
+    // Build update data for User table
+    const userUpdateData: Record<string, unknown> = {};
+    
+    // Update user name and avatar in User table as well
+    if (name !== undefined) userUpdateData.name = name;
+    if (avatar !== undefined) userUpdateData.avatar = avatar || null;
+
+    // Update User table if there are changes
+    if (Object.keys(userUpdateData).length > 0) {
+      await db.user.update({
+        where: { id: user.id },
+        data: userUpdateData,
+      });
+    }
 
     if (!profile) {
       // Create new profile
@@ -103,9 +126,13 @@ export async function PATCH(request: NextRequest) {
           faviconUrl: faviconUrl || null,
           metaTitle: metaTitle || null,
           metaDescription: metaDescription || null,
+          footerEmail: footerEmail || null,
           footerWhatsapp: footerWhatsapp || null,
           footerInstagram: footerInstagram || null,
           footerFacebook: footerFacebook || null,
+          footerTiktok: footerTiktok || null,
+          footerYoutube: footerYoutube || null,
+          footerThreads: footerThreads || null,
           maintenanceMode: maintenanceMode || false,
         },
       });
@@ -113,15 +140,18 @@ export async function PATCH(request: NextRequest) {
       // Update existing profile
       profile = await db.ownerProfile.update({
         where: { id: profile.id },
-        data: updateData,
+        data: profileUpdateData,
       });
     }
 
-    // Return profile with user data
+    // Return profile with updated user data
     return NextResponse.json({
       success: true,
       data: {
         ...profile,
+        // Return updated values
+        name: name || user.name,
+        avatar: avatar || null,
         email: user.email || '',
       },
       message: 'Profil berhasil diperbarui',

@@ -413,7 +413,7 @@ function PartnerCard({
 
   const badge = getRankBadge(rank);
 
-  // Calculate progress by profit (base profit)
+  // Calculate progress based on profit (not volume)
   const progress = partner.target > 0 ? Math.min(100, (partner.totalProfit / partner.target) * 100) : 0;
   const progressColor = progress >= 80 ? 'bg-green-500' : progress >= 50 ? 'bg-yellow-500' : 'bg-red-400';
 
@@ -448,10 +448,10 @@ function PartnerCard({
               </div>
               <p className="text-xs text-muted-foreground truncate">{partner.city}</p>
 
-              {/* Progress Bar - Based on Profit */}
+              {/* Progress Bar */}
               <div className="mt-2 space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Target Profit</span>
+                  <span className="text-muted-foreground">Target Progress</span>
                   <span className="font-medium">{progress.toFixed(0)}%</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -460,16 +460,12 @@ function PartnerCard({
                     style={{ width: `${progress}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span>{formatCurrency(partner.totalProfit)} profit</span>
-                  <span>/ {formatCurrency(partner.target)} target</span>
-                </div>
               </div>
             </div>
 
             {/* Stats & Actions */}
             <div className="flex flex-col items-end gap-1">
-              <p className="text-sm font-bold text-primary">{formatCurrency(partner.totalVolume)}</p>
+              <p className="text-sm font-bold text-primary">{formatCurrency(partner.totalProfit)}</p>
               <p className="text-xs text-muted-foreground">{partner.totalTransactions} transaksi</p>
               <Button
                 variant="ghost"
@@ -675,23 +671,23 @@ function PartnerDetailDialog({
               </CardContent>
             </Card>
 
-            {/* Target Progress - Based on Profit */}
+            {/* Target Progress */}
             <Card>
               <CardHeader className="pb-2 pt-4">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Target className="w-4 h-4" />
-                  Target Profit (Base Profit)
+                  Target Progress
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Target Profit</span>
+                    <span className="text-muted-foreground">Target Bulanan</span>
                     <span className="font-medium">{formatCurrency(data.target)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Profit Saat Ini</span>
-                    <span className="font-medium text-green-600">{formatCurrency(data.totalProfit)}</span>
+                    <span className="font-medium">{formatCurrency(data.totalProfit)}</span>
                   </div>
                   <Progress
                     value={data.target > 0 ? Math.min(100, (data.totalProfit / data.target) * 100) : 0}

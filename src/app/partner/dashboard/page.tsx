@@ -9,7 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
   DollarSign,
   ShoppingBag,
@@ -46,7 +46,7 @@ import { cn } from '@/lib/utils';
 interface Announcement {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   type: 'promo' | 'broadcast' | 'announcement';
   link?: string;
   startDate?: string;
@@ -139,32 +139,73 @@ export default function PartnerDashboardPage() {
 
   // Separate broadcasts from announcements
   const broadcasts = announcements?.filter(a => a.type === 'broadcast') || [];
+  // Only show 'announcement' type in running text (not promo or broadcast)
   const regularAnnouncements = announcements?.filter(a => a.type === 'announcement') || [];
   const promoItems = announcements?.filter(a => a.type === 'promo') || [];
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-6 space-y-3 sm:space-y-6 pb-24 md:pb-6">
-      {/* Header with gradient background */}
-      <div className="relative overflow-hidden rounded-2xl gradient-primary p-3 sm:p-6 text-white">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+      {/* Welcome Card - Clean Modern Design */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/80">
+        {/* Simple decorative circle */}
+        <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full" />
+        <div className="absolute -right-4 -bottom-8 w-24 h-24 bg-white/5 rounded-full" />
         
-        <div className="relative flex items-center justify-between">
-          <div>
-            <p className="text-white/80 text-xs sm:text-sm">Selamat datang kembali,</p>
-            <h1 className="text-lg sm:text-2xl font-bold">{user?.name?.split(' ')[0]}! 👋</h1>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge className="bg-white/20 text-white border-white/30 capitalize text-[10px] sm:text-xs">
-                {currentPartner?.tier as string}
-              </Badge>
-              <Badge className="bg-white/20 text-white border-white/30 capitalize text-[10px] sm:text-xs">
-                {currentPartner?.badge as string}
-              </Badge>
+        <div className="relative p-4 sm:p-5">
+          <div className="flex items-center gap-3">
+            {/* Avatar */}
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-xl sm:text-2xl font-bold text-white">
+                {user?.name?.charAt(0)?.toUpperCase() || 'P'}
+              </span>
+            </div>
+            
+            {/* Greeting */}
+            <div className="flex-1 min-w-0">
+              <p className="text-white/70 text-xs">Selamat datang,</p>
+              <h1 className="text-lg sm:text-xl font-bold text-white truncate">
+                {user?.name?.split(' ')[0]}!
+              </h1>
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <Badge className="bg-white/20 text-white border-0 text-[10px] px-2 py-0 h-auto">
+                  {currentPartner?.tier as string}
+                </Badge>
+                <Badge className="bg-white/20 text-white border-0 text-[10px] px-2 py-0 h-auto">
+                  {currentPartner?.commission as number}%
+                </Badge>
+              </div>
+            </div>
+            
+            {/* Progress Circle */}
+            <div className="text-center flex-shrink-0">
+              <div className="relative w-14 h-14 sm:w-16 sm:h-16">
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
+                  <circle 
+                    cx="18" cy="18" r="16" fill="none" stroke="white" strokeWidth="3"
+                    strokeDasharray={`${Math.min(progressPercent, 100)} 100`}
+                    strokeLinecap="round"
+                    className="transition-all duration-500"
+                  />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-sm sm:text-base">
+                  {progressPercent.toFixed(0)}%
+                </span>
+              </div>
+              <p className="text-white/60 text-[10px] mt-1">Target</p>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-white/80 text-[10px] sm:text-xs">Komisi Anda</p>
-            <p className="text-xl sm:text-3xl font-bold">{currentPartner?.commission as number}%</p>
+          
+          {/* Quick Stats */}
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/10 text-xs">
+            <div>
+              <p className="text-white/60">Profit</p>
+              <p className="text-white font-semibold">{formatCurrency(currentPartner?.totalProfit as number || 0)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-white/60">Target</p>
+              <p className="text-white font-semibold">{formatCurrency(currentPartner?.target as number || 0)}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -175,59 +216,86 @@ export default function PartnerDashboardPage() {
         </Alert>
       )}
 
-      {/* Broadcast Notifications */}
+      {/* Broadcast Notifications - Modern Design */}
       {broadcasts && broadcasts.length > 0 && (
-        <Card className="glass-card border-amber-200 dark:border-amber-800/50 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 animate-fade-in">
-          <CardContent className="py-2 sm:py-3 px-3 sm:px-4">
-            <div className="flex items-start gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
-                <Radio className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-400" />
+        <div className="space-y-3 animate-fade-in">
+          {broadcasts.slice(0, 3).map((broadcast, index) => (
+            <Card 
+              key={broadcast.id}
+              className="glass-card overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 active-scale"
+              onClick={() => setSelectedBroadcast(broadcast)}
+            >
+              <div className="flex">
+                {/* Left accent bar */}
+                <div className="w-1 bg-gradient-to-b from-amber-400 to-orange-500" />
+                
+                <CardContent className="flex-1 p-4">
+                  <div className="flex items-start gap-3">
+                    {/* Icon */}
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+                      <Radio className="w-5 h-5 text-white" />
+                    </div>
+                    
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="secondary" className="text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+                          BROADCAST
+                        </Badge>
+                        {broadcast.startDate && (
+                          <span className="text-[10px] text-muted-foreground">
+                            {formatDate(broadcast.startDate)}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="font-semibold text-sm mb-1 truncate">{broadcast.title}</h3>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{broadcast.description}</p>
+                    </div>
+                    
+                    {/* Arrow */}
+                    <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  </div>
+                </CardContent>
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[10px]">
-                    BROADCAST
-                  </Badge>
-                </div>
-                <div className="space-y-1.5 sm:space-y-2">
-                  {broadcasts.slice(0, 2).map((b) => (
-                    <button
-                      key={b.id}
-                      onClick={() => setSelectedBroadcast(b)}
-                      className="w-full text-left p-2 sm:p-3 bg-white/50 dark:bg-white/5 rounded-lg sm:rounded-xl hover:bg-white/70 dark:hover:bg-white/10 transition-colors"
-                    >
-                      <p className="font-medium text-xs sm:text-sm line-clamp-1">{b.title}</p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-1">{b.description}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </Card>
+          ))}
+          
+          {/* Show more button if there are more broadcasts */}
+          {broadcasts.length > 3 && (
+            <button className="w-full py-2 text-xs text-muted-foreground hover:text-primary transition-colors">
+              +{broadcasts.length - 3} broadcast lainnya
+            </button>
+          )}
+        </div>
       )}
 
-      {/* Announcements Banner (Running Text) */}
+      {/* Announcements Banner (Running Text) - Modern Design */}
       {regularAnnouncements && regularAnnouncements.length > 0 && (
-        <Card className="glass-card border-primary/20 bg-primary/5 animate-fade-in overflow-hidden">
-          <CardContent className="py-2 sm:py-3 px-3 sm:px-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
-                <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <div className="animate-marquee whitespace-nowrap">
-                  {regularAnnouncements.map((a, i) => (
-                    <span key={a.id} className="text-[10px] sm:text-sm">
-                      <strong>{a.title}</strong>: {a.description}
-                      {i < regularAnnouncements.length - 1 && ' • '}
-                    </span>
-                  ))}
-                </div>
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border border-primary/20">
+          <div className="flex items-center gap-3 py-3 px-4">
+            {/* Icon */}
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Bell className="w-4 h-4 text-primary" />
+            </div>
+            
+            {/* Running text */}
+            <div className="flex-1 overflow-hidden">
+              <div className="animate-marquee whitespace-nowrap">
+                {regularAnnouncements.map((a, i) => (
+                  <span key={a.id} className="text-sm">
+                    <strong className="text-primary">{a.title}</strong>
+                    {a.description && (
+                      <span className="text-muted-foreground">: {a.description}</span>
+                    )}
+                    {i < regularAnnouncements.length - 1 && (
+                      <span className="mx-4 text-primary/50">•</span>
+                    )}
+                  </span>
+                ))}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Stats Cards - Enhanced Design */}
@@ -437,28 +505,47 @@ export default function PartnerDashboardPage() {
         </Card>
       )}
 
-      {/* Broadcast Detail Dialog */}
+      {/* Broadcast Detail Dialog - Modern Design */}
       <Dialog open={!!selectedBroadcast} onOpenChange={() => setSelectedBroadcast(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Radio className="w-5 h-5 text-amber-500" />
-              {selectedBroadcast?.title}
-            </DialogTitle>
+        <DialogContent className="max-w-md p-0 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{selectedBroadcast?.title || 'Detail Broadcast'}</DialogTitle>
+            <DialogDescription>{selectedBroadcast?.description || 'Informasi broadcast'}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 sm:space-y-4">
-            <p className="text-xs sm:text-sm text-muted-foreground">{selectedBroadcast?.description}</p>
+          {/* Header with gradient */}
+          <div className="relative bg-gradient-to-br from-amber-400 to-orange-500 p-6 pb-4">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Radio className="w-5 h-5 text-white" />
+                </div>
+                <Badge className="bg-white/20 text-white border-white/30 text-[10px]">
+                  BROADCAST
+                </Badge>
+              </div>
+              <h2 className="text-lg font-bold text-white">{selectedBroadcast?.title}</h2>
+            </div>
+          </div>
+          
+          {/* Content */}
+          <div className="p-6 space-y-4">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {selectedBroadcast?.description}
+            </p>
+            
             {selectedBroadcast?.startDate && (
-              <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground">
-                <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+                <Calendar className="w-4 h-4" />
                 <span>
                   {formatDate(selectedBroadcast.startDate)}
                   {selectedBroadcast.expireDate && ` - ${formatDate(selectedBroadcast.expireDate)}`}
                 </span>
               </div>
             )}
+            
             {selectedBroadcast?.link && (
-              <Button asChild className="w-full gradient-primary text-white h-10 sm:h-11">
+              <Button asChild className="w-full h-11">
                 <a href={selectedBroadcast.link} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Buka Link
@@ -469,27 +556,46 @@ export default function PartnerDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Promo Detail Dialog */}
+      {/* Promo Detail Dialog - Modern Design */}
       <Dialog open={!!selectedPromo} onOpenChange={() => setSelectedPromo(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Gift className="w-5 h-5 text-pink-500" />
-              {selectedPromo?.title}
-            </DialogTitle>
+        <DialogContent className="max-w-md p-0 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{selectedPromo?.title || 'Detail Promo'}</DialogTitle>
+            <DialogDescription>{selectedPromo?.description || 'Informasi promo'}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 sm:space-y-4">
-            <p className="text-xs sm:text-sm text-muted-foreground">{selectedPromo?.description}</p>
+          {/* Header with gradient */}
+          <div className="relative bg-gradient-to-br from-pink-500 to-purple-600 p-6 pb-4">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Gift className="w-5 h-5 text-white" />
+                </div>
+                <Badge className="bg-white/20 text-white border-white/30 text-[10px]">
+                  PROMO
+                </Badge>
+              </div>
+              <h2 className="text-lg font-bold text-white">{selectedPromo?.title}</h2>
+            </div>
+          </div>
+          
+          {/* Content */}
+          <div className="p-6 space-y-4">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {selectedPromo?.description}
+            </p>
+            
             {selectedPromo?.startDate && (
-              <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground">
-                <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+                <Calendar className="w-4 h-4" />
                 <span>
                   Berlaku: {formatDate(selectedPromo.startDate)}
                   {selectedPromo.expireDate && ` - ${formatDate(selectedPromo.expireDate)}`}
                 </span>
               </div>
             )}
-            <Button asChild className="w-full gradient-primary text-white h-10 sm:h-11">
+            
+            <Button asChild className="w-full h-11 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700">
               <a href={selectedPromo?.link} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Buka Materi Promo
@@ -560,225 +666,137 @@ function SmartAlertsCard({
   dataLoading: boolean;
 }) {
   if (dataLoading) {
-    return <Skeleton className="h-28 sm:h-32 rounded-xl sm:rounded-2xl" />;
+    return <Skeleton className="h-24 rounded-xl" />;
   }
 
-  const alerts: Array<{
-    type: 'warning' | 'success' | 'info' | 'motivational';
+  // Build notifications list - simplified
+  const notifications: Array<{
+    id: string;
     icon: React.ElementType;
     title: string;
-    message: string;
-    action?: string;
-    href?: string;
+    value: string;
+    type: 'warning' | 'success' | 'info';
+    action?: { label: string; href: string };
   }> = [];
 
-  // Warning: Pending transactions
+  // Pending transactions - priority warning
   if (pendingCount > 0) {
-    alerts.push({
-      type: 'warning',
+    notifications.push({
+      id: 'pending',
       icon: AlertTriangle,
       title: 'Transaksi Pending',
-      message: `${pendingCount} transaksi menunggu diproses`,
-      action: 'Lihat Transaksi',
-      href: '/partner/dashboard/transactions',
+      value: `${pendingCount} menunggu`,
+      type: 'warning',
+      action: { label: 'Lihat', href: '/partner/dashboard/transactions' },
     });
   }
 
-  // Success/Motivational: Target progress
+  // Target progress
   if (targetProgress >= 100) {
-    alerts.push({
-      type: 'success',
+    notifications.push({
+      id: 'target',
       icon: CheckCircle,
-      title: 'Target Tercapai!',
-      message: 'Selamat! Anda telah mencapai target bulan ini',
-    });
-  } else if (targetProgress >= 75) {
-    alerts.push({
-      type: 'motivational',
-      icon: Zap,
-      title: 'Hampir Sampai!',
-      message: `${targetProgress.toFixed(0)}% menuju target - Sedikit lagi!`,
-    });
-  } else if (targetProgress >= 50) {
-    alerts.push({
-      type: 'motivational',
-      icon: TrendingUp,
-      title: 'Progress Bagus!',
-      message: `${targetProgress.toFixed(0)}% menuju target - Terus semangat!`,
-    });
-  } else if (targetProgress > 0) {
-    alerts.push({
-      type: 'info',
-      icon: Target,
-      title: 'Menuju Target',
-      message: `${targetProgress.toFixed(0)}% tercapai - Ayo tingkatkan!`,
-    });
-  }
-
-  // Success: Leaderboard position
-  if (leaderboardPosition > 0 && leaderboardPosition <= 3) {
-    const positionText = leaderboardPosition === 1 ? 'Juara 1!' : leaderboardPosition === 2 ? 'Juara 2!' : 'Juara 3!';
-    alerts.push({
+      title: 'Target Tercapai',
+      value: 'Bulan ini',
       type: 'success',
-      icon: Trophy,
-      title: `Anda ${positionText}`,
-      message: 'Pertahankan posisi terbaik Anda!',
-    });
-  } else if (leaderboardPosition > 3 && leaderboardPosition <= 5) {
-    alerts.push({
-      type: 'motivational',
-      icon: Star,
-      title: `Peringkat #${leaderboardPosition}`,
-      message: 'Hampir masuk top 3, terus tingkatkan!',
-    });
-  } else if (leaderboardPosition > 5) {
-    alerts.push({
-      type: 'info',
-      icon: TrendingDown,
-      title: `Peringkat #${leaderboardPosition}`,
-      message: 'Tingkatkan performa untuk naik peringkat!',
     });
   }
 
-  // Info: New customers this month
+  // Leaderboard position
+  if (leaderboardPosition > 0 && leaderboardPosition <= 3) {
+    notifications.push({
+      id: 'rank',
+      icon: Trophy,
+      title: 'Peringkat',
+      value: `#${leaderboardPosition}`,
+      type: 'success',
+    });
+  }
+
+  // New customers
   if (newCustomersCount > 0) {
-    alerts.push({
-      type: 'info',
+    notifications.push({
+      id: 'customers',
       icon: Users,
       title: 'Customer Baru',
-      message: `${newCustomersCount} customer baru ditambahkan bulan ini`,
+      value: `${newCustomersCount} orang`,
+      type: 'info',
     });
   }
 
-  // Info: Active promos
+  // Active promos
   if (promos.length > 0) {
-    alerts.push({
-      type: 'info',
+    notifications.push({
+      id: 'promos',
       icon: Gift,
       title: 'Promo Aktif',
-      message: `${promos.length} promo tersedia untuk Anda`,
+      value: `${promos.length} tersedia`,
+      type: 'info',
     });
   }
 
-  // Info: Active announcements
+  // Announcements
   if (announcements.length > 0) {
-    alerts.push({
-      type: 'info',
+    notifications.push({
+      id: 'announcements',
       icon: Megaphone,
       title: 'Pengumuman',
-      message: `${announcements.length} pengumuman aktif`,
+      value: `${announcements.length} aktif`,
+      type: 'info',
     });
   }
 
-  // Don't render if no alerts
-  if (alerts.length === 0) {
+  if (notifications.length === 0) {
     return null;
   }
 
-  const getAlertStyles = (type: string) => {
+  const getTypeStyle = (type: string) => {
     switch (type) {
       case 'warning':
-        return {
-          bg: 'bg-amber-50 dark:bg-amber-900/20',
-          border: 'border-amber-200 dark:border-amber-800/50',
-          iconBg: 'bg-amber-100 dark:bg-amber-900/30',
-          iconColor: 'text-amber-600 dark:text-amber-400',
-          titleColor: 'text-amber-800 dark:text-amber-200',
-          textColor: 'text-amber-700 dark:text-amber-300',
-        };
+        return 'bg-amber-500';
       case 'success':
-        return {
-          bg: 'bg-green-50 dark:bg-green-900/20',
-          border: 'border-green-200 dark:border-green-800/50',
-          iconBg: 'bg-green-100 dark:bg-green-900/30',
-          iconColor: 'text-green-600 dark:text-green-400',
-          titleColor: 'text-green-800 dark:text-green-200',
-          textColor: 'text-green-700 dark:text-green-300',
-        };
-      case 'motivational':
-        return {
-          bg: 'bg-violet-50 dark:bg-violet-900/20',
-          border: 'border-violet-200 dark:border-violet-800/50',
-          iconBg: 'bg-violet-100 dark:bg-violet-900/30',
-          iconColor: 'text-violet-600 dark:text-violet-400',
-          titleColor: 'text-violet-800 dark:text-violet-200',
-          textColor: 'text-violet-700 dark:text-violet-300',
-        };
-      case 'info':
+        return 'bg-green-500';
       default:
-        return {
-          bg: 'bg-blue-50 dark:bg-blue-900/20',
-          border: 'border-blue-200 dark:border-blue-800/50',
-          iconBg: 'bg-blue-100 dark:bg-blue-900/30',
-          iconColor: 'text-blue-600 dark:text-blue-400',
-          titleColor: 'text-blue-800 dark:text-blue-200',
-          textColor: 'text-blue-700 dark:text-blue-300',
-        };
+        return 'bg-primary';
     }
   };
 
-  // Show only top 4 alerts to avoid cluttering
-  const displayedAlerts = alerts.slice(0, 4);
-
   return (
-    <Card className="glass-card overflow-hidden">
-      <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
-      <CardContent className="p-3 sm:p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Bell className="w-4 h-4 text-primary" />
-          <h3 className="font-semibold text-sm sm:text-base">Notifikasi & Alert</h3>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-          {displayedAlerts.map((alert, index) => {
-            const styles = getAlertStyles(alert.type);
-            const Icon = alert.icon;
-            return (
-              <div
-                key={index}
-                className={cn(
-                  'flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl border transition-all tap-highlight active-scale',
-                  styles.bg,
-                  styles.border
-                )}
-              >
-                <div className={cn(
-                  'w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0',
-                  styles.iconBg
-                )}>
-                  <Icon className={cn('w-4 h-4 sm:w-5 sm:h-5', styles.iconColor)} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <p className={cn('font-medium text-xs sm:text-sm', styles.titleColor)}>
-                      {alert.title}
-                    </p>
-                    {alert.type === 'success' && (
-                      <ArrowUpRight className={cn('w-3 h-3 sm:w-3.5 sm:h-3.5', styles.iconColor)} />
-                    )}
-                  </div>
-                  <p className={cn('text-[11px] sm:text-xs mt-0.5 sm:mt-1 leading-relaxed', styles.textColor)}>
-                    {alert.message}
-                  </p>
-                  {alert.action && alert.href && (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className={cn('h-auto p-0 mt-1 text-[10px] sm:text-xs', styles.iconColor)}
-                      asChild
-                    >
-                      <Link href={alert.href}>
-                        {alert.action}
-                        <ArrowUpRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 ml-0.5 sm:ml-1" />
-                      </Link>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+      {notifications.slice(0, 5).map((item) => {
+        const Icon = item.icon;
+        const isClickable = !!item.action;
+        
+        const content = (
+          <div
+            key={item.id}
+            className={cn(
+              'flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-card border flex-shrink-0 min-w-[140px]',
+              'transition-all duration-200',
+              isClickable && 'cursor-pointer hover:border-primary/50 hover:shadow-sm active:scale-[0.98]'
+            )}
+          >
+            <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', getTypeStyle(item.type))}>
+              <Icon className="w-4 h-4 text-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground truncate">{item.title}</p>
+              <p className="text-xs font-semibold truncate">{item.value}</p>
+            </div>
+          </div>
+        );
+
+        if (isClickable) {
+          return (
+            <Link key={item.id} href={item.action!.href} className="block">
+              {content}
+            </Link>
+          );
+        }
+
+        return content;
+      })}
+    </div>
   );
 }
 

@@ -30,10 +30,12 @@ import {
   Smartphone,
   Instagram,
   Facebook,
+  Mail,
   Image as ImageIcon,
   ExternalLink,
   Eye,
   Monitor,
+  Youtube,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
@@ -50,9 +52,13 @@ interface OwnerProfile {
   faviconUrl: string | null;
   metaTitle: string | null;
   metaDescription: string | null;
+  footerEmail: string | null;
   footerWhatsapp: string | null;
   footerInstagram: string | null;
   footerFacebook: string | null;
+  footerTiktok: string | null;
+  footerYoutube: string | null;
+  footerThreads: string | null;
   maintenanceMode: boolean;
 }
 
@@ -67,7 +73,7 @@ function useAuthHydrated() {
 
 export default function OwnerSettingsPage() {
   const router = useRouter();
-  const { user, isAuthenticated, hydrate, logout } = useAuthStore();
+  const { user, isAuthenticated, hydrate, logout, updateUser } = useAuthStore();
   const hasHydrated = useAuthHydrated();
   const { theme, setTheme } = useTheme();
   const redirectAttempted = useRef(false);
@@ -75,6 +81,7 @@ export default function OwnerSettingsPage() {
   const [profile, setProfile] = useState<OwnerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [logoError, setLogoError] = useState(false);
   const [faviconError, setFaviconError] = useState(false);
@@ -90,9 +97,13 @@ export default function OwnerSettingsPage() {
     faviconUrl: '',
     metaTitle: '',
     metaDescription: '',
+    footerEmail: '',
     footerWhatsapp: '',
     footerInstagram: '',
     footerFacebook: '',
+    footerTiktok: '',
+    footerYoutube: '',
+    footerThreads: '',
     maintenanceMode: false,
   });
 
@@ -137,9 +148,13 @@ export default function OwnerSettingsPage() {
           faviconUrl: result.data.faviconUrl || '',
           metaTitle: result.data.metaTitle || '',
           metaDescription: result.data.metaDescription || '',
+          footerEmail: result.data.footerEmail || '',
           footerWhatsapp: result.data.footerWhatsapp || '',
           footerInstagram: result.data.footerInstagram || '',
           footerFacebook: result.data.footerFacebook || '',
+          footerTiktok: result.data.footerTiktok || '',
+          footerYoutube: result.data.footerYoutube || '',
+          footerThreads: result.data.footerThreads || '',
           maintenanceMode: result.data.maintenanceMode || false,
         });
       }
@@ -150,7 +165,10 @@ export default function OwnerSettingsPage() {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
+    if (savingRef.current) return; // Prevent double-clicks
+    
+    savingRef.current = true;
     setSaving(true);
     try {
       const response = await fetch('/api/owner/profile', {
@@ -158,23 +176,39 @@ export default function OwnerSettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const result = await response.json();
       if (result.success) {
         toast.success('Pengaturan berhasil disimpan');
         if (result.data) {
           setProfile(result.data);
         }
+        // Update auth store so navbar reflects changes
+        updateUser({
+          name: formData.name,
+          avatar: formData.avatar || undefined,
+        });
         // Invalidate cache so other components get fresh data
         invalidateSiteConfigCache();
       } else {
         toast.error(result.error || 'Gagal menyimpan pengaturan');
       }
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
+      console.error('Save error:', err);
       toast.error('Terjadi kesalahan');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
-  };
+  }, [formData, updateUser]);
 
   const handleChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -217,6 +251,7 @@ export default function OwnerSettingsPage() {
           <p className="text-sm text-muted-foreground">Kelola konfigurasi website</p>
         </div>
         <Button
+          type="button"
           onClick={handleSave}
           disabled={saving}
           className="gradient-primary text-white rounded-xl h-10 px-4"
@@ -645,6 +680,15 @@ export default function OwnerSettingsPage() {
                   <div className="text-right">
                     <p className="font-medium mb-2 text-[10px]">Follow Us</p>
                     <div className="flex gap-2 justify-end">
+                      {formData.footerEmail ? (
+                        <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                          <Mail className="w-3 h-3 text-amber-600" />
+                        </div>
+                      ) : (
+                        <div className="w-6 h-6 rounded-lg bg-muted flex items-center justify-center">
+                          <Mail className="w-3 h-3 text-muted-foreground/50" />
+                        </div>
+                      )}
                       {formData.footerWhatsapp ? (
                         <div className="w-6 h-6 rounded-lg bg-green-500/10 flex items-center justify-center">
                           <Smartphone className="w-3 h-3 text-green-600" />
@@ -737,6 +781,38 @@ export default function OwnerSettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  Email
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={formData.footerEmail}
+                    onChange={(e) => handleChange('footerEmail', e.target.value)}
+                    placeholder="contact@example.com"
+                    className="h-11 flex-1"
+                  />
+                  {formData.footerEmail && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-11 w-11 flex-shrink-0"
+                      asChild
+                    >
+                      <a 
+                        href={`mailto:${formData.footerEmail}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">Email kontak yang ditampilkan di footer</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm flex items-center gap-2">
                   <Instagram className="w-4 h-4" />
                   Instagram
                 </Label>
@@ -796,6 +872,108 @@ export default function OwnerSettingsPage() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">URL profil Facebook</p>
+              </div>
+              
+              <Separator className="my-4" />
+              
+              <div className="space-y-2">
+                <Label className="text-sm flex items-center gap-2">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                  </svg>
+                  TikTok
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={formData.footerTiktok}
+                    onChange={(e) => handleChange('footerTiktok', e.target.value)}
+                    placeholder="https://tiktok.com/@username"
+                    className="h-11 flex-1"
+                  />
+                  {formData.footerTiktok && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-11 w-11 flex-shrink-0"
+                      asChild
+                    >
+                      <a 
+                        href={formData.footerTiktok}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">URL profil TikTok</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm flex items-center gap-2">
+                  <Youtube className="w-4 h-4" />
+                  YouTube
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={formData.footerYoutube}
+                    onChange={(e) => handleChange('footerYoutube', e.target.value)}
+                    placeholder="https://youtube.com/@channel"
+                    className="h-11 flex-1"
+                  />
+                  {formData.footerYoutube && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-11 w-11 flex-shrink-0"
+                      asChild
+                    >
+                      <a 
+                        href={formData.footerYoutube}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">URL channel YouTube</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm flex items-center gap-2">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.5 12.068V12c.015-4.55 1.5-8.15 4.396-10.702C8.379-.785 11.633-.09 11.765-.06l.056.012.093.027c1.256.315 2.55.402 3.78.255a10.27 10.27 0 0 1 3.318.15c.052.013.104.027.155.043.137.043.31.108.486.207.335.188.613.458.814.791.227.377.328.797.294 1.216a2.17 2.17 0 0 1-.63 1.428 2.21 2.21 0 0 1-1.455.622 2.26 2.26 0 0 1-.292-.01l-.07-.01a7.98 7.98 0 0 0-1.945-.175 7.2 7.2 0 0 0-2.443.417c-.89.333-1.637.856-2.212 1.55-.605.73-.967 1.6-1.075 2.59a6.14 6.14 0 0 0 .198 2.263c.23.81.635 1.51 1.204 2.08.55.548 1.21.94 1.96 1.164a5.32 5.32 0 0 0 2.352.13c.79-.12 1.5-.418 2.1-.885.596-.463 1.05-1.07 1.35-1.804.317-.77.42-1.622.304-2.532a6.61 6.61 0 0 0-.51-1.883l-.03-.065a.84.84 0 0 1 .037-.78.87.87 0 0 1 .668-.423.89.89 0 0 1 .777.3l.024.03c.59.73 1.032 1.575 1.313 2.51.275.915.38 1.86.312 2.812a8.1 8.1 0 0 1-.632 2.618 7.58 7.58 0 0 1-1.49 2.263 7.78 7.78 0 0 1-2.228 1.627c-.86.442-1.78.723-2.735.837a9.35 9.35 0 0 1-1.474.06z"/>
+                  </svg>
+                  Threads
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={formData.footerThreads}
+                    onChange={(e) => handleChange('footerThreads', e.target.value)}
+                    placeholder="https://threads.net/@username"
+                    className="h-11 flex-1"
+                  />
+                  {formData.footerThreads && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-11 w-11 flex-shrink-0"
+                      asChild
+                    >
+                      <a 
+                        href={formData.footerThreads}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">URL profil Threads</p>
               </div>
             </CardContent>
           </Card>

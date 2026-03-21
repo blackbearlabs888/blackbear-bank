@@ -11,6 +11,7 @@ interface AuthState {
   
   // Actions
   setUser: (user: User | null) => void;
+  updateUser: (updates: Partial<User>) => void;
   setPartner: (partner: Partner | null) => void;
   setLoading: (loading: boolean) => void;
   logout: () => Promise<void>;
@@ -35,6 +36,10 @@ export const useAuthStore = create<AuthState>()(
         hasHydrated: true,
       }),
 
+      updateUser: (updates) => set((state) => ({
+        user: state.user ? { ...state.user, ...updates } : null,
+      })),
+
       setPartner: (partner) => set({ partner }),
 
       setLoading: (isLoading) => set({ isLoading }),
@@ -54,6 +59,10 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
           hasHydrated: true,
         });
+        // Redirect to login page after logout
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
       },
 
       // Clear auth state when API returns 401

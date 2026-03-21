@@ -44,6 +44,10 @@ import {
   Percent,
   Award,
   Flame,
+  Radio,
+  Tag,
+  FileText,
+  Gift,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
@@ -115,7 +119,6 @@ interface DashboardData {
     name: string;
     achievement?: number;
     profit?: number;
-    volume?: number;
     target?: number;
   }>;
   newPartners: Array<{
@@ -554,87 +557,270 @@ export default function OwnerDashboardPage() {
         </Button>
       </div>
 
-      {/* Volume Chart with Sparkline */}
-      <Card className="glass-card animate-slide-up">
+      {/* Broadcast & Promo Preview Section */}
+      <Card className="glass-card animate-slide-up border-violet-200 dark:border-violet-800">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-              <Activity className="w-4 h-4 text-primary" />
-              Volume 7 Hari Terakhir
+              <Radio className="w-4 h-4 text-violet-500" />
+              Siaran Aktif
             </CardTitle>
+            <Button variant="ghost" size="sm" asChild className="tap-highlight h-7 sm:h-8 text-[10px] sm:text-xs">
+              <Link href="/owner/dashboard/broadcast">
+                Kelola
+                <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-0.5 sm:ml-1" />
+              </Link>
+            </Button>
+          </div>
+          <CardDescription className="text-[10px] sm:text-xs">Preview tampilan di dashboard partner</CardDescription>
+        </CardHeader>
+        <CardContent className="px-1 sm:px-6">
+          {/* Preview Frame */}
+          <div className="bg-muted/30 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-dashed border-muted-foreground/30">
+            <div className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1">
+              <Eye className="w-3 h-3" />
+              Preview Partner Dashboard
+            </div>
+            
+            <div className="space-y-2 sm:space-y-3">
+              {/* Broadcast Preview */}
+              {data?.announcements?.filter(a => a.type === 'broadcast').map((b, i) => (
+                <div key={b.id} className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2 sm:p-3 border border-amber-200 dark:border-amber-800/50">
+                  <div className="flex items-center gap-2">
+                    <Radio className="w-3.5 h-3.5 text-amber-600" />
+                    <span className="text-[10px] sm:text-xs font-medium text-amber-700 dark:text-amber-300">BROADCAST</span>
+                  </div>
+                  <p className="text-xs sm:text-sm font-medium mt-1 truncate">{b.title}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-1">{b.description}</p>
+                </div>
+              ))}
+              
+              {/* Announcement Preview - Running Text */}
+              {data?.announcements?.filter(a => a.type === 'announcement').length > 0 && (
+                <div className="bg-primary/5 rounded-lg p-2 sm:p-3 border border-primary/20 overflow-hidden">
+                  <div className="flex items-center gap-2 mb-1">
+                    <FileText className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-[10px] sm:text-xs font-medium text-primary">PENGUMUMAN</span>
+                  </div>
+                  <div className="overflow-hidden">
+                    <div className="animate-marquee whitespace-nowrap text-[10px] sm:text-xs">
+                      📢 {data.announcements.filter(a => a.type === 'announcement').map(a => `${a.title}: ${a.description}`).join(' • ')}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Promo Preview */}
+              {data?.promos?.slice(0, 2).map((p, i) => (
+                <div key={p.id} className="bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 rounded-lg p-2 sm:p-3 border border-pink-200 dark:border-pink-800/50 flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                    <Gift className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium truncate">{p.title}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Tap untuk melihat promo</p>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Empty State */}
+              {(!data?.announcements || data.announcements.length === 0) && (!data?.promos || data.promos.length === 0) && (
+                <div className="text-center py-4 sm:py-6">
+                  <Megaphone className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-30" />
+                  <p className="text-xs text-muted-foreground">Belum ada siaran aktif</p>
+                  <Button asChild size="sm" variant="outline" className="mt-2 h-8 text-xs">
+                    <Link href="/owner/dashboard/broadcast">Buat Siaran</Link>
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Stats Row */}
+          <div className="grid grid-cols-3 gap-2 mt-3 sm:mt-4">
+            <div className="text-center p-2 rounded-lg bg-violet-50 dark:bg-violet-900/20">
+              <p className="text-lg sm:text-xl font-bold text-violet-600 dark:text-violet-400">
+                {data?.announcements?.filter(a => a.type === 'promo').length || 0}
+              </p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground">Promo</p>
+            </div>
+            <div className="text-center p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20">
+              <p className="text-lg sm:text-xl font-bold text-purple-600 dark:text-purple-400">
+                {data?.announcements?.filter(a => a.type === 'broadcast').length || 0}
+              </p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground">Broadcast</p>
+            </div>
+            <div className="text-center p-2 rounded-lg bg-fuchsia-50 dark:bg-fuchsia-900/20">
+              <p className="text-lg sm:text-xl font-bold text-fuchsia-600 dark:text-fuchsia-400">
+                {data?.announcements?.filter(a => a.type === 'announcement').length || 0}
+              </p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground">Pengumuman</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Volume Chart - Modern Design */}
+      <Card className="glass-card animate-slide-up overflow-hidden">
+        <div className="h-1 gradient-primary" />
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-primary" />
+                Volume 7 Hari Terakhir
+              </CardTitle>
+              <CardDescription className="text-[10px] sm:text-xs mt-1">
+                {data?.last7DaysData ? (
+                  <span className="flex items-center gap-2">
+                    Total: {formatCompactCurrency(data.last7DaysData.reduce((sum, d) => sum + d.volume, 0))} •{' '}
+                    {data.last7DaysData.reduce((sum, d) => sum + d.count, 0)} transaksi
+                  </span>
+                ) : (
+                  'Grafik volume transaksi'
+                )}
+              </CardDescription>
+            </div>
             {stats?.dailyGrowth !== undefined && (
-              <Badge className={cn(
-                "text-[10px] sm:text-xs",
-                stats.dailyGrowth >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+              <div className={cn(
+                "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium",
+                stats.dailyGrowth >= 0 
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" 
+                  : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
               )}>
-                {stats.dailyGrowth >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                {stats.dailyGrowth >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
                 {Math.abs(stats.dailyGrowth).toFixed(1)}%
-              </Badge>
+              </div>
             )}
           </div>
-          <CardDescription className="text-[10px] sm:text-xs">
-            {data?.last7DaysData ? (
-              <span className="flex items-center gap-2">
-                Total: {formatCompactCurrency(data.last7DaysData.reduce((sum, d) => sum + d.volume, 0))} •{' '}
-                {data.last7DaysData.reduce((sum, d) => sum + d.count, 0)} transaksi
-              </span>
-            ) : (
-              'Grafik volume transaksi'
-            )}
-          </CardDescription>
         </CardHeader>
-        <CardContent className="px-2 sm:px-6">
+        <CardContent className="px-3 sm:px-6 pb-4">
           {dataLoading ? (
-            <div className="flex items-end gap-1 sm:gap-2 h-24 sm:h-32">
-              {[...Array(7)].map((_, i) => <Skeleton key={i} className="flex-1 h-full" />)}
+            <div className="flex items-end gap-1 sm:gap-2 h-36 sm:h-44">
+              {[...Array(7)].map((_, i) => <Skeleton key={i} className="flex-1 h-full rounded-t-xl" />)}
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {(() => {
                 const chartData = data?.last7DaysData || [];
                 const maxVolume = Math.max(...chartData.map(d => d.volume), 0);
                 const totalVolume = chartData.reduce((sum, d) => sum + d.volume, 0);
+                const avgVolume = totalVolume / 7;
                 
                 if (chartData.length === 0 || totalVolume === 0) {
                   return (
-                    <div className="flex flex-col items-center justify-center h-24 sm:h-32 text-muted-foreground">
-                      <Activity className="w-8 h-8 mb-2 opacity-30" />
+                    <div className="flex flex-col items-center justify-center h-36 sm:h-44 text-muted-foreground bg-muted/30 rounded-xl">
+                      <BarChart3 className="w-10 h-10 mb-2 opacity-20" />
                       <p className="text-xs sm:text-sm">Belum ada transaksi 7 hari terakhir</p>
                     </div>
                   );
                 }
                 
                 return (
-                  <div className="flex items-end gap-0.5 sm:gap-2 h-24 sm:h-32">
-                    {chartData.map((day, index) => {
-                      const heightPercent = maxVolume > 0 ? (day.volume / maxVolume) * 100 : 0;
-                      const isToday = index === chartData.length - 1;
-                      return (
-                        <div key={index} className="flex-1 flex flex-col items-center gap-0.5 sm:gap-1 group relative">
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-6 bg-popover text-popover-foreground text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap z-10">
-                            {formatCompactCurrency(day.volume)}
+                  <div className="relative">
+                    {/* Average Line */}
+                    <div 
+                      className="absolute left-0 right-0 border-t-2 border-dashed border-amber-400/50 z-10"
+                      style={{ bottom: `${Math.max((avgVolume / maxVolume) * 100, 5)}%` }}
+                    >
+                      <span className="absolute right-0 -top-5 text-[9px] text-amber-600 bg-background/80 px-1 rounded">
+                        Avg: {formatCompactCurrency(avgVolume)}
+                      </span>
+                    </div>
+                    
+                    {/* Chart Bars */}
+                    <div className="flex items-end gap-1 sm:gap-2 h-36 sm:h-44 pt-6">
+                      {chartData.map((day, index) => {
+                        const heightPercent = maxVolume > 0 ? (day.volume / maxVolume) * 100 : 0;
+                        const isToday = index === chartData.length - 1;
+                        const isAboveAvg = day.volume >= avgVolume;
+                        const hasData = day.volume > 0;
+                        
+                        return (
+                          <div key={index} className="flex-1 flex flex-col items-center gap-1 sm:gap-1.5 group relative">
+                            {/* Tooltip */}
+                            <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute -top-14 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-[10px] px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap z-20 border">
+                              <div className="font-semibold">{formatCompactCurrency(day.volume)}</div>
+                              <div className="text-muted-foreground text-[9px]">{day.count} transaksi</div>
+                              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-popover border-r border-b" />
+                            </div>
+                            
+                            {/* Bar Container */}
+                            <div className="w-full flex-1 flex flex-col justify-end items-center relative" style={{ minHeight: '80px' }}>
+                              {/* Volume amount on top */}
+                              {hasData && (
+                                <span className={cn(
+                                  "text-[9px] sm:text-[10px] font-medium mb-1 transition-opacity",
+                                  "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+                                  isAboveAvg ? "text-emerald-600" : "text-muted-foreground"
+                                )}>
+                                  {formatCompactCurrency(day.volume)}
+                                </span>
+                              )}
+                              
+                              {/* Bar */}
+                              <div
+                                className={cn(
+                                  "w-full rounded-t-lg sm:rounded-t-xl transition-all duration-300 relative overflow-hidden",
+                                  hasData ? "cursor-pointer hover:opacity-90" : ""
+                                )}
+                                style={{ 
+                                  height: `${Math.max(heightPercent, 3)}%`,
+                                  minHeight: hasData ? '8px' : '3px'
+                                }}
+                              >
+                                {/* Gradient Fill */}
+                                <div className={cn(
+                                  "absolute inset-0",
+                                  isToday 
+                                    ? "bg-gradient-to-t from-primary via-primary to-primary/70" 
+                                    : isAboveAvg
+                                      ? "bg-gradient-to-t from-emerald-500 via-emerald-400 to-emerald-300"
+                                      : "bg-gradient-to-t from-slate-400 via-slate-300 to-slate-200 dark:from-slate-600 dark:via-slate-500 dark:to-slate-400"
+                                )} />
+                                
+                                {/* Shine effect */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                                
+                                {/* Pulse animation for today */}
+                                {isToday && hasData && (
+                                  <div className="absolute inset-0 animate-pulse bg-primary/30" />
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Day Label */}
+                            <div className={cn(
+                              "text-[9px] sm:text-[10px] font-medium py-1 px-1.5 rounded-md transition-colors",
+                              isToday 
+                                ? "bg-primary text-primary-foreground" 
+                                : hasData && isAboveAvg
+                                  ? "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30"
+                                  : "text-muted-foreground"
+                            )}>
+                              {day.dayName}
+                            </div>
                           </div>
-                          <div
-                            className={cn(
-                              "w-full rounded-t transition-all duration-300 hover:opacity-80 min-h-[4px]",
-                              isToday ? "gradient-primary" : "bg-primary/60"
-                            )}
-                            style={{ height: `${Math.max(heightPercent, 5)}%` }}
-                          />
-                          <div className={cn(
-                            "text-[8px] sm:text-[10px] font-medium",
-                            isToday ? "text-primary" : "text-muted-foreground"
-                          )}>
-                            {day.dayName}
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })()}
             </div>
           )}
+          
+          {/* Legend */}
+          <div className="flex items-center justify-center gap-4 sm:gap-6 mt-4 pt-3 border-t border-dashed">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-sm bg-gradient-to-t from-emerald-500 to-emerald-300" />
+              <span className="text-[10px] text-muted-foreground">Di atas rata-rata</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-sm bg-gradient-to-t from-slate-400 to-slate-200" />
+              <span className="text-[10px] text-muted-foreground">Di bawah rata-rata</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -750,7 +936,7 @@ export default function OwnerDashboardPage() {
               <Target className="w-4 h-4 text-primary" />
               Hampir Capai Target
             </CardTitle>
-            <CardDescription className="text-[10px] sm:text-xs">Partner dengan pencapaian profit 80%+</CardDescription>
+            <CardDescription className="text-[10px] sm:text-xs">Partner dengan pencapaian 80%+</CardDescription>
           </CardHeader>
           <CardContent className="px-1 sm:px-6">
             {dataLoading ? (
@@ -780,7 +966,7 @@ export default function OwnerDashboardPage() {
                       />
                       <div className="flex justify-between mt-1">
                         <p className="text-[9px] sm:text-[10px] text-muted-foreground">
-                          <span className="text-green-600 font-medium">{formatCurrency(partner.profit || 0)}</span> profit / {formatCurrency(partner.target || 0)} target
+                          {formatCurrency(partner.profit || 0)} / {formatCurrency(partner.target || 0)}
                         </p>
                       </div>
                     </div>

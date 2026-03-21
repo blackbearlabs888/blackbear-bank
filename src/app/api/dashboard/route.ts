@@ -428,10 +428,9 @@ export async function GET(request: NextRequest) {
               name: p.name,
               achievement: p.target > 0 ? (p.totalProfit / p.target) * 100 : 0,
               profit: p.totalProfit,
-              volume: p.totalVolume,
               target: p.target,
             }))
-            .filter(p => p.achievement >= 80)
+            .filter(p => p.achievement >= 90)
           ),
           newPartners: await db.partner.findMany({
             where: { joinedAt: { gte: startOfMonth } },

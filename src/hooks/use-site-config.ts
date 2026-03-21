@@ -8,9 +8,13 @@ export interface SiteConfig {
   faviconUrl: string | null;
   metaTitle: string | null;
   metaDescription: string | null;
+  footerEmail: string | null;
   footerWhatsapp: string | null;
   footerInstagram: string | null;
   footerFacebook: string | null;
+  footerTiktok: string | null;
+  footerYoutube: string | null;
+  footerThreads: string | null;
   maintenanceMode: boolean;
 }
 
@@ -20,9 +24,13 @@ const defaultConfig: SiteConfig = {
   faviconUrl: null,
   metaTitle: 'Black Bear - Layanan Tarik Tunai Terpercaya',
   metaDescription: 'Layanan tarik tunai profesional untuk Kartu Kredit & Paylater dengan proses cepat dan aman.',
+  footerEmail: null,
   footerWhatsapp: null,
   footerInstagram: null,
   footerFacebook: null,
+  footerTiktok: null,
+  footerYoutube: null,
+  footerThreads: null,
   maintenanceMode: false,
 };
 
