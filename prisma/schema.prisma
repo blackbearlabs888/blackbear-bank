@@ -1,4 +1,14 @@
+// This is your Prisma schema file,
+// Black Bear WebApp - Gestun Management System
 
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
 
 // ==================== USER & AUTH ====================
 
