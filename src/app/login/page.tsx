@@ -273,27 +273,6 @@ export default function LoginPage() {
                 </p>
               </div>
             )}
-
-            <Separator className="my-6" />
-
-            {/* Demo credentials */}
-            <div className="space-y-3">
-              <p className="text-xs text-muted-foreground text-center font-medium">
-                Demo Login:
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="p-3 rounded-xl bg-muted/50 text-center">
-                  <Badge variant="outline" className="text-[10px] mb-1.5">Owner</Badge>
-                  <p className="text-xs font-medium">owner@blackbear.id</p>
-                  <p className="text-xs text-muted-foreground">owner123</p>
-                </div>
-                <div className="p-3 rounded-xl bg-muted/50 text-center">
-                  <Badge variant="outline" className="text-[10px] mb-1.5">Partner</Badge>
-                  <p className="text-xs font-medium">test@partner.com</p>
-                  <p className="text-xs text-muted-foreground">partner123</p>
-                </div>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>
