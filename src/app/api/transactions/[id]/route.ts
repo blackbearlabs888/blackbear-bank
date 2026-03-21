@@ -150,17 +150,19 @@ export async function PATCH(
     }
 
     // Handle marketplace selection during verification
-    if (marketplaceId !== undefined) {
+    // Accept 'none', '', or null as signals to clear marketplace
+    if (marketplaceId !== undefined || body.clearMarketplace) {
       let platformFee = 0;
+      const effectiveMarketplaceId = marketplaceId === 'none' || marketplaceId === '' ? null : marketplaceId;
       
-      if (marketplaceId) {
+      if (effectiveMarketplaceId) {
         const marketplace = await db.marketplace.findUnique({
-          where: { id: marketplaceId },
+          where: { id: effectiveMarketplaceId },
         });
         
         if (marketplace) {
           platformFee = existingTransaction.nominal * (marketplace.feePercent / 100) + (marketplace.feeFlat || 0);
-          updateData.marketplaceId = marketplaceId;
+          updateData.marketplaceId = effectiveMarketplaceId;
         }
       } else {
         updateData.marketplaceId = null;
