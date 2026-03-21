@@ -11,32 +11,29 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   CreditCard,
   Plus,
-  Edit,
   Percent,
   DollarSign,
   Loader2,
-  Settings2,
   TrendingUp,
   Globe,
   Truck,
   Calculator,
   BarChart3,
-  AlertCircle,
-  CheckCircle,
-  Info,
   ArrowUpRight,
   ArrowDownRight,
-  Trash2,
+  RefreshCw,
+  Settings2,
+  Wallet,
+  Target,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface PaymentType {
   id: string;
@@ -86,6 +83,13 @@ interface MarketplaceStats {
   totalFees: number;
 }
 
+const COLORS = {
+  primary: 'from-primary to-primary/70',
+  green: 'from-green-500 to-emerald-600',
+  violet: 'from-violet-500 to-purple-600',
+  amber: 'from-amber-500 to-orange-600',
+};
+
 export default function OwnerFeesPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, hasHydrated, hydrate } = useAuthStore();
@@ -94,7 +98,11 @@ export default function OwnerFeesPage() {
   const [paymentTypeStats, setPaymentTypeStats] = useState<PaymentTypeStats[]>([]);
   const [marketplaceStats, setMarketplaceStats] = useState<MarketplaceStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [mainTab, setMainTab] = useState<'payment' | 'marketplace'>('payment');
   const redirectAttempted = useRef(false);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!hasHydrated) hydrate();
@@ -117,8 +125,26 @@ export default function OwnerFeesPage() {
     }
   }, [isAuthenticated, hasHydrated, user]);
 
-  const fetchData = async () => {
-    setLoading(true);
+  // Auto-refresh every 1 minute
+  useEffect(() => {
+    if (isAuthenticated && hasHydrated && user?.role === 'owner') {
+      refreshIntervalRef.current = setInterval(() => {
+        fetchData(true);
+      }, 60000);
+    }
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
+  }, [isAuthenticated, hasHydrated, user]);
+
+  const fetchData = async (isAutoRefresh = false) => {
+    if (isAutoRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const [ptRes, mpRes, ptStatsRes, mpStatsRes] = await Promise.all([
         fetch('/api/payment-types'),
@@ -136,10 +162,12 @@ export default function OwnerFeesPage() {
       if (mpData.success) setMarketplaces(mpData.data);
       if (ptStatsData.success) setPaymentTypeStats(ptStatsData.data);
       if (mpStatsData.success) setMarketplaceStats(mpStatsData.data);
+      setLastUpdated(new Date());
     } catch (err) {
       console.error('Failed to fetch data:', err);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -158,6 +186,7 @@ export default function OwnerFeesPage() {
         setPaymentTypeStats(prev => 
           prev.map(pt => pt.id === id ? { ...pt, isActive: !isActive } : pt)
         );
+        toast.success(isActive ? 'Payment type dinonaktifkan' : 'Payment type diaktifkan');
       }
     } catch (err) {
       console.error('Failed to toggle payment type:', err);
@@ -179,6 +208,7 @@ export default function OwnerFeesPage() {
         setMarketplaceStats(prev => 
           prev.map(mp => mp.id === id ? { ...mp, isActive: !isActive } : mp)
         );
+        toast.success(isActive ? 'Marketplace dinonaktifkan' : 'Marketplace diaktifkan');
       }
     } catch (err) {
       console.error('Failed to toggle marketplace:', err);
@@ -187,12 +217,13 @@ export default function OwnerFeesPage() {
 
   if (isLoading || !hasHydrated) {
     return (
-      <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
-        <Skeleton className="h-10 w-32" />
-        <Skeleton className="h-12 rounded-xl" />
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
+      <div className="container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3 pb-20 md:pb-4">
+        <Skeleton className="h-8 w-24" />
+        <div className="flex gap-1 p-1 bg-muted/50 rounded-xl">
+          <Skeleton className="h-9 flex-1 rounded-lg" />
+          <Skeleton className="h-9 flex-1 rounded-lg" />
         </div>
+        <div className="grid grid-cols-2 gap-1.5">{[1,2,3,4].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
       </div>
     );
   }
@@ -207,283 +238,263 @@ export default function OwnerFeesPage() {
   const totalPaymentFees = paymentTypeStats.reduce((sum, pt) => sum + pt.totalFees, 0);
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
+    <div className="container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3 pb-20 md:pb-4">
       {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold">Pengaturan Fee</h1>
-        <p className="text-sm text-muted-foreground">Kelola biaya, marketplace & kalkulator fee</p>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-base sm:text-lg font-bold flex items-center gap-2">
+            <Percent className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+            <span className="truncate">Pengaturan Fee</span>
+          </h1>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Kelola biaya & marketplace</p>
+            {lastUpdated && (
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                {isRefreshing ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                )}
+                <span className="hidden sm:inline">{isRefreshing ? 'Refreshing...' : formatTimeAgo(lastUpdated)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        <Button
+          onClick={() => fetchData()}
+          size="sm"
+          variant="outline"
+          className="h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-lg"
+          disabled={isRefreshing}
+        >
+          <RefreshCw className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", isRefreshing && "animate-spin")} />
+        </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <CreditCard className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Payment Aktif</p>
-                <p className="text-lg font-bold text-primary">{activePaymentTypes}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <Globe className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Marketplace</p>
-                <p className="text-lg font-bold">{activeMarketplaces}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-violet-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total Fee Payment</p>
-                <p className="text-sm font-bold">{formatCurrency(totalPaymentFees)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total Fee Platform</p>
-                <p className="text-sm font-bold">{formatCurrency(totalPlatformFees)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+        <FeeKPICard
+          title="Payment Aktif"
+          value={activePaymentTypes}
+          icon={<CreditCard className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="primary"
+          isCount
+        />
+        <FeeKPICard
+          title="Marketplace"
+          value={activeMarketplaces}
+          icon={<Globe className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="green"
+          isCount
+        />
+        <FeeKPICard
+          title="Fee Payment"
+          value={totalPaymentFees}
+          icon={<TrendingUp className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="violet"
+        />
+        <FeeKPICard
+          title="Fee Platform"
+          value={totalPlatformFees}
+          icon={<DollarSign className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="amber"
+        />
       </div>
 
-      {/* Fee Calculator Card */}
+      {/* Fee Calculator */}
       <FeeCalculatorCard paymentTypes={paymentTypes} marketplaces={marketplaces} />
 
-      {/* Tabs */}
-      <Tabs defaultValue="payment" className="w-full">
-        <TabsList className="w-full grid grid-cols-2 h-12">
-          <TabsTrigger value="payment" className="gap-2">
-            <CreditCard className="w-4 h-4" />
-            Payment
-          </TabsTrigger>
-          <TabsTrigger value="marketplace" className="gap-2">
-            <Globe className="w-4 h-4" />
-            Marketplace
-          </TabsTrigger>
-        </TabsList>
+      {/* Main Tabs */}
+      <div className="flex gap-1 p-1 bg-muted/50 rounded-xl">
+        <button
+          onClick={() => setMainTab('payment')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-xs font-medium transition-all",
+            mainTab === 'payment' 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <CreditCard className="w-4 h-4" />
+          Payment
+        </button>
+        <button
+          onClick={() => setMainTab('marketplace')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-xs font-medium transition-all",
+            mainTab === 'marketplace' 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Globe className="w-4 h-4" />
+          Marketplace
+        </button>
+      </div>
 
-        <TabsContent value="payment" className="space-y-4 mt-4">
-          {/* Payment Type Usage Stats */}
-          <PaymentTypeUsageStats stats={paymentTypeStats} loading={loading} />
+      {/* Tab Content */}
+      {mainTab === 'payment' ? (
+        <div className="space-y-2 sm:space-y-3">
+          {/* Stats Summary */}
+          {paymentTypeStats.length > 0 && (
+            <Card className="glass-card">
+              <CardContent className="p-2.5 sm:p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <BarChart3 className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-[10px] sm:text-xs font-medium">Top Payment by Volume</span>
+                </div>
+                <div className="space-y-1">
+                  {[...paymentTypeStats].sort((a, b) => b.totalVolume - a.totalVolume).slice(0, 3).map((pt, idx) => (
+                    <div key={pt.id} className="flex items-center justify-between text-[10px] sm:text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="outline" className="w-4 h-4 p-0 text-[8px] justify-center">
+                          {idx + 1}
+                        </Badge>
+                        <span className="truncate">{pt.name}</span>
+                      </div>
+                      <span className="font-medium">{formatCurrency(pt.totalVolume)}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
+          {/* Payment Type List */}
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Tipe Pembayaran</p>
-            <NewPaymentTypeDialog onCreated={fetchData} />
+            <p className="text-xs sm:text-sm font-medium">Tipe Pembayaran</p>
+            <NewPaymentTypeDialog onCreated={() => fetchData()} />
           </div>
 
           {loading ? (
-            [...Array(3)].map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)
+            [...Array(3)].map((_, i) => <Skeleton key={i} className="h-28 sm:h-32 rounded-lg sm:rounded-xl" />)
           ) : paymentTypes.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {paymentTypes.map((pt) => {
                 const stats = paymentTypeStats.find(s => s.id === pt.id);
                 return (
-                  <Card key={pt.id} className={cn(
-                    "glass-card tap-highlight",
-                    !pt.isActive && "opacity-60"
-                  )}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            "w-10 h-10 rounded-xl flex items-center justify-center",
-                            pt.isActive ? "bg-primary/10" : "bg-muted"
-                          )}>
-                            <CreditCard className={cn(
-                              "w-5 h-5",
-                              pt.isActive ? "text-primary" : "text-muted-foreground"
-                            )} />
-                          </div>
-                          <div>
-                            <p className="font-medium">{pt.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Threshold: {formatCurrency(pt.threshold)}
-                            </p>
-                          </div>
-                        </div>
-                        <Switch
-                          checked={pt.isActive}
-                          onCheckedChange={() => togglePaymentType(pt.id, pt.isActive)}
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t">
-                        <div className="flex items-center gap-2">
-                          <Globe className="w-4 h-4 text-muted-foreground" />
-                          <div className="text-xs">
-                            <p className="text-muted-foreground">Online</p>
-                            <p className="font-medium">
-                              {pt.onlineFeePercent}% + {formatCurrency(pt.onlineFeeFlat)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Truck className="w-4 h-4 text-muted-foreground" />
-                          <div className="text-xs">
-                            <p className="text-muted-foreground">COD</p>
-                            <p className="font-medium">
-                              {pt.codFeePercent}% + {formatCurrency(pt.codFeeFlat)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Stats */}
-                      {stats && (
-                        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t">
-                          <div className="text-center">
-                            <p className="text-xs text-muted-foreground">Transaksi</p>
-                            <p className="text-sm font-medium">{stats.transactionCount}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xs text-muted-foreground">Volume</p>
-                            <p className="text-sm font-medium">{formatCurrency(stats.totalVolume)}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xs text-muted-foreground">Total Fee</p>
-                            <p className="text-sm font-medium">{formatCurrency(stats.totalFees)}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      <PaymentTypeFeePreview paymentType={pt} />
-                      <EditPaymentTypeDialog paymentType={pt} onUpdated={fetchData} />
-                    </CardContent>
-                  </Card>
+                  <PaymentTypeCard
+                    key={pt.id}
+                    paymentType={pt}
+                    stats={stats}
+                    onToggle={() => togglePaymentType(pt.id, pt.isActive)}
+                    onUpdated={() => fetchData()}
+                  />
                 );
               })}
             </div>
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">Belum ada tipe pembayaran</p>
+            <div className="text-center py-12">
+              <CreditCard className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+              <p className="text-xs sm:text-sm text-muted-foreground">Belum ada tipe pembayaran</p>
             </div>
           )}
-        </TabsContent>
+        </div>
+      ) : (
+        <div className="space-y-2 sm:space-y-3">
+          {/* Stats Summary */}
+          {marketplaceStats.length > 0 && (
+            <Card className="glass-card">
+              <CardContent className="p-2.5 sm:p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <BarChart3 className="w-3.5 h-3.5 text-green-600" />
+                  <span className="text-[10px] sm:text-xs font-medium">Top Marketplace by Fee</span>
+                </div>
+                <div className="space-y-1">
+                  {[...marketplaceStats].sort((a, b) => b.totalFees - a.totalFees).slice(0, 3).map((mp, idx) => (
+                    <div key={mp.id} className="flex items-center justify-between text-[10px] sm:text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="outline" className="w-4 h-4 p-0 text-[8px] justify-center">
+                          {idx + 1}
+                        </Badge>
+                        <span className="truncate">{mp.name}</span>
+                      </div>
+                      <span className="font-medium">{formatCurrency(mp.totalFees)}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-        <TabsContent value="marketplace" className="space-y-4 mt-4">
-          {/* Marketplace Usage Stats */}
-          <MarketplaceUsageStats stats={marketplaceStats} loading={loading} />
-
+          {/* Marketplace List */}
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Marketplace</p>
-            <NewMarketplaceDialog onCreated={fetchData} />
+            <p className="text-xs sm:text-sm font-medium">Marketplace</p>
+            <NewMarketplaceDialog onCreated={() => fetchData()} />
           </div>
 
           {loading ? (
-            [...Array(3)].map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)
+            [...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 sm:h-28 rounded-lg sm:rounded-xl" />)
           ) : marketplaces.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {marketplaces.map((mp) => {
                 const stats = marketplaceStats.find(s => s.id === mp.id);
                 return (
-                  <Card key={mp.id} className={cn(
-                    "glass-card tap-highlight",
-                    !mp.isActive && "opacity-60"
-                  )}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            "w-10 h-10 rounded-xl flex items-center justify-center",
-                            mp.isActive ? "bg-green-100 dark:bg-green-900/30" : "bg-muted"
-                          )}>
-                            <Globe className={cn(
-                              "w-5 h-5",
-                              mp.isActive ? "text-green-600" : "text-muted-foreground"
-                            )} />
-                          </div>
-                          <div>
-                            <p className="font-medium">{mp.name}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs h-5">
-                                {mp.feePercent}% 
-                              </Badge>
-                              {mp.feeFlat > 0 && (
-                                <Badge variant="outline" className="text-xs h-5">
-                                  + {formatCurrency(mp.feeFlat)}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <Switch
-                          checked={mp.isActive}
-                          onCheckedChange={() => toggleMarketplace(mp.id, mp.isActive)}
-                        />
-                      </div>
-
-                      {mp.description && (
-                        <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
-                          {mp.description}
-                        </p>
-                      )}
-
-                      {/* Stats */}
-                      {stats && (
-                        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t">
-                          <div className="text-center">
-                            <p className="text-xs text-muted-foreground">Transaksi</p>
-                            <p className="text-sm font-medium">{stats.transactionCount}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xs text-muted-foreground">Volume</p>
-                            <p className="text-sm font-medium">{formatCurrency(stats.totalVolume)}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xs text-muted-foreground">Total Fee</p>
-                            <p className="text-sm font-medium">{formatCurrency(stats.totalFees)}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      <MarketplaceFeePreview marketplace={mp} />
-                      <EditMarketplaceDialog marketplace={mp} onUpdated={fetchData} />
-                    </CardContent>
-                  </Card>
+                  <MarketplaceCard
+                    key={mp.id}
+                    marketplace={mp}
+                    stats={stats}
+                    onToggle={() => toggleMarketplace(mp.id, mp.isActive)}
+                    onUpdated={() => fetchData()}
+                  />
                 );
               })}
             </div>
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <Globe className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">Belum ada marketplace</p>
+            <div className="text-center py-12">
+              <Globe className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+              <p className="text-xs sm:text-sm text-muted-foreground">Belum ada marketplace</p>
             </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 }
 
-// Fee Calculator Card Component
+// Fee KPI Card
+function FeeKPICard({ title, value, icon, color, isCount }: {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  color: 'primary' | 'green' | 'violet' | 'amber';
+  isCount?: boolean;
+}) {
+  const colorClasses = {
+    primary: 'from-primary to-primary/70',
+    green: 'from-green-500 to-emerald-600',
+    violet: 'from-violet-500 to-purple-600',
+    amber: 'from-amber-500 to-orange-600',
+  };
+
+  const bgColorClasses = {
+    primary: 'bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20',
+    green: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20',
+    violet: 'bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20',
+    amber: 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20',
+  };
+
+  return (
+    <Card className={cn("glass-card overflow-hidden", bgColorClasses[color])}>
+      <div className={cn("h-0.5 sm:h-1 bg-gradient-to-r", colorClasses[color])} />
+      <CardContent className="p-2 sm:p-3">
+        <div className="flex items-start justify-between gap-1">
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{title}</p>
+            <p className="text-sm sm:text-lg font-bold truncate">
+              {isCount ? value : formatCurrency(value)}
+            </p>
+          </div>
+          <div className={cn("w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-gradient-to-br flex items-center justify-center text-white flex-shrink-0", colorClasses[color])}>
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Fee Calculator Card
 function FeeCalculatorCard({ 
   paymentTypes, 
   marketplaces 
@@ -530,31 +541,28 @@ function FeeCalculatorCard({
 
   return (
     <Card className="glass-card border-violet-200 dark:border-violet-800">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Calculator className="w-5 h-5 text-violet-500" />
+      <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
+        <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+          <Calculator className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
           Kalkulator Fee
         </CardTitle>
-        <CardDescription>
-          Hitung estimasi fee berdasarkan nominal dan pengaturan
-        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label className="text-xs">Nominal Transaksi</Label>
+      <CardContent className="px-3 sm:px-4 pb-2.5 sm:pb-3 space-y-2 sm:space-y-3">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label className="text-[10px] sm:text-xs">Nominal</Label>
             <Input
               type="number"
-              placeholder="Masukkan nominal"
+              placeholder="Nominal"
               value={nominal}
               onChange={(e) => setNominal(e.target.value)}
-              className="h-10"
+              className="h-8 sm:h-9 text-xs sm:text-sm rounded-lg"
             />
           </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Metode</Label>
+          <div className="space-y-1">
+            <Label className="text-[10px] sm:text-xs">Metode</Label>
             <Select value={method} onValueChange={(v) => setMethod(v as 'Online' | 'COD')}>
-              <SelectTrigger className="h-10">
+              <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm rounded-lg">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -563,33 +571,29 @@ function FeeCalculatorCard({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Tipe Pembayaran</Label>
+          <div className="space-y-1">
+            <Label className="text-[10px] sm:text-xs">Payment Type</Label>
             <Select value={paymentTypeId} onValueChange={setPaymentTypeId}>
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder="Pilih tipe pembayaran" />
+              <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm rounded-lg">
+                <SelectValue placeholder="Pilih..." />
               </SelectTrigger>
               <SelectContent>
                 {paymentTypes.map((pt) => (
-                  <SelectItem key={pt.id} value={pt.id}>
-                    {pt.name}
-                  </SelectItem>
+                  <SelectItem key={pt.id} value={pt.id}>{pt.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Marketplace (Opsional)</Label>
+          <div className="space-y-1">
+            <Label className="text-[10px] sm:text-xs">Marketplace</Label>
             <Select value={marketplaceId} onValueChange={setMarketplaceId}>
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder="Pilih marketplace" />
+              <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm rounded-lg">
+                <SelectValue placeholder="Opsional" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none">Tanpa Marketplace</SelectItem>
+                <SelectItem value="__none">Tanpa</SelectItem>
                 {marketplaces.map((mp) => (
-                  <SelectItem key={mp.id} value={mp.id}>
-                    {mp.name}
-                  </SelectItem>
+                  <SelectItem key={mp.id} value={mp.id}>{mp.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -597,61 +601,46 @@ function FeeCalculatorCard({
         </div>
 
         {/* Results */}
-        <div className="bg-muted/50 rounded-xl p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Nominal</span>
+        <div className="bg-muted/50 rounded-lg sm:rounded-xl p-2.5 sm:p-3 space-y-1.5 sm:space-y-2">
+          <div className="flex items-center justify-between text-[10px] sm:text-xs">
+            <span className="text-muted-foreground">Nominal</span>
             <span className="font-medium">{formatCurrency(nominalNum)}</span>
           </div>
 
           {selectedPaymentType && (
             <>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Payment Fee</span>
-                  {isAboveThreshold ? (
-                    <Badge variant="default" className="text-[10px] h-4 bg-violet-500">
-                      Persentase
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="text-[10px] h-4">
-                      Flat
-                    </Badge>
-                  )}
+              <div className="flex items-center justify-between text-[10px] sm:text-xs">
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground">Payment Fee</span>
+                  <Badge variant={isAboveThreshold ? "default" : "secondary"} className="text-[8px] h-3.5 px-1">
+                    {isAboveThreshold ? '%' : 'Flat'}
+                  </Badge>
                 </div>
                 <span className="font-medium text-violet-600">-{formatCurrency(paymentFee)}</span>
               </div>
-              
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Customer menerima</span>
+              <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-muted-foreground">
+                <span>Customer receives</span>
                 <span>{formatCurrency(customerReceives)}</span>
               </div>
             </>
           )}
 
           {selectedMarketplace && (
-            <div className="flex items-center justify-between pt-2 border-t">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Platform Fee</span>
-                <Badge variant="outline" className="text-[10px] h-4">
-                  {selectedMarketplace.feePercent}% + {formatCurrency(selectedMarketplace.feeFlat)}
-                </Badge>
-              </div>
+            <div className="flex items-center justify-between text-[10px] sm:text-xs pt-1 border-t">
+              <span className="text-muted-foreground">Platform Fee</span>
               <span className="font-medium text-amber-600">-{formatCurrency(platformFee)}</span>
             </div>
           )}
 
-          <div className="flex items-center justify-between pt-2 border-t">
-            <span className="text-sm font-medium">Net Margin</span>
-            <span className={cn(
-              "font-bold",
-              netMargin > 0 ? "text-green-600" : "text-muted-foreground"
-            )}>
+          <div className="flex items-center justify-between text-[10px] sm:text-xs pt-1 border-t">
+            <span className="font-medium">Net Margin</span>
+            <span className={cn("font-bold", netMargin > 0 ? "text-green-600" : "text-muted-foreground")}>
               {formatCurrency(netMargin)}
             </span>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Total Potongan</span>
+          <div className="flex items-center justify-between text-[10px] sm:text-xs">
+            <span className="font-medium">Total Potongan</span>
             <span className="font-bold text-red-500">-{formatCurrency(totalDeduction)}</span>
           </div>
         </div>
@@ -659,20 +648,20 @@ function FeeCalculatorCard({
         {/* Threshold Info */}
         {selectedPaymentType && (
           <div className={cn(
-            "flex items-center gap-2 text-xs p-2 rounded-lg",
+            "flex items-center gap-1.5 text-[9px] sm:text-[10px] p-1.5 sm:p-2 rounded-lg",
             isAboveThreshold 
               ? "bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400"
               : "bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400"
           )}>
             {isAboveThreshold ? (
               <>
-                <ArrowUpRight className="w-4 h-4" />
-                <span>Diatas threshold ({formatCurrency(selectedPaymentType.threshold)}) - Fee persentase diterapkan</span>
+                <ArrowUpRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                <span>Above threshold - Fee % applied</span>
               </>
             ) : (
               <>
-                <ArrowDownRight className="w-4 h-4" />
-                <span>Dibawah threshold ({formatCurrency(selectedPaymentType.threshold)}) - Fee flat diterapkan</span>
+                <ArrowDownRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                <span>Below threshold - Flat fee applied</span>
               </>
             )}
           </div>
@@ -682,268 +671,193 @@ function FeeCalculatorCard({
   );
 }
 
-// Payment Type Fee Preview Component
-function PaymentTypeFeePreview({ paymentType }: { paymentType: PaymentType }) {
-  const [nominal, setNominal] = useState<string>('1000000');
-  const [method, setMethod] = useState<'Online' | 'COD'>('Online');
-  const [showPreview, setShowPreview] = useState(false);
-
-  const nominalNum = parseFloat(nominal) || 0;
-  const isAboveThreshold = nominalNum >= paymentType.threshold;
-  
-  const feePercent = method === 'Online' 
-    ? paymentType.onlineFeePercent 
-    : paymentType.codFeePercent;
-  const feeFlat = method === 'Online' 
-    ? paymentType.onlineFeeFlat 
-    : paymentType.codFeeFlat;
-  
-  const fee = isAboveThreshold ? nominalNum * (feePercent / 100) : feeFlat;
-
-  if (!showPreview) {
-    return (
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        className="mt-3 h-8 text-xs w-full"
-        onClick={() => setShowPreview(true)}
-      >
-        <Calculator className="w-3 h-3 mr-1" />
-        Preview Fee
-      </Button>
-    );
-  }
+// Payment Type Card
+function PaymentTypeCard({ 
+  paymentType, 
+  stats, 
+  onToggle, 
+  onUpdated 
+}: { 
+  paymentType: PaymentType;
+  stats?: PaymentTypeStats;
+  onToggle: () => void;
+  onUpdated: () => void;
+}) {
+  const [showEdit, setShowEdit] = useState(false);
 
   return (
-    <div className="mt-3 pt-3 border-t space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">Preview Fee</span>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-6 w-6 p-0" 
-          onClick={() => setShowPreview(false)}
-        >
-          ×
-        </Button>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <Input
-          type="number"
-          placeholder="Nominal"
-          value={nominal}
-          onChange={(e) => setNominal(e.target.value)}
-          className="h-8 text-xs"
-        />
-        <Select value={method} onValueChange={(v) => setMethod(v as 'Online' | 'COD')}>
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Online">Online</SelectItem>
-            <SelectItem value="COD">COD</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="flex items-center justify-between bg-muted/50 rounded-lg p-2">
-        <div className="flex items-center gap-2">
-          {isAboveThreshold ? (
-            <Badge variant="default" className="text-[10px] h-4 bg-violet-500">
-              {feePercent}%
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="text-[10px] h-4">
-              Flat
-            </Badge>
+    <>
+      <Card className={cn("glass-card tap-highlight", !paymentType.isActive && "opacity-60")}>
+        <CardContent className="p-2.5 sm:p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className={cn(
+                "w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0",
+                paymentType.isActive ? "bg-primary/10" : "bg-muted"
+              )}>
+                <CreditCard className={cn("w-4 h-4 sm:w-5 sm:h-5", paymentType.isActive ? "text-primary" : "text-muted-foreground")} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] sm:text-sm font-medium truncate">{paymentType.name}</p>
+                <p className="text-[9px] sm:text-xs text-muted-foreground">
+                  Threshold: {formatCurrency(paymentType.threshold)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                onClick={() => setShowEdit(true)}
+              >
+                <Settings2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </Button>
+              <Switch
+                checked={paymentType.isActive}
+                onCheckedChange={onToggle}
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t">
+            <div className="flex items-center gap-1.5">
+              <Globe className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground" />
+              <div className="text-[9px] sm:text-xs">
+                <p className="text-muted-foreground">Online</p>
+                <p className="font-medium">{paymentType.onlineFeePercent}% + {formatCurrency(paymentType.onlineFeeFlat)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Truck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground" />
+              <div className="text-[9px] sm:text-xs">
+                <p className="text-muted-foreground">COD</p>
+                <p className="font-medium">{paymentType.codFeePercent}% + {formatCurrency(paymentType.codFeeFlat)}</p>
+              </div>
+            </div>
+          </div>
+
+          {stats && (
+            <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t">
+              <div className="text-center">
+                <p className="text-[9px] text-muted-foreground">Trx</p>
+                <p className="text-[10px] sm:text-xs font-medium">{stats.transactionCount}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[9px] text-muted-foreground">Volume</p>
+                <p className="text-[10px] sm:text-xs font-medium">{formatCurrency(stats.totalVolume)}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[9px] text-muted-foreground">Fee</p>
+                <p className="text-[10px] sm:text-xs font-medium">{formatCurrency(stats.totalFees)}</p>
+              </div>
+            </div>
           )}
-        </div>
-        <span className="font-medium text-violet-600">{formatCurrency(fee)}</span>
-      </div>
-    </div>
-  );
-}
+        </CardContent>
+      </Card>
 
-// Marketplace Fee Preview Component
-function MarketplaceFeePreview({ marketplace }: { marketplace: Marketplace }) {
-  const [nominal, setNominal] = useState<string>('1000000');
-  const [showPreview, setShowPreview] = useState(false);
-
-  const nominalNum = parseFloat(nominal) || 0;
-  const percentFee = nominalNum * (marketplace.feePercent / 100);
-  const totalFee = percentFee + marketplace.feeFlat;
-
-  if (!showPreview) {
-    return (
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        className="mt-3 h-8 text-xs w-full"
-        onClick={() => setShowPreview(true)}
-      >
-        <Calculator className="w-3 h-3 mr-1" />
-        Preview Fee
-      </Button>
-    );
-  }
-
-  return (
-    <div className="mt-3 pt-3 border-t space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">Preview Fee Platform</span>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-6 w-6 p-0" 
-          onClick={() => setShowPreview(false)}
-        >
-          ×
-        </Button>
-      </div>
-      <Input
-        type="number"
-        placeholder="Nominal"
-        value={nominal}
-        onChange={(e) => setNominal(e.target.value)}
-        className="h-8 text-xs"
+      <EditPaymentTypeDialog 
+        paymentType={paymentType} 
+        open={showEdit} 
+        onOpenChange={setShowEdit} 
+        onUpdated={onUpdated} 
       />
-      <div className="bg-muted/50 rounded-lg p-2 space-y-1">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Fee {marketplace.feePercent}%</span>
-          <span>{formatCurrency(percentFee)}</span>
-        </div>
-        {marketplace.feeFlat > 0 && (
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Flat Fee</span>
-            <span>{formatCurrency(marketplace.feeFlat)}</span>
-          </div>
-        )}
-        <div className="flex items-center justify-between pt-1 border-t">
-          <span className="text-xs font-medium">Total</span>
-          <span className="font-medium text-amber-600">{formatCurrency(totalFee)}</span>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
 
-// Payment Type Usage Stats Component
-function PaymentTypeUsageStats({ stats, loading }: { stats: PaymentTypeStats[]; loading: boolean }) {
-  if (loading) {
-    return <Skeleton className="h-32 rounded-xl" />;
-  }
-
-  if (stats.length === 0) return null;
-
-  const topByVolume = [...stats].sort((a, b) => b.totalVolume - a.totalVolume).slice(0, 3);
-  const topByTransactions = [...stats].sort((a, b) => b.transactionCount - a.transactionCount).slice(0, 3);
+// Marketplace Card
+function MarketplaceCard({ 
+  marketplace, 
+  stats, 
+  onToggle, 
+  onUpdated 
+}: { 
+  marketplace: Marketplace;
+  stats?: MarketplaceStats;
+  onToggle: () => void;
+  onUpdated: () => void;
+}) {
+  const [showEdit, setShowEdit] = useState(false);
 
   return (
-    <Card className="glass-card">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <BarChart3 className="w-4 h-4 text-primary" />
-          Statistik Payment Type
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Top Volume</p>
-            <div className="space-y-2">
-              {topByVolume.map((pt, idx) => (
-                <div key={pt.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-5 h-5 p-0 text-[10px] justify-center">
-                      {idx + 1}
+    <>
+      <Card className={cn("glass-card tap-highlight", !marketplace.isActive && "opacity-60")}>
+        <CardContent className="p-2.5 sm:p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className={cn(
+                "w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0",
+                marketplace.isActive ? "bg-green-100 dark:bg-green-900/30" : "bg-muted"
+              )}>
+                <Globe className={cn("w-4 h-4 sm:w-5 sm:h-5", marketplace.isActive ? "text-green-600" : "text-muted-foreground")} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] sm:text-sm font-medium truncate">{marketplace.name}</p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <Badge variant="outline" className="text-[9px] h-4 px-1">
+                    {marketplace.feePercent}%
+                  </Badge>
+                  {marketplace.feeFlat > 0 && (
+                    <Badge variant="outline" className="text-[9px] h-4 px-1">
+                      +{formatCurrency(marketplace.feeFlat)}
                     </Badge>
-                    <span className="text-xs">{pt.name}</span>
-                  </div>
-                  <span className="text-xs font-medium">{formatCurrency(pt.totalVolume)}</span>
+                  )}
                 </div>
-              ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                onClick={() => setShowEdit(true)}
+              >
+                <Settings2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </Button>
+              <Switch
+                checked={marketplace.isActive}
+                onCheckedChange={onToggle}
+              />
             </div>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Top Transaksi</p>
-            <div className="space-y-2">
-              {topByTransactions.map((pt, idx) => (
-                <div key={pt.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-5 h-5 p-0 text-[10px] justify-center">
-                      {idx + 1}
-                    </Badge>
-                    <span className="text-xs">{pt.name}</span>
-                  </div>
-                  <span className="text-xs font-medium">{pt.transactionCount} trx</span>
-                </div>
-              ))}
+
+          {marketplace.description && (
+            <p className="text-[9px] sm:text-xs text-muted-foreground mt-2 pt-2 border-t">
+              {marketplace.description}
+            </p>
+          )}
+
+          {stats && (
+            <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t">
+              <div className="text-center">
+                <p className="text-[9px] text-muted-foreground">Trx</p>
+                <p className="text-[10px] sm:text-xs font-medium">{stats.transactionCount}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[9px] text-muted-foreground">Volume</p>
+                <p className="text-[10px] sm:text-xs font-medium">{formatCurrency(stats.totalVolume)}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[9px] text-muted-foreground">Fee</p>
+                <p className="text-[10px] sm:text-xs font-medium">{formatCurrency(stats.totalFees)}</p>
+              </div>
             </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+          )}
+        </CardContent>
+      </Card>
+
+      <EditMarketplaceDialog 
+        marketplace={marketplace} 
+        open={showEdit} 
+        onOpenChange={setShowEdit} 
+        onUpdated={onUpdated} 
+      />
+    </>
   );
 }
 
-// Marketplace Usage Stats Component
-function MarketplaceUsageStats({ stats, loading }: { stats: MarketplaceStats[]; loading: boolean }) {
-  if (loading) {
-    return <Skeleton className="h-32 rounded-xl" />;
-  }
-
-  if (stats.length === 0) return null;
-
-  const topByVolume = [...stats].sort((a, b) => b.totalVolume - a.totalVolume).slice(0, 3);
-  const topByFees = [...stats].sort((a, b) => b.totalFees - a.totalFees).slice(0, 3);
-
-  return (
-    <Card className="glass-card">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <BarChart3 className="w-4 h-4 text-green-600" />
-          Statistik Marketplace
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Top Volume</p>
-            <div className="space-y-2">
-              {topByVolume.map((mp, idx) => (
-                <div key={mp.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-5 h-5 p-0 text-[10px] justify-center">
-                      {idx + 1}
-                    </Badge>
-                    <span className="text-xs">{mp.name}</span>
-                  </div>
-                  <span className="text-xs font-medium">{formatCurrency(mp.totalVolume)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Top Fee Platform</p>
-            <div className="space-y-2">
-              {topByFees.map((mp, idx) => (
-                <div key={mp.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-5 h-5 p-0 text-[10px] justify-center">
-                      {idx + 1}
-                    </Badge>
-                    <span className="text-xs">{mp.name}</span>
-                  </div>
-                  <span className="text-xs font-medium">{formatCurrency(mp.totalFees)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
+// New Payment Type Dialog
 function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -979,9 +893,13 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
           codFeeFlat: 0,
           threshold: 1000000,
         });
+        toast.success('Payment type berhasil dibuat');
+      } else {
+        toast.error(result.error || 'Gagal membuat payment type');
       }
     } catch (err) {
       console.error('Failed to create payment type:', err);
+      toast.error('Terjadi kesalahan');
     } finally {
       setLoading(false);
     }
@@ -990,111 +908,123 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gradient-primary text-white rounded-xl h-9 px-3 text-xs">
+        <Button size="sm" className="gradient-primary text-white rounded-lg h-8 px-3 text-[10px] sm:text-xs">
           <Plus className="w-3 h-3 mr-1" />
           Baru
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Tipe Pembayaran Baru</DialogTitle>
-          <DialogDescription>
-            Tambahkan tipe pembayaran baru dengan pengaturan fee
-          </DialogDescription>
+          <DialogTitle className="text-base sm:text-lg">Tipe Pembayaran Baru</DialogTitle>
+          <DialogDescription>Tambahkan tipe pembayaran dengan pengaturan fee</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Nama</Label>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs sm:text-sm">Nama</Label>
             <Input
               placeholder="contoh: BRI, Mandiri, dll"
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
+              className="h-9 sm:h-10"
             />
           </div>
           
-          <div className="space-y-3">
-            <p className="text-sm font-medium flex items-center gap-2">
-              <Globe className="w-4 h-4" /> Fee Online
+          <div className="space-y-2">
+            <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" /> Fee Online
             </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label className="text-xs">Persentase (%)</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-[10px] sm:text-xs">Persentase (%)</Label>
                 <Input
                   type="number"
                   step="0.01"
                   placeholder="0"
                   value={formData.onlineFeePercent}
                   onChange={(e) => setFormData(prev => ({ ...prev, onlineFeePercent: parseFloat(e.target.value) || 0 }))}
+                  className="h-9"
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs">Flat (Rp)</Label>
+              <div className="space-y-1">
+                <Label className="text-[10px] sm:text-xs">Flat (Rp)</Label>
                 <Input
                   type="number"
                   placeholder="0"
                   value={formData.onlineFeeFlat}
                   onChange={(e) => setFormData(prev => ({ ...prev, onlineFeeFlat: parseFloat(e.target.value) || 0 }))}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <p className="text-sm font-medium flex items-center gap-2">
-              <Truck className="w-4 h-4" /> Fee COD
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label className="text-xs">Persentase (%)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="0"
-                  value={formData.codFeePercent}
-                  onChange={(e) => setFormData(prev => ({ ...prev, codFeePercent: parseFloat(e.target.value) || 0 }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs">Flat (Rp)</Label>
-                <Input
-                  type="number"
-                  placeholder="0"
-                  value={formData.codFeeFlat}
-                  onChange={(e) => setFormData(prev => ({ ...prev, codFeeFlat: parseFloat(e.target.value) || 0 }))}
+                  className="h-9"
                 />
               </div>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              Threshold Minimum
-              <Info className="w-3 h-3 text-muted-foreground" />
-            </Label>
-            <Input
-              type="number"
-              placeholder="Minimal transaksi"
-              value={formData.threshold}
-              onChange={(e) => setFormData(prev => ({ ...prev, threshold: parseFloat(e.target.value) || 0 }))}
-            />
-            <p className="text-xs text-muted-foreground">
-              Di atas threshold: fee persentase, di bawah: fee flat
+            <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+              <Truck className="w-3.5 h-3.5" /> Fee COD
             </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-[10px] sm:text-xs">Persentase (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0"
+                  value={formData.codFeePercent}
+                  onChange={(e) => setFormData(prev => ({ ...prev, codFeePercent: parseFloat(e.target.value) || 0 }))}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] sm:text-xs">Flat (Rp)</Label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={formData.codFeeFlat}
+                  onChange={(e) => setFormData(prev => ({ ...prev, codFeeFlat: parseFloat(e.target.value) || 0 }))}
+                  className="h-9"
+                />
+              </div>
+            </div>
           </div>
 
-          <Button type="submit" className="w-full gradient-primary text-white h-11 rounded-xl" disabled={loading}>
-            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-            Simpan
-          </Button>
+          <div className="space-y-1.5">
+            <Label className="text-xs sm:text-sm">Threshold (diatas nominal ini pakai %)</Label>
+            <Input
+              type="number"
+              placeholder="1000000"
+              value={formData.threshold}
+              onChange={(e) => setFormData(prev => ({ ...prev, threshold: parseFloat(e.target.value) || 0 }))}
+              className="h-9"
+            />
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" className="flex-1 h-9" onClick={() => setOpen(false)}>
+              Batal
+            </Button>
+            <Button type="submit" className="flex-1 gradient-primary text-white h-9" disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan'}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
 
-function EditPaymentTypeDialog({ paymentType, onUpdated }: { paymentType: PaymentType; onUpdated: () => void }) {
-  const [open, setOpen] = useState(false);
+// Edit Payment Type Dialog
+function EditPaymentTypeDialog({ 
+  paymentType, 
+  open, 
+  onOpenChange, 
+  onUpdated 
+}: { 
+  paymentType: PaymentType;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpdated: () => void;
+}) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: paymentType.name,
@@ -1114,7 +1044,7 @@ function EditPaymentTypeDialog({ paymentType, onUpdated }: { paymentType: Paymen
       codFeeFlat: paymentType.codFeeFlat,
       threshold: paymentType.threshold,
     });
-  }, [paymentType]);
+  }, [paymentType, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1129,97 +1059,117 @@ function EditPaymentTypeDialog({ paymentType, onUpdated }: { paymentType: Paymen
 
       const result = await response.json();
       if (result.success) {
-        setOpen(false);
+        onOpenChange(false);
         onUpdated();
+        toast.success('Payment type berhasil diperbarui');
+      } else {
+        toast.error(result.error || 'Gagal memperbarui payment type');
       }
     } catch (err) {
       console.error('Failed to update payment type:', err);
+      toast.error('Terjadi kesalahan');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="mt-3 h-8 text-xs">
-          <Edit className="w-3 h-3 mr-1" />
-          Edit
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Tipe Pembayaran</DialogTitle>
+          <DialogTitle className="text-base sm:text-lg">Edit Payment Type</DialogTitle>
+          <DialogDescription>Edit pengaturan fee untuk {paymentType.name}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Nama</Label>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs sm:text-sm">Nama</Label>
             <Input
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
+              className="h-9"
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-xs">Online %</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.onlineFeePercent}
-                onChange={(e) => setFormData(prev => ({ ...prev, onlineFeePercent: parseFloat(e.target.value) || 0 }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Online Flat</Label>
-              <Input
-                type="number"
-                value={formData.onlineFeeFlat}
-                onChange={(e) => setFormData(prev => ({ ...prev, onlineFeeFlat: parseFloat(e.target.value) || 0 }))}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-xs">COD %</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.codFeePercent}
-                onChange={(e) => setFormData(prev => ({ ...prev, codFeePercent: parseFloat(e.target.value) || 0 }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">COD Flat</Label>
-              <Input
-                type="number"
-                value={formData.codFeeFlat}
-                onChange={(e) => setFormData(prev => ({ ...prev, codFeeFlat: parseFloat(e.target.value) || 0 }))}
-              />
+          <div className="space-y-2">
+            <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" /> Fee Online
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-[10px]">%</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.onlineFeePercent}
+                  onChange={(e) => setFormData(prev => ({ ...prev, onlineFeePercent: parseFloat(e.target.value) || 0 }))}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px]">Flat</Label>
+                <Input
+                  type="number"
+                  value={formData.onlineFeeFlat}
+                  onChange={(e) => setFormData(prev => ({ ...prev, onlineFeeFlat: parseFloat(e.target.value) || 0 }))}
+                  className="h-9"
+                />
+              </div>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Threshold</Label>
+            <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+              <Truck className="w-3.5 h-3.5" /> Fee COD
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-[10px]">%</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.codFeePercent}
+                  onChange={(e) => setFormData(prev => ({ ...prev, codFeePercent: parseFloat(e.target.value) || 0 }))}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px]">Flat</Label>
+                <Input
+                  type="number"
+                  value={formData.codFeeFlat}
+                  onChange={(e) => setFormData(prev => ({ ...prev, codFeeFlat: parseFloat(e.target.value) || 0 }))}
+                  className="h-9"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs sm:text-sm">Threshold</Label>
             <Input
               type="number"
               value={formData.threshold}
               onChange={(e) => setFormData(prev => ({ ...prev, threshold: parseFloat(e.target.value) || 0 }))}
+              className="h-9"
             />
           </div>
 
-          <Button type="submit" className="w-full gradient-primary text-white h-11 rounded-xl" disabled={loading}>
-            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-            Update
-          </Button>
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" className="flex-1 h-9" onClick={() => onOpenChange(false)}>
+              Batal
+            </Button>
+            <Button type="submit" className="flex-1 gradient-primary text-white h-9" disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan'}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
 
+// New Marketplace Dialog
 function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -1246,9 +1196,13 @@ function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
         setOpen(false);
         onCreated();
         setFormData({ name: '', feePercent: 0, feeFlat: 0, description: '' });
+        toast.success('Marketplace berhasil dibuat');
+      } else {
+        toast.error(result.error || 'Gagal membuat marketplace');
       }
     } catch (err) {
       console.error('Failed to create marketplace:', err);
+      toast.error('Terjadi kesalahan');
     } finally {
       setLoading(false);
     }
@@ -1257,70 +1211,86 @@ function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gradient-primary text-white rounded-xl h-9 px-3 text-xs">
+        <Button size="sm" className="gradient-primary text-white rounded-lg h-8 px-3 text-[10px] sm:text-xs">
           <Plus className="w-3 h-3 mr-1" />
           Baru
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Marketplace Baru</DialogTitle>
-          <DialogDescription>
-            Tambahkan marketplace dengan pengaturan fee platform
-          </DialogDescription>
+          <DialogTitle className="text-base sm:text-lg">Marketplace Baru</DialogTitle>
+          <DialogDescription>Tambahkan marketplace dengan pengaturan fee</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Nama</Label>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs sm:text-sm">Nama</Label>
             <Input
-              placeholder="contoh: Shopee, Tokopedia, dll"
+              placeholder="contoh: Shopee, Tokopedia"
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
+              className="h-9"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-xs">Fee Persentase (%)</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-[10px] sm:text-xs">Fee Persentase (%)</Label>
               <Input
                 type="number"
                 step="0.01"
-                placeholder="contoh: 4.25"
+                placeholder="0"
                 value={formData.feePercent}
                 onChange={(e) => setFormData(prev => ({ ...prev, feePercent: parseFloat(e.target.value) || 0 }))}
+                className="h-9"
               />
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Fee Flat (Rp)</Label>
+            <div className="space-y-1">
+              <Label className="text-[10px] sm:text-xs">Fee Flat (Rp)</Label>
               <Input
                 type="number"
-                placeholder="contoh: 60000"
+                placeholder="0"
                 value={formData.feeFlat}
                 onChange={(e) => setFormData(prev => ({ ...prev, feeFlat: parseFloat(e.target.value) || 0 }))}
+                className="h-9"
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label>Deskripsi / Catatan</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs sm:text-sm">Deskripsi (opsional)</Label>
             <Textarea
-              placeholder="Catatan tentang marketplace ini..."
+              placeholder="Deskripsi singkat..."
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className="h-20"
+              rows={2}
+              className="text-sm"
             />
           </div>
-          <Button type="submit" className="w-full gradient-primary text-white h-11 rounded-xl" disabled={loading}>
-            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-            Simpan
-          </Button>
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" className="flex-1 h-9" onClick={() => setOpen(false)}>
+              Batal
+            </Button>
+            <Button type="submit" className="flex-1 gradient-primary text-white h-9" disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan'}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
 
-function EditMarketplaceDialog({ marketplace, onUpdated }: { marketplace: Marketplace; onUpdated: () => void }) {
-  const [open, setOpen] = useState(false);
+// Edit Marketplace Dialog
+function EditMarketplaceDialog({ 
+  marketplace, 
+  open, 
+  onOpenChange, 
+  onUpdated 
+}: { 
+  marketplace: Marketplace;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpdated: () => void;
+}) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: marketplace.name,
@@ -1336,7 +1306,7 @@ function EditMarketplaceDialog({ marketplace, onUpdated }: { marketplace: Market
       feeFlat: marketplace.feeFlat,
       description: marketplace.description || '',
     });
-  }, [marketplace]);
+  }, [marketplace, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1351,105 +1321,89 @@ function EditMarketplaceDialog({ marketplace, onUpdated }: { marketplace: Market
 
       const result = await response.json();
       if (result.success) {
-        setOpen(false);
+        onOpenChange(false);
         onUpdated();
+        toast.success('Marketplace berhasil diperbarui');
+      } else {
+        toast.error(result.error || 'Gagal memperbarui marketplace');
       }
     } catch (err) {
       console.error('Failed to update marketplace:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm(`Hapus marketplace "${marketplace.name}"?`)) return;
-    
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/marketplaces/${marketplace.id}`, {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        setOpen(false);
-        onUpdated();
-      } else {
-        alert(result.error);
-      }
-    } catch (err) {
-      console.error('Failed to delete marketplace:', err);
+      toast.error('Terjadi kesalahan');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="mt-3 h-8 text-xs">
-          <Edit className="w-3 h-3 mr-1" />
-          Edit
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Marketplace</DialogTitle>
+          <DialogTitle className="text-base sm:text-lg">Edit Marketplace</DialogTitle>
+          <DialogDescription>Edit pengaturan untuk {marketplace.name}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Nama</Label>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs sm:text-sm">Nama</Label>
             <Input
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
+              className="h-9"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-xs">Fee Persentase (%)</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-[10px]">Fee %</Label>
               <Input
                 type="number"
                 step="0.01"
                 value={formData.feePercent}
                 onChange={(e) => setFormData(prev => ({ ...prev, feePercent: parseFloat(e.target.value) || 0 }))}
+                className="h-9"
               />
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Fee Flat (Rp)</Label>
+            <div className="space-y-1">
+              <Label className="text-[10px]">Fee Flat</Label>
               <Input
                 type="number"
                 value={formData.feeFlat}
                 onChange={(e) => setFormData(prev => ({ ...prev, feeFlat: parseFloat(e.target.value) || 0 }))}
+                className="h-9"
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label>Deskripsi / Catatan</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs sm:text-sm">Deskripsi</Label>
             <Textarea
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className="h-20"
+              rows={2}
+              className="text-sm"
             />
           </div>
-          <div className="flex gap-2">
-            <Button 
-              type="button" 
-              variant="destructive" 
-              className="flex-1 h-11 rounded-xl"
-              onClick={handleDelete}
-              disabled={loading}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Hapus
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" className="flex-1 h-9" onClick={() => onOpenChange(false)}>
+              Batal
             </Button>
-            <Button type="submit" className="flex-1 gradient-primary text-white h-11 rounded-xl" disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              Update
+            <Button type="submit" className="flex-1 gradient-primary text-white h-9" disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan'}
             </Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
   );
+}
+
+// Helper function
+function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return 'just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHour = Math.floor(diffMin / 60);
+  return `${diffHour}h ago`;
 }

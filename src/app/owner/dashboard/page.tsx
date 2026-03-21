@@ -48,7 +48,17 @@ import {
   Tag,
   FileText,
   Gift,
+  Sparkles,
 } from 'lucide-react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -186,12 +196,12 @@ export default function OwnerDashboardPage() {
     }
   }, [isAuthenticated, hasHydrated, user]);
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 1 minute
   useEffect(() => {
     if (isAuthenticated && hasHydrated && user?.role === 'owner') {
       refreshIntervalRef.current = setInterval(() => {
         fetchDashboard(transactionsPage, true);
-      }, 30000);
+      }, 60000);
     }
     return () => {
       if (refreshIntervalRef.current) {
@@ -272,48 +282,90 @@ export default function OwnerDashboardPage() {
   const notifications = (stats?.pendingCount || 0) + (stats?.verificationCount || 0);
   const partnerNotifications = data?.partnerNotifications || [];
 
+  // Time-based greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return { text: 'Selamat Pagi', emoji: '🌅' };
+    if (hour >= 12 && hour < 15) return { text: 'Selamat Siang', emoji: '☀️' };
+    if (hour >= 15 && hour < 18) return { text: 'Selamat Sore', emoji: '🌤️' };
+    return { text: 'Selamat Malam', emoji: '🌙' };
+  };
+  const greeting = getGreeting();
+
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-6 space-y-3 sm:space-y-4 pb-24 md:pb-6">
-      {/* Header with gradient */}
-      <div className="relative overflow-hidden rounded-xl sm:rounded-2xl gradient-primary p-4 sm:p-6 text-white">
-        <div className="absolute top-0 right-0 w-32 sm:w-48 h-32 sm:h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-20 sm:w-32 h-20 sm:h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-        <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-white/5 rounded-full" />
-        
-        <div className="relative flex items-center justify-between">
-          <div>
-            <p className="text-white/80 text-xs sm:text-sm">Selamat datang,</p>
-            <h1 className="text-xl sm:text-3xl font-bold">{user?.name?.split(' ')[0]}!</h1>
-            <p className="text-white/70 text-xs sm:text-sm mt-1 flex items-center gap-1.5">
-              <Calendar className="w-3 h-3" />
-              {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {lastUpdated && (
-              <div className="flex items-center gap-1.5 text-white/60 text-[10px] sm:text-xs">
-                {isRefreshing ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                )}
-                <span className="hidden sm:inline">
-                  {isRefreshing ? 'Refreshing...' : `Updated ${formatTimeAgo(lastUpdated)}`}
-                </span>
+    <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3 pb-24 md:pb-4">
+      {/* Modern Simple Welcome Section */}
+      <Card className="overflow-hidden border-0 shadow-lg">
+        <div className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            {/* Left: Greeting */}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                <span className="text-[10px] font-medium text-white/80">Owner Dashboard</span>
               </div>
-            )}
-            {notifications > 0 && (
-              <Badge className="bg-white/20 text-white animate-pulse text-[10px] sm:text-xs px-2 sm:px-3 py-1">
-                <Bell className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                {notifications} pending
-              </Badge>
-            )}
-            <Badge className="bg-white/20 text-white border-white/30 text-[10px] sm:text-xs px-2 sm:px-3 py-1">
-              Owner
-            </Badge>
+              <h1 className="text-xl sm:text-2xl font-bold text-white">
+                {greeting.text} {greeting.emoji}
+              </h1>
+              <p className="text-sm sm:text-base text-white/90 font-medium">
+                {user?.name?.split(' ')[0]}
+              </p>
+              <p className="text-[10px] sm:text-xs text-white/70 mt-1 flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+            </div>
+
+            {/* Right: Actions */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => fetchDashboard(transactionsPage)}
+                disabled={isRefreshing}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all disabled:opacity-50"
+                title="Refresh"
+              >
+                <RefreshCw className={cn("w-4 h-4 text-white", isRefreshing && "animate-spin")} />
+              </button>
+              {notifications > 0 && (
+                <button className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all">
+                  <Bell className="w-4 h-4 text-white" />
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center">
+                    {notifications}
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Stats Row */}
+          <div className="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-white/20">
+            <div className="text-center">
+              <p className="text-[9px] sm:text-[10px] text-white/70">Profit</p>
+              <p className="text-xs sm:text-sm font-bold text-white">
+                {dataLoading ? '...' : formatCompactCurrency(stats?.thisMonthProfit || 0)}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[9px] sm:text-[10px] text-white/70">Volume</p>
+              <p className="text-xs sm:text-sm font-bold text-white">
+                {dataLoading ? '...' : formatCompactCurrency(stats?.thisMonthVolume || 0)}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[9px] sm:text-[10px] text-white/70">Partner</p>
+              <p className="text-xs sm:text-sm font-bold text-white">
+                {dataLoading ? '...' : stats?.activePartners || 0}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[9px] sm:text-[10px] text-white/70">Trx</p>
+              <p className="text-xs sm:text-sm font-bold text-white">
+                {dataLoading ? '...' : stats?.totalTransactions || 0}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {error && (
         <Alert variant="destructive" className="text-xs sm:text-sm animate-fade-in">
@@ -660,14 +712,14 @@ export default function OwnerDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Volume Chart - Modern Design */}
+      {/* Volume Chart - Line Chart */}
       <Card className="glass-card animate-slide-up overflow-hidden">
-        <div className="h-1 gradient-primary" />
+        <div className="h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-primary" />
+                <Activity className="w-4 h-4 text-emerald-500" />
                 Volume 7 Hari Terakhir
               </CardTitle>
               <CardDescription className="text-[10px] sm:text-xs mt-1">
@@ -683,144 +735,69 @@ export default function OwnerDashboardPage() {
             </div>
             {stats?.dailyGrowth !== undefined && (
               <div className={cn(
-                "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium",
+                "flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-medium",
                 stats.dailyGrowth >= 0 
                   ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" 
                   : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
               )}>
-                {stats.dailyGrowth >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+                {stats.dailyGrowth >= 0 ? <ArrowUpRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <ArrowDownRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
                 {Math.abs(stats.dailyGrowth).toFixed(1)}%
               </div>
             )}
           </div>
         </CardHeader>
-        <CardContent className="px-3 sm:px-6 pb-4">
+        <CardContent className="px-2 sm:px-6 pb-3 sm:pb-4">
           {dataLoading ? (
-            <div className="flex items-end gap-1 sm:gap-2 h-36 sm:h-44">
-              {[...Array(7)].map((_, i) => <Skeleton key={i} className="flex-1 h-full rounded-t-xl" />)}
-            </div>
+            <Skeleton className="h-36 sm:h-44 w-full rounded-xl" />
+          ) : data?.last7DaysData && data.last7DaysData.length > 0 && data.last7DaysData.some(d => d.volume > 0) ? (
+            <ResponsiveContainer width="100%" height={160} className="sm:!h-[180px]">
+              <AreaChart data={data?.last7DaysData || []}>
+                <defs>
+                  <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                <XAxis 
+                  dataKey="dayName" 
+                  tick={{ fontSize: 9 }} 
+                  stroke="#9ca3af" 
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis 
+                  tick={{ fontSize: 9 }} 
+                  stroke="#9ca3af" 
+                  tickFormatter={(v) => `${(v/1000).toFixed(0)}K`} 
+                  width={35}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip 
+                  formatter={(value: number) => formatCurrency(value)}
+                  labelStyle={{ fontSize: 11 }}
+                  contentStyle={{ fontSize: 10, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="volume" 
+                  stroke="#10b981" 
+                  strokeWidth={3} 
+                  fillOpacity={1} 
+                  fill="url(#colorVolume)" 
+                  name="Volume" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           ) : (
-            <div className="space-y-3">
-              {(() => {
-                const chartData = data?.last7DaysData || [];
-                const maxVolume = Math.max(...chartData.map(d => d.volume), 0);
-                const totalVolume = chartData.reduce((sum, d) => sum + d.volume, 0);
-                const avgVolume = totalVolume / 7;
-                
-                if (chartData.length === 0 || totalVolume === 0) {
-                  return (
-                    <div className="flex flex-col items-center justify-center h-36 sm:h-44 text-muted-foreground bg-muted/30 rounded-xl">
-                      <BarChart3 className="w-10 h-10 mb-2 opacity-20" />
-                      <p className="text-xs sm:text-sm">Belum ada transaksi 7 hari terakhir</p>
-                    </div>
-                  );
-                }
-                
-                return (
-                  <div className="relative">
-                    {/* Average Line */}
-                    <div 
-                      className="absolute left-0 right-0 border-t-2 border-dashed border-amber-400/50 z-10"
-                      style={{ bottom: `${Math.max((avgVolume / maxVolume) * 100, 5)}%` }}
-                    >
-                      <span className="absolute right-0 -top-5 text-[9px] text-amber-600 bg-background/80 px-1 rounded">
-                        Avg: {formatCompactCurrency(avgVolume)}
-                      </span>
-                    </div>
-                    
-                    {/* Chart Bars */}
-                    <div className="flex items-end gap-1 sm:gap-2 h-36 sm:h-44 pt-6">
-                      {chartData.map((day, index) => {
-                        const heightPercent = maxVolume > 0 ? (day.volume / maxVolume) * 100 : 0;
-                        const isToday = index === chartData.length - 1;
-                        const isAboveAvg = day.volume >= avgVolume;
-                        const hasData = day.volume > 0;
-                        
-                        return (
-                          <div key={index} className="flex-1 flex flex-col items-center gap-1 sm:gap-1.5 group relative">
-                            {/* Tooltip */}
-                            <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 absolute -top-14 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-[10px] px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap z-20 border">
-                              <div className="font-semibold">{formatCompactCurrency(day.volume)}</div>
-                              <div className="text-muted-foreground text-[9px]">{day.count} transaksi</div>
-                              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-popover border-r border-b" />
-                            </div>
-                            
-                            {/* Bar Container */}
-                            <div className="w-full flex-1 flex flex-col justify-end items-center relative" style={{ minHeight: '80px' }}>
-                              {/* Volume amount on top */}
-                              {hasData && (
-                                <span className={cn(
-                                  "text-[9px] sm:text-[10px] font-medium mb-1 transition-opacity",
-                                  "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
-                                  isAboveAvg ? "text-emerald-600" : "text-muted-foreground"
-                                )}>
-                                  {formatCompactCurrency(day.volume)}
-                                </span>
-                              )}
-                              
-                              {/* Bar */}
-                              <div
-                                className={cn(
-                                  "w-full rounded-t-lg sm:rounded-t-xl transition-all duration-300 relative overflow-hidden",
-                                  hasData ? "cursor-pointer hover:opacity-90" : ""
-                                )}
-                                style={{ 
-                                  height: `${Math.max(heightPercent, 3)}%`,
-                                  minHeight: hasData ? '8px' : '3px'
-                                }}
-                              >
-                                {/* Gradient Fill */}
-                                <div className={cn(
-                                  "absolute inset-0",
-                                  isToday 
-                                    ? "bg-gradient-to-t from-primary via-primary to-primary/70" 
-                                    : isAboveAvg
-                                      ? "bg-gradient-to-t from-emerald-500 via-emerald-400 to-emerald-300"
-                                      : "bg-gradient-to-t from-slate-400 via-slate-300 to-slate-200 dark:from-slate-600 dark:via-slate-500 dark:to-slate-400"
-                                )} />
-                                
-                                {/* Shine effect */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                                
-                                {/* Pulse animation for today */}
-                                {isToday && hasData && (
-                                  <div className="absolute inset-0 animate-pulse bg-primary/30" />
-                                )}
-                              </div>
-                            </div>
-                            
-                            {/* Day Label */}
-                            <div className={cn(
-                              "text-[9px] sm:text-[10px] font-medium py-1 px-1.5 rounded-md transition-colors",
-                              isToday 
-                                ? "bg-primary text-primary-foreground" 
-                                : hasData && isAboveAvg
-                                  ? "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30"
-                                  : "text-muted-foreground"
-                            )}>
-                              {day.dayName}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
+            <div className="h-36 sm:h-44 flex items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                <p className="text-xs sm:text-sm">Belum ada transaksi 7 hari terakhir</p>
+              </div>
             </div>
           )}
-          
-          {/* Legend */}
-          <div className="flex items-center justify-center gap-4 sm:gap-6 mt-4 pt-3 border-t border-dashed">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-sm bg-gradient-to-t from-emerald-500 to-emerald-300" />
-              <span className="text-[10px] text-muted-foreground">Di atas rata-rata</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-sm bg-gradient-to-t from-slate-400 to-slate-200" />
-              <span className="text-[10px] text-muted-foreground">Di bawah rata-rata</span>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
@@ -1019,13 +996,14 @@ export default function OwnerDashboardPage() {
         </Card>
       </div>
 
-      {/* Recent Activity Feed */}
-      <Card className="glass-card animate-slide-up">
+      {/* Recent Activity Feed - Modern Design */}
+      <Card className="glass-card animate-slide-up overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-emerald-500 via-primary to-purple-500" />
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-              <Clock className="w-4 h-4 text-primary" />
-              Aktivitas Terbaru
+              <Sparkles className="w-4 h-4 text-primary" />
+              Transaksi Terbaru
             </CardTitle>
             <Button variant="ghost" size="sm" asChild className="tap-highlight h-7 sm:h-8 text-[10px] sm:text-xs">
               <Link href="/owner/dashboard/transactions">
@@ -1036,151 +1014,168 @@ export default function OwnerDashboardPage() {
           </div>
           <CardDescription className="text-[10px] sm:text-xs">
             {data?.transactionsPagination ? (
-              <>
-                Menampilkan {((data.transactionsPagination.currentPage - 1) * 10) + 1}-{Math.min(data.transactionsPagination.currentPage * 10, data.transactionsPagination.totalCount)} dari {data.transactionsPagination.totalCount} transaksi
-              </>
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {((data.transactionsPagination.currentPage - 1) * 10) + 1}-{Math.min(data.transactionsPagination.currentPage * 10, data.transactionsPagination.totalCount)} dari {data.transactionsPagination.totalCount} transaksi
+              </span>
             ) : '10 transaksi terakhir'}
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-1 sm:px-6">
+        <CardContent className="px-2 sm:px-6">
           {dataLoading ? (
             <div className="space-y-2">
-              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 sm:h-20 rounded-lg sm:rounded-xl" />)}
+              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 sm:h-16 rounded-xl" />)}
             </div>
           ) : data?.recentTransactions?.length ? (
             <>
-              <div className="space-y-1 sm:space-y-2">
-                {data.recentTransactions.map((tx) => (
-                  <div key={tx.id} className="py-2 sm:py-3 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors tap-highlight">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
-                          <p className="font-medium text-xs sm:text-sm truncate">{tx.customer.name}</p>
-                          <StatusBadge status={tx.status} />
+              <div className="space-y-1.5">
+                {data.recentTransactions.map((tx) => {
+                  const statusConfig = {
+                    pending: { bg: 'bg-gradient-to-br from-orange-500 to-amber-600', icon: Clock },
+                    verification: { bg: 'bg-gradient-to-br from-violet-500 to-purple-600', icon: AlertCircle },
+                    process: { bg: 'bg-gradient-to-br from-cyan-500 to-blue-600', icon: Loader2 },
+                    success: { bg: 'bg-gradient-to-br from-emerald-500 to-green-600', icon: CheckCircle },
+                    failed: { bg: 'bg-gradient-to-br from-red-500 to-rose-600', icon: XCircle },
+                  };
+                  const config = statusConfig[tx.status as keyof typeof statusConfig] || statusConfig.pending;
+                  const StatusIcon = config.icon;
+                  
+                  return (
+                    <div key={tx.id} className="group relative overflow-hidden rounded-xl bg-muted/20 hover:bg-muted/40 transition-all duration-200 border border-transparent hover:border-primary/20">
+                      <div className="flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3">
+                        {/* Status Icon */}
+                        <div className={cn(
+                          "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg",
+                          config.bg
+                        )}>
+                          <StatusIcon className={cn("w-4 h-4 sm:w-5 sm:h-5 text-white", tx.status === 'process' && "animate-spin")} />
                         </div>
-                        <p className="text-xs sm:text-sm font-medium text-primary">{formatCurrency(tx.nominal)}</p>
-                        <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
-                          <p className="text-[9px] sm:text-[10px] text-muted-foreground">
-                            {tx.paymentType.name}
-                          </p>
-                          {tx.partner && (
-                            <>
-                              <span className="text-[9px] sm:text-[10px] text-muted-foreground">•</span>
-                              <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">
-                                {tx.partner.name}
-                              </p>
-                            </>
-                          )}
+                        
+                        {/* Main Content */}
+                        <div className="min-w-0 flex-1">
+                          {/* Top Row: Customer + Status */}
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <p className="font-semibold text-xs sm:text-sm truncate">{tx.customer.name}</p>
+                            <Badge className={cn(
+                              "text-[8px] sm:text-[9px] px-1.5 sm:px-2 capitalize",
+                              tx.status === 'success' && "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+                              tx.status === 'pending' && "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+                              tx.status === 'verification' && "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+                              tx.status === 'process' && "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400",
+                              tx.status === 'failed' && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            )}>
+                              {tx.status}
+                            </Badge>
+                          </div>
+                          
+                          {/* Amount */}
+                          <p className="text-sm sm:text-base font-bold text-primary">{formatCurrency(tx.nominal)}</p>
+                          
+                          {/* Bottom Row: Payment Type + Partner + Time */}
+                          <div className="flex items-center gap-1.5 mt-0.5 text-[9px] sm:text-[10px] text-muted-foreground">
+                            <span className="truncate max-w-[80px] sm:max-w-none">{tx.paymentType.name}</span>
+                            {tx.partner && (
+                              <>
+                                <span>•</span>
+                                <span className="truncate max-w-[60px] sm:max-w-none">{tx.partner.name}</span>
+                              </>
+                            )}
+                            <span>•</span>
+                            <span>{formatDateAgo(tx.createdAt)}</span>
+                          </div>
                         </div>
-                        <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 sm:mt-1">
-                          {formatDateAgo(tx.createdAt)}
-                        </p>
-                      </div>
-                      {/* Quick Status Buttons */}
-                      {tx.status !== 'success' && tx.status !== 'failed' && (
-                        <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
-                          {tx.status === 'pending' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 sm:h-8 px-2 sm:px-3 text-[9px] sm:text-[10px] border-green-200 text-green-600 hover:bg-green-50"
-                              onClick={() => updateTransactionStatus(tx.id, 'process')}
-                              disabled={updatingStatus === tx.id}
-                            >
-                              {updatingStatus === tx.id ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <>
-                                  <CheckCircle className="w-3 h-3 sm:mr-1" />
-                                  <span className="hidden sm:inline">Proses</span>
-                                </>
-                              )}
-                            </Button>
-                          )}
-                          {tx.status === 'verification' && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 sm:h-8 px-2 sm:px-3 text-[9px] sm:text-[10px] border-green-200 text-green-600 hover:bg-green-50"
-                                onClick={() => updateTransactionStatus(tx.id, 'success')}
+                        
+                        {/* Quick Actions */}
+                        {tx.status !== 'success' && tx.status !== 'failed' && (
+                          <div className="flex items-center gap-1 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            {tx.status === 'pending' && (
+                              <button
+                                onClick={() => updateTransactionStatus(tx.id, 'process')}
                                 disabled={updatingStatus === tx.id}
+                                className="w-8 h-8 rounded-lg bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center transition-colors disabled:opacity-50"
                               >
                                 {updatingStatus === tx.id ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  <Loader2 className="w-4 h-4 text-white animate-spin" />
                                 ) : (
-                                  <CheckCircle className="w-3 h-3" />
+                                  <ArrowUpRight className="w-4 h-4 text-white" />
                                 )}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 sm:h-8 px-2 sm:px-3 text-[9px] sm:text-[10px] border-red-200 text-red-600 hover:bg-red-50"
-                                onClick={() => updateTransactionStatus(tx.id, 'failed')}
+                              </button>
+                            )}
+                            {tx.status === 'verification' && (
+                              <>
+                                <button
+                                  onClick={() => updateTransactionStatus(tx.id, 'success')}
+                                  disabled={updatingStatus === tx.id}
+                                  className="w-8 h-8 rounded-lg bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center transition-colors disabled:opacity-50"
+                                >
+                                  {updatingStatus === tx.id ? (
+                                    <Loader2 className="w-4 h-4 text-white animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="w-4 h-4 text-white" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => updateTransactionStatus(tx.id, 'failed')}
+                                  disabled={updatingStatus === tx.id}
+                                  className="w-8 h-8 rounded-lg bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors disabled:opacity-50"
+                                >
+                                  <XCircle className="w-4 h-4 text-white" />
+                                </button>
+                              </>
+                            )}
+                            {tx.status === 'process' && (
+                              <button
+                                onClick={() => updateTransactionStatus(tx.id, 'verification')}
                                 disabled={updatingStatus === tx.id}
+                                className="w-8 h-8 rounded-lg bg-violet-500 hover:bg-violet-600 flex items-center justify-center transition-colors disabled:opacity-50"
                               >
-                                <XCircle className="w-3 h-3" />
-                              </Button>
-                            </>
-                          )}
-                          {tx.status === 'process' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 sm:h-8 px-2 sm:px-3 text-[9px] sm:text-[10px] border-amber-200 text-amber-600 hover:bg-amber-50"
-                              onClick={() => updateTransactionStatus(tx.id, 'verification')}
-                              disabled={updatingStatus === tx.id}
-                            >
-                              {updatingStatus === tx.id ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <>
-                                  <AlertCircle className="w-3 h-3 sm:mr-1" />
-                                  <span className="hidden sm:inline">Verif</span>
-                                </>
-                              )}
-                            </Button>
-                          )}
-                        </div>
-                      )}
+                                {updatingStatus === tx.id ? (
+                                  <Loader2 className="w-4 h-4 text-white animate-spin" />
+                                ) : (
+                                  <AlertCircle className="w-4 h-4 text-white" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               
               {/* Pagination Controls */}
               {data.transactionsPagination && data.transactionsPagination.totalPages > 1 && (
-                <div className="flex items-center justify-between pt-3 sm:pt-4 mt-3 sm:mt-4 border-t">
+                <div className="flex items-center justify-between pt-3 mt-3 border-t border-dashed">
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
                     Halaman {data.transactionsPagination.currentPage} dari {data.transactionsPagination.totalPages}
                   </p>
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs"
+                  <div className="flex items-center gap-1.5">
+                    <button
                       onClick={() => goToTransactionsPage(transactionsPage - 1)}
                       disabled={transactionsPage === 1 || dataLoading}
+                      className="h-8 px-3 rounded-lg border bg-background hover:bg-muted transition-colors disabled:opacity-50 text-xs flex items-center gap-1"
                     >
-                      <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-0.5 sm:mr-1" />
+                      <ChevronLeft className="w-3.5 h-3.5" />
                       Prev
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs"
+                    </button>
+                    <button
                       onClick={() => goToTransactionsPage(transactionsPage + 1)}
                       disabled={transactionsPage === data.transactionsPagination.totalPages || dataLoading}
+                      className="h-8 px-3 rounded-lg border bg-background hover:bg-muted transition-colors disabled:opacity-50 text-xs flex items-center gap-1"
                     >
                       Next
-                      <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-0.5 sm:ml-1" />
-                    </Button>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               )}
             </>
           ) : (
-            <div className="text-center text-muted-foreground py-6 sm:py-8 text-xs sm:text-sm">Belum ada transaksi</div>
+            <div className="text-center py-8">
+              <Wallet className="w-10 h-10 mx-auto mb-2 text-muted-foreground opacity-20" />
+              <p className="text-xs sm:text-sm text-muted-foreground">Belum ada transaksi</p>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -1247,30 +1242,30 @@ function KPICard({
   return (
     <Card className="glass-card overflow-hidden relative">
       <div className={cn("absolute inset-x-0 top-0 h-1 bg-gradient-to-r", gradient)} />
-      <CardContent className="p-3 sm:p-4">
+      <CardContent className="p-2.5 sm:p-4">
         {loading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-6 w-24" />
+          <div className="space-y-1.5">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-5 w-20" />
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-0.5 sm:space-y-1">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] sm:text-xs text-muted-foreground">{title}</p>
-              <div className={cn("w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br flex items-center justify-center", gradient)}>
-                <Icon className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+              <p className="text-[9px] sm:text-xs text-muted-foreground line-clamp-1">{title}</p>
+              <div className={cn("w-5 h-5 sm:w-7 sm:h-7 rounded-md sm:rounded-lg bg-gradient-to-br flex items-center justify-center flex-shrink-0", gradient)}>
+                <Icon className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white" />
               </div>
             </div>
-            <p className="text-base sm:text-xl font-bold">{value}</p>
+            <p className="text-sm sm:text-lg lg:text-xl font-bold truncate">{value}</p>
             {change !== undefined && !isNeutral && (
-              <div className={cn("text-[10px] sm:text-xs flex items-center gap-1", change >= 0 ? 'text-green-600' : 'text-red-600')}>
-                {change >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                {change >= 0 ? '+' : ''}{change.toFixed(1)}%
-                {subtitle && <span className="text-muted-foreground ml-1">{subtitle}</span>}
+              <div className={cn("text-[9px] sm:text-xs flex items-center gap-0.5", change >= 0 ? 'text-green-600' : 'text-red-600')}>
+                {change >= 0 ? <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                <span>{change >= 0 ? '+' : ''}{change.toFixed(1)}%</span>
+                {subtitle && <span className="text-muted-foreground hidden sm:inline ml-1">{subtitle}</span>}
               </div>
             )}
             {sparkline && sparkline.length > 0 && (
-              <div className="h-6 flex items-end gap-0.5 mt-2">
+              <div className="h-4 sm:h-6 flex items-end gap-0.5 mt-1 sm:mt-2">
                 {sparkline.slice(-7).map((v, i) => {
                   const max = Math.max(...sparkline);
                   const height = max > 0 ? (v / max) * 100 : 0;

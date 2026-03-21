@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { SimplePagination } from '@/components/ui/pagination';
 import {
@@ -21,8 +20,14 @@ import {
   Calculator, TrendingUp, TrendingDown, Wallet, CreditCard, Info,
   CheckCircle, XCircle, ChevronLeft, ChevronRight as ChevronRightIcon,
   RefreshCw, Eye, Zap, Filter, Calendar, ArrowRightLeft, Sparkles,
-  Store, DollarSign, PiggyBank, Building2, ArrowRight, MinusCircle,
+  Store, DollarSign, PiggyBank, Building2, ArrowRight, MinusCircle, Copy,
+  BarChart3, PieChart, LineChart, Activity, Layers, Users,
 } from 'lucide-react';
+import {
+  AreaChart, Area, BarChart, Bar, PieChart as RePieChart, Pie, Cell,
+  LineChart as ReLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend, RadialBarChart, RadialBar,
+} from 'recharts';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -30,18 +35,37 @@ import { toast } from 'sonner';
 interface AnalyticsData {
   forecast: {
     currentMonthProfit: number;
+    currentMonthVolume: number;
     avgDailyProfit: number;
+    avgDailyVolume: number;
     projectedProfit: number;
+    projectedVolume: number;
     daysRemaining: number;
     profitChange: number;
+    volumeChange: number;
+    lastMonthProfit: number;
+    lastMonthVolume: number;
+    daysPassed: number;
+    daysInMonth: number;
   };
   feeAnalysis: {
     avgPaymentFee: number;
     avgPlatformFee: number;
     avgMarginPercent: number;
+    totalPaymentFee: number;
+    totalPlatformFee: number;
+    totalNetMargin: number;
+    totalOwnerProfit: number;
+    totalTransactions: number;
+    totalVolume: number;
   };
+  dailyTrends: Array<{ date: string; day: string; profit: number; volume: number; count: number; }>;
   statusCounts: Record<string, number>;
-  paymentTypes: Array<{ id: string; name: string; transactionCount: number; totalVolume: number; }>;
+  statusDetails: Record<string, { count: number; volume: number; profit: number; }>;
+  paymentTypes: Array<{ id: string; name: string; transactionCount: number; totalVolume: number; totalProfit: number; successRate: number; }>;
+  partnerStats: Array<{ id: string; name: string; tier: string; last30DaysVolume: number; last30DaysTransactions: number; }>;
+  marketplaceAnalysis: Array<{ id: string; name: string; transactionCount: number; totalVolume: number; }>;
+  peakHours: Array<{ hour: number; count: number; }>;
 }
 
 interface Transaction {
@@ -57,15 +81,15 @@ interface Transaction {
   status: string;
   notes: string | null;
   createdAt: string;
-  customer: { id: string; name: string; phone: string; city?: string; };
+  customer: { id: string; name: string; phone: string; city?: string; bankName?: string; bankAccount?: string; bankHolder?: string; };
   paymentType: { id: string; name: string; };
   marketplace?: { id: string; name: string; feePercent: number; isActive?: boolean; } | null;
   partner?: { id: string; name: string; tier: string; commission?: number; } | null;
 }
 
-interface PaymentType { id: string; name: string; onlineFeePercent: number; onlineFeeFlat: number; codFeePercent: number; codFeeFlat: number; isActive: boolean; }
+interface PaymentType { id: string; name: string; onlineFeePercent: number; onlineFeeFlat: number; codFeePercent: number; codFeeFlat: number; threshold: number; isActive: boolean; }
 interface Partner { id: string; name: string; commission: number; tier: string; status: string; }
-interface Customer { id: string; name: string; phone: string; city?: string; totalTransactions: number; }
+interface Customer { id: string; name: string; phone: string; city?: string; bankName?: string; bankAccount?: string; bankHolder?: string; totalTransactions: number; }
 interface Marketplace { id: string; name: string; feePercent: number; feeFlat?: number; isActive: boolean; }
 
 const STATUS_CONFIG = {
@@ -85,6 +109,7 @@ export default function OwnerTransactionsPage() {
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [mainTab, setMainTab] = useState<'transactions' | 'analytics'>('transactions');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -115,13 +140,13 @@ export default function OwnerTransactionsPage() {
     }
   }, [isAuthenticated, hasHydrated, user, activeTab, currentPage]);
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 1 minute
   useEffect(() => {
     if (isAuthenticated && hasHydrated && user?.role === 'owner') {
       refreshIntervalRef.current = setInterval(() => {
         fetchTransactions(true);
         fetchAnalytics();
-      }, 30000);
+      }, 60000);
     }
     return () => {
       if (refreshIntervalRef.current) {
@@ -217,13 +242,13 @@ export default function OwnerTransactionsPage() {
     <div className="container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3 pb-20 md:pb-4">
       {/* Header with Last Updated */}
       <div className="flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold flex items-center gap-2">
-            <ArrowRightLeft className="w-5 h-5 text-primary" />
-            Transaksi
+        <div className="min-w-0 flex-1">
+          <h1 className="text-base sm:text-lg font-bold flex items-center gap-2">
+            <ArrowRightLeft className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+            <span className="truncate">Transaksi</span>
           </h1>
           <div className="flex items-center gap-2 mt-0.5">
-            <p className="text-xs text-muted-foreground">Kelola semua transaksi</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Kelola semua transaksi</p>
             {lastUpdated && (
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                 {isRefreshing ? (
@@ -231,140 +256,138 @@ export default function OwnerTransactionsPage() {
                 ) : (
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                 )}
-                <span>{isRefreshing ? 'Refreshing...' : formatTimeAgo(lastUpdated)}</span>
+                <span className="hidden sm:inline">{isRefreshing ? 'Refreshing...' : formatTimeAgo(lastUpdated)}</span>
               </div>
             )}
           </div>
         </div>
-        <Button onClick={() => setNewTxOpen(true)} size="sm" className="gradient-primary text-white rounded-lg h-9 px-3 shadow-md">
-          <Plus className="w-4 h-4 mr-1" /> Baru
-        </Button>
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          <Button
+            onClick={() => { fetchTransactions(); fetchAnalytics(); }}
+            size="sm"
+            variant="outline"
+            className="h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-lg"
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", isRefreshing && "animate-spin")} />
+          </Button>
+          <Button onClick={() => setNewTxOpen(true)} size="sm" className="gradient-primary text-white rounded-lg h-8 sm:h-9 px-2.5 sm:px-3 shadow-md">
+            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" /> 
+            <span className="hidden sm:inline">Baru</span>
+          </Button>
+        </div>
       </div>
 
-      {/* Quick Stats Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <StatCard
-          title="Proyeksi Bulan Ini"
-          value={analytics?.forecast.projectedProfit || 0}
-          change={analytics?.forecast.profitChange || 0}
-          loading={analyticsLoading}
-          icon={<Target className="w-4 h-4" />}
-          gradient="from-emerald-500 to-teal-600"
-        />
-        <StatCard
-          title="Net Margin"
-          value={`${(analytics?.feeAnalysis.avgMarginPercent || 0).toFixed(2)}%`}
-          isPercent
-          loading={analyticsLoading}
-          icon={<Percent className="w-4 h-4" />}
-          gradient="from-amber-500 to-orange-600"
-        />
-        <StatCard
-          title="Pending"
-          value={analytics?.statusCounts.pending || 0}
-          isCount
-          loading={analyticsLoading}
-          icon={<Clock className="w-4 h-4" />}
-          gradient="from-orange-500 to-amber-600"
-          highlight={analytics?.statusCounts.pending ? analytics.statusCounts.pending > 0 : false}
-        />
-        <StatCard
-          title="Verifikasi"
-          value={analytics?.statusCounts.verification || 0}
-          isCount
-          loading={analyticsLoading}
-          icon={<AlertCircle className="w-4 h-4" />}
-          gradient="from-blue-500 to-indigo-600"
-          highlight={analytics?.statusCounts.verification ? analytics.statusCounts.verification > 0 : false}
-        />
+      {/* Main Tabs: Transaksi & Analytics */}
+      <div className="flex gap-1 p-1 bg-muted/50 rounded-xl">
+        <button
+          onClick={() => setMainTab('transactions')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-xs font-medium transition-all",
+            mainTab === 'transactions' 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Wallet className="w-4 h-4" />
+          Transaksi
+        </button>
+        <button
+          onClick={() => setMainTab('analytics')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-xs font-medium transition-all",
+            mainTab === 'analytics' 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <BarChart3 className="w-4 h-4" />
+          Analytics
+        </button>
       </div>
 
-      {/* Payment Type Quick Stats */}
-      {analytics && analytics.paymentTypes.length > 0 && (
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-thin pb-1">
-              <span className="text-xs text-muted-foreground flex-shrink-0">Payment:</span>
-              {analytics.paymentTypes.slice(0, 6).map((pt) => (
-                <div key={pt.id} className="flex-shrink-0 px-3 py-1.5 bg-muted/50 rounded-full text-xs flex items-center gap-1.5">
-                  <span className="font-medium">{pt.name}</span>
-                  <Badge variant="secondary" className="text-[10px] px-1 h-4">{pt.transactionCount}</Badge>
-                </div>
+      {/* Tab Content */}
+      {mainTab === 'transactions' ? (
+        <div className="space-y-3">
+          {/* Status Filter Pills */}
+          <div className="overflow-x-auto -mx-3 px-3 scrollbar-hide">
+            <div className="flex gap-1.5 min-w-max pb-1">
+              {[
+                { value: 'all', label: 'Semua' },
+                { value: 'pending', label: 'Pending', count: analytics?.statusCounts.pending, color: 'orange' },
+                { value: 'verification', label: 'Verif', count: analytics?.statusCounts.verification, color: 'blue' },
+                { value: 'process', label: 'Proses', count: analytics?.statusCounts.process, color: 'cyan' },
+                { value: 'success', label: 'Sukses', count: analytics?.statusCounts.success, color: 'green' },
+                { value: 'failed', label: 'Gagal', count: analytics?.statusCounts.failed, color: 'red' },
+              ].map(tab => (
+                <button
+                  key={tab.value}
+                  onClick={() => setActiveTab(tab.value)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-all whitespace-nowrap",
+                    activeTab === tab.value 
+                      ? cn(
+                          tab.color === 'orange' && "bg-orange-500 text-white shadow-sm",
+                          tab.color === 'blue' && "bg-blue-500 text-white shadow-sm",
+                          tab.color === 'cyan' && "bg-cyan-500 text-white shadow-sm",
+                          tab.color === 'green' && "bg-green-500 text-white shadow-sm",
+                          tab.color === 'red' && "bg-red-500 text-white shadow-sm",
+                          !tab.color && "bg-primary text-primary-foreground shadow-sm"
+                        )
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {tab.label}
+                  {tab.count !== undefined && tab.count > 0 && (
+                    <span className={cn("ml-1", activeTab === tab.value ? "opacity-80" : "opacity-60")}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Search & Tabs */}
-      <div className="space-y-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Cari order ID, nama, no. WA..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-10 rounded-xl"
-          />
-        </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full h-auto flex-wrap gap-1 bg-transparent p-0">
-            {[
-              { value: 'all', label: 'Semua' },
-              { value: 'pending', label: 'Pending', count: analytics?.statusCounts.pending },
-              { value: 'verification', label: 'Verifikasi', count: analytics?.statusCounts.verification },
-              { value: 'process', label: 'Proses', count: analytics?.statusCounts.process },
-              { value: 'success', label: 'Berhasil', count: analytics?.statusCounts.success },
-              { value: 'failed', label: 'Gagal', count: analytics?.statusCounts.failed },
-            ].map(tab => (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className={cn(
-                  "text-[10px] sm:text-xs px-2 sm:px-3 py-1 rounded-md h-7 transition-all",
-                  activeTab === tab.value && tab.value === 'pending' && "bg-orange-100 text-orange-700",
-                  activeTab === tab.value && tab.value === 'verification' && "bg-blue-100 text-blue-700",
-                  activeTab === tab.value && tab.value === 'process' && "bg-cyan-100 text-cyan-700",
-                  activeTab === tab.value && tab.value === 'success' && "bg-green-100 text-green-700",
-                  activeTab === tab.value && tab.value === 'failed' && "bg-red-100 text-red-700"
-                )}
-              >
-                {tab.label}
-                {tab.count !== undefined && tab.count > 0 && (
-                  <Badge className="ml-1 h-4 px-1 text-[9px]">{tab.count}</Badge>
-                )}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      </div>
-
-      {/* Transaction List */}
-      <div className="space-y-2">
-        {loading ? (
-          [...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
-        ) : filtered.length > 0 ? (
-          filtered.map(tx => (
-            <TxCard key={tx.id} tx={tx} onClick={() => { setSelectedTransaction(tx); setDetailOpen(true); }} />
-          ))
-        ) : (
-          <div className="text-center py-12">
-            <Wallet className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
-            <p className="text-sm text-muted-foreground">Tidak ada transaksi</p>
           </div>
-        )}
-      </div>
 
-      {/* Pagination */}
-      {!loading && totalPages > 1 && (
-        <SimplePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          itemsPerPage={ITEMS_PER_PAGE}
-          onPageChange={setCurrentPage}
-        />
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+            <Input
+              placeholder="Cari order ID, nama, no. WA..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 sm:pl-10 h-9 sm:h-10 rounded-xl text-sm"
+            />
+          </div>
+
+          {/* Transaction List */}
+          <div className="space-y-2">
+            {loading ? (
+              [...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 sm:h-20 rounded-xl" />)
+            ) : filtered.length > 0 ? (
+              filtered.map(tx => (
+                <TxCard key={tx.id} tx={tx} onClick={() => { setSelectedTransaction(tx); setDetailOpen(true); }} />
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <Wallet className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+                <p className="text-xs sm:text-sm text-muted-foreground">Tidak ada transaksi</p>
+              </div>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {!loading && totalPages > 1 && (
+            <SimplePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setCurrentPage}
+            />
+          )}
+        </div>
+      ) : (
+        <ModernAnalyticsDashboard analytics={analytics} loading={analyticsLoading} />
       )}
 
       {/* Dialogs */}
@@ -378,6 +401,329 @@ export default function OwnerTransactionsPage() {
         updating={updatingStatus}
       />
     </div>
+  );
+}
+
+// Modern Analytics Dashboard Component
+function ModernAnalyticsDashboard({ analytics, loading }: { analytics: AnalyticsData | null; loading: boolean }) {
+  const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+  
+  // Prepare data for charts
+  const statusChartData = analytics ? [
+    { name: 'Berhasil', value: analytics.statusCounts.success, color: '#22c55e' },
+    { name: 'Proses', value: analytics.statusCounts.process, color: '#3b82f6' },
+    { name: 'Verifikasi', value: analytics.statusCounts.verification, color: '#8b5cf6' },
+    { name: 'Pending', value: analytics.statusCounts.pending, color: '#f59e0b' },
+    { name: 'Gagal', value: analytics.statusCounts.failed, color: '#ef4444' },
+  ].filter(d => d.value > 0) : [];
+
+  const paymentTypePieData = analytics?.paymentTypes.slice(0, 6).map((pt, i) => ({
+    name: pt.name,
+    value: pt.transactionCount,
+    volume: pt.totalVolume,
+    fill: COLORS[i % COLORS.length],
+  })) || [];
+
+  if (loading) {
+    return (
+      <div className="space-y-2 sm:space-y-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-16 sm:h-24 rounded-lg sm:rounded-xl" />)}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
+          <Skeleton className="h-48 sm:h-64 rounded-lg sm:rounded-xl" />
+          <Skeleton className="h-48 sm:h-64 rounded-lg sm:rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 sm:space-y-3">
+      {/* KPI Cards Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+        <ModernKPICard
+          title="Proyeksi Profit"
+          value={analytics?.forecast.projectedProfit || 0}
+          subtitle={`Sisa ${analytics?.forecast.daysRemaining} hari`}
+          change={analytics?.forecast.profitChange}
+          icon={<Target className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="emerald"
+        />
+        <ModernKPICard
+          title="Profit Bulan Ini"
+          value={analytics?.forecast.currentMonthProfit || 0}
+          subtitle={`${analytics?.forecast.daysPassed}/${analytics?.forecast.daysInMonth} hari`}
+          icon={<TrendingUp className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="blue"
+        />
+        <ModernKPICard
+          title="Volume Bulan Ini"
+          value={analytics?.forecast.currentMonthVolume || 0}
+          subtitle={`${analytics?.feeAnalysis.totalTransactions} transaksi`}
+          icon={<Wallet className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="amber"
+        />
+        <ModernKPICard
+          title="Net Margin"
+          value={`${(analytics?.feeAnalysis.avgMarginPercent || 0).toFixed(2)}%`}
+          subtitle="Rata-rata margin"
+          icon={<Percent className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="purple"
+          isPercent
+        />
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
+        {/* Profit Trend Chart */}
+        <Card className="glass-card">
+          <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+              <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+              Tren 7 Hari Terakhir
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
+            {analytics && analytics.dailyTrends.length > 0 ? (
+              <ResponsiveContainer width="100%" height={160} className="sm:h-[200px]">
+                <AreaChart data={analytics.dailyTrends}>
+                  <defs>
+                    <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                  <XAxis dataKey="day" tick={{ fontSize: 9 }} stroke="#9ca3af" />
+                  <YAxis tick={{ fontSize: 9 }} stroke="#9ca3af" tickFormatter={(v) => `${(v/1000).toFixed(0)}K`} width={35} />
+                  <Tooltip 
+                    formatter={(value: number) => formatCurrency(value)}
+                    labelStyle={{ fontSize: 11 }}
+                    contentStyle={{ fontSize: 10, borderRadius: 6 }}
+                  />
+                  <Area type="monotone" dataKey="profit" stroke="#22c55e" strokeWidth={2} fillOpacity={1} fill="url(#colorProfit)" name="Profit" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[160px] sm:h-[200px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
+                Belum ada data
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Status Distribution */}
+        <Card className="glass-card">
+          <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+              <PieChart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+              Distribusi Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
+            {statusChartData.length > 0 ? (
+              <div className="flex items-center gap-2 sm:gap-4">
+                <ResponsiveContainer width="45%" height={140} className="sm:h-[180px]">
+                  <RePieChart>
+                    <Pie
+                      data={statusChartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={30}
+                      outerRadius={55}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {statusChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => `${value} trx`} />
+                  </RePieChart>
+                </ResponsiveContainer>
+                <div className="flex-1 space-y-1 sm:space-y-1.5">
+                  {statusChartData.map((item) => (
+                    <div key={item.name} className="flex items-center justify-between text-[10px] sm:text-xs">
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="text-muted-foreground">{item.name}</span>
+                      </div>
+                      <span className="font-medium">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
+                Belum ada data
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Payment Types & Volume Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
+        {/* Payment Type Distribution */}
+        <Card className="glass-card">
+          <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+              <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+              Payment Type (30 Hari)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
+            {paymentTypePieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={140} className="sm:h-[180px]">
+                <BarChart data={paymentTypePieData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 9 }} stroke="#9ca3af" />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} stroke="#9ca3af" width={55} />
+                  <Tooltip formatter={(value: number) => `${value} trx`} contentStyle={{ fontSize: 10, borderRadius: 6 }} />
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                    {paymentTypePieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
+                Belum ada data
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Quick Stats Grid */}
+        <Card className="glass-card">
+          <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+              <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+              Ringkasan Fee
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
+            <div className="grid grid-cols-2 gap-1.5 sm:gap-3">
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg sm:rounded-xl">
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground">Total Payment Fee</p>
+                <p className="text-xs sm:text-sm font-bold text-green-600 truncate">{formatCurrency(analytics?.feeAnalysis.totalPaymentFee || 0)}</p>
+              </div>
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-lg sm:rounded-xl">
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground">Total Platform Fee</p>
+                <p className="text-xs sm:text-sm font-bold text-orange-600 truncate">{formatCurrency(analytics?.feeAnalysis.totalPlatformFee || 0)}</p>
+              </div>
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg sm:rounded-xl">
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground">Net Margin</p>
+                <p className="text-xs sm:text-sm font-bold text-blue-600 truncate">{formatCurrency(analytics?.feeAnalysis.totalNetMargin || 0)}</p>
+              </div>
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-lg sm:rounded-xl">
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground">Total Profit</p>
+                <p className="text-xs sm:text-sm font-bold text-purple-600 truncate">{formatCurrency(analytics?.feeAnalysis.totalOwnerProfit || 0)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Action Required Row */}
+      {(analytics?.statusCounts.pending || 0) > 0 || (analytics?.statusCounts.verification || 0) > 0 ? (
+        <Card className="glass-card border-amber-200 dark:border-amber-800/50 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
+          <CardContent className="p-2.5 sm:p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm font-medium">Perlu Tindakan</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                    {(analytics?.statusCounts.pending || 0) > 0 && `${analytics?.statusCounts.pending} pending`}
+                    {(analytics?.statusCounts.pending || 0) > 0 && (analytics?.statusCounts.verification || 0) > 0 && ' • '}
+                    {(analytics?.statusCounts.verification || 0) > 0 && `${analytics?.statusCounts.verification} verifikasi`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
+                {(analytics?.statusCounts.pending || 0) > 0 && (
+                  <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200 text-[9px] sm:text-[10px] px-1.5 sm:px-2">
+                    <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
+                    {analytics?.statusCounts.pending}
+                  </Badge>
+                )}
+                {(analytics?.statusCounts.verification || 0) > 0 && (
+                  <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200 text-[9px] sm:text-[10px] px-1.5 sm:px-2">
+                    <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
+                    {analytics?.statusCounts.verification}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
+  );
+}
+
+// Modern KPI Card Component
+function ModernKPICard({ title, value, subtitle, change, icon, color, isPercent }: {
+  title: string;
+  value: number | string;
+  subtitle?: string;
+  change?: number;
+  icon: React.ReactNode;
+  color: 'emerald' | 'blue' | 'amber' | 'purple';
+  isPercent?: boolean;
+}) {
+  const colorClasses = {
+    emerald: 'from-emerald-500 to-teal-600',
+    blue: 'from-blue-500 to-cyan-600',
+    amber: 'from-amber-500 to-orange-600',
+    purple: 'from-purple-500 to-violet-600',
+  };
+
+  const bgColorClasses = {
+    emerald: 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20',
+    blue: 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20',
+    amber: 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20',
+    purple: 'bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20',
+  };
+
+  const textColorClasses = {
+    emerald: 'text-emerald-600',
+    blue: 'text-blue-600',
+    amber: 'text-amber-600',
+    purple: 'text-purple-600',
+  };
+
+  return (
+    <Card className={cn("glass-card overflow-hidden", bgColorClasses[color])}>
+      <div className={cn("h-0.5 sm:h-1 bg-gradient-to-r", colorClasses[color])} />
+      <CardContent className="p-2 sm:p-3">
+        <div className="flex items-start justify-between gap-1">
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{title}</p>
+            <p className={cn("text-sm sm:text-lg font-bold truncate", textColorClasses[color])}>
+              {isPercent ? value : formatCurrency(value as number)}
+            </p>
+            {subtitle && (
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{subtitle}</p>
+            )}
+            {change !== undefined && (
+              <div className={cn("flex items-center gap-0.5 text-[9px] sm:text-[10px]", change >= 0 ? 'text-green-600' : 'text-red-600')}>
+                {change >= 0 ? <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                <span>{change >= 0 ? '+' : ''}{change.toFixed(1)}%</span>
+              </div>
+            )}
+          </div>
+          <div className={cn("w-7 h-7 sm:w-9 sm:h-9 rounded-md sm:rounded-lg bg-gradient-to-br flex items-center justify-center text-white flex-shrink-0", colorClasses[color])}>
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -434,32 +780,32 @@ function TxCard({ tx, onClick }: { tx: Transaction; onClick: () => void }) {
   return (
     <Card className="glass-card overflow-hidden active-scale cursor-pointer hover:shadow-md transition-all tap-highlight" onClick={onClick}>
       <CardContent className="p-0">
-        <div className="flex items-center gap-2.5 p-2.5">
-          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br", config.gradient)}>
-            <Icon className={cn("w-5 h-5 text-white", tx.status === 'process' && "animate-spin")} />
+        <div className="flex items-center gap-2 p-2 sm:gap-2.5 sm:p-2.5">
+          <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center bg-gradient-to-br flex-shrink-0", config.gradient)}>
+            <Icon className={cn("w-4 h-4 sm:w-5 sm:h-5 text-white", tx.status === 'process' && "animate-spin")} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-1">
-              <p className="font-mono text-[10px] text-muted-foreground truncate">{tx.orderId}</p>
-              <Badge className={cn("text-[9px] capitalize", config.color)}>{tx.status}</Badge>
+              <p className="font-mono text-[9px] sm:text-[10px] text-muted-foreground truncate">{tx.orderId}</p>
+              <Badge className={cn("text-[8px] sm:text-[9px] capitalize px-1.5 sm:px-2", config.color)}>{tx.status}</Badge>
             </div>
-            <p className="text-xs font-medium truncate">{tx.customer?.name}</p>
+            <p className="text-[11px] sm:text-xs font-medium truncate">{tx.customer?.name}</p>
             <div className="flex items-center justify-between gap-1 mt-0.5">
-              <p className="text-[10px] text-muted-foreground">{tx.paymentType?.name} • {tx.methodTransaction}</p>
-              <p className="text-xs font-bold text-primary">+{formatCurrency(tx.ownerProfit)}</p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{tx.paymentType?.name} • {tx.methodTransaction}</p>
+              <p className="text-[10px] sm:text-xs font-bold text-primary flex-shrink-0">+{formatCurrency(tx.ownerProfit)}</p>
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-between px-2.5 py-1.5 bg-muted/30 border-t text-[10px]">
-          <span className="text-muted-foreground">{formatCurrency(tx.nominal)} • {formatDate(tx.createdAt)}</span>
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between px-2 sm:px-2.5 py-1.5 bg-muted/30 border-t text-[9px] sm:text-[10px]">
+          <span className="text-muted-foreground truncate">{formatCurrency(tx.nominal)} • {formatDate(tx.createdAt)}</span>
+          <div className="flex items-center gap-1 flex-shrink-0">
             {tx.marketplace && (
-              <Badge variant="outline" className="text-[9px] h-4 flex items-center gap-1">
-                <Store className="w-2.5 h-2.5" />
-                {tx.marketplace.name}
+              <Badge variant="outline" className="text-[8px] sm:text-[9px] h-3.5 sm:h-4 px-1 flex items-center gap-0.5">
+                <Store className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
+                <span className="truncate max-w-[50px] sm:max-w-none">{tx.marketplace.name}</span>
               </Badge>
             )}
-            {tx.partner && <Badge variant="secondary" className="text-[9px] h-4">{tx.partner.name}</Badge>}
+            {tx.partner && <Badge variant="secondary" className="text-[8px] sm:text-[9px] h-3.5 sm:h-4 px-1 truncate max-w-[50px] sm:max-w-none">{tx.partner.name}</Badge>}
           </div>
         </div>
       </CardContent>
@@ -498,6 +844,7 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
 
   const [form, setForm] = useState({
     customerId: '', customerName: '', customerPhone: '', customerCity: '',
+    customerBankName: '', customerBankAccount: '', customerBankHolder: '',
     nominal: '', paymentTypeId: '', methodTransaction: 'Online', marketplaceId: '', partnerId: '',
   });
 
@@ -508,16 +855,47 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
     const pt = paymentTypes.find(p => p.id === form.paymentTypeId);
     if (!pt) return null;
 
-    const feePercent = form.methodTransaction === 'Online' ? pt.onlineFeePercent : pt.codFeePercent;
+    // Get fee values with safety checks
+    // Fee percent should be between 0-100, if higher it might be stored incorrectly
+    let feePercent = form.methodTransaction === 'Online' ? pt.onlineFeePercent : pt.codFeePercent;
     const feeFlat = form.methodTransaction === 'Online' ? pt.onlineFeeFlat : pt.codFeeFlat;
-    const paymentFee = (nominal * feePercent / 100) + feeFlat;
+    
+    // Safety: if feePercent > 100, it's likely stored incorrectly (e.g., 8000 instead of 8%)
+    // This can happen due to database precision issues or incorrect input
+    if (feePercent > 100) {
+      console.warn('[WARN] Fee percent > 100%, normalizing. Original:', feePercent);
+      feePercent = feePercent / 1000; // Normalize: 8000 -> 8
+    }
+    
+    // Debug log for production troubleshooting
+    console.log('[DEBUG] Payment calculation:', {
+      nominal,
+      feePercent,
+      feeFlat,
+      threshold: pt.threshold,
+      feePercentType: typeof feePercent,
+      ptRaw: pt,
+    });
+    
+    // Use threshold logic: if nominal >= threshold, use percentage; otherwise use flat fee
+    let paymentFee: number;
+    if (nominal >= (pt.threshold || 0)) {
+      paymentFee = nominal * (feePercent / 100);
+    } else {
+      paymentFee = feeFlat;
+    }
 
     let platformFee = 0;
     let selectedMp: Marketplace | null = null;
     if (form.marketplaceId && form.marketplaceId !== 'none') {
       const mp = marketplaces.find(m => m.id === form.marketplaceId);
       if (mp) {
-        platformFee = nominal * mp.feePercent / 100 + (mp.feeFlat || 0);
+        // Safety: normalize marketplace fee percent if > 100
+        let mpFeePercent = mp.feePercent;
+        if (mpFeePercent > 100) {
+          mpFeePercent = mpFeePercent / 1000;
+        }
+        platformFee = nominal * mpFeePercent / 100 + (mp.feeFlat || 0);
         selectedMp = mp;
       }
     }
@@ -528,14 +906,14 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
     const ownerProfit = netMargin - partnerProfit;
     const totalReceived = nominal - paymentFee;
 
-    return { paymentFee, platformFee, netMargin, partnerProfit, ownerProfit, totalReceived, feePercent, selectedMp };
+    return { paymentFee, platformFee, netMargin, partnerProfit, ownerProfit, totalReceived, feePercent, selectedMp, threshold: pt.threshold };
   }, [form, paymentTypes, marketplaces, selectedPartner]);
 
   useEffect(() => { if (open) { fetchPT(); fetchMP(); fetchP(); } }, [open]);
   useEffect(() => { if (searchCust.length >= 2 && !isNewCust) searchC(); }, [searchCust, isNewCust]);
 
   const fetchPT = async () => { const res = await fetch('/api/payment-types?all=true'); const d = await res.json(); if (d.success) setPaymentTypes(d.data.filter((p: PaymentType) => p.isActive)); };
-  const fetchMP = async () => { const res = await fetch('/api/marketplaces'); const d = await res.json(); if (d.success) setMarketplaces(d.data); };
+  const fetchMP = async () => { const res = await fetch('/api/marketplaces?activeOnly=true'); const d = await res.json(); if (d.success) setMarketplaces(d.data); };
   const fetchP = async () => { const res = await fetch('/api/partners'); const d = await res.json(); if (d.success) setPartners(d.data.filter((p: Partner) => p.status === 'active')); };
   const searchC = async () => { const res = await fetch(`/api/customers?search=${searchCust}`); const d = await res.json(); if (d.success) setCustomers(d.data); };
 
@@ -543,10 +921,21 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
     e.preventDefault();
     setLoading(true);
     try {
+      // Normalize marketplaceId: 'none' or '' means no marketplace
+      const normalizedMarketplaceId = (form.marketplaceId && form.marketplaceId !== 'none') 
+        ? form.marketplaceId 
+        : null;
+      
       const res = await fetch('/api/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, nominal: parseFloat(form.nominal), marketplaceId: form.marketplaceId === 'none' ? null : form.marketplaceId || null, partnerId: form.partnerId || null, isNewCustomer: isNewCust }),
+        body: JSON.stringify({ 
+          ...form, 
+          nominal: parseFloat(form.nominal), 
+          marketplaceId: normalizedMarketplaceId, 
+          partnerId: form.partnerId || null, 
+          isNewCustomer: isNewCust 
+        }),
       });
       const d = await res.json();
       if (d.success) {
@@ -556,7 +945,7 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
         setSelectedPartner(null);
         setIsNewCust(false);
         setShowPartner(false);
-        setForm({ customerId: '', customerName: '', customerPhone: '', customerCity: '', nominal: '', paymentTypeId: '', methodTransaction: 'Online', marketplaceId: '', partnerId: '' });
+        setForm({ customerId: '', customerName: '', customerPhone: '', customerCity: '', customerBankName: '', customerBankAccount: '', customerBankHolder: '', nominal: '', paymentTypeId: '', methodTransaction: 'Online', marketplaceId: '', partnerId: '' });
         toast.success('Transaksi dibuat (Status: Process)');
       } else toast.error(d.error || 'Gagal');
     } catch (e) { toast.error('Gagal'); }
@@ -585,18 +974,58 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
               </div>
             </div>
             {isNewCust ? (
-              <div className="grid grid-cols-3 gap-2">
-                <Input placeholder="Nama" value={form.customerName} onChange={e => setForm(p => ({ ...p, customerName: e.target.value }))} required className="h-8 text-xs" />
-                <Input placeholder="WA" value={form.customerPhone} onChange={e => setForm(p => ({ ...p, customerPhone: e.target.value }))} required className="h-8 text-xs" />
-                <Input placeholder="Kota" value={form.customerCity} onChange={e => setForm(p => ({ ...p, customerCity: e.target.value }))} className="h-8 text-xs" />
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <Input placeholder="Nama" value={form.customerName} onChange={e => setForm(p => ({ ...p, customerName: e.target.value }))} required className="h-8 text-xs" />
+                  <Input placeholder="WA" value={form.customerPhone} onChange={e => setForm(p => ({ ...p, customerPhone: e.target.value }))} required className="h-8 text-xs" />
+                  <Input placeholder="Kota" value={form.customerCity} onChange={e => setForm(p => ({ ...p, customerCity: e.target.value }))} className="h-8 text-xs" />
+                </div>
+                {/* Bank Account Fields */}
+                <div className="p-2 bg-muted/50 rounded-lg space-y-2">
+                  <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                    <Building2 className="w-3 h-3" /> Rekening (Opsional)
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input placeholder="Nama Bank" value={form.customerBankName} onChange={e => setForm(p => ({ ...p, customerBankName: e.target.value }))} className="h-8 text-xs" />
+                    <Input placeholder="No. Rekening" value={form.customerBankAccount} onChange={e => setForm(p => ({ ...p, customerBankAccount: e.target.value }))} className="h-8 text-xs" />
+                    <Input placeholder="Atas Nama" value={form.customerBankHolder} onChange={e => setForm(p => ({ ...p, customerBankHolder: e.target.value }))} className="h-8 text-xs" />
+                  </div>
+                </div>
               </div>
             ) : selectedCust ? (
-              <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                <div>
-                  <p className="text-xs font-medium">{selectedCust.name}</p>
-                  <p className="text-[10px] text-muted-foreground">{selectedCust.phone}</p>
+              <div className="p-2 bg-muted rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium">{selectedCust.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{selectedCust.phone}</p>
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => { setSelectedCust(null); setForm(p => ({ ...p, customerId: '' })); }}>Ganti</Button>
                 </div>
-                <Button type="button" variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => { setSelectedCust(null); setForm(p => ({ ...p, customerId: '' })); }}>Ganti</Button>
+                {/* Bank Account Preview */}
+                {selectedCust.bankName && selectedCust.bankAccount && (
+                  <div className="flex items-center gap-2 p-2 bg-background rounded-md border">
+                    <Building2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-muted-foreground">{selectedCust.bankName}</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-xs font-mono font-medium truncate">{selectedCust.bankAccount}</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedCust.bankAccount || '');
+                            toast.success('No. rekening disalin');
+                          }}
+                          className="p-0.5 hover:bg-muted rounded"
+                        >
+                          <Copy className="w-3 h-3 text-muted-foreground" />
+                        </button>
+                      </div>
+                      {selectedCust.bankHolder && (
+                        <p className="text-[10px] text-muted-foreground">a.n. {selectedCust.bankHolder}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="relative">
@@ -634,8 +1063,9 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
                     <SelectItem key={mp.id} value={mp.id} className="text-xs">
                       <div className="flex items-center gap-2">
                         <span>{mp.name}</span>
-                        <Badge variant="outline" className="text-[9px] h-4">{mp.feePercent}%</Badge>
-                        {!mp.isActive && <Badge variant="destructive" className="text-[9px] h-4">Inactive</Badge>}
+                        <Badge variant="outline" className="text-[9px] h-4">
+                          {mp.feePercent}%{mp.feeFlat ? ` + ${formatCurrency(mp.feeFlat)}` : ''}
+                        </Badge>
                       </div>
                     </SelectItem>
                   ))}
@@ -744,18 +1174,29 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
   const [notes, setNotes] = useState(tx.notes || '');
   const [status, setStatus] = useState(tx.status);
   const [marketplace, setMarketplace] = useState(tx.marketplace?.id || 'none');
-  const [showMp, setShowMp] = useState(false);
   const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
 
-  const loadMp = async () => {
-    const res = await fetch('/api/marketplaces');
-    const d = await res.json();
-    if (d.success) setMarketplaces(d.data);
-  };
+  // Load marketplaces when dialog opens if status is verification
+  useEffect(() => {
+    if (status === 'verification') {
+      fetch('/api/marketplaces?activeOnly=true')
+        .then(res => res.json())
+        .then(d => {
+          if (d.success) {
+            // Include current transaction's marketplace if it exists and is not already in the list
+            if (tx.marketplace && !d.data.find((mp: Marketplace) => mp.id === tx.marketplace?.id)) {
+              setMarketplaces([...d.data, tx.marketplace as Marketplace]);
+            } else {
+              setMarketplaces(d.data);
+            }
+          }
+        });
+    }
+  }, []);
 
   // Calculate profit preview when marketplace changes
   const profitPreview = useMemo(() => {
-    if (!showMp || status !== 'verification') return null;
+    if (status !== 'verification') return null;
     
     const selectedMp = marketplaces.find(m => m.id === marketplace);
     const currentPlatformFee = tx.platformFee || 0;
@@ -783,125 +1224,142 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
       newPartnerProfit,
       profitChange: newOwnerProfit - currentOwnerProfit,
     };
-  }, [showMp, status, marketplace, marketplaces, tx]);
+  }, [status, marketplace, marketplaces, tx]);
 
   const handleStatus = (s: string) => {
     setStatus(s);
-    if (s === 'verification') { 
-      setShowMp(true); 
-      loadMp(); 
-    } else setShowMp(false);
+    if (s === 'verification' && marketplaces.length === 0) { 
+      // Load marketplaces if not already loaded
+      fetch('/api/marketplaces?activeOnly=true')
+        .then(res => res.json())
+        .then(d => {
+          if (d.success) {
+            if (tx.marketplace && !d.data.find((mp: Marketplace) => mp.id === tx.marketplace?.id)) {
+              setMarketplaces([...d.data, tx.marketplace as Marketplace]);
+            } else {
+              setMarketplaces(d.data);
+            }
+          }
+        });
+    }
   };
 
   const save = () => { 
-    onUpdate(tx.id, status, notes, marketplace === 'none' ? undefined : marketplace || undefined); 
+    // Send 'none' explicitly so backend knows to clear marketplace
+    onUpdate(tx.id, status, notes, marketplace); 
   };
 
   const config = STATUS_CONFIG[tx.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
+  const StatusIcon = config.icon;
+
+  // Check if any changes were made
+  // For verification status, always allow save (it's a confirmation action)
+  const originalMarketplace = tx.marketplace?.id || 'none';
+  const hasChanges = status !== tx.status || 
+    marketplace !== originalMarketplace || 
+    notes !== (tx.notes || '') ||
+    status === 'verification'; // Always allow save when status is verification
 
   return (
-    <div className="space-y-3">
-      {/* Current Status */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">Status Saat Ini</span>
-        <Badge className={cn("text-[10px]", config.color)}>{tx.status}</Badge>
+    <div className="space-y-2.5 p-4">
+      {/* Compact Header */}
+      <div className="flex items-center justify-between -mx-4 -mt-4 mb-0 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 rounded-t-lg">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/20">
+            <StatusIcon className={cn("w-4 h-4 text-white", tx.status === 'process' && "animate-spin")} />
+          </div>
+          <div>
+            <p className="text-[9px] text-white/70 uppercase">Status</p>
+            <p className="text-sm font-bold text-white capitalize">{tx.status}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[9px] text-white/70">ID</p>
+          <p className="text-[10px] font-mono text-white bg-white/20 px-1.5 py-0.5 rounded">{tx.orderId}</p>
+        </div>
       </div>
 
-      {/* Transaction Amount Breakdown */}
-      <Card className="glass-card">
-        <CardContent className="p-3 space-y-2">
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-2">
-            <DollarSign className="w-3.5 h-3.5" />
-            Rincian Nominal
-          </div>
-          
-          <div className="space-y-1.5 text-xs">
+      {/* Amount & Profit Row */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg border bg-muted/30 p-2.5">
+          <p className="text-[9px] text-muted-foreground mb-0.5">Nominal</p>
+          <p className="text-base font-bold text-emerald-600">{formatCurrency(tx.nominal)}</p>
+          <div className="text-[9px] text-muted-foreground mt-1 space-y-0.5">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Nominal Transaksi</span>
-              <span className="font-medium">{formatCurrency(tx.nominal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Fee Payment</span>
-              <span className="text-red-600">-{formatCurrency(tx.paymentFee)}</span>
+              <span>Fee</span>
+              <span className="text-red-500">-{formatCurrency(tx.paymentFee)}</span>
             </div>
             {tx.platformFee > 0 && (
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <Store className="w-3 h-3" />
-                  <span>Platform Fee</span>
-                  {tx.marketplace && (
-                    <Badge variant="outline" className="text-[9px] h-3.5">{tx.marketplace.name}</Badge>
-                  )}
-                </div>
-                <span className="text-red-600">-{formatCurrency(tx.platformFee)}</span>
+              <div className="flex justify-between">
+                <span>Platform</span>
+                <span className="text-red-500">-{formatCurrency(tx.platformFee)}</span>
               </div>
             )}
-            <Separator className="my-1" />
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Diterima Customer</span>
-              <span className="font-bold text-primary">{formatCurrency(tx.totalReceived)}</span>
-            </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Current Profit Display */}
-      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
-        <CardContent className="p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-1.5">
-                <PiggyBank className="w-4 h-4 text-green-600" />
-                <p className="text-[10px] text-muted-foreground">Profit Anda Saat Ini</p>
-              </div>
-              <p className="text-xl font-bold text-green-600 mt-0.5">+{formatCurrency(tx.ownerProfit)}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] text-muted-foreground">Partner</p>
-              {tx.partner ? (
-                <div>
-                  <p className="text-xs font-medium">{tx.partner.name}</p>
-                  <p className="text-[10px] text-blue-600">+{formatCurrency(tx.partnerProfit)}</p>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">-</p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Info Grid */}
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="p-2 bg-muted/30 rounded-lg">
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-0.5">
-            <User className="w-3 h-3" /> Customer
-          </div>
-          <p className="font-medium truncate">{tx.customer?.name}</p>
-          <p className="text-[10px] text-muted-foreground">{tx.customer?.phone}</p>
         </div>
-        <div className="p-2 bg-muted/30 rounded-lg">
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-0.5">
-            <CreditCard className="w-3 h-3" /> Payment
-          </div>
-          <p className="font-medium">{tx.paymentType?.name}</p>
-          <p className="text-[10px] text-muted-foreground">{tx.methodTransaction}</p>
+        <div className="rounded-lg bg-slate-900 p-2.5 text-white">
+          <p className="text-[9px] text-white/70 mb-0.5">Profit Anda</p>
+          <p className="text-base font-bold text-emerald-400">+{formatCurrency(tx.ownerProfit)}</p>
+          {tx.partner && (
+            <p className="text-[9px] text-white/60 mt-1">
+              {tx.partner.name}: <span className="text-blue-400">+{formatCurrency(tx.partnerProfit)}</span>
+            </p>
+          )}
         </div>
       </div>
 
+      {/* Customer & Payment Row */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg border bg-muted/30 p-2.5">
+          <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
+            <User className="w-2.5 h-2.5" /> Customer
+          </p>
+          <p className="text-xs font-semibold truncate">{tx.customer?.name}</p>
+          <p className="text-[9px] text-muted-foreground">{tx.customer?.phone}</p>
+        </div>
+        <div className="rounded-lg border bg-muted/30 p-2.5">
+          <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
+            <CreditCard className="w-2.5 h-2.5" /> Payment
+          </p>
+          <p className="text-xs font-semibold">{tx.paymentType?.name}</p>
+          <p className="text-[9px] text-muted-foreground">{tx.methodTransaction}</p>
+        </div>
+      </div>
+
+      {/* Bank Account - Compact */}
+      {tx.customer?.bankName && tx.customer?.bankAccount && (
+        <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20 p-2.5">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] text-muted-foreground">{tx.customer.bankName}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-mono font-bold">{tx.customer.bankAccount}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(tx.customer.bankAccount || '');
+                    toast.success('Disalin');
+                  }}
+                  className="p-1 hover:bg-blue-100 dark:hover:bg-blue-800 rounded"
+                >
+                  <Copy className="w-3 h-3 text-blue-600" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Status Change */}
-      <div className="space-y-3 pt-3 border-t">
-        <p className="text-xs font-semibold flex items-center gap-1.5">
-          <Edit3 className="w-3.5 h-3.5" /> Ubah Status
-        </p>
-        
+      <div className="pt-2 border-t">
+        <p className="text-[9px] font-medium text-muted-foreground mb-2">UBAH STATUS</p>
         <div className="grid grid-cols-5 gap-1.5">
           {[
-            { v: 'pending', l: 'Pending', icon: Clock, c: 'text-orange-600', bg: 'bg-orange-50 dark:bg-orange-900/20', border: 'border-orange-200 dark:border-orange-800', gradient: 'from-orange-500 to-amber-600' },
-            { v: 'verification', l: 'Verif', icon: AlertCircle, c: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800', gradient: 'from-blue-500 to-indigo-600' },
-            { v: 'process', l: 'Proses', icon: Loader2, c: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800', gradient: 'from-cyan-500 to-teal-600' },
-            { v: 'success', l: 'Sukses', icon: CheckCircle, c: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800', gradient: 'from-green-500 to-emerald-600' },
-            { v: 'failed', l: 'Gagal', icon: XCircle, c: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800', gradient: 'from-red-500 to-rose-600' },
+            { v: 'pending', l: 'Pending', icon: Clock, color: 'bg-orange-500' },
+            { v: 'verification', l: 'Verif', icon: AlertCircle, color: 'bg-violet-500' },
+            { v: 'process', l: 'Proses', icon: Loader2, color: 'bg-cyan-500' },
+            { v: 'success', l: 'Sukses', icon: CheckCircle, color: 'bg-emerald-500' },
+            { v: 'failed', l: 'Gagal', icon: XCircle, color: 'bg-red-500' },
           ].map(s => {
             const Icon = s.icon;
             const isSelected = status === s.v;
@@ -912,153 +1370,84 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
                 onClick={() => handleStatus(s.v)} 
                 disabled={updating} 
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 p-2 rounded-xl border-2 transition-all duration-200 min-h-[56px]",
+                  "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all min-h-[44px]",
                   isSelected 
-                    ? "gradient-primary border-primary text-white shadow-lg scale-[1.02]" 
-                    : cn(s.bg, s.border, "hover:scale-[1.02] hover:shadow-md", s.c)
+                    ? `${s.color} text-white shadow` 
+                    : "bg-muted/30 hover:bg-muted/50"
                 )}
               >
-                <Icon className={cn("w-4 h-4", isSelected && "text-white", !isSelected && s.c, s.v === 'process' && !isSelected && "animate-spin")} />
-                <span className="text-[10px] font-medium">{s.l}</span>
+                <Icon className={cn("w-4 h-4", !isSelected && "text-muted-foreground", s.v === 'process' && "animate-spin")} />
+                <span className="text-[8px] font-medium">{s.l}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Marketplace Selection with Profit Preview */}
-        {showMp && status === 'verification' && (
-          <div className="space-y-3">
-            {/* Marketplace Selector */}
-            <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-              <CardContent className="p-3 space-y-2">
-                <div className="flex items-center gap-1.5 text-[10px] text-blue-700 dark:text-blue-400">
-                  <Info className="w-3 h-3" /> 
-                  Pilih marketplace untuk kalkulasi platform fee
-                </div>
-                
-                <Select value={marketplace} onValueChange={setMarketplace}>
-                  <SelectTrigger className="h-9 text-xs bg-white dark:bg-background">
-                    <SelectValue placeholder="Pilih marketplace" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none" className="text-xs">
-                      <div className="flex items-center gap-2">
-                        <MinusCircle className="w-3 h-3 text-muted-foreground" />
-                        <span>Tanpa Marketplace</span>
-                      </div>
-                    </SelectItem>
-                    {marketplaces.map(mp => (
-                      <SelectItem key={mp.id} value={mp.id} className="text-xs">
-                        <div className="flex items-center gap-2">
-                          <Store className="w-3 h-3" />
-                          <span>{mp.name}</span>
-                          <Badge variant="outline" className="text-[9px] h-4">{mp.feePercent}%</Badge>
-                          {mp.isActive ? (
-                            <Badge className="text-[9px] h-4 bg-green-100 text-green-700">Active</Badge>
-                          ) : (
-                            <Badge variant="destructive" className="text-[9px] h-4">Inactive</Badge>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
+        {/* Marketplace - Compact */}
+        {status === 'verification' && (
+          <div className="mt-2 space-y-2">
+            <Select value={marketplace} onValueChange={setMarketplace}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Pilih marketplace..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none" className="text-xs">Tanpa Marketplace</SelectItem>
+                {marketplaces.map(mp => (
+                  <SelectItem key={mp.id} value={mp.id} className="text-xs">
+                    <span className="flex items-center gap-1">
+                      {mp.name}
+                      <span className="text-muted-foreground">({mp.feePercent}%{mp.feeFlat ? ` + ${formatCurrency(mp.feeFlat)}` : ''})</span>
+                      {mp.isActive === false && <Badge variant="outline" className="text-[8px] h-3.5 text-orange-600 border-orange-300">Nonaktif</Badge>}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            {/* Profit Preview */}
             {profitPreview && (
-              <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-amber-200 dark:border-amber-800">
-                <CardContent className="p-3 space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
-                    <Calculator className="w-3.5 h-3.5" />
-                    Preview Profit Setelah Update
-                  </div>
-                  
-                  {/* Selected Marketplace Info */}
-                  {profitPreview.selectedMp && (
-                    <div className="flex items-center justify-between p-2 bg-white/50 dark:bg-background/50 rounded-lg text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <Store className="w-3.5 h-3.5 text-orange-600" />
-                        <span className="font-medium">{profitPreview.selectedMp.name}</span>
-                        <Badge variant="outline" className="text-[9px] h-3.5">{profitPreview.selectedMp.feePercent}%</Badge>
-                      </div>
-                      <span className="text-red-600 font-medium">-{formatCurrency(profitPreview.newPlatformFee)}</span>
-                    </div>
-                  )}
-                  
-                  {/* Profit Comparison */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="p-2 bg-muted/30 rounded-lg">
-                      <p className="text-[10px] text-muted-foreground">Profit Saat Ini</p>
-                      <p className="text-sm font-bold">{formatCurrency(profitPreview.currentOwnerProfit)}</p>
-                    </div>
-                    <div className={cn(
-                      "p-2 rounded-lg",
-                      profitPreview.profitChange >= 0 
-                        ? "bg-green-100 dark:bg-green-900/30" 
-                        : "bg-red-100 dark:bg-red-900/30"
-                    )}>
-                      <p className="text-[10px] text-muted-foreground">Profit Baru</p>
-                      <p className="text-sm font-bold flex items-center gap-1">
-                        {formatCurrency(profitPreview.newOwnerProfit)}
-                        {profitPreview.profitChange !== 0 && (
-                          <span className={cn(
-                            "text-[10px]",
-                            profitPreview.profitChange >= 0 ? "text-green-600" : "text-red-600"
-                          )}>
-                            ({profitPreview.profitChange >= 0 ? '+' : ''}{formatCurrency(profitPreview.profitChange)})
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Partner Profit Preview */}
-                  {tx.partner && profitPreview.newPartnerProfit !== profitPreview.currentPartnerProfit && (
-                    <div className="flex items-center justify-between text-[10px] p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded">
-                      <span className="text-muted-foreground">Partner Profit ({tx.partner.name}):</span>
-                      <div className="flex items-center gap-1">
-                        <span>{formatCurrency(profitPreview.currentPartnerProfit)}</span>
-                        <ArrowRight className="w-3 h-3" />
-                        <span className="text-blue-600 font-medium">{formatCurrency(profitPreview.newPartnerProfit)}</span>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-2 gap-2 text-[10px]">
+                <div className="p-2 rounded-lg bg-muted/30">
+                  <p className="text-muted-foreground">Saat ini</p>
+                  <p className="font-bold">{formatCurrency(profitPreview.currentOwnerProfit)}</p>
+                </div>
+                <div className={cn(
+                  "p-2 rounded-lg",
+                  profitPreview.profitChange >= 0 ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-red-100 dark:bg-red-900/30"
+                )}>
+                  <p className="text-muted-foreground">Baru</p>
+                  <p className="font-bold">{formatCurrency(profitPreview.newOwnerProfit)}</p>
+                </div>
+              </div>
             )}
           </div>
         )}
 
-        <div>
-          <Label className="text-[10px]">Catatan</Label>
+        {/* Notes */}
+        <div className="mt-2">
           <Textarea 
             value={notes} 
             onChange={e => setNotes(e.target.value)} 
-            placeholder="Catatan tambahan..." 
-            className="h-14 text-xs resize-none" 
+            placeholder="Catatan..." 
+            className="h-10 text-xs resize-none" 
           />
         </div>
 
-        <div className="flex gap-2">
+        {/* Actions */}
+        <div className="flex gap-2 mt-2">
           <Button 
             onClick={save} 
-            disabled={updating || (status === tx.status && marketplace === (tx.marketplace?.id || 'none'))} 
-            className="flex-1 h-9 text-xs gradient-primary"
+            disabled={updating || !hasChanges} 
+            className="flex-1 h-8 text-xs bg-emerald-500 hover:bg-emerald-600"
           >
-            {updating ? (
-              <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Menyimpan...</>
-            ) : (
-              <><Check className="w-3 h-3 mr-1" /> Simpan Perubahan</>
-            )}
+            {updating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+            <span className="ml-1">Simpan</span>
           </Button>
           <Button 
-            variant="destructive" 
+            variant="outline" 
             size="icon" 
             onClick={() => onDelete(tx.id)} 
             disabled={updating} 
-            className="h-9 w-9"
+            className="h-8 w-8 text-red-600 hover:bg-red-50"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
@@ -1074,13 +1463,9 @@ function TxDetailDialog({ open, onOpenChange, tx, onUpdate, onDelete, updating }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-sm">
-            <Hash className="w-4 h-4 text-muted-foreground" /> 
-            Detail Transaksi
-          </DialogTitle>
-          <DialogDescription className="font-mono text-[10px]">{tx.orderId}</DialogDescription>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 gap-0">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Detail Transaksi {tx.orderId}</DialogTitle>
         </DialogHeader>
         <TxDetailDialogContent key={tx.id} tx={tx} onUpdate={onUpdate} onDelete={onDelete} updating={updating} />
       </DialogContent>

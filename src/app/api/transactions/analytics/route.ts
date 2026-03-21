@@ -38,6 +38,9 @@ export async function GET(request: NextRequest) {
 
     // Last 30 days
     const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    // Last 7 days for chart
+    const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     // Current month transactions for forecast
     const currentMonthTxs = await db.transaction.findMany({
@@ -100,6 +103,44 @@ export async function GET(request: NextRequest) {
     const avgPaymentFeePercent = totalVolume > 0 ? (totalPaymentFee / totalVolume) * 100 : 0;
     const avgPlatformFeePercent = totalVolume > 0 ? (totalPlatformFee / totalVolume) * 100 : 0;
     const avgMarginPercent = totalVolume > 0 ? (totalNetMargin / totalVolume) * 100 : 0;
+
+    // Daily trends for last 7 days
+    const dailyTrendsRaw = await db.transaction.findMany({
+      where: {
+        createdAt: { gte: last7Days },
+      },
+      select: {
+        createdAt: true,
+        nominal: true,
+        ownerProfit: true,
+        status: true,
+      },
+    });
+
+    // Group by day
+    const dailyTrends = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const dateStr = date.toISOString().split('T')[0];
+      const dayName = date.toLocaleDateString('id-ID', { weekday: 'short' });
+      
+      const dayTxs = dailyTrendsRaw.filter(tx => {
+        const txDate = new Date(tx.createdAt).toISOString().split('T')[0];
+        return txDate === dateStr;
+      });
+      
+      const profit = dayTxs.filter(tx => tx.status === 'success').reduce((sum, tx) => sum + tx.ownerProfit, 0);
+      const volume = dayTxs.reduce((sum, tx) => sum + tx.nominal, 0);
+      const count = dayTxs.length;
+      
+      dailyTrends.push({
+        date: dateStr,
+        day: dayName,
+        profit,
+        volume,
+        count,
+      });
+    }
 
     // Payment type stats with detailed info
     const paymentTypes = await db.paymentType.findMany({
@@ -218,6 +259,27 @@ export async function GET(request: NextRequest) {
       totalFee: mp.transactions.reduce((sum, tx) => sum + tx.platformFee, 0),
     }));
 
+    // Hourly distribution (for peak hours analysis)
+    const hourlyDistribution = await db.transaction.groupBy({
+      by: ['createdAt'],
+      where: { createdAt: { gte: last30Days } },
+      _count: { id: true },
+    });
+
+    // Count transactions by hour
+    const hourCounts: Record<number, number> = {};
+    for (let h = 0; h < 24; h++) hourCounts[h] = 0;
+    
+    hourlyDistribution.forEach(item => {
+      const hour = new Date(item.createdAt).getHours();
+      hourCounts[hour] += item._count.id;
+    });
+    
+    const peakHours = Object.entries(hourCounts)
+      .map(([hour, count]) => ({ hour: parseInt(hour), count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
     // Return complete data structure
     return NextResponse.json({
       success: true,
@@ -252,6 +314,7 @@ export async function GET(request: NextRequest) {
           totalTransactions,
           totalVolume,
         },
+        dailyTrends,
         paymentTypes: paymentTypeStats,
         statusCounts: {
           pending: statusCounts.pending.count,
@@ -263,6 +326,7 @@ export async function GET(request: NextRequest) {
         statusDetails: statusCounts,
         partnerStats,
         marketplaceAnalysis,
+        peakHours,
       },
     });
   } catch (error) {

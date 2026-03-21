@@ -135,8 +135,14 @@ export function calculatePaymentFee(
   },
   method: 'Online' | 'COD'
 ): number {
-  const feePercent = method === 'Online' ? paymentType.onlineFeePercent : paymentType.codFeePercent;
+  let feePercent = method === 'Online' ? paymentType.onlineFeePercent : paymentType.codFeePercent;
   const feeFlat = method === 'Online' ? paymentType.onlineFeeFlat : paymentType.codFeeFlat;
+
+  // Safety: if feePercent > 100, normalize it (database precision issue fix)
+  // This handles cases where fee is stored as 8000 instead of 8%
+  if (feePercent > 100) {
+    feePercent = feePercent / 1000;
+  }
 
   if (nominal >= paymentType.threshold) {
     return nominal * (feePercent / 100);

@@ -161,7 +161,12 @@ export async function PATCH(
         });
         
         if (marketplace) {
-          platformFee = existingTransaction.nominal * (marketplace.feePercent / 100) + (marketplace.feeFlat || 0);
+          // Safety: normalize fee percent if > 100 (database precision issue fix)
+          let mpFeePercent = marketplace.feePercent;
+          if (mpFeePercent > 100) {
+            mpFeePercent = mpFeePercent / 1000;
+          }
+          platformFee = existingTransaction.nominal * (mpFeePercent / 100) + (marketplace.feeFlat || 0);
           updateData.marketplaceId = effectiveMarketplaceId;
         }
       } else {

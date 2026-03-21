@@ -82,6 +82,36 @@ export async function GET() {
       ? (volumeResult._sum.totalVolume || 0) / totalTransactions._sum.totalTransactions
       : 0;
 
+    // Get top customers by volume
+    const topCustomers = await db.customer.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        totalVolume: true,
+        totalTransactions: true,
+        label: true,
+      },
+      orderBy: {
+        totalVolume: 'desc',
+      },
+      take: 5,
+    });
+
+    // Get new customers this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    
+    const newThisMonth = await db.customer.count({
+      where: {
+        ...where,
+        createdAt: {
+          gte: startOfMonth,
+        },
+      },
+    });
+
     return NextResponse.json({
       success: true,
       data: {
@@ -93,6 +123,8 @@ export async function GET() {
         blacklistCount,
         avgTransactionValue,
         topCities,
+        topCustomers,
+        newThisMonth,
         growthRate: 0, // Placeholder for future implementation
       },
     });

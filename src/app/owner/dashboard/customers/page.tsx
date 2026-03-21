@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SimplePagination } from '@/components/ui/pagination';
-import { Progress } from '@/components/ui/progress';
 import {
   Users,
   Search,
@@ -40,10 +39,19 @@ import {
   Sparkles,
   WalletCards,
   BarChart3,
+  TrendingUp,
+  TrendingDown,
+  RefreshCw,
+  PieChart,
+  Target,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import {
+  PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+} from 'recharts';
 
 interface Partner {
   id: string;
@@ -82,8 +90,12 @@ interface CustomerStats {
   blacklistCount: number;
   avgTransactionValue: number;
   topCities: Array<{ city: string; count: number; volume: number }>;
+  topCustomers: Array<{ id: string; name: string; totalVolume: number; totalTransactions: number; label: string }>;
   growthRate: number;
+  newThisMonth: number;
 }
+
+const COLORS = ['#f59e0b', '#6b7280', '#3b82f6', '#ef4444'];
 
 export default function OwnerCustomersPage() {
   const router = useRouter();
@@ -91,9 +103,14 @@ export default function OwnerCustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [stats, setStats] = useState<CustomerStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [labelFilter, setLabelFilter] = useState<string>('all');
+  const [mainTab, setMainTab] = useState<'list' | 'analytics'>('list');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const redirectAttempted = useRef(false);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -128,20 +145,27 @@ export default function OwnerCustomersPage() {
     setCurrentPage(1);
   }, [labelFilter]);
 
-  // Window focus revalidation
+  // Auto-refresh every 1 minute
   useEffect(() => {
-    const handleFocus = () => {
-      if (isAuthenticated && user?.role === 'owner') {
-        fetchCustomers();
+    if (isAuthenticated && hasHydrated && user?.role === 'owner') {
+      refreshIntervalRef.current = setInterval(() => {
+        fetchCustomers(true);
         fetchStats();
+      }, 60000);
+    }
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
       }
     };
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, hasHydrated, user, currentPage, labelFilter]);
 
-  const fetchCustomers = async () => {
-    setLoading(true);
+  const fetchCustomers = async (isAutoRefresh = false) => {
+    if (isAutoRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const params = new URLSearchParams();
       params.append('page', currentPage.toString());
@@ -158,15 +182,18 @@ export default function OwnerCustomersPage() {
           setTotalPages(result.pagination.totalPages);
           setTotalItems(result.pagination.totalItems);
         }
+        setLastUpdated(new Date());
       }
     } catch (err) {
       console.error('Failed to fetch customers:', err);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   const fetchStats = async () => {
+    setStatsLoading(true);
     try {
       const response = await fetch('/api/customers/stats');
       const result = await response.json();
@@ -175,6 +202,8 @@ export default function OwnerCustomersPage() {
       }
     } catch (err) {
       console.error('Failed to fetch stats:', err);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -190,16 +219,14 @@ export default function OwnerCustomersPage() {
 
   if (isLoading || !hasHydrated) {
     return (
-      <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
-        <Skeleton className="h-10 w-48" />
-        <div className="grid grid-cols-2 gap-3">
-          <Skeleton className="h-24 rounded-xl" />
-          <Skeleton className="h-24 rounded-xl" />
+      <div className="container mx-auto px-3 py-4 space-y-3 pb-24 md:pb-6">
+        <Skeleton className="h-8 w-32" />
+        <div className="flex gap-1 p-1 bg-muted/50 rounded-xl">
+          <Skeleton className="h-9 flex-1 rounded-lg" />
+          <Skeleton className="h-9 flex-1 rounded-lg" />
         </div>
-        <Skeleton className="h-12 rounded-xl" />
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
-        </div>
+        <Skeleton className="h-10 rounded-xl" />
+        <div className="space-y-2">{[1,2,3].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
       </div>
     );
   }
@@ -209,96 +236,292 @@ export default function OwnerCustomersPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
+    <div className="container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3 pb-20 md:pb-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Customer</h1>
-          <p className="text-sm text-muted-foreground">Kelola data pelanggan</p>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-base sm:text-lg font-bold flex items-center gap-2">
+            <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+            <span className="truncate">Customer</span>
+          </h1>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Kelola data pelanggan</p>
+            {lastUpdated && (
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                {isRefreshing ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                )}
+                <span className="hidden sm:inline">{isRefreshing ? 'Refreshing...' : formatTimeAgo(lastUpdated)}</span>
+              </div>
+            )}
+          </div>
         </div>
-        <NewCustomerDialog onCreated={() => { fetchCustomers(); fetchStats(); }} />
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          <Button
+            onClick={() => { fetchCustomers(); fetchStats(); }}
+            size="sm"
+            variant="outline"
+            className="h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-lg"
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", isRefreshing && "animate-spin")} />
+          </Button>
+          <NewCustomerDialog onCreated={() => { fetchCustomers(); fetchStats(); }} />
+        </div>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Users className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total</p>
-                <p className="text-lg font-bold">{stats?.totalCustomers || totalItems}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total Volume</p>
-                <p className="text-sm font-bold">{formatCurrency(stats?.totalVolume || 0)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <Crown className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">VIP</p>
-                <p className="text-lg font-bold">{stats?.vipCount || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
-                <Activity className="w-5 h-5 text-teal-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Avg Trx</p>
-                <p className="text-sm font-bold">{formatCurrency(stats?.avgTransactionValue || 0)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Main Tabs: Customer & Analytics */}
+      <div className="flex gap-1 p-1 bg-muted/50 rounded-xl">
+        <button
+          onClick={() => setMainTab('list')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-xs font-medium transition-all",
+            mainTab === 'list' 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Users className="w-4 h-4" />
+          Customer
+        </button>
+        <button
+          onClick={() => setMainTab('analytics')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-xs font-medium transition-all",
+            mainTab === 'analytics' 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <BarChart3 className="w-4 h-4" />
+          Analytics
+        </button>
       </div>
 
-      {/* Location & Segmentation Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Top Locations Card */}
+      {/* Tab Content */}
+      {mainTab === 'list' ? (
+        <div className="space-y-3">
+          {/* Filter Pills */}
+          <div className="overflow-x-auto -mx-3 px-3 scrollbar-hide">
+            <div className="flex gap-1.5 min-w-max pb-1">
+              {[
+                { value: 'all', label: 'Semua', count: totalItems },
+                { value: 'VIP', label: 'VIP', count: stats?.vipCount, color: 'amber' },
+                { value: 'Regular', label: 'Regular', count: stats?.regularCount, color: 'gray' },
+                { value: 'New', label: 'New', count: stats?.newCount, color: 'blue' },
+                { value: 'blacklist', label: 'Blacklist', count: stats?.blacklistCount, color: 'red' },
+              ].map(tab => (
+                <button
+                  key={tab.value}
+                  onClick={() => setLabelFilter(tab.value)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-all whitespace-nowrap",
+                    labelFilter === tab.value 
+                      ? cn(
+                          tab.color === 'amber' && "bg-amber-500 text-white shadow-sm",
+                          tab.color === 'gray' && "bg-gray-500 text-white shadow-sm",
+                          tab.color === 'blue' && "bg-blue-500 text-white shadow-sm",
+                          tab.color === 'red' && "bg-red-500 text-white shadow-sm",
+                          !tab.color && "bg-primary text-primary-foreground shadow-sm"
+                        )
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {tab.label}
+                  {tab.count !== undefined && tab.count > 0 && (
+                    <span className={cn("ml-1", labelFilter === tab.value ? "opacity-80" : "opacity-60")}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+            <Input
+              placeholder="Cari nama/no. WA..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 sm:pl-10 h-9 sm:h-10 rounded-xl text-sm"
+            />
+          </div>
+
+          {/* Customer List */}
+          <div className="space-y-2">
+            {loading ? (
+              [...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 sm:h-20 rounded-xl" />)
+            ) : filteredCustomers.length > 0 ? (
+              filteredCustomers.map((customer) => (
+                <CustomerCard
+                  key={customer.id}
+                  customer={customer}
+                  onUpdated={() => { fetchCustomers(); fetchStats(); }}
+                />
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <Users className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+                <p className="text-xs sm:text-sm text-muted-foreground">Tidak ada customer</p>
+              </div>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {!loading && totalPages > 1 && (
+            <SimplePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setCurrentPage}
+            />
+          )}
+        </div>
+      ) : (
+        <CustomerAnalytics stats={stats} loading={statsLoading} />
+      )}
+    </div>
+  );
+}
+
+// Customer Analytics Component
+function CustomerAnalytics({ stats, loading }: { stats: CustomerStats | null; loading: boolean }) {
+  // Prepare chart data
+  const segmentData = stats ? [
+    { name: 'VIP', value: stats.vipCount, color: '#f59e0b' },
+    { name: 'Regular', value: stats.regularCount, color: '#6b7280' },
+    { name: 'New', value: stats.newCount, color: '#3b82f6' },
+    { name: 'Blacklist', value: stats.blacklistCount, color: '#ef4444' },
+  ].filter(d => d.value > 0) : [];
+
+  const topCustomersData = stats?.topCustomers?.slice(0, 5) || [];
+
+  if (loading) {
+    return (
+      <div className="space-y-2 sm:space-y-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-16 sm:h-24 rounded-lg sm:rounded-xl" />)}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
+          <Skeleton className="h-48 sm:h-64 rounded-lg sm:rounded-xl" />
+          <Skeleton className="h-48 sm:h-64 rounded-lg sm:rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 sm:space-y-3">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+        <AnalyticsCard
+          title="Total Customer"
+          value={stats?.totalCustomers || 0}
+          subtitle={`${stats?.newThisMonth || 0} baru bulan ini`}
+          icon={<Users className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="primary"
+          isCount
+        />
+        <AnalyticsCard
+          title="Total Volume"
+          value={stats?.totalVolume || 0}
+          subtitle="dari semua customer"
+          icon={<Wallet className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="green"
+        />
+        <AnalyticsCard
+          title="Avg Transaction"
+          value={stats?.avgTransactionValue || 0}
+          subtitle="nilai rata-rata"
+          icon={<Target className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="blue"
+        />
+        <AnalyticsCard
+          title="Growth Rate"
+          value={`${(stats?.growthRate || 0).toFixed(1)}%`}
+          subtitle="pertumbuhan bulanan"
+          icon={<TrendingUp className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="purple"
+          isPercent
+          change={stats?.growthRate}
+        />
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
+        {/* Segment Distribution */}
         <Card className="glass-card">
-          <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-base flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-primary" />
+          <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+              <PieChart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+              Segmentasi Customer
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
+            {segmentData.length > 0 ? (
+              <div className="flex items-center gap-2 sm:gap-4">
+                <ResponsiveContainer width="45%" height={140} className="sm:h-[180px]">
+                  <RePieChart>
+                    <Pie
+                      data={segmentData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={30}
+                      outerRadius={55}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {segmentData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => `${value} customer`} />
+                  </RePieChart>
+                </ResponsiveContainer>
+                <div className="flex-1 space-y-1 sm:space-y-1.5">
+                  {segmentData.map((item) => (
+                    <div key={item.name} className="flex items-center justify-between text-[10px] sm:text-xs">
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="text-muted-foreground">{item.name}</span>
+                      </div>
+                      <span className="font-medium">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
+                Belum ada data
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top Locations */}
+        <Card className="glass-card">
+          <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
               Top Lokasi
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-4 pb-4">
+          <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
             {stats?.topCities && stats.topCities.length > 0 ? (
-              <div className="space-y-2">
-                {stats.topCities.map((city, index) => {
+              <div className="space-y-1.5 sm:space-y-2">
+                {stats.topCities.slice(0, 5).map((city, index) => {
                   const percentage = stats.totalCustomers > 0 
                     ? (city.count / stats.totalCustomers) * 100 
                     : 0;
                   return (
-                    <div key={city.city} className="flex items-center gap-3">
+                    <div key={city.city} className="flex items-center gap-2 sm:gap-3">
                       <div className={cn(
-                        "w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold",
+                        "w-5 h-5 sm:w-6 sm:h-6 rounded-md sm:rounded-lg flex items-center justify-center text-[9px] sm:text-xs font-bold flex-shrink-0",
                         index === 0 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
                         index === 1 ? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" :
                         index === 2 ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" :
@@ -307,18 +530,18 @@ export default function OwnerCustomersPage() {
                         {index + 1}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium truncate">{city.city}</span>
-                          <span className="text-xs text-muted-foreground">{city.count} customer</span>
+                        <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                          <span className="text-[10px] sm:text-sm font-medium truncate">{city.city}</span>
+                          <span className="text-[9px] sm:text-xs text-muted-foreground">{city.count}</span>
                         </div>
-                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-1 sm:h-1.5 bg-muted rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-primary rounded-full transition-all"
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
                       </div>
-                      <span className="text-xs font-medium text-primary">
+                      <span className="text-[9px] sm:text-xs font-medium text-primary flex-shrink-0">
                         {percentage.toFixed(0)}%
                       </span>
                     </div>
@@ -326,124 +549,111 @@ export default function OwnerCustomersPage() {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
+              <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
                 Belum ada data lokasi
-              </p>
+              </div>
             )}
           </CardContent>
         </Card>
+      </div>
 
-        {/* Customer Segmentation */}
-        <Card className="glass-card">
-          <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-base flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-primary" />
-              Segmentasi Customer
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="flex flex-wrap gap-2 mb-3">
-              <SegmentBadge label="VIP" count={stats?.vipCount || 0} color="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" icon={Crown} />
-              <SegmentBadge label="Regular" count={stats?.regularCount || 0} color="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" icon={User} />
-              <SegmentBadge label="New" count={stats?.newCount || 0} color="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" icon={Star} />
-              <SegmentBadge label="Blacklist" count={stats?.blacklistCount || 0} color="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" icon={Ban} />
+      {/* Top Customers */}
+      <Card className="glass-card">
+        <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
+          <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+            <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+            Top Customer
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
+          {topCustomersData.length > 0 ? (
+            <div className="space-y-1.5 sm:space-y-2">
+              {topCustomersData.map((customer, index) => (
+                <div key={customer.id} className="flex items-center gap-2 sm:gap-3 py-1.5 sm:py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-muted/30">
+                  <div className={cn(
+                    "w-6 h-6 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-[10px] sm:text-xs flex-shrink-0",
+                    index === 0 ? "bg-gradient-to-br from-yellow-400 to-amber-500 text-white" :
+                    index === 1 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-white" :
+                    index === 2 ? "bg-gradient-to-br from-orange-400 to-orange-500 text-white" :
+                    "bg-muted text-muted-foreground"
+                  )}>
+                    {index + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] sm:text-sm font-medium truncate">{customer.name}</p>
+                    <p className="text-[9px] sm:text-xs text-muted-foreground">{customer.totalTransactions || 0} transaksi</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[11px] sm:text-sm font-bold text-primary">{formatCurrency(customer.totalVolume || 0)}</p>
+                    <Badge variant="outline" className="text-[8px] sm:text-[10px] h-4 sm:h-5 px-1">
+                      {customer.label}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
             </div>
-            
-            {/* Progress bar */}
-            <div className="h-3 rounded-full overflow-hidden flex bg-muted">
-              {stats && stats.totalCustomers > 0 && (
-                <>
-                  {stats.vipCount > 0 && (
-                    <div className="bg-amber-400 h-full" style={{ width: `${(stats.vipCount / stats.totalCustomers) * 100}%` }} />
-                  )}
-                  {stats.regularCount > 0 && (
-                    <div className="bg-gray-400 h-full" style={{ width: `${(stats.regularCount / stats.totalCustomers) * 100}%` }} />
-                  )}
-                  {stats.newCount > 0 && (
-                    <div className="bg-blue-400 h-full" style={{ width: `${(stats.newCount / stats.totalCustomers) * 100}%` }} />
-                  )}
-                  {stats.blacklistCount > 0 && (
-                    <div className="bg-red-400 h-full" style={{ width: `${(stats.blacklistCount / stats.totalCustomers) * 100}%` }} />
-                  )}
-                </>
-              )}
+          ) : (
+            <div className="h-[100px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
+              Belum ada data customer
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filter */}
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Cari nama/no. WA..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-11"
-          />
-        </div>
-        <Select value={labelFilter} onValueChange={setLabelFilter}>
-          <SelectTrigger className="w-[130px] h-11">
-            <Filter className="w-4 h-4 mr-1" />
-            <SelectValue placeholder="Filter" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua</SelectItem>
-            <SelectItem value="VIP">VIP</SelectItem>
-            <SelectItem value="Regular">Regular</SelectItem>
-            <SelectItem value="New">New</SelectItem>
-            <SelectItem value="blacklist">Blacklist</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Customer List */}
-      <div className="space-y-2">
-        <p className="text-xs text-muted-foreground">
-          {totalItems} customer{labelFilter !== 'all' && ` (${labelFilter})`}
-        </p>
-
-        {loading ? (
-          [...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
-        ) : filteredCustomers.length > 0 ? (
-          filteredCustomers.map((customer) => (
-            <CustomerCard
-              key={customer.id}
-              customer={customer}
-              onUpdated={() => { fetchCustomers(); fetchStats(); }}
-            />
-          ))
-        ) : (
-          <div className="text-center py-12 text-muted-foreground">
-            <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Tidak ada customer ditemukan</p>
-          </div>
-        )}
-      </div>
-
-      {/* Pagination */}
-      {!loading && totalPages > 1 && (
-        <SimplePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          itemsPerPage={ITEMS_PER_PAGE}
-          onPageChange={setCurrentPage}
-        />
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-// Segment Badge Component
-function SegmentBadge({ label, count, color, icon: Icon }: { label: string; count: number; color: string; icon: React.ElementType }) {
+// Analytics Card Component
+function AnalyticsCard({ title, value, subtitle, icon, color, isCount, isPercent, change }: {
+  title: string;
+  value: number | string;
+  subtitle?: string;
+  icon: React.ReactNode;
+  color: 'primary' | 'green' | 'blue' | 'purple';
+  isCount?: boolean;
+  isPercent?: boolean;
+  change?: number;
+}) {
+  const colorClasses = {
+    primary: 'from-primary to-primary/70',
+    green: 'from-green-500 to-emerald-600',
+    blue: 'from-blue-500 to-cyan-600',
+    purple: 'from-purple-500 to-violet-600',
+  };
+
+  const bgColorClasses = {
+    primary: 'bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20',
+    green: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20',
+    blue: 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20',
+    purple: 'bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20',
+  };
+
   return (
-    <div className={cn('px-3 py-1.5 rounded-full flex items-center gap-2', color)}>
-      <Icon className="w-3.5 h-3.5" />
-      <span className="text-sm font-medium">{label}</span>
-      <span className="text-sm font-bold">{count}</span>
-    </div>
+    <Card className={cn("glass-card overflow-hidden", bgColorClasses[color])}>
+      <div className={cn("h-0.5 sm:h-1 bg-gradient-to-r", colorClasses[color])} />
+      <CardContent className="p-2 sm:p-3">
+        <div className="flex items-start justify-between gap-1">
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{title}</p>
+            <p className="text-sm sm:text-lg font-bold truncate">
+              {isPercent ? value : isCount ? value : formatCurrency(value as number)}
+            </p>
+            {subtitle && (
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{subtitle}</p>
+            )}
+            {change !== undefined && (
+              <div className={cn("flex items-center gap-0.5 text-[9px] sm:text-[10px]", change >= 0 ? 'text-green-600' : 'text-red-600')}>
+                {change >= 0 ? <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                <span>{change >= 0 ? '+' : ''}{change.toFixed(1)}%</span>
+              </div>
+            )}
+          </div>
+          <div className={cn("w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-gradient-to-br flex items-center justify-center text-white flex-shrink-0", colorClasses[color])}>
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -471,7 +681,7 @@ function LabelBadge({ label }: { label: string }) {
   const variant = variants[label] || variants.Regular;
 
   return (
-    <Badge variant="outline" className={cn('text-xs gap-1 font-medium', variant.className)}>
+    <Badge variant="outline" className={cn('text-[9px] sm:text-xs gap-0.5 sm:gap-1 font-medium px-1.5 sm:px-2', variant.className)}>
       {variant.icon}
       {label}
     </Badge>
@@ -483,22 +693,22 @@ function AddedByBadge({ addedBy, partner }: { addedBy: string; partner?: Partner
   const getAddedByInfo = () => {
     switch (addedBy) {
       case 'owner':
-        return { label: 'Owner', icon: <Building className="w-3 h-3" />, className: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' };
+        return { label: 'Owner', icon: <Building className="w-2.5 h-2.5 sm:w-3 sm:h-3" />, className: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' };
       case 'partner':
-        return { label: partner?.name || 'Partner', icon: <Users className="w-3 h-3" />, className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' };
+        return { label: partner?.name || 'Partner', icon: <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3" />, className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' };
       case 'public':
-        return { label: 'Public', icon: <User className="w-3 h-3" />, className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' };
+        return { label: 'Public', icon: <User className="w-2.5 h-2.5 sm:w-3 sm:h-3" />, className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' };
       default:
-        return { label: addedBy, icon: <User className="w-3 h-3" />, className: 'bg-gray-100 text-gray-700' };
+        return { label: addedBy, icon: <User className="w-2.5 h-2.5 sm:w-3 sm:h-3" />, className: 'bg-gray-100 text-gray-700' };
     }
   };
 
   const info = getAddedByInfo();
 
   return (
-    <Badge variant="outline" className={cn('text-[10px] gap-1 border-0', info.className)}>
+    <Badge variant="outline" className={cn('text-[8px] sm:text-[10px] gap-0.5 sm:gap-1 border-0', info.className)}>
       {info.icon}
-      {info.label}
+      <span className="truncate max-w-[50px] sm:max-w-none">{info.label}</span>
     </Badge>
   );
 }
@@ -529,19 +739,19 @@ function CustomerCard({
   return (
     <Card className={cn("glass-card overflow-hidden tap-highlight active-scale", isBlacklisted && "opacity-60")}>
       <CardContent className="p-0">
-        <div className="flex items-center gap-3 p-3">
+        <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3">
           {/* Avatar */}
           <div className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+            "w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0",
             isBlacklisted ? "bg-red-100 dark:bg-red-900/30" : 
             customer.label === 'VIP' ? "bg-amber-100 dark:bg-amber-900/30" :
             "bg-primary/10"
           )}>
             {customer.label === 'VIP' ? (
-              <Crown className="w-5 h-5 text-amber-600" />
+              <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
             ) : (
               <span className={cn(
-                "font-bold",
+                "font-bold text-xs sm:text-sm",
                 isBlacklisted ? "text-red-600" : "text-primary"
               )}>
                 {customer.name?.charAt(0).toUpperCase()}
@@ -551,38 +761,38 @@ function CustomerCard({
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="font-medium truncate">{customer.name}</p>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <p className="text-[11px] sm:text-sm font-medium truncate">{customer.name}</p>
               <LabelBadge label={customer.label} />
             </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <p className="text-xs text-muted-foreground">{customer.phone}</p>
+            <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">{customer.phone}</p>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-5 w-5 p-0"
+                className="h-4 w-4 sm:h-5 sm:w-5 p-0"
                 onClick={handleCopyPhone}
               >
                 {copied ? (
-                  <Check className="w-3 h-3 text-green-600" />
+                  <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-green-600" />
                 ) : (
-                  <Copy className="w-3 h-3 text-muted-foreground" />
+                  <Copy className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-muted-foreground" />
                 )}
               </Button>
               <AddedByBadge addedBy={customer.addedBy} partner={customer.partner} />
             </div>
             {(customer.bankName || customer.city) && (
-              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 sm:gap-3 mt-0.5 sm:mt-1 text-[9px] sm:text-xs text-muted-foreground">
                 {customer.city && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    {customer.city}
+                  <span className="flex items-center gap-0.5 sm:gap-1">
+                    <MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    <span className="truncate max-w-[60px] sm:max-w-none">{customer.city}</span>
                   </span>
                 )}
                 {customer.bankName && (
-                  <span className="flex items-center gap-1">
-                    <WalletCards className="w-3 h-3" />
-                    {customer.bankName}
+                  <span className="flex items-center gap-0.5 sm:gap-1">
+                    <WalletCards className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    <span className="truncate max-w-[50px] sm:max-w-none">{customer.bankName}</span>
                   </span>
                 )}
               </div>
@@ -590,16 +800,16 @@ function CustomerCard({
           </div>
 
           {/* Stats */}
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-bold text-primary">{formatCurrency(customer.totalVolume)}</p>
-            <p className="text-xs text-muted-foreground">{customer.totalTransactions} trx</p>
+          <div className="text-right hidden sm:block flex-shrink-0">
+            <p className="text-xs sm:text-sm font-bold text-primary">{formatCurrency(customer.totalVolume)}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{customer.totalTransactions} trx</p>
           </div>
 
           {/* Actions */}
           <Dialog open={actionsOpen} onOpenChange={setActionsOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
-                <MoreVertical className="w-5 h-5" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg flex-shrink-0">
+                <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
             </DialogTrigger>
             <CustomerActionsDialogContent
@@ -611,6 +821,11 @@ function CustomerCard({
               onClose={() => setActionsOpen(false)}
             />
           </Dialog>
+        </div>
+        
+        {/* Mobile Stats Footer */}
+        <div className="sm:hidden flex items-center justify-between px-2.5 py-1.5 bg-muted/30 border-t text-[9px]">
+          <span className="text-muted-foreground">{formatCurrency(customer.totalVolume)} • {customer.totalTransactions} trx</span>
         </div>
       </CardContent>
     </Card>
@@ -951,9 +1166,9 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gradient-primary text-white rounded-xl h-10 px-4">
-          <UserPlus className="w-4 h-4 mr-1" />
-          Baru
+        <Button size="sm" className="gradient-primary text-white rounded-lg h-8 sm:h-9 px-2.5 sm:px-4 shadow-md">
+          <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
+          <span className="hidden sm:inline">Baru</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
@@ -1060,4 +1275,15 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
       </DialogContent>
     </Dialog>
   );
+}
+
+// Helper functions
+function formatTimeAgo(date: Date): string {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }

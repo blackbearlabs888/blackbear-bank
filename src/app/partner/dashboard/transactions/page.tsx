@@ -1138,12 +1138,17 @@ function NewTransactionDialog({ onCreated }: { onCreated: () => void }) {
     }
 
     // Calculate payment fee
-    const feePercent = method === 'Online' 
+    let feePercent = method === 'Online' 
       ? selectedPaymentType.onlineFeePercent 
       : selectedPaymentType.codFeePercent;
     const feeFlat = method === 'Online' 
       ? selectedPaymentType.onlineFeeFlat 
       : selectedPaymentType.codFeeFlat;
+
+    // Safety: if feePercent > 100, normalize it (database precision issue fix)
+    if (feePercent > 100) {
+      feePercent = feePercent / 1000;
+    }
 
     let paymentFee: number;
     if (nominal >= selectedPaymentType.threshold) {

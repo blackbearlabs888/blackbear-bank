@@ -14,15 +14,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import {
   Users,
   Search,
   Trophy,
   TrendingUp,
-  ChevronRight,
+  TrendingDown,
   Crown,
   Star,
   UserPlus,
@@ -39,13 +37,19 @@ import {
   BarChart3,
   Calendar,
   RefreshCw,
-  AlertTriangle,
   CheckCircle,
   XCircle,
   Edit,
+  PieChart,
+  Activity,
+  Award,
 } from 'lucide-react';
-import { formatCurrency, formatDate, formatShortDate } from '@/lib/utils';
+import { formatCurrency, formatShortDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import {
+  PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+} from 'recharts';
 
 interface Partner {
   id: string;
@@ -93,13 +97,43 @@ interface Partner {
   };
 }
 
+interface PartnerStats {
+  totalPartners: number;
+  activePartners: number;
+  suspendedPartners: number;
+  totalVolume: number;
+  totalProfit: number;
+  totalTransactions: number;
+  avgProfitPerPartner: number;
+  avgVolumePerPartner: number;
+  tierDistribution: Array<{ tier: string; count: number; volume: number; profit: number }>;
+  topPartnersByProfit: Array<{ id: string; name: string; profit: number; volume: number; tier: string; transactions: number }>;
+  topPartnersByVolume: Array<{ id: string; name: string; profit: number; volume: number; tier: string; transactions: number }>;
+  topCities: Array<{ city: string; count: number; volume: number }>;
+  newThisMonth: number;
+  growthRate: number;
+}
+
+const TIER_COLORS: Record<string, string> = {
+  Bronze: '#f97316',
+  Silver: '#6b7280',
+  Gold: '#eab308',
+  Platinum: '#a855f7',
+};
+
 export default function OwnerPartnersPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, hasHydrated, hydrate } = useAuthStore();
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [stats, setStats] = useState<PartnerStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mainTab, setMainTab] = useState<'list' | 'analytics'>('list');
   const redirectAttempted = useRef(false);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!hasHydrated) hydrate();
@@ -119,21 +153,59 @@ export default function OwnerPartnersPage() {
   useEffect(() => {
     if (isAuthenticated && hasHydrated && user?.role === 'owner') {
       fetchPartners();
+      fetchStats();
     }
   }, [isAuthenticated, hasHydrated, user]);
 
-  const fetchPartners = async () => {
+  // Auto-refresh every 1 minute
+  useEffect(() => {
+    if (isAuthenticated && hasHydrated && user?.role === 'owner') {
+      refreshIntervalRef.current = setInterval(() => {
+        fetchPartners(true);
+        fetchStats();
+      }, 60000);
+    }
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
+  }, [isAuthenticated, hasHydrated, user]);
+
+  const fetchPartners = async (isAutoRefresh = false) => {
+    if (isAutoRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const response = await fetch('/api/partners');
       const result = await response.json();
       if (result.success) {
         setPartners(result.data);
+        setLastUpdated(new Date());
       }
     } catch (err) {
       console.error('Failed to fetch partners:', err);
-      toast.error('Gagal memuat data partner');
+      if (!isAutoRefresh) toast.error('Gagal memuat data partner');
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    setStatsLoading(true);
+    try {
+      const response = await fetch('/api/partners/stats');
+      const result = await response.json();
+      if (result.success) {
+        setStats(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch partner stats:', err);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -165,18 +237,13 @@ export default function OwnerPartnersPage() {
 
   if (isLoading || !hasHydrated) {
     return (
-      <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
-        <Skeleton className="h-10 w-48" />
-        <div className="grid grid-cols-2 gap-3">
-          <Skeleton className="h-24 rounded-xl" />
-          <Skeleton className="h-24 rounded-xl" />
+      <div className="container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3 pb-20 md:pb-4">
+        <Skeleton className="h-8 w-24" />
+        <div className="flex gap-1 p-1 bg-muted/50 rounded-xl">
+          <Skeleton className="h-9 flex-1 rounded-lg" />
+          <Skeleton className="h-9 flex-1 rounded-lg" />
         </div>
-        <Skeleton className="h-12 rounded-xl" />
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-20 rounded-xl" />
-          ))}
-        </div>
+        <div className="grid grid-cols-2 gap-1.5">{[1,2,3,4].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
       </div>
     );
   }
@@ -186,173 +253,543 @@ export default function OwnerPartnersPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
+    <div className="container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3 pb-20 md:pb-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Partner</h1>
-          <p className="text-sm text-muted-foreground">Kelola mitra aktif</p>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-base sm:text-lg font-bold flex items-center gap-2">
+            <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+            <span className="truncate">Partner</span>
+          </h1>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Kelola mitra aktif</p>
+            {lastUpdated && (
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                {isRefreshing ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                )}
+                <span className="hidden sm:inline">{isRefreshing ? 'Refreshing...' : formatTimeAgo(lastUpdated)}</span>
+              </div>
+            )}
+          </div>
         </div>
-        <NewPartnerDialog onCreated={fetchPartners} />
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          <Button
+            onClick={() => { fetchPartners(); fetchStats(); }}
+            size="sm"
+            variant="outline"
+            className="h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-lg"
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", isRefreshing && "animate-spin")} />
+          </Button>
+          <NewPartnerDialog onCreated={() => { fetchPartners(); fetchStats(); }} />
+        </div>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Users className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Partner Aktif</p>
-                <p className="text-lg font-bold">{activePartners.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total Volume</p>
-                <p className="text-sm font-bold">{formatCurrency(totalVolume)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total Profit</p>
-                <p className="text-sm font-bold">{formatCurrency(totalProfit)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total Transaksi</p>
-                <p className="text-lg font-bold">
-                  {partners.reduce((sum, p) => sum + (p.totalTransactions || 0), 0)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Top Partners Card */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2 pt-4 px-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Crown className="w-5 h-5 text-yellow-500" />
-            Top Partner (by Profit)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
-          {topPartners.length > 0 ? (
-            <div className="space-y-2">
-              {topPartners.map((partner, index) => (
-                <TopPartnerItem key={partner.id} partner={partner} rank={index + 1} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Belum ada data partner
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Tier Statistics Card */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2 pt-4 px-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Medal className="w-5 h-5 text-primary" />
-            Statistik Tier
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
-          <div className="flex flex-wrap gap-2">
-            <TierBadge tier="Bronze" count={tierCounts.Bronze} color="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" />
-            <TierBadge tier="Silver" count={tierCounts.Silver} color="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" />
-            <TierBadge tier="Gold" count={tierCounts.Gold} color="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" />
-            <TierBadge tier="Platinum" count={tierCounts.Platinum} color="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" />
-          </div>
-          <div className="mt-3 h-4 rounded-full overflow-hidden flex">
-            {Object.entries(tierCounts).map(([tier, count]) => {
-              const total = Object.values(tierCounts).reduce((a, b) => a + b, 0);
-              const percentage = total > 0 ? (count / total) * 100 : 0;
-              const colors: Record<string, string> = {
-                Bronze: 'bg-orange-400',
-                Silver: 'bg-gray-400',
-                Gold: 'bg-yellow-400',
-                Platinum: 'bg-purple-400',
-              };
-              return percentage > 0 ? (
-                <div
-                  key={tier}
-                  className={cn(colors[tier], 'h-full')}
-                  style={{ width: `${percentage}%` }}
-                />
-              ) : null;
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Cari nama, email, atau kota partner..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 h-11"
+      {/* KPI Cards - Always visible */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+        <PartnerKPICard
+          title="Partner Aktif"
+          value={activePartners.length}
+          icon={<Users className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="primary"
+          isCount
+        />
+        <PartnerKPICard
+          title="Total Volume"
+          value={totalVolume}
+          icon={<TrendingUp className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="green"
+        />
+        <PartnerKPICard
+          title="Total Profit"
+          value={totalProfit}
+          icon={<Wallet className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="amber"
+        />
+        <PartnerKPICard
+          title="Total Trx"
+          value={partners.reduce((sum, p) => sum + (p.totalTransactions || 0), 0)}
+          icon={<BarChart3 className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="purple"
+          isCount
         />
       </div>
 
-      {/* Partner List */}
-      <div className="space-y-2">
-        {loading ? (
-          [...Array(5)].map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)
-        ) : filteredPartners.length > 0 ? (
-          filteredPartners.map((partner, index) => (
-            <PartnerCard
-              key={partner.id}
-              partner={partner}
-              rank={index + 1}
-              onUpdate={fetchPartners}
-            />
-          ))
-        ) : (
-          <div className="text-center py-12 text-muted-foreground">
-            <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Tidak ada partner ditemukan</p>
-          </div>
-        )}
+      {/* Main Tabs */}
+      <div className="flex gap-1 p-1 bg-muted/50 rounded-xl">
+        <button
+          onClick={() => setMainTab('list')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-xs font-medium transition-all",
+            mainTab === 'list' 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Users className="w-4 h-4" />
+          Partner
+        </button>
+        <button
+          onClick={() => setMainTab('analytics')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-xs font-medium transition-all",
+            mainTab === 'analytics' 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <BarChart3 className="w-4 h-4" />
+          Analytics
+        </button>
       </div>
+
+      {/* Tab Content */}
+      {mainTab === 'list' ? (
+        <div className="space-y-3">
+          {/* Top Partners */}
+          {topPartners.length > 0 && (
+            <Card className="glass-card">
+              <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
+                <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+                  <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500" />
+                  Top Partner
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-3 sm:px-4 pb-2.5 sm:pb-3">
+                <div className="space-y-1.5 sm:space-y-2">
+                  {topPartners.map((partner, index) => (
+                    <TopPartnerItem key={partner.id} partner={partner} rank={index + 1} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tier Statistics */}
+          <Card className="glass-card">
+            <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
+              <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+                <Medal className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+                Statistik Tier
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 sm:px-4 pb-2.5 sm:pb-3">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                <TierBadge tier="Bronze" count={tierCounts.Bronze} color="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" />
+                <TierBadge tier="Silver" count={tierCounts.Silver} color="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" />
+                <TierBadge tier="Gold" count={tierCounts.Gold} color="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" />
+                <TierBadge tier="Platinum" count={tierCounts.Platinum} color="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" />
+              </div>
+              <div className="mt-2 sm:mt-3 h-2 sm:h-3 rounded-full overflow-hidden flex">
+                {Object.entries(tierCounts).map(([tier, count]) => {
+                  const total = Object.values(tierCounts).reduce((a, b) => a + b, 0);
+                  const percentage = total > 0 ? (count / total) * 100 : 0;
+                  const colors: Record<string, string> = {
+                    Bronze: 'bg-orange-400',
+                    Silver: 'bg-gray-400',
+                    Gold: 'bg-yellow-400',
+                    Platinum: 'bg-purple-400',
+                  };
+                  return percentage > 0 ? (
+                    <div
+                      key={tier}
+                      className={cn(colors[tier], 'h-full transition-all')}
+                      style={{ width: `${percentage}%` }}
+                    />
+                  ) : null;
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+            <Input
+              placeholder="Cari nama, email, kota..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 sm:pl-10 h-9 sm:h-10 rounded-xl text-sm"
+            />
+          </div>
+
+          {/* Partner List */}
+          <div className="space-y-2">
+            {loading ? (
+              [...Array(5)].map((_, i) => <Skeleton key={i} className="h-24 sm:h-28 rounded-lg sm:rounded-xl" />)
+            ) : filteredPartners.length > 0 ? (
+              filteredPartners.map((partner, index) => (
+                <PartnerCard
+                  key={partner.id}
+                  partner={partner}
+                  rank={index + 1}
+                  onUpdate={() => { fetchPartners(); fetchStats(); }}
+                />
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <Users className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+                <p className="text-xs sm:text-sm text-muted-foreground">Tidak ada partner ditemukan</p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <PartnerAnalytics stats={stats} loading={statsLoading} partners={partners} />
+      )}
     </div>
   );
 }
 
-// Top Partner Item Component
+// Partner Analytics Component
+function PartnerAnalytics({ stats, loading, partners }: { stats: PartnerStats | null; loading: boolean; partners: Partner[] }) {
+  // Prepare chart data
+  const tierData = stats?.tierDistribution?.map(t => ({
+    name: t.tier,
+    value: t.count,
+    volume: t.volume,
+    profit: t.profit,
+    color: TIER_COLORS[t.tier] || '#6b7280',
+  })).filter(d => d.value > 0) || [];
+
+  const topProfitData = stats?.topPartnersByProfit?.slice(0, 5) || [];
+  const topVolumeData = stats?.topPartnersByVolume?.slice(0, 5) || [];
+
+  if (loading) {
+    return (
+      <div className="space-y-2 sm:space-y-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-16 sm:h-24 rounded-lg sm:rounded-xl" />)}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
+          <Skeleton className="h-48 sm:h-64 rounded-lg sm:rounded-xl" />
+          <Skeleton className="h-48 sm:h-64 rounded-lg sm:rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 sm:space-y-3">
+      {/* Analytics KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+        <AnalyticsCard
+          title="Avg Profit/Partner"
+          value={stats?.avgProfitPerPartner || 0}
+          subtitle="rata-rata profit"
+          icon={<Wallet className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="amber"
+        />
+        <AnalyticsCard
+          title="Avg Volume/Partner"
+          value={stats?.avgVolumePerPartner || 0}
+          subtitle="rata-rata volume"
+          icon={<TrendingUp className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="green"
+        />
+        <AnalyticsCard
+          title="New This Month"
+          value={stats?.newThisMonth || 0}
+          subtitle="partner baru"
+          icon={<UserPlus className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="primary"
+          isCount
+        />
+        <AnalyticsCard
+          title="Growth Rate"
+          value={`${(stats?.growthRate || 0).toFixed(1)}%`}
+          subtitle="pertumbuhan"
+          icon={<Activity className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          color="purple"
+          isPercent
+          change={stats?.growthRate}
+        />
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
+        {/* Tier Distribution */}
+        <Card className="glass-card">
+          <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+              <PieChart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+              Distribusi Tier
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
+            {tierData.length > 0 ? (
+              <div className="flex items-center gap-2 sm:gap-4">
+                <ResponsiveContainer width="45%" height={140} className="sm:h-[180px]">
+                  <RePieChart>
+                    <Pie
+                      data={tierData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={30}
+                      outerRadius={55}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {tierData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => `${value} partner`} />
+                  </RePieChart>
+                </ResponsiveContainer>
+                <div className="flex-1 space-y-1 sm:space-y-1.5">
+                  {tierData.map((item) => (
+                    <div key={item.name} className="flex items-center justify-between text-[10px] sm:text-xs">
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="text-muted-foreground">{item.name}</span>
+                      </div>
+                      <span className="font-medium">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
+                Belum ada data
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top Cities */}
+        <Card className="glass-card">
+          <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+              Top Lokasi
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
+            {stats?.topCities && stats.topCities.length > 0 ? (
+              <div className="space-y-1.5 sm:space-y-2">
+                {stats.topCities.slice(0, 5).map((city, index) => {
+                  const percentage = stats.totalPartners > 0 
+                    ? (city.count / stats.totalPartners) * 100 
+                    : 0;
+                  return (
+                    <div key={city.city} className="flex items-center gap-2 sm:gap-3">
+                      <div className={cn(
+                        "w-5 h-5 sm:w-6 sm:h-6 rounded-md sm:rounded-lg flex items-center justify-center text-[9px] sm:text-xs font-bold flex-shrink-0",
+                        index === 0 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+                        index === 1 ? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" :
+                        index === 2 ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" :
+                        "bg-muted text-muted-foreground"
+                      )}>
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                          <span className="text-[10px] sm:text-sm font-medium truncate">{city.city}</span>
+                          <span className="text-[9px] sm:text-xs text-muted-foreground">{city.count}</span>
+                        </div>
+                        <div className="h-1 sm:h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary rounded-full transition-all"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                      <span className="text-[9px] sm:text-xs font-medium text-primary flex-shrink-0">
+                        {percentage.toFixed(0)}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
+                Belum ada data lokasi
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top Partners by Profit */}
+      <Card className="glass-card">
+        <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
+          <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+            <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+            Top Partner by Profit
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
+          {topProfitData.length > 0 ? (
+            <div className="space-y-1.5 sm:space-y-2">
+              {topProfitData.map((partner, index) => (
+                <div key={partner.id} className="flex items-center gap-2 sm:gap-3 py-1.5 sm:py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-muted/30">
+                  <div className={cn(
+                    "w-6 h-6 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-[10px] sm:text-xs flex-shrink-0",
+                    index === 0 ? "bg-gradient-to-br from-yellow-400 to-amber-500 text-white" :
+                    index === 1 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-white" :
+                    index === 2 ? "bg-gradient-to-br from-orange-400 to-orange-500 text-white" :
+                    "bg-muted text-muted-foreground"
+                  )}>
+                    {index + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] sm:text-sm font-medium truncate">{partner.name}</p>
+                    <p className="text-[9px] sm:text-xs text-muted-foreground">{partner.transactions} transaksi</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[11px] sm:text-sm font-bold text-primary">{formatCurrency(partner.profit)}</p>
+                    <Badge variant="outline" className="text-[8px] sm:text-[10px] h-4 sm:h-5 px-1">
+                      {partner.tier}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-[100px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
+              Belum ada data partner
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Performance Overview */}
+      <Card className="glass-card">
+        <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
+          <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+            <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+            Performance Overview
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            <div className="text-center p-2 sm:p-3 rounded-lg sm:rounded-xl bg-muted/30">
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground">Target Achievement</p>
+              <p className="text-sm sm:text-lg font-bold text-primary">
+                {partners.length > 0 
+                  ? ((partners.filter(p => p.target > 0 && p.totalProfit >= p.target).length / partners.length) * 100).toFixed(0)
+                  : 0}%
+              </p>
+              <p className="text-[9px] text-muted-foreground">partners achieved target</p>
+            </div>
+            <div className="text-center p-2 sm:p-3 rounded-lg sm:rounded-xl bg-muted/30">
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground">Active Rate</p>
+              <p className="text-sm sm:text-lg font-bold text-green-600">
+                {partners.length > 0 
+                  ? ((partners.filter(p => p.status === 'active').length / partners.length) * 100).toFixed(0)
+                  : 0}%
+              </p>
+              <p className="text-[9px] text-muted-foreground">partners active</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Analytics Card Component
+function AnalyticsCard({ title, value, subtitle, icon, color, isCount, isPercent, change }: {
+  title: string;
+  value: number | string;
+  subtitle?: string;
+  icon: React.ReactNode;
+  color: 'primary' | 'green' | 'amber' | 'purple';
+  isCount?: boolean;
+  isPercent?: boolean;
+  change?: number;
+}) {
+  const colorClasses = {
+    primary: 'from-primary to-primary/70',
+    green: 'from-green-500 to-emerald-600',
+    amber: 'from-amber-500 to-orange-600',
+    purple: 'from-purple-500 to-violet-600',
+  };
+
+  const bgColorClasses = {
+    primary: 'bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20',
+    green: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20',
+    amber: 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20',
+    purple: 'bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20',
+  };
+
+  return (
+    <Card className={cn("glass-card overflow-hidden", bgColorClasses[color])}>
+      <div className={cn("h-0.5 sm:h-1 bg-gradient-to-r", colorClasses[color])} />
+      <CardContent className="p-2 sm:p-3">
+        <div className="flex items-start justify-between gap-1">
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{title}</p>
+            <p className="text-sm sm:text-lg font-bold truncate">
+              {isPercent ? value : isCount ? (typeof value === 'number' ? value.toLocaleString() : value) : formatCurrency(value as number)}
+            </p>
+            {subtitle && (
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{subtitle}</p>
+            )}
+            {change !== undefined && (
+              <div className={cn("flex items-center gap-0.5 text-[9px] sm:text-[10px]", change >= 0 ? 'text-green-600' : 'text-red-600')}>
+                {change >= 0 ? <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                <span>{change >= 0 ? '+' : ''}{change.toFixed(1)}%</span>
+              </div>
+            )}
+          </div>
+          <div className={cn("w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-gradient-to-br flex items-center justify-center text-white flex-shrink-0", colorClasses[color])}>
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Partner KPI Card
+function PartnerKPICard({ title, value, icon, color, isCount }: {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  color: 'primary' | 'green' | 'amber' | 'purple';
+  isCount?: boolean;
+}) {
+  const colorClasses = {
+    primary: 'from-primary to-primary/70',
+    green: 'from-green-500 to-emerald-600',
+    amber: 'from-amber-500 to-orange-600',
+    purple: 'from-purple-500 to-violet-600',
+  };
+
+  const bgColorClasses = {
+    primary: 'bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20',
+    green: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20',
+    amber: 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20',
+    purple: 'bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20',
+  };
+
+  return (
+    <Card className={cn("glass-card overflow-hidden", bgColorClasses[color])}>
+      <div className={cn("h-0.5 sm:h-1 bg-gradient-to-r", colorClasses[color])} />
+      <CardContent className="p-2 sm:p-3">
+        <div className="flex items-start justify-between gap-1">
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{title}</p>
+            <p className="text-sm sm:text-lg font-bold truncate">
+              {isCount ? value.toLocaleString() : formatCurrency(value)}
+            </p>
+          </div>
+          <div className={cn("w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-gradient-to-br flex items-center justify-center text-white flex-shrink-0", colorClasses[color])}>
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Top Partner Item
 function TopPartnerItem({ partner, rank }: { partner: Partner; rank: number }) {
   const getRankStyle = (rank: number) => {
     if (rank === 1) return { icon: Crown, class: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20' };
@@ -365,33 +802,33 @@ function TopPartnerItem({ partner, rank }: { partner: Partner; rank: number }) {
   const RankIcon = style.icon;
 
   return (
-    <div className={cn('flex items-center gap-3 p-2 rounded-lg', style.bg)}>
-      <div className={cn('w-8 h-8 rounded-full flex items-center justify-center', style.class)}>
-        <RankIcon className="w-5 h-5" />
+    <div className={cn('flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-lg', style.bg)}>
+      <div className={cn('w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center', style.class)}>
+        <RankIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="font-medium text-sm truncate">{partner.name}</p>
-          <Badge variant="outline" className="text-[10px]">{partner.tier}</Badge>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <p className="text-[11px] sm:text-sm font-medium truncate">{partner.name}</p>
+          <Badge variant="outline" className="text-[9px] sm:text-[10px] h-4 px-1">{partner.tier}</Badge>
         </div>
-        <p className="text-xs text-muted-foreground">{partner.totalTransactions} transaksi</p>
+        <p className="text-[9px] sm:text-xs text-muted-foreground">{partner.totalTransactions} transaksi</p>
       </div>
-      <p className="text-sm font-bold text-primary">{formatCurrency(partner.totalProfit)}</p>
+      <p className="text-[11px] sm:text-sm font-bold text-primary">{formatCurrency(partner.totalProfit)}</p>
     </div>
   );
 }
 
-// Tier Badge Component
+// Tier Badge
 function TierBadge({ tier, count, color }: { tier: string; count: number; color: string }) {
   return (
-    <div className={cn('px-3 py-1.5 rounded-full flex items-center gap-2', color)}>
-      <span className="text-sm font-medium">{tier}</span>
-      <span className="text-sm font-bold">{count}</span>
+    <div className={cn('px-2 sm:px-3 py-1 sm:py-1.5 rounded-full flex items-center gap-1 sm:gap-2', color)}>
+      <span className="text-[10px] sm:text-xs font-medium">{tier}</span>
+      <span className="text-[10px] sm:text-xs font-bold">{count}</span>
     </div>
   );
 }
 
-// Partner Card Component with Progress Bar
+// Partner Card
 function PartnerCard({
   partner,
   rank,
@@ -424,37 +861,37 @@ function PartnerCard({
       <Card className={cn('glass-card overflow-hidden tap-highlight active-scale', isSuspended && 'opacity-60')}>
         <CardContent className="p-0">
           <div
-            className="flex items-center gap-3 p-3 cursor-pointer"
+            className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 cursor-pointer"
             onClick={() => setShowDetail(true)}
           >
             {/* Rank */}
             <div
               className={cn(
-                'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold',
+                'w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 font-bold',
                 badge ? badge.class : 'bg-muted text-muted-foreground'
               )}
             >
-              {badge ? <badge.icon className="w-5 h-5" /> : rank}
+              {badge ? <badge.icon className="w-4 h-4 sm:w-5 sm:h-5" /> : <span className="text-xs sm:text-sm">{rank}</span>}
             </div>
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="font-medium truncate">{partner.name}</p>
-                <Badge variant="outline" className="text-[10px]">{partner.tier}</Badge>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <p className="text-[11px] sm:text-sm font-medium truncate">{partner.name}</p>
+                <Badge variant="outline" className="text-[9px] sm:text-[10px] h-4 px-1">{partner.tier}</Badge>
                 {isSuspended && (
-                  <Badge variant="destructive" className="text-[10px]">Suspended</Badge>
+                  <Badge variant="destructive" className="text-[9px] h-4 px-1">Suspended</Badge>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground truncate">{partner.city}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{partner.city}</p>
 
               {/* Progress Bar */}
-              <div className="mt-2 space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Target Progress</span>
+              <div className="mt-1.5 sm:mt-2 space-y-0.5 sm:space-y-1">
+                <div className="flex items-center justify-between text-[9px] sm:text-xs">
+                  <span className="text-muted-foreground">Progress</span>
                   <span className="font-medium">{progress.toFixed(0)}%</span>
                 </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className="h-1.5 sm:h-2 bg-muted rounded-full overflow-hidden">
                   <div
                     className={cn('h-full transition-all duration-300', progressColor)}
                     style={{ width: `${progress}%` }}
@@ -464,19 +901,19 @@ function PartnerCard({
             </div>
 
             {/* Stats & Actions */}
-            <div className="flex flex-col items-end gap-1">
-              <p className="text-sm font-bold text-primary">{formatCurrency(partner.totalProfit)}</p>
-              <p className="text-xs text-muted-foreground">{partner.totalTransactions} transaksi</p>
+            <div className="flex flex-col items-end gap-0.5 sm:gap-1 flex-shrink-0">
+              <p className="text-[11px] sm:text-sm font-bold text-primary">{formatCurrency(partner.totalProfit)}</p>
+              <p className="text-[9px] sm:text-xs text-muted-foreground">{partner.totalTransactions} trx</p>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2"
+                className="h-6 w-6 sm:h-7 sm:w-7 p-0 mt-0.5"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowEdit(true);
                 }}
               >
-                <Edit className="w-3 h-3" />
+                <Edit className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </Button>
             </div>
           </div>
@@ -549,75 +986,75 @@ function PartnerDetailDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Users className="w-4 h-4 sm:w-5 sm:h-5" />
             Detail Partner
           </DialogTitle>
         </DialogHeader>
 
         {loading ? (
-          <div className="space-y-4 py-4">
-            <Skeleton className="h-20 rounded-xl" />
-            <Skeleton className="h-32 rounded-xl" />
-            <Skeleton className="h-24 rounded-xl" />
+          <div className="space-y-3 py-4">
+            <Skeleton className="h-16 rounded-lg" />
+            <Skeleton className="h-24 rounded-lg" />
+            <Skeleton className="h-20 rounded-lg" />
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Header */}
-            <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/50">
-              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-xl font-bold text-primary">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-lg font-bold text-primary">
                   {data.name?.charAt(0).toUpperCase()}
                 </span>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold">{data.name}</h3>
-                  <Badge variant="outline">{data.tier}</Badge>
+                  <h3 className="font-semibold text-sm sm:text-base truncate">{data.name}</h3>
+                  <Badge variant="outline" className="text-[10px]">{data.tier}</Badge>
                   {data.status === 'suspended' && (
-                    <Badge variant="destructive">Suspended</Badge>
+                    <Badge variant="destructive" className="text-[10px]">Suspended</Badge>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">{data.email}</p>
+                <p className="text-xs text-muted-foreground truncate">{data.email}</p>
               </div>
             </div>
 
             {/* Contact Info */}
             <Card>
-              <CardHeader className="pb-2 pt-4">
-                <CardTitle className="text-sm">Informasi Kontak</CardTitle>
+              <CardHeader className="pb-1.5 pt-3 px-3 sm:px-4">
+                <CardTitle className="text-xs sm:text-sm">Kontak</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">{data.phone}</span>
+              <CardContent className="space-y-2 px-3 sm:px-4 pb-3">
+                <div className="flex items-center gap-2">
+                  <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-xs sm:text-sm">{data.phone}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">{data.email}</span>
+                <div className="flex items-center gap-2">
+                  <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-xs sm:text-sm">{data.email}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">{data.city}</span>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-xs sm:text-sm">{data.city}</span>
                 </div>
               </CardContent>
             </Card>
 
             {/* Bank Details */}
             <Card>
-              <CardHeader className="pb-2 pt-4">
-                <CardTitle className="text-sm">Informasi Rekening</CardTitle>
+              <CardHeader className="pb-1.5 pt-3 px-3 sm:px-4">
+                <CardTitle className="text-xs sm:text-sm">Rekening</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Building2 className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">{data.bankName}</span>
+              <CardContent className="space-y-2 px-3 sm:px-4 pb-3">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-xs sm:text-sm">{data.bankName}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Wallet className="w-4 h-4 text-muted-foreground" />
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-3.5 h-3.5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium">{data.bankAccount}</p>
-                    <p className="text-xs text-muted-foreground">a.n. {data.bankHolder}</p>
+                    <p className="text-xs sm:text-sm font-medium">{data.bankAccount}</p>
+                    <p className="text-[10px] text-muted-foreground">a.n. {data.bankHolder}</p>
                   </div>
                 </div>
               </CardContent>
@@ -625,45 +1062,45 @@ function PartnerDetailDialog({
 
             {/* Stats */}
             <Card>
-              <CardHeader className="pb-2 pt-4">
-                <CardTitle className="text-sm">Statistik</CardTitle>
+              <CardHeader className="pb-1.5 pt-3 px-3 sm:px-4">
+                <CardTitle className="text-xs sm:text-sm">Statistik</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Total Volume</p>
-                    <p className="text-sm font-bold text-primary">{formatCurrency(data.totalVolume)}</p>
+              <CardContent className="px-3 sm:px-4 pb-3">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  <div className="text-center p-2 sm:p-2.5 rounded-lg bg-muted/50">
+                    <p className="text-[10px] text-muted-foreground">Volume</p>
+                    <p className="text-xs sm:text-sm font-bold text-primary">{formatCurrency(data.totalVolume)}</p>
                   </div>
-                  <div className="text-center p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Total Profit</p>
-                    <p className="text-sm font-bold text-green-600">{formatCurrency(data.totalProfit)}</p>
+                  <div className="text-center p-2 sm:p-2.5 rounded-lg bg-muted/50">
+                    <p className="text-[10px] text-muted-foreground">Profit</p>
+                    <p className="text-xs sm:text-sm font-bold text-green-600">{formatCurrency(data.totalProfit)}</p>
                   </div>
-                  <div className="text-center p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Transaksi</p>
-                    <p className="text-lg font-bold">{data.totalTransactions}</p>
+                  <div className="text-center p-2 sm:p-2.5 rounded-lg bg-muted/50">
+                    <p className="text-[10px] text-muted-foreground">Transaksi</p>
+                    <p className="text-sm sm:text-base font-bold">{data.totalTransactions}</p>
                   </div>
-                  <div className="text-center p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Komisi</p>
-                    <p className="text-lg font-bold">{data.commission}%</p>
+                  <div className="text-center p-2 sm:p-2.5 rounded-lg bg-muted/50">
+                    <p className="text-[10px] text-muted-foreground">Komisi</p>
+                    <p className="text-sm sm:text-base font-bold">{data.commission}%</p>
                   </div>
                 </div>
 
                 {/* Monthly Stats */}
                 {detailedPartner?.monthlyStats && (
-                  <div className="mt-4 pt-4 border-t">
-                    <p className="text-xs text-muted-foreground mb-2">Bulan Ini</p>
+                  <div className="mt-3 pt-3 border-t">
+                    <p className="text-[10px] text-muted-foreground mb-2">Bulan Ini</p>
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div>
-                        <p className="text-xs text-muted-foreground">Volume</p>
-                        <p className="text-sm font-medium">{formatCurrency(detailedPartner.monthlyStats.volume)}</p>
+                        <p className="text-[9px] text-muted-foreground">Volume</p>
+                        <p className="text-[10px] sm:text-xs font-medium">{formatCurrency(detailedPartner.monthlyStats.volume)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Profit</p>
-                        <p className="text-sm font-medium">{formatCurrency(detailedPartner.monthlyStats.profit)}</p>
+                        <p className="text-[9px] text-muted-foreground">Profit</p>
+                        <p className="text-[10px] sm:text-xs font-medium">{formatCurrency(detailedPartner.monthlyStats.profit)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Transaksi</p>
-                        <p className="text-sm font-medium">{detailedPartner.monthlyStats.transactions}</p>
+                        <p className="text-[9px] text-muted-foreground">Trx</p>
+                        <p className="text-[10px] sm:text-xs font-medium">{detailedPartner.monthlyStats.transactions}</p>
                       </div>
                     </div>
                   </div>
@@ -673,27 +1110,27 @@ function PartnerDetailDialog({
 
             {/* Target Progress */}
             <Card>
-              <CardHeader className="pb-2 pt-4">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Target className="w-4 h-4" />
+              <CardHeader className="pb-1.5 pt-3 px-3 sm:px-4">
+                <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5" />
                   Target Progress
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Target Bulanan</span>
+              <CardContent className="px-3 sm:px-4 pb-3">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-[10px] sm:text-xs">
+                    <span className="text-muted-foreground">Target</span>
                     <span className="font-medium">{formatCurrency(data.target)}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Profit Saat Ini</span>
+                  <div className="flex justify-between text-[10px] sm:text-xs">
+                    <span className="text-muted-foreground">Profit</span>
                     <span className="font-medium">{formatCurrency(data.totalProfit)}</span>
                   </div>
                   <Progress
                     value={data.target > 0 ? Math.min(100, (data.totalProfit / data.target) * 100) : 0}
-                    className="h-3"
+                    className="h-2"
                   />
-                  <p className="text-right text-sm font-medium">
+                  <p className="text-right text-[10px] sm:text-xs font-medium">
                     {data.target > 0 ? ((data.totalProfit / data.target) * 100).toFixed(1) : 0}%
                   </p>
                 </div>
@@ -703,27 +1140,27 @@ function PartnerDetailDialog({
             {/* Notes */}
             {data.notes && (
               <Card>
-                <CardHeader className="pb-2 pt-4">
-                  <CardTitle className="text-sm">Catatan</CardTitle>
+                <CardHeader className="pb-1.5 pt-3 px-3 sm:px-4">
+                  <CardTitle className="text-xs sm:text-sm">Catatan</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{data.notes}</p>
+                <CardContent className="px-3 sm:px-4 pb-3">
+                  <p className="text-xs text-muted-foreground whitespace-pre-wrap">{data.notes}</p>
                 </CardContent>
               </Card>
             )}
 
             {/* Joined Date */}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="w-4 h-4" />
+            <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground">
+              <Calendar className="w-3.5 h-3.5" />
               <span>Bergabung: {formatShortDate(data.joinedAt)}</span>
             </div>
 
             {/* Edit Button */}
             <Button
-              className="w-full gradient-primary text-white"
+              className="w-full gradient-primary text-white h-9 sm:h-10"
               onClick={onEdit}
             >
-              <Edit className="w-4 h-4 mr-2" />
+              <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
               Edit Partner
             </Button>
           </div>
@@ -827,22 +1264,20 @@ function EditPartnerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Settings className="w-5 h-5" />
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
             Edit Partner
           </DialogTitle>
-          <DialogDescription>
-            Edit pengaturan untuk {partner.name}
-          </DialogDescription>
+          <DialogDescription>Edit pengaturan untuk {partner.name}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {/* Password Section */}
-          <div className="space-y-3 p-3 rounded-xl bg-muted/50">
+          <div className="space-y-2 p-2.5 sm:p-3 rounded-xl bg-muted/50">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Key className="w-4 h-4 text-muted-foreground" />
-                <Label className="text-sm font-medium">Password</Label>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Key className="w-3.5 h-3.5 text-muted-foreground" />
+                <Label className="text-xs sm:text-sm font-medium">Password</Label>
               </div>
               <Button
                 type="button"
@@ -850,24 +1285,25 @@ function EditPartnerDialog({
                 size="sm"
                 onClick={handleGeneratePassword}
                 disabled={loading}
+                className="h-7 sm:h-8 text-[10px] sm:text-xs"
               >
-                <RefreshCw className="w-4 h-4 mr-1" />
-                Generate Random
+                <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
+                Generate
               </Button>
             </div>
             {newPassword && (
-              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                <p className="text-xs text-muted-foreground mb-1">Password baru:</p>
+              <div className="p-2 sm:p-2.5 rounded-lg bg-primary/10 border border-primary/20">
+                <p className="text-[10px] text-muted-foreground mb-0.5">Password baru:</p>
                 <div className="flex items-center gap-2">
-                  <code className="text-sm font-mono font-bold">{newPassword}</code>
+                  <code className="text-xs sm:text-sm font-mono font-bold">{newPassword}</code>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-6 px-2"
+                    className="h-5 sm:h-6 px-2 text-[10px]"
                     onClick={() => {
                       navigator.clipboard.writeText(newPassword);
-                      toast.success('Password disalin ke clipboard');
+                      toast.success('Password disalin');
                     }}
                   >
                     Copy
@@ -878,15 +1314,15 @@ function EditPartnerDialog({
           </div>
 
           {/* Status Toggle */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-muted/50">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               {formData.status === 'active' ? (
-                <CheckCircle className="w-4 h-4 text-green-500" />
+                <CheckCircle className="w-3.5 h-3.5 text-green-500" />
               ) : (
-                <XCircle className="w-4 h-4 text-red-500" />
+                <XCircle className="w-3.5 h-3.5 text-red-500" />
               )}
-              <Label className="text-sm font-medium">
-                Status: {formData.status === 'active' ? 'Aktif' : 'Suspended'}
+              <Label className="text-xs sm:text-sm font-medium">
+                {formData.status === 'active' ? 'Aktif' : 'Suspended'}
               </Label>
             </div>
             <Switch
@@ -898,14 +1334,14 @@ function EditPartnerDialog({
           </div>
 
           {/* Tier & Commission */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Tier</Label>
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Tier</Label>
               <Select
                 value={formData.tier}
                 onValueChange={(value) => setFormData((prev) => ({ ...prev, tier: value }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -916,60 +1352,56 @@ function EditPartnerDialog({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Komisi (%)</Label>
+            <div className="space-y-1">
+              <Label className="text-xs">Komisi (%)</Label>
               <Input
                 type="number"
                 value={formData.commission}
                 onChange={(e) => setFormData((prev) => ({ ...prev, commission: e.target.value }))}
+                className="h-9"
               />
             </div>
           </div>
 
           {/* Target */}
-          <div className="space-y-2">
-            <Label>Target Bulanan</Label>
+          <div className="space-y-1">
+            <Label className="text-xs">Target Bulanan</Label>
             <Input
               type="number"
               value={formData.target}
               onChange={(e) => setFormData((prev) => ({ ...prev, target: e.target.value }))}
+              className="h-9"
             />
           </div>
 
           {/* Notes */}
-          <div className="space-y-2">
-            <Label>Catatan</Label>
+          <div className="space-y-1">
+            <Label className="text-xs">Catatan</Label>
             <Textarea
-              placeholder="Tambahkan catatan tentang partner ini..."
+              placeholder="Tambahkan catatan..."
               value={formData.notes}
               onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
-              rows={3}
+              rows={2}
+              className="text-sm"
             />
           </div>
 
           {/* Submit */}
-          <div className="flex gap-3">
+          <div className="flex gap-2 pt-2">
             <Button
               type="button"
               variant="outline"
-              className="flex-1"
+              className="flex-1 h-9"
               onClick={() => onOpenChange(false)}
             >
               Batal
             </Button>
             <Button
               type="submit"
-              className="flex-1 gradient-primary text-white"
+              className="flex-1 gradient-primary text-white h-9"
               disabled={loading}
             >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                'Simpan'
-              )}
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan'}
             </Button>
           </div>
         </form>
@@ -1041,146 +1473,162 @@ function NewPartnerDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gradient-primary text-white rounded-xl h-10 px-4">
-          <UserPlus className="w-4 h-4 mr-1" />
+        <Button size="sm" className="gradient-primary text-white rounded-lg h-8 px-3 text-[10px] sm:text-xs">
+          <UserPlus className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
           Baru
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Partner Baru</DialogTitle>
+          <DialogTitle className="text-base sm:text-lg">Partner Baru</DialogTitle>
           <DialogDescription>Tambahkan mitra baru ke sistem</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Nama Lengkap *</Label>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Nama Lengkap *</Label>
               <Input
-                placeholder="Nama partner"
+                placeholder="Nama"
                 value={formData.name}
                 onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 required
+                className="h-9"
               />
             </div>
-            <div className="space-y-2">
-              <Label>No. WhatsApp *</Label>
+            <div className="space-y-1">
+              <Label className="text-xs">No. WA *</Label>
               <Input
                 placeholder="08xxx"
                 value={formData.phone}
                 onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
                 required
+                className="h-9"
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Email *</Label>
+          <div className="space-y-1">
+            <Label className="text-xs">Email *</Label>
             <Input
               type="email"
               placeholder="email@contoh.com"
               value={formData.email}
               onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
               required
+              className="h-9"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Kota *</Label>
+          <div className="space-y-1">
+            <Label className="text-xs">Kota *</Label>
             <Input
-              placeholder="Kota domisili"
+              placeholder="Kota"
               value={formData.city}
               onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
               required
+              className="h-9"
             />
           </div>
 
-          <div className="space-y-3 pt-2 border-t">
-            <p className="text-sm font-medium">Informasi Rekening</p>
-            <div className="space-y-2">
-              <Label>Nama Bank *</Label>
+          <div className="space-y-2 pt-2 border-t">
+            <p className="text-xs font-medium">Rekening</p>
+            <div className="space-y-1">
+              <Label className="text-xs">Nama Bank *</Label>
               <Input
-                placeholder="contoh: BCA, Mandiri, BRI"
+                placeholder="BCA, Mandiri, BRI"
                 value={formData.bankName}
                 onChange={(e) => setFormData((prev) => ({ ...prev, bankName: e.target.value }))}
                 required
+                className="h-9"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>No. Rekening *</Label>
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">No. Rekening *</Label>
                 <Input
                   placeholder="1234567890"
                   value={formData.bankAccount}
                   onChange={(e) => setFormData((prev) => ({ ...prev, bankAccount: e.target.value }))}
                   required
+                  className="h-9"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Nama di Rekening *</Label>
+              <div className="space-y-1">
+                <Label className="text-xs">Nama di Rekening *</Label>
                 <Input
                   placeholder="Nama pemilik"
                   value={formData.bankHolder}
                   onChange={(e) => setFormData((prev) => ({ ...prev, bankHolder: e.target.value }))}
                   required
+                  className="h-9"
                 />
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 pt-2 border-t">
-            <div className="space-y-2">
-              <Label>Tier</Label>
-              <Select
-                value={formData.tier}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, tier: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Bronze">Bronze</SelectItem>
-                  <SelectItem value="Silver">Silver</SelectItem>
-                  <SelectItem value="Gold">Gold</SelectItem>
-                  <SelectItem value="Platinum">Platinum</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="space-y-2 pt-2 border-t">
+            <p className="text-xs font-medium">Pengaturan</p>
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Tier</Label>
+                <Select
+                  value={formData.tier}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, tier: value }))}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Bronze">Bronze</SelectItem>
+                    <SelectItem value="Silver">Silver</SelectItem>
+                    <SelectItem value="Gold">Gold</SelectItem>
+                    <SelectItem value="Platinum">Platinum</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Komisi (%)</Label>
+                <Input
+                  type="number"
+                  value={formData.commission}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, commission: e.target.value }))}
+                  className="h-9"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Komisi (%)</Label>
+            <div className="space-y-1">
+              <Label className="text-xs">Target Bulanan</Label>
               <Input
                 type="number"
-                placeholder="30"
-                value={formData.commission}
-                onChange={(e) => setFormData((prev) => ({ ...prev, commission: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Target</Label>
-              <Input
-                type="number"
-                placeholder="5000000"
                 value={formData.target}
                 onChange={(e) => setFormData((prev) => ({ ...prev, target: e.target.value }))}
+                className="h-9"
               />
             </div>
           </div>
 
-          <Button
-            type="submit"
-            className="w-full gradient-primary text-white h-11 rounded-xl"
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Menyimpan...
-              </>
-            ) : (
-              'Simpan Partner'
-            )}
-          </Button>
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" className="flex-1 h-9" onClick={() => setOpen(false)}>
+              Batal
+            </Button>
+            <Button type="submit" className="flex-1 gradient-primary text-white h-9" disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan'}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
   );
+}
+
+// Helper function
+function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return 'just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHour = Math.floor(diffMin / 60);
+  return `${diffHour}h ago`;
 }

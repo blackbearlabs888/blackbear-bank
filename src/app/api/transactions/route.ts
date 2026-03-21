@@ -99,6 +99,9 @@ export async function POST(request: NextRequest) {
       customerName,
       customerPhone,
       customerCity,
+      customerBankName,
+      customerBankAccount,
+      customerBankHolder,
       isNewCustomer,
       nominal,
       paymentTypeId,
@@ -153,7 +156,12 @@ export async function POST(request: NextRequest) {
         where: { id: effectiveMarketplaceId },
       });
       if (marketplace) {
-        platformFee = nominal * (marketplace.feePercent / 100) + (marketplace.feeFlat || 0);
+        // Safety: normalize fee percent if > 100 (database precision issue fix)
+        let mpFeePercent = marketplace.feePercent;
+        if (mpFeePercent > 100) {
+          mpFeePercent = mpFeePercent / 1000;
+        }
+        platformFee = nominal * (mpFeePercent / 100) + (marketplace.feeFlat || 0);
       }
     }
 
@@ -200,12 +208,15 @@ export async function POST(request: NextRequest) {
       if (existingCustomer) {
         finalCustomerId = existingCustomer.id;
       } else {
-        // Create new customer
+        // Create new customer with bank details
         const newCustomer = await db.customer.create({
           data: {
             name: customerName,
             phone: customerPhone,
             city: customerCity || null,
+            bankName: customerBankName || null,
+            bankAccount: customerBankAccount || null,
+            bankHolder: customerBankHolder || null,
             totalVolume: 0,
             totalTransactions: 0,
           },
