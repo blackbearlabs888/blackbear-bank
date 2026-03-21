@@ -253,9 +253,13 @@ model OwnerProfile {
   faviconUrl      String?
   metaTitle       String?
   metaDescription String?
+  footerEmail     String?
   footerWhatsapp  String?
   footerInstagram String?
   footerFacebook  String?
+  footerTiktok    String?
+  footerYoutube   String?
+  footerThreads   String?
   maintenanceMode Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

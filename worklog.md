@@ -687,127 +687,57 @@ Stage Summary:
 ---
 Task ID: 20
 Agent: main-agent
-Task: Fix Owner Dashboard Chart Design & Partner Target Based on Profit
+Task: Owner Dashboard Chart & Partner Target Fixes + Deployment Setup
 
-Work Log:
-
-**1. Owner Dashboard Chart Redesign (`/src/app/owner/dashboard/page.tsx`):**
-- Redesigned "Volume 7 Hari Terakhir" chart with modern styling
-- Added gradient background with glass-card effect
-- Added BarChart3 icon with gradient styling in header
-- Added summary stats showing: Total, Rata-rata, Jumlah transaksi
-- Added grid lines for better visualization
-- Added bar styling with gradient and shine effects
-- Highlight highest bar with emerald color and "MAX" label
-- Today's bar highlighted with gradient-primary and shadow
-- Enhanced tooltip showing volume + transaction count
-- Better empty state with informative message
-- Smooth animations (500ms transitions)
-
-**2. Partner Target Based on Profit (`/src/app/owner/dashboard/partners/page.tsx`):**
-- Changed progress calculation from `totalVolume/target` to `totalProfit/target`
-- Updated PartnerCard progress bar to show profit progress
-- Added profit and target values below progress bar
-- Changed label from "Target Progress" to "Target Profit"
-- Updated PartnerDetailDialog to show profit-based progress
-- Changed title from "Target Progress" to "Target Profit (Base Profit)"
-- Updated to show "Profit Saat Ini" instead of "Volume Saat Ini"
-
-**3. Owner Dashboard "Hampir Capai Target" Section:**
-- Updated description from "pencapaian 80%+" to "pencapaian profit 80%+"
-- Changed display from volume to profit
-- Shows green profit amount with "profit / target" format
-- Filter changed from 90% to 80% to show more partners
-
-**4. Dashboard API Update (`/src/app/api/dashboard/route.ts`):**
-- Added `profit` field to `partnersCloseToTarget` response
-- Changed filter threshold from 90% to 80%
-
-**Files Modified:**
-- `/src/app/owner/dashboard/page.tsx` - Chart redesign, target section update
-- `/src/app/owner/dashboard/partners/page.tsx` - Profit-based progress
-- `/src/app/api/dashboard/route.ts` - Added profit field, filter adjustment
-
-**Lint Status:**
-- All lint checks passed with no errors
-
-Stage Summary:
-- Owner dashboard chart now has modern, attractive design
-- Partner target progress is now based on profit (base profit) instead of volume
-- All interfaces updated to reflect profit-based calculations
-- Filter threshold changed to 80% to show more partners close to target
+**Changes:**
+1. Redesigned Volume 7 Hari chart with modern styling
+2. Changed partner target to use "base profit" calculation
+3. Created DEPLOYMENT.md guide
+4. Created PostgreSQL schema with Decimal type
+5. Created prebuild script for auto schema switching
+6. Added auto seed on deploy
 
 ---
 Task ID: 21
 Agent: main-agent
-Task: Create Deployment Documentation for GitHub, Vercel, and Neon
+Task: Auto Seed on Deploy
 
-Work Log:
+**Work Log:**
 
-**1. Created Deployment Guide (`/DEPLOYMENT.md`):**
-- Complete step-by-step guide for deploying to production
-- Covered 3 platforms: GitHub, Vercel, Neon (PostgreSQL)
-- Includes:
-  - Neon database setup with connection string
-  - GitHub repository creation and push
-  - Vercel project import and configuration
-  - Environment variables reference
-  - Custom domain setup
-  - Automatic deployment configuration
-  - Troubleshooting section
-  - Backup & monitoring tips
-  - Security checklist
-  - Quick reference commands
+**1. Updated Prebuild Script (`/scripts/prebuild.ts`):**
+- Auto-detect production environment
+- Switch schema from SQLite to PostgreSQL
+- Generate Prisma Client
+- Push schema to database
+- **Auto-run seed** (creates owner, payment types, marketplaces)
 
-**2. Created PostgreSQL Schema (`/prisma/schema.postgres.prisma`):**
-- Converted SQLite schema to PostgreSQL compatible
-- Changed Float to Double for proper numeric handling
-- Added indexes for better query performance
-- Ready for Neon deployment
+**2. Deploy Flow:**
+```
+Vercel Deploy
+    ↓
+prebuild.ts runs
+    ↓
+1. Detect PostgreSQL → Switch schema
+2. prisma generate
+3. prisma db push (create tables)
+4. tsx prisma/seed.ts (seed data)
+    ↓
+next build
+    ↓
+Done! ✅
+```
 
-**3. Updated `package.json`:**
-- Changed name from "nextjs_tailwind_shadcn_ts" to "black-bear-webapp"
-- Updated version to "1.0.0"
-- Simplified build script for Vercel compatibility
-- Added `postinstall` script for automatic Prisma generate
-- Added new scripts: `db:migrate:deploy`, `db:studio`, `db:seed`
-- Added `start` script using `next start`
-
-**4. Updated `next.config.ts`:**
-- Commented out `output: "standalone"` for Vercel compatibility
-- Added `.vercel.app` to allowedDevOrigins
-- Cleaned up configuration
-
-**5. Created `.env.example`:**
-- Template for environment variables
-- Includes SQLite (local) and PostgreSQL (production) examples
-- Includes NEXTAUTH_SECRET and NEXTAUTH_URL placeholders
-
-**6. Created `.gitattributes`:**
-- Consistent line endings across platforms
-- LF normalization for code files
-- Binary file handling
-
-**7. Verified `seed.ts`:**
-- Already has owner account creation
-- Creates default payment types
-- Creates default marketplaces
-
-**Files Created:**
-- `/DEPLOYMENT.md` - Complete deployment guide
-- `/prisma/schema.postgres.prisma` - PostgreSQL schema
-- `/.env.example` - Environment variables template
-- `/.gitattributes` - Git line endings config
+**3. Seed Creates Automatically:**
+- Owner: `owner@blackbear.id` / `owner123`
+- 5 Payment Types (Kartu Kredit, GoPay Later, etc.)
+- 5 Marketplaces (Tokopedia, Shopee, etc.)
 
 **Files Modified:**
-- `/package.json` - Updated for production deployment
-- `/next.config.ts` - Vercel compatible config
+- `/scripts/prebuild.ts` - Auto seed on deploy
+- `/prisma/schema.postgres.prisma` - Decimal type for money
+- `/prisma/seed.ts` - Simplified seeding
 
-**Lint Status:**
-- All lint checks passed with no errors
-
-Stage Summary:
-- Complete deployment documentation ready for production
-- Project structure updated for Vercel + Neon deployment
-- PostgreSQL schema prepared for migration
-- All necessary configuration files in place
+**Stage Summary:**
+- Everything auto-creates on deploy: tables + seed data
+- No manual steps needed after first deploy
+- Owner account ready to login immediately
