@@ -23,6 +23,10 @@ import {
   User,
   Calendar,
   ArrowRight,
+  Sparkles,
+  Zap,
+  Shield,
+  XCircle,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -52,7 +56,8 @@ const statusConfig = {
     icon: Clock,
     description: 'Order menunggu verifikasi tim kami',
     progress: 25,
-    gradient: 'from-amber-500 to-yellow-500',
+    gradient: 'from-amber-400 to-yellow-500',
+    bgGradient: 'from-amber-500/10 to-yellow-500/10',
   },
   verification: {
     label: 'Verifikasi',
@@ -60,7 +65,8 @@ const statusConfig = {
     icon: AlertCircle,
     description: 'Sedang dalam proses verifikasi',
     progress: 50,
-    gradient: 'from-blue-500 to-cyan-500',
+    gradient: 'from-blue-400 to-cyan-500',
+    bgGradient: 'from-blue-500/10 to-cyan-500/10',
   },
   process: {
     label: 'Diproses',
@@ -68,7 +74,8 @@ const statusConfig = {
     icon: Loader2,
     description: 'Transaksi sedang diproses',
     progress: 75,
-    gradient: 'from-purple-500 to-violet-500',
+    gradient: 'from-purple-400 to-violet-500',
+    bgGradient: 'from-purple-500/10 to-violet-500/10',
   },
   success: {
     label: 'Berhasil',
@@ -76,17 +83,60 @@ const statusConfig = {
     icon: CheckCircle2,
     description: 'Transaksi berhasil, dana telah dikirim',
     progress: 100,
-    gradient: 'from-green-500 to-emerald-500',
+    gradient: 'from-green-400 to-emerald-500',
+    bgGradient: 'from-green-500/10 to-emerald-500/10',
   },
   failed: {
     label: 'Gagal',
     color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-    icon: AlertCircle,
+    icon: XCircle,
     description: 'Transaksi gagal',
     progress: 0,
-    gradient: 'from-red-500 to-rose-500',
+    gradient: 'from-red-400 to-rose-500',
+    bgGradient: 'from-red-500/10 to-rose-500/10',
   },
 };
+
+// Animated Background Component
+function AnimatedBackground() {
+  return (
+    <div className="fixed inset-0 -z-10 overflow-hidden">
+      {/* Gradient Base */}
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-50 via-fuchsia-50 to-pink-50 dark:from-gray-950 dark:via-violet-950/20 dark:to-fuchsia-950/20" />
+      
+      {/* Mesh Gradient Orbs */}
+      <div className="absolute top-0 right-1/4 w-96 h-96 bg-gradient-to-br from-violet-400/30 to-fuchsia-400/30 dark:from-violet-600/20 dark:to-fuchsia-600/20 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-gradient-to-br from-pink-400/30 to-rose-400/30 dark:from-pink-600/20 dark:to-rose-600/20 rounded-full blur-3xl animate-pulse delay-1000" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-primary/10 to-fuchsia-500/10 dark:from-primary/5 dark:to-fuchsia-500/5 rounded-full blur-3xl" />
+      
+      {/* Floating Particles */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 rounded-full bg-primary/20 dark:bg-primary/10"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animation: `float ${5 + Math.random() * 10}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 5}s`,
+            }}
+          />
+        ))}
+      </div>
+      
+      {/* Grid Pattern */}
+      <div 
+        className="absolute inset-0 opacity-[0.02] dark:opacity-[0.03]"
+        style={{
+          backgroundImage: `linear-gradient(to right, currentColor 1px, transparent 1px),
+                           linear-gradient(to bottom, currentColor 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }}
+      />
+    </div>
+  );
+}
 
 // Status Timeline Component
 function StatusTimeline({ currentStatus }: { currentStatus: string }) {
@@ -94,11 +144,11 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
   const currentIndex = statuses.indexOf(currentStatus);
   
   return (
-    <div className="relative">
+    <div className="relative p-4 rounded-2xl bg-white/30 dark:bg-black/10 backdrop-blur-xl">
       {/* Progress Line */}
-      <div className="absolute top-6 left-6 right-6 h-0.5 bg-muted">
+      <div className="absolute top-10 left-10 right-10 h-1 bg-muted/50 rounded-full overflow-hidden">
         <div 
-          className="h-full bg-gradient-to-r from-primary to-green-500 transition-all duration-500"
+          className="h-full bg-gradient-to-r from-primary via-purple-500 to-green-500 transition-all duration-700 rounded-full"
           style={{ width: `${(currentIndex / (statuses.length - 1)) * 100}%` }}
         />
       </div>
@@ -112,22 +162,22 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
           const isCurrent = status === currentStatus;
           
           return (
-            <div key={status} className="flex flex-col items-center">
+            <div key={status} className="flex flex-col items-center relative z-10">
               <div className={cn(
-                "w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300",
+                "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center border-2 transition-all duration-500",
                 isCompleted 
-                  ? `bg-gradient-to-br ${config.gradient} border-transparent` 
+                  ? `bg-gradient-to-br ${config.gradient} border-transparent shadow-lg` 
                   : "bg-background border-muted",
-                isCurrent && "ring-4 ring-primary/20"
+                isCurrent && "ring-4 ring-primary/20 scale-110"
               )}>
                 <Icon className={cn(
-                  "w-5 h-5",
+                  "w-5 h-5 sm:w-6 sm:h-6",
                   isCompleted ? "text-white" : "text-muted-foreground",
                   status === 'process' && isCurrent && "animate-spin"
                 )} />
               </div>
               <span className={cn(
-                "text-xs mt-2 font-medium",
+                "text-xs mt-2 font-medium text-center",
                 isCompleted ? "text-foreground" : "text-muted-foreground"
               )}>
                 {config.label}
@@ -146,6 +196,7 @@ function TrackOrderContent() {
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
 
   // Auto-fill from URL param
   useEffect(() => {
@@ -190,30 +241,47 @@ function TrackOrderContent() {
     handleSearch();
   };
 
+  const handleCopy = () => {
+    if (order) {
+      navigator.clipboard.writeText(order.orderId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   const getStatusConfig = (status: string) => {
     return statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
   };
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 sm:space-y-6">
+    <div className="max-w-lg mx-auto space-y-5 sm:space-y-6">
       {/* Search Card */}
-      <Card className="glass-card animate-slide-up overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
+      <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-2xl shadow-primary/10">
+        <div className="h-1.5 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 flex items-center justify-center shadow-lg shadow-primary/30">
+                <Search className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="font-semibold text-lg">Lacak Order</p>
+                <p className="text-sm text-muted-foreground">Masukkan Order ID Anda</p>
+              </div>
+            </div>
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Package className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                <Package className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   placeholder="Contoh: BB-XXXXXX"
                   value={orderId}
                   onChange={(e) => setOrderId(e.target.value.toUpperCase())}
-                  className="h-12 sm:h-14 pl-10 sm:pl-12 text-base sm:text-lg font-mono tracking-wide rounded-xl"
+                  className="h-14 pl-12 text-lg font-mono tracking-wide rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
                 />
               </div>
               <Button 
                 type="submit" 
-                className="h-12 sm:h-14 w-12 sm:w-14 rounded-xl gradient-primary shadow-lg shadow-primary/25"
+                className="h-14 w-14 rounded-xl bg-gradient-to-r from-primary to-fuchsia-500 hover:from-primary/90 hover:to-fuchsia-500/90 shadow-lg shadow-primary/30"
                 disabled={loading}
               >
                 {loading ? (
@@ -232,15 +300,15 @@ function TrackOrderContent() {
 
       {/* Error State */}
       {error && (
-        <Card className="glass-card border-destructive/50 animate-fade-in">
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3 text-destructive">
-              <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-5 h-5" />
+        <Card className="glass-card border-red-500/30 animate-fade-in overflow-hidden">
+          <CardContent className="py-5">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center shadow-lg shadow-red-500/20">
+                <AlertCircle className="w-7 h-7 text-white" />
               </div>
               <div>
-                <p className="font-medium text-sm">Order Tidak Ditemukan</p>
-                <p className="text-xs text-muted-foreground">{error}</p>
+                <p className="font-semibold text-red-600 dark:text-red-400">Order Tidak Ditemukan</p>
+                <p className="text-sm text-muted-foreground">{error}</p>
               </div>
             </div>
           </CardContent>
@@ -249,35 +317,44 @@ function TrackOrderContent() {
 
       {/* Order Found */}
       {order && (
-        <div className="space-y-4 animate-fade-in">
+        <div className="space-y-5 animate-fade-in">
           {/* Status Card */}
-          <Card className="glass-card overflow-hidden">
+          <Card className="glass-card overflow-hidden border-0 shadow-2xl">
             <CardContent className="p-0">
               {(() => {
                 const config = getStatusConfig(order.status);
                 const Icon = config.icon;
                 return (
-                  <div className="text-center py-6 sm:py-8 px-4 bg-gradient-to-br from-muted/50 to-muted/30">
+                  <div className={cn(
+                    "text-center py-8 sm:py-10 px-4 bg-gradient-to-br",
+                    config.bgGradient
+                  )}>
                     {/* Status Icon */}
-                    <div className={cn(
-                      'w-20 h-20 sm:w-24 sm:h-24 rounded-2xl mx-auto mb-4 flex items-center justify-center bg-gradient-to-br',
-                      config.gradient
-                    )}>
-                      <Icon className={cn('w-10 h-10 sm:w-12 sm:h-12 text-white', order.status === 'process' && 'animate-spin')} />
+                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-5">
+                      <div className={cn(
+                        "absolute inset-0 rounded-3xl blur-xl opacity-50",
+                        `bg-gradient-to-br ${config.gradient}`
+                      )} />
+                      <div className={cn(
+                        "relative w-24 h-24 sm:w-28 sm:h-28 rounded-3xl flex items-center justify-center shadow-2xl",
+                        `bg-gradient-to-br ${config.gradient}`
+                      )}>
+                        <Icon className={cn('w-12 h-12 sm:w-14 sm:h-14 text-white', order.status === 'process' && 'animate-spin')} />
+                      </div>
                     </div>
                     
                     {/* Status Badge */}
-                    <Badge className={cn(config.color, 'text-sm sm:text-base px-4 sm:px-5 py-1 sm:py-1.5')}>
+                    <Badge className={cn(config.color, 'text-base px-5 py-1.5 rounded-full')}>
                       {config.label}
                     </Badge>
                     
-                    <p className="text-sm sm:text-base text-muted-foreground mt-3 max-w-xs mx-auto">
+                    <p className="text-base sm:text-lg text-muted-foreground mt-4 max-w-xs mx-auto">
                       {config.description}
                     </p>
                     
                     {/* Timeline - Hidden for failed status */}
                     {order.status !== 'failed' && (
-                      <div className="mt-6 sm:mt-8">
+                      <div className="mt-8">
                         <StatusTimeline currentStatus={order.status} />
                       </div>
                     )}
@@ -288,72 +365,74 @@ function TrackOrderContent() {
           </Card>
 
           {/* Order Details Card */}
-          <Card className="glass-card animate-slide-up overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-violet-500 to-purple-500" />
-            <CardContent className="p-4 sm:p-6 space-y-4">
+          <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-2xl shadow-primary/5">
+            <div className="h-1.5 bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500" />
+            <CardContent className="p-5 sm:p-6 space-y-5">
               {/* Order ID */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-primary/5 to-fuchsia-500/5 border border-primary/10">
                 <span className="text-sm text-muted-foreground">Order ID</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-primary text-base sm:text-lg">{order.orderId}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-lg tap-highlight"
-                    onClick={() => navigator.clipboard.writeText(order.orderId)}
-                  >
-                    <Package className="w-4 h-4" />
-                  </Button>
-                </div>
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors"
+                >
+                  <span className="font-mono font-bold text-primary">{order.orderId}</span>
+                  {copied ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <Package className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </button>
               </div>
-
-              <Separator />
 
               {/* Amount Cards */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 sm:p-4 rounded-xl bg-muted/50">
-                  <div className="flex items-center gap-2 mb-1">
-                    <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
+                <div className="p-4 rounded-xl bg-muted/30 border border-muted/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CreditCard className="w-4 h-4 text-muted-foreground" />
                     <p className="text-xs text-muted-foreground">Nominal</p>
                   </div>
-                  <p className="font-semibold text-sm sm:text-base">{formatCurrency(order.nominal)}</p>
+                  <p className="font-bold text-lg">{formatCurrency(order.nominal)}</p>
                 </div>
-                <div className="p-3 sm:p-4 rounded-xl bg-red-500/5 border border-red-500/20">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Wallet className="w-3.5 h-3.5 text-red-500" />
+                <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wallet className="w-4 h-4 text-red-500" />
                     <p className="text-xs text-muted-foreground">Biaya</p>
                   </div>
-                  <p className="font-semibold text-sm sm:text-base text-red-500">-{formatCurrency(order.paymentFee)}</p>
+                  <p className="font-bold text-lg text-red-500">-{formatCurrency(order.paymentFee)}</p>
                 </div>
               </div>
 
               {/* Total Received */}
-              <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-r from-primary/10 to-fuchsia-500/10 border border-primary/20">
+              <div className="p-5 rounded-xl bg-gradient-to-r from-primary/10 via-purple-500/10 to-fuchsia-500/10 border border-primary/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Wallet className="w-5 h-5 text-primary" />
-                    <span className="font-semibold text-sm sm:text-base">Total Diterima</span>
+                    <span className="font-semibold">Total Diterima</span>
                   </div>
-                  <span className="text-xl sm:text-2xl font-bold text-primary">{formatCurrency(order.totalReceived)}</span>
+                  <span className="text-2xl font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
+                    {formatCurrency(order.totalReceived)}
+                  </span>
                 </div>
               </div>
 
               <Separator />
 
               {/* Customer Info */}
-              <div>
+              <div className="p-4 rounded-xl bg-muted/20 border border-muted/30">
                 <div className="flex items-center gap-2 mb-3">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-sm font-medium">Data Penerima</p>
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <User className="w-4 h-4 text-primary" />
+                  </div>
+                  <p className="font-medium">Data Penerima</p>
                 </div>
-                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Nama</p>
-                    <p className="text-sm font-medium">{order.customer.name}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Nama</p>
+                    <p className="font-medium">{order.customer.name}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Bank</p>
-                    <p className="text-sm font-medium">
+                    <p className="text-xs text-muted-foreground mb-1">Bank</p>
+                    <p className="font-medium">
                       {order.customer.bankName && order.customer.bankAccount
                         ? `${order.customer.bankName} - ${order.customer.bankAccount}`
                         : '-'}
@@ -365,46 +444,50 @@ function TrackOrderContent() {
               <Separator />
 
               {/* Payment & Method Info */}
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-0.5">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 rounded-xl bg-muted/20">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
                     <CreditCard className="w-3 h-3" />
                     Tipe Pembayaran
                   </p>
-                  <p className="text-sm font-medium">{order.paymentType}</p>
+                  <p className="font-medium">{order.paymentType}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-0.5">
+                <div className="p-3 rounded-xl bg-muted/20">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
                     <Truck className="w-3 h-3" />
                     Metode
                   </p>
-                  <p className="text-sm font-medium">{order.methodTransaction}</p>
+                  <p className="font-medium">{order.methodTransaction}</p>
                 </div>
               </div>
 
               {order.partner && (
-                <div className="pt-2">
-                  <p className="text-xs text-muted-foreground mb-0.5">Partner</p>
-                  <p className="text-sm font-medium">{order.partner}</p>
+                <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
+                  <p className="text-xs text-muted-foreground mb-1">Partner</p>
+                  <p className="font-medium text-primary">{order.partner}</p>
                 </div>
               )}
 
               <Separator />
 
               {/* Timestamps */}
-              <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3 h-3" />
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex items-start gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-4 h-4 text-green-500" />
+                  </div>
                   <div>
-                    <p>Dibuat</p>
-                    <p className="font-medium text-foreground text-xs">{formatDate(order.createdAt)}</p>
+                    <p className="text-muted-foreground text-xs">Dibuat</p>
+                    <p className="font-medium">{formatDate(order.createdAt)}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 justify-end text-right">
-                  <Clock className="w-3 h-3" />
+                <div className="flex items-start gap-2 justify-end text-right">
                   <div>
-                    <p>Update Terakhir</p>
-                    <p className="font-medium text-foreground text-xs">{formatDate(order.updatedAt)}</p>
+                    <p className="text-muted-foreground text-xs">Update Terakhir</p>
+                    <p className="font-medium">{formatDate(order.updatedAt)}</p>
+                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-4 h-4 text-blue-500" />
                   </div>
                 </div>
               </div>
@@ -425,7 +508,7 @@ function TrackOrderContent() {
             </Button>
             <Button 
               asChild 
-              className="flex-1 h-12 rounded-xl gradient-primary"
+              className="flex-1 h-12 rounded-xl bg-gradient-to-r from-primary to-fuchsia-500 hover:from-primary/90 hover:to-fuchsia-500/90 shadow-lg shadow-primary/30"
             >
               <Link href="/order">
                 <Package className="w-4 h-4 mr-2" />
@@ -442,12 +525,13 @@ function TrackOrderContent() {
 
 function TrackOrderSkeleton() {
   return (
-    <div className="max-w-lg mx-auto space-y-4 sm:space-y-6">
-      <Card className="glass-card">
+    <div className="max-w-lg mx-auto space-y-5 sm:space-y-6">
+      <Card className="glass-card border-0 shadow-xl overflow-hidden">
+        <div className="h-1.5 bg-gradient-to-r from-primary to-fuchsia-500" />
         <CardContent className="pt-6">
           <div className="flex gap-2">
-            <Skeleton className="h-12 sm:h-14 flex-1 rounded-xl" />
-            <Skeleton className="h-12 sm:h-14 w-12 sm:w-14 rounded-xl" />
+            <Skeleton className="h-14 flex-1 rounded-xl" />
+            <Skeleton className="h-14 w-14 rounded-xl" />
           </div>
         </CardContent>
       </Card>
@@ -457,24 +541,30 @@ function TrackOrderSkeleton() {
 
 export default function TrackOrderPage() {
   return (
-    <div className="min-h-screen gradient-hero pb-8">
+    <div className="min-h-screen pb-8">
+      <AnimatedBackground />
+      
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-xl border-b">
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-white/20 dark:border-white/5">
         <div className="container mx-auto px-4">
-          <div className="flex items-center gap-3 h-14 sm:h-16">
+          <div className="flex items-center gap-3 h-16 sm:h-20">
             <Button 
               variant="ghost" 
               size="icon"
               asChild 
-              className="tap-highlight rounded-xl"
+              className="rounded-xl bg-white/50 dark:bg-black/20"
             >
               <Link href="/">
                 <ArrowLeft className="w-5 h-5" />
               </Link>
             </Button>
-            <div>
-              <h1 className="font-semibold text-base sm:text-lg">Track Order</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">Cek status transaksi Anda</p>
+            <div className="flex-1">
+              <h1 className="font-bold text-lg sm:text-xl">Track Order</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">Cek status transaksi Anda</p>
+            </div>
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20">
+              <Shield className="w-4 h-4 text-green-500" />
+              <span className="text-sm font-medium">Real-time</span>
             </div>
           </div>
         </div>

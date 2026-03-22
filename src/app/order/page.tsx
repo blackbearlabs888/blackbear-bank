@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,6 @@ import {
   Truck, 
   Loader2,
   CheckCircle2,
-  Info,
   Sparkles,
   Shield,
   Clock,
@@ -31,6 +30,10 @@ import {
   Check,
   Building,
   WalletCards,
+  Zap,
+  Star,
+  Globe,
+  Phone,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -51,42 +54,94 @@ const banks = [
   'Panin', 'OCBC NISP', 'Jenius', 'Seabank', 'Bank Jago', 'Lainnya'
 ];
 
+// Animated Background Component
+function AnimatedBackground() {
+  return (
+    <div className="fixed inset-0 -z-10 overflow-hidden">
+      {/* Gradient Base */}
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-50 via-fuchsia-50 to-pink-50 dark:from-gray-950 dark:via-violet-950/20 dark:to-fuchsia-950/20" />
+      
+      {/* Mesh Gradient Orbs */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-violet-400/30 to-fuchsia-400/30 dark:from-violet-600/20 dark:to-fuchsia-600/20 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-to-br from-pink-400/30 to-rose-400/30 dark:from-pink-600/20 dark:to-rose-600/20 rounded-full blur-3xl animate-pulse delay-1000" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-primary/10 to-fuchsia-500/10 dark:from-primary/5 dark:to-fuchsia-500/5 rounded-full blur-3xl" />
+      
+      {/* Floating Particles */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 rounded-full bg-primary/20 dark:bg-primary/10"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animation: `float ${5 + Math.random() * 10}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 5}s`,
+            }}
+          />
+        ))}
+      </div>
+      
+      {/* Grid Pattern */}
+      <div 
+        className="absolute inset-0 opacity-[0.02] dark:opacity-[0.03]"
+        style={{
+          backgroundImage: `linear-gradient(to right, currentColor 1px, transparent 1px),
+                           linear-gradient(to bottom, currentColor 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }}
+      />
+    </div>
+  );
+}
+
 // Step Indicator Component
 function StepIndicator({ currentStep, steps }: { currentStep: number; steps: string[] }) {
   return (
-    <div className="flex items-center justify-center gap-2">
-      {steps.map((step, index) => (
-        <div key={step} className="flex items-center gap-2">
-          <div 
-            className={cn(
-              "flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm transition-all",
-              currentStep > index 
-                ? "bg-green-500 text-white" 
-                : currentStep === index 
-                  ? "gradient-primary text-white" 
-                  : "bg-muted text-muted-foreground"
-            )}
-          >
-            {currentStep > index ? (
-              <Check className="w-4 h-4" />
-            ) : (
-              index + 1
+    <div className="relative p-4 rounded-2xl bg-white/50 dark:bg-black/20 backdrop-blur-xl border border-white/50 dark:border-white/10">
+      <div className="flex items-center justify-center gap-2">
+        {steps.map((step, index) => (
+          <div key={step} className="flex items-center gap-2">
+            <div className="flex flex-col items-center gap-1">
+              <div 
+                className={cn(
+                  "relative flex items-center justify-center w-10 h-10 rounded-xl font-semibold text-sm transition-all duration-500",
+                  currentStep > index 
+                    ? "bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-lg shadow-green-500/30" 
+                    : currentStep === index 
+                      ? "bg-gradient-to-br from-primary to-fuchsia-500 text-white shadow-lg shadow-primary/30 scale-110" 
+                      : "bg-muted/50 text-muted-foreground"
+                )}
+              >
+                {currentStep > index ? (
+                  <Check className="w-5 h-5" />
+                ) : (
+                  index + 1
+                )}
+                {currentStep === index && (
+                  <div className="absolute inset-0 rounded-xl bg-primary/20 animate-ping" />
+                )}
+              </div>
+              <span className={cn(
+                "text-xs font-medium transition-colors",
+                currentStep === index ? "text-primary" : "text-muted-foreground"
+              )}>
+                {step}
+              </span>
+            </div>
+            {index < steps.length - 1 && (
+              <div className="relative w-8 sm:w-16 h-1 rounded-full bg-muted/50 overflow-hidden">
+                <div 
+                  className={cn(
+                    "absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-fuchsia-500 transition-all duration-500",
+                    currentStep > index ? "w-full" : "w-0"
+                  )}
+                />
+              </div>
             )}
           </div>
-          <span className={cn(
-            "text-xs sm:text-sm font-medium hidden sm:block",
-            currentStep === index ? "text-primary" : "text-muted-foreground"
-          )}>
-            {step}
-          </span>
-          {index < steps.length - 1 && (
-            <div className={cn(
-              "w-6 sm:w-12 h-0.5 rounded-full",
-              currentStep > index ? "bg-green-500" : "bg-muted"
-            )} />
-          )}
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -104,38 +159,53 @@ function StepRecipient({
   const isValid = formData.name && formData.phone;
 
   return (
-    <Card className="glass-card animate-slide-up overflow-hidden">
-      <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+    <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-2xl shadow-primary/5">
+      <div className="h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <User className="w-4 h-4 text-primary" />
-          Data Penerima
-        </CardTitle>
-        <CardDescription className="text-xs">
-          Informasi untuk mengirim dana
-        </CardDescription>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+            <User className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <CardTitle className="text-lg">Data Penerima</CardTitle>
+            <CardDescription>Informasi untuk mengirim dana</CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-sm">Nama Lengkap *</Label>
+            <Label className="text-sm font-medium flex items-center gap-2">
+              <User className="w-3.5 h-3.5 text-muted-foreground" />
+              Nama Lengkap *
+            </Label>
             <Input
               placeholder="Nama lengkap"
               value={formData.name}
               onChange={(e) => onChange('name', e.target.value)}
-              className="h-11"
+              className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-sm">No. WhatsApp *</Label>
+            <Label className="text-sm font-medium flex items-center gap-2">
+              <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+              No. WhatsApp *
+            </Label>
             <Input
               type="tel"
               placeholder="08xxxxxxxxxx"
               value={formData.phone}
               onChange={(e) => onChange('phone', e.target.value)}
-              className="h-11"
+              className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
             />
           </div>
+        </div>
+
+        <div className="p-3 rounded-xl bg-muted/30 border border-dashed">
+          <p className="text-xs text-muted-foreground flex items-center gap-2">
+            <Building className="w-3.5 h-3.5" />
+            Informasi Bank (Opsional)
+          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -145,7 +215,7 @@ function StepRecipient({
               value={formData.bank}
               onValueChange={(value) => onChange('bank', value)}
             >
-              <SelectTrigger className="h-11">
+              <SelectTrigger className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2">
                 <SelectValue placeholder="Pilih bank" />
               </SelectTrigger>
               <SelectContent>
@@ -161,7 +231,7 @@ function StepRecipient({
               placeholder="Nomor rekening"
               value={formData.bankAccount}
               onChange={(e) => onChange('bankAccount', e.target.value)}
-              className="h-11"
+              className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
               inputMode="numeric"
             />
           </div>
@@ -174,7 +244,7 @@ function StepRecipient({
               placeholder="Nama pemilik rekening"
               value={formData.bankHolder}
               onChange={(e) => onChange('bankHolder', e.target.value)}
-              className="h-11"
+              className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
             />
           </div>
           <div className="space-y-2">
@@ -183,7 +253,7 @@ function StepRecipient({
               placeholder="Kota domisili"
               value={formData.city}
               onChange={(e) => onChange('city', e.target.value)}
-              className="h-11"
+              className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
             />
           </div>
         </div>
@@ -192,7 +262,7 @@ function StepRecipient({
           type="button"
           onClick={onNext}
           disabled={!isValid}
-          className="w-full gradient-primary text-white h-12"
+          className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-fuchsia-500 hover:from-primary/90 hover:to-fuchsia-500/90 text-white shadow-lg shadow-primary/30 transition-all hover:shadow-xl hover:shadow-primary/40 hover:scale-[1.02] active:scale-[0.98]"
         >
           Lanjutkan
           <ArrowRight className="w-4 h-4 ml-2" />
@@ -220,30 +290,35 @@ function StepTransaction({
   const isValid = formData.nominal && formData.paymentTypeId;
 
   return (
-    <Card className="glass-card animate-slide-up overflow-hidden">
-      <div className="h-1 bg-gradient-to-r from-fuchsia-500 to-pink-500" />
+    <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-2xl shadow-primary/5">
+      <div className="h-1.5 bg-gradient-to-r from-fuchsia-500 via-pink-500 to-rose-500" />
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <CreditCard className="w-4 h-4 text-primary" />
-          Detail Transaksi
-        </CardTitle>
-        <CardDescription className="text-xs">
-          Pilih nominal dan metode pembayaran
-        </CardDescription>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center shadow-lg shadow-fuchsia-500/30">
+            <CreditCard className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <CardTitle className="text-lg">Detail Transaksi</CardTitle>
+            <CardDescription>Pilih nominal dan metode pembayaran</CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Nominal */}
         <div className="space-y-2">
-          <Label className="text-sm">Nominal Gestun *</Label>
+          <Label className="text-sm font-medium flex items-center gap-2">
+            <Wallet className="w-3.5 h-3.5 text-muted-foreground" />
+            Nominal Gestun *
+          </Label>
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">Rp</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-lg">Rp</span>
             <Input
               type="number"
               placeholder="1.000.000"
               value={formData.nominal}
               onChange={(e) => onChange('nominal', e.target.value)}
               min={10000}
-              className="h-14 pl-14 text-lg font-semibold"
+              className="h-16 pl-14 pr-4 text-xl font-bold rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
               inputMode="numeric"
             />
           </div>
@@ -252,12 +327,12 @@ function StepTransaction({
 
         {/* Payment Type */}
         <div className="space-y-2">
-          <Label className="text-sm">Tipe Pembayaran *</Label>
+          <Label className="text-sm font-medium">Tipe Pembayaran *</Label>
           <Select
             value={formData.paymentTypeId}
             onValueChange={(value) => onChange('paymentTypeId', value)}
           >
-            <SelectTrigger className="h-11">
+            <SelectTrigger className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2">
               <SelectValue placeholder="Pilih tipe pembayaran" />
             </SelectTrigger>
             <SelectContent>
@@ -277,24 +352,24 @@ function StepTransaction({
 
         {/* Payment Type Info */}
         {selectedPayment && (
-          <div className="p-3 rounded-xl bg-muted/50 border animate-fade-in">
+          <div className="p-4 rounded-xl bg-gradient-to-r from-primary/5 to-fuchsia-500/5 border border-primary/20 animate-fade-in">
             <div className="grid grid-cols-2 gap-3">
-              <div className="flex items-center justify-between p-2 rounded-lg bg-background/80">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span className="text-xs">Online</span>
+                  <Globe className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium">Online</span>
                 </div>
-                <span className="text-sm font-semibold">{selectedPayment.onlineFeePercent}%</span>
+                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{selectedPayment.onlineFeePercent}%</span>
               </div>
-              <div className="flex items-center justify-between p-2 rounded-lg bg-background/80">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span className="text-xs">COD</span>
+                  <Truck className="w-4 h-4 text-amber-500" />
+                  <span className="text-sm font-medium">COD</span>
                 </div>
-                <span className="text-sm font-semibold">{selectedPayment.codFeePercent}%</span>
+                <span className="text-lg font-bold text-amber-600 dark:text-amber-400">{selectedPayment.codFeePercent}%</span>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-muted-foreground mt-3 text-center">
               Threshold: {formatCurrency(selectedPayment.threshold)}
             </p>
           </div>
@@ -302,7 +377,7 @@ function StepTransaction({
 
         {/* Method */}
         <div className="space-y-2">
-          <Label className="text-sm">Metode Transaksi *</Label>
+          <Label className="text-sm font-medium">Metode Transaksi *</Label>
           <RadioGroup
             value={formData.methodTransaction}
             onValueChange={(value) => onChange('methodTransaction', value)}
@@ -313,17 +388,17 @@ function StepTransaction({
               <Label
                 htmlFor="online"
                 className={cn(
-                  "flex flex-col items-center justify-center rounded-xl border-2 p-4 cursor-pointer transition-all",
+                  "flex flex-col items-center justify-center rounded-xl border-2 p-5 cursor-pointer transition-all",
                   formData.methodTransaction === 'Online'
-                    ? "border-primary bg-primary/5"
-                    : "border-muted hover:border-primary/50"
+                    ? "border-primary bg-primary/5 shadow-lg shadow-primary/20"
+                    : "border-muted bg-white/30 dark:bg-black/10 hover:border-primary/50"
                 )}
               >
-                <CreditCard className={cn(
-                  "w-6 h-6 mb-2",
+                <Globe className={cn(
+                  "w-8 h-8 mb-2",
                   formData.methodTransaction === 'Online' ? "text-primary" : "text-muted-foreground"
                 )} />
-                <span className="font-medium text-sm">Online</span>
+                <span className="font-semibold">Online</span>
                 <span className="text-xs text-muted-foreground">Via link</span>
               </Label>
             </div>
@@ -332,17 +407,17 @@ function StepTransaction({
               <Label
                 htmlFor="cod"
                 className={cn(
-                  "flex flex-col items-center justify-center rounded-xl border-2 p-4 cursor-pointer transition-all",
+                  "flex flex-col items-center justify-center rounded-xl border-2 p-5 cursor-pointer transition-all",
                   formData.methodTransaction === 'COD'
-                    ? "border-amber-500 bg-amber-500/5"
-                    : "border-muted hover:border-amber-500/50"
+                    ? "border-amber-500 bg-amber-500/5 shadow-lg shadow-amber-500/20"
+                    : "border-muted bg-white/30 dark:bg-black/10 hover:border-amber-500/50"
                 )}
               >
                 <Truck className={cn(
-                  "w-6 h-6 mb-2",
+                  "w-8 h-8 mb-2",
                   formData.methodTransaction === 'COD' ? "text-amber-500" : "text-muted-foreground"
                 )} />
-                <span className="font-medium text-sm">COD</span>
+                <span className="font-semibold">COD</span>
                 <span className="text-xs text-muted-foreground">Cash on Delivery</span>
               </Label>
             </div>
@@ -354,7 +429,7 @@ function StepTransaction({
             type="button"
             variant="outline"
             onClick={onBack}
-            className="flex-1 h-12"
+            className="flex-1 h-12 rounded-xl"
           >
             <ArrowLeftIcon className="w-4 h-4 mr-2" />
             Kembali
@@ -363,7 +438,7 @@ function StepTransaction({
             type="button"
             onClick={onNext}
             disabled={!isValid}
-            className="flex-1 gradient-primary text-white h-12"
+            className="flex-1 h-12 rounded-xl bg-gradient-to-r from-primary to-fuchsia-500 hover:from-primary/90 hover:to-fuchsia-500/90 text-white shadow-lg shadow-primary/30"
           >
             Lanjutkan
             <ArrowRight className="w-4 h-4 ml-2" />
@@ -399,69 +474,75 @@ function StepCalculation({
   return (
     <div className="space-y-4">
       {/* Calculation Card */}
-      <Card className="glass-card animate-slide-up overflow-hidden border-primary/30">
-        <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
-        <CardContent className="pt-5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-              <Calculator className="w-5 h-5 text-white" />
+      <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-2xl shadow-primary/10">
+        <div className="h-1.5 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 flex items-center justify-center shadow-lg shadow-primary/30">
+              <Calculator className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <p className="font-semibold">Kalkulasi</p>
-              <p className="text-xs text-muted-foreground">Estimasi dana yang akan diterima</p>
+            <div className="flex-1">
+              <p className="font-semibold text-lg">Kalkulasi</p>
+              <p className="text-sm text-muted-foreground">Estimasi dana yang akan diterima</p>
             </div>
             {feePercent !== undefined && (
-              <Badge variant="outline" className="ml-auto">
+              <Badge className="bg-primary/10 text-primary border-primary/20">
                 Fee: {feePercent}%
               </Badge>
             )}
           </div>
 
           <div className="space-y-3">
-            <div className="flex justify-between py-2">
+            <div className="flex justify-between items-center py-3">
               <span className="text-muted-foreground">Nominal</span>
-              <span className="font-semibold text-lg">{formatCurrency(nominal)}</span>
+              <span className="font-bold text-xl">{formatCurrency(nominal)}</span>
             </div>
-            <div className="flex justify-between py-2 bg-red-500/5 -mx-3 px-3 rounded-lg">
+            <div className="flex justify-between items-center py-3 px-4 bg-gradient-to-r from-red-500/10 to-rose-500/10 rounded-xl border border-red-500/20">
               <div className="flex items-center gap-2">
-                <TrendingDown className="w-4 h-4 text-red-500" />
+                <TrendingDown className="w-5 h-5 text-red-500" />
                 <span className="text-muted-foreground">Biaya Layanan</span>
               </div>
-              <span className="font-semibold text-red-500">- {formatCurrency(calculation.paymentFee)}</span>
+              <span className="font-bold text-red-500 text-lg">- {formatCurrency(calculation.paymentFee)}</span>
             </div>
             <Separator />
-            <div className="flex justify-between py-3 bg-gradient-to-r from-primary/10 to-fuchsia-500/10 -mx-3 px-3 rounded-xl">
+            <div className="flex justify-between items-center py-4 px-4 bg-gradient-to-r from-primary/10 via-purple-500/10 to-fuchsia-500/10 rounded-xl border border-primary/20">
               <div className="flex items-center gap-2">
                 <Wallet className="w-5 h-5 text-primary" />
                 <span className="font-semibold">Total Diterima</span>
               </div>
-              <span className="text-2xl font-bold text-primary">{formatCurrency(calculation.totalReceived)}</span>
+              <span className="text-2xl font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
+                {formatCurrency(calculation.totalReceived)}
+              </span>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Summary Card */}
-      <Card className="glass-card">
+      <Card className="glass-card border-0 shadow-xl overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-violet-500 to-purple-500" />
         <CardHeader className="pb-2 pt-4">
-          <CardTitle className="text-sm">Ringkasan Data</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-green-500" />
+            Ringkasan Data
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <div className="flex items-center gap-2">
+        <CardContent className="space-y-3 text-sm">
+          <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
             <User className="w-4 h-4 text-muted-foreground" />
-            <span>{formData.name}</span>
+            <span className="font-medium">{formData.name}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
             <MapPin className="w-4 h-4 text-muted-foreground" />
             <span>{formData.city || '-'}</span>
           </div>
           {formData.bank && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
               <Building className="w-4 h-4 text-muted-foreground" />
               <span>{formData.bank} - {formData.bankAccount} a.n {formData.bankHolder}</span>
             </div>
           )}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
             <WalletCards className="w-4 h-4 text-muted-foreground" />
             <span>{paymentType?.name} ({formData.methodTransaction})</span>
           </div>
@@ -473,7 +554,7 @@ function StepCalculation({
           type="button"
           variant="outline"
           onClick={onBack}
-          className="flex-1 h-12"
+          className="flex-1 h-12 rounded-xl"
         >
           <ArrowLeftIcon className="w-4 h-4 mr-2" />
           Kembali
@@ -482,7 +563,7 @@ function StepCalculation({
           type="button"
           onClick={onSubmit}
           disabled={loading}
-          className="flex-1 gradient-primary text-white h-12"
+          className="flex-1 h-12 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg shadow-green-500/30 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
         >
           {loading ? (
             <>
@@ -507,34 +588,60 @@ function StepCalculation({
 
 // Success Screen
 function SuccessScreen({ orderId }: { orderId: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(orderId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center gradient-hero px-4 py-8">
-      <Card className="w-full max-w-md glass-card text-center animate-scale-in overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500" />
-        <CardContent className="pt-8 pb-8">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-10 h-10 text-green-600" />
+    <div className="min-h-screen flex items-center justify-center px-4 py-8">
+      <AnimatedBackground />
+      <Card className="w-full max-w-md glass-card text-center animate-scale-in overflow-hidden border-0 shadow-2xl">
+        <div className="h-2 bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500" />
+        <CardContent className="pt-10 pb-8">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-emerald-500 rounded-3xl animate-pulse opacity-50" />
+            <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-xl shadow-green-500/30">
+              <CheckCircle2 className="w-12 h-12 text-white" />
+            </div>
           </div>
           
           <h2 className="text-2xl font-bold mb-2">Order Berhasil!</h2>
           <p className="text-muted-foreground mb-6">Simpan Order ID Anda:</p>
           
           <div 
-            className="bg-muted rounded-2xl p-4 mb-6 cursor-pointer tap-highlight active-scale hover:bg-muted/80 transition-colors"
-            onClick={() => navigator.clipboard.writeText(orderId)}
+            className="relative group cursor-pointer"
+            onClick={handleCopy}
           >
-            <p className="text-2xl font-mono font-bold text-primary">{orderId}</p>
-            <p className="text-xs text-muted-foreground mt-1">Tap untuk menyalin</p>
+            <div className="absolute inset-0 bg-gradient-to-r from-primary to-fuchsia-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition-opacity" />
+            <div className="relative bg-gradient-to-r from-muted to-muted/50 rounded-2xl p-5 hover:from-primary/5 hover:to-fuchsia-500/5 transition-colors">
+              <p className="text-2xl font-mono font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">{orderId}</p>
+              <p className="text-xs text-muted-foreground mt-2 flex items-center justify-center gap-1">
+                {copied ? (
+                  <>
+                    <Check className="w-3 h-3 text-green-500" />
+                    <span className="text-green-500">Disalin!</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Tap untuk menyalin</span>
+                  </>
+                )}
+              </p>
+            </div>
           </div>
           
-          <div className="flex flex-col gap-3">
-            <Button asChild className="gradient-primary text-white h-12">
+          <div className="flex flex-col gap-3 mt-6">
+            <Button asChild className="h-12 rounded-xl bg-gradient-to-r from-primary to-fuchsia-500 hover:from-primary/90 hover:to-fuchsia-500/90 text-white shadow-lg shadow-primary/30">
               <Link href={`/track?orderId=${orderId}`}>
                 <Clock className="w-4 h-4 mr-2" />
                 Track Order Sekarang
               </Link>
             </Button>
-            <Button variant="outline" asChild className="h-12">
+            <Button variant="outline" asChild className="h-12 rounded-xl">
               <Link href="/">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Kembali ke Beranda
@@ -650,50 +757,54 @@ export default function OrderPage() {
     return <SuccessScreen orderId={orderId} />;
   }
 
-  const siteName = config.websiteTitle || 'Black Bear';
-
   return (
-    <div className="min-h-screen gradient-hero pb-8">
+    <div className="min-h-screen pb-8">
+      <AnimatedBackground />
+      
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-xl border-b">
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-white/20 dark:border-white/5">
         <div className="container mx-auto px-4">
-          <div className="flex items-center gap-3 h-14 sm:h-16">
+          <div className="flex items-center gap-3 h-16 sm:h-20">
             <Button 
               variant="ghost" 
               size="icon"
               asChild 
-              className="rounded-xl"
+              className="rounded-xl bg-white/50 dark:bg-black/20"
             >
               <Link href="/">
                 <ArrowLeft className="w-5 h-5" />
               </Link>
             </Button>
-            <div>
-              <h1 className="font-semibold text-base sm:text-lg">Order Gestun</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">Buat order tarik tunai baru</p>
+            <div className="flex-1">
+              <h1 className="font-bold text-lg sm:text-xl">Order Gestun</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">Buat order tarik tunai baru</p>
+            </div>
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-primary/10 to-fuchsia-500/10 border border-primary/20">
+              <Zap className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Proses Cepat</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-4 sm:py-6">
-        <div className="max-w-lg mx-auto space-y-4">
+      <div className="container mx-auto px-4 py-6 sm:py-8">
+        <div className="max-w-lg mx-auto space-y-5">
           {/* Step Indicator */}
           <StepIndicator currentStep={currentStep} steps={steps} />
 
           {/* Quick Info */}
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-primary/5 to-fuchsia-500/5 border border-primary/20 animate-fade-in">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-primary/5 via-purple-500/5 to-fuchsia-500/5 border border-primary/10 backdrop-blur-xl animate-fade-in">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 flex items-center justify-center shadow-lg shadow-primary/30 flex-shrink-0">
+              <Sparkles className="w-7 h-7 text-white" />
             </div>
             <div>
-              <p className="font-medium text-sm">Proses Cepat & Aman</p>
-              <p className="text-xs text-muted-foreground">Dana dikirim langsung ke rekening Anda</p>
+              <p className="font-semibold">Proses Cepat & Aman</p>
+              <p className="text-sm text-muted-foreground">Dana dikirim langsung ke rekening Anda dalam hitungan menit</p>
             </div>
           </div>
 
           {error && (
-            <Alert variant="destructive" className="animate-fade-in">
+            <Alert variant="destructive" className="animate-fade-in rounded-xl">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
