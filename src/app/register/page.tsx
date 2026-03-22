@@ -138,7 +138,6 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [logoError, setLogoError] = useState(false);
-  const hasRedirected = useRef(false);
 
   const siteName = config.websiteTitle || 'Black Bear';
 
