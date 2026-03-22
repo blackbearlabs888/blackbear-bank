@@ -451,34 +451,6 @@ export default function LoginPage() {
                   <span>Login aman dengan enkripsi SSL</span>
                 </div>
               </div>
-
-              {/* Demo credentials */}
-              <div className="mt-5 p-4 rounded-xl bg-muted/30 border border-border/30">
-                <p className="text-xs text-muted-foreground text-center font-medium mb-3 flex items-center justify-center gap-2">
-                  <Zap className="w-3.5 h-3.5 text-amber-500" />
-                  Demo Login
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => { setEmail('owner@blackbear.id'); setPassword('owner123'); setRole('owner'); }}
-                    className="p-3 rounded-xl bg-background/80 text-center hover:bg-background transition-colors border border-border/30 group"
-                  >
-                    <Badge variant="outline" className="text-[10px] mb-1.5 border-primary/30 text-primary">Owner</Badge>
-                    <p className="text-xs font-medium truncate">owner@blackbear.id</p>
-                    <p className="text-[10px] text-muted-foreground">owner123</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setEmail('test@partner.com'); setPassword('partner123'); setRole('partner'); }}
-                    className="p-3 rounded-xl bg-background/80 text-center hover:bg-background transition-colors border border-border/30 group"
-                  >
-                    <Badge variant="outline" className="text-[10px] mb-1.5 border-primary/30 text-primary">Partner</Badge>
-                    <p className="text-xs font-medium truncate">test@partner.com</p>
-                    <p className="text-[10px] text-muted-foreground">partner123</p>
-                  </button>
-                </div>
-              </div>
             </CardContent>
           </Card>
 
