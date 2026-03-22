@@ -1,6 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
+
+// Helper to serialize transaction with Decimal fields
+function serializeTransaction(tx: Record<string, unknown>) {
+  return {
+    ...tx,
+    nominal: toNumber(tx.nominal),
+    paymentFee: toNumber(tx.paymentFee),
+    platformFee: toNumber(tx.platformFee),
+    netMargin: toNumber(tx.netMargin),
+    partnerProfit: toNumber(tx.partnerProfit),
+    ownerProfit: toNumber(tx.ownerProfit),
+    totalReceived: toNumber(tx.totalReceived),
+    customer: tx.customer ? {
+      ...tx.customer as object,
+      totalVolume: toNumber((tx.customer as Record<string, unknown>).totalVolume),
+    } : null,
+    paymentType: tx.paymentType ? {
+      ...tx.paymentType as object,
+      onlineFeePercent: toNumber((tx.paymentType as Record<string, unknown>).onlineFeePercent),
+      onlineFeeFlat: toNumber((tx.paymentType as Record<string, unknown>).onlineFeeFlat),
+      codFeePercent: toNumber((tx.paymentType as Record<string, unknown>).codFeePercent),
+      codFeeFlat: toNumber((tx.paymentType as Record<string, unknown>).codFeeFlat),
+      threshold: toNumber((tx.paymentType as Record<string, unknown>).threshold),
+    } : null,
+    marketplace: tx.marketplace ? {
+      ...tx.marketplace as object,
+      feePercent: toNumber((tx.marketplace as Record<string, unknown>).feePercent),
+      feeFlat: toNumber((tx.marketplace as Record<string, unknown>).feeFlat),
+    } : null,
+    partner: tx.partner ? {
+      ...tx.partner as object,
+      commission: toNumber((tx.partner as Record<string, unknown>).commission),
+      target: toNumber((tx.partner as Record<string, unknown>).target),
+      totalProfit: toNumber((tx.partner as Record<string, unknown>).totalProfit),
+      totalVolume: toNumber((tx.partner as Record<string, unknown>).totalVolume),
+    } : null,
+  };
+}
 
 // GET single transaction
 export async function GET(
@@ -50,7 +88,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: transaction,
+      data: serializeTransaction(transaction as unknown as Record<string, unknown>),
     });
   } catch (error) {
     console.error('Get transaction error:', error);
@@ -154,19 +192,21 @@ export async function PATCH(
     if (marketplaceId !== undefined || body.clearMarketplace) {
       let platformFee = 0;
       const effectiveMarketplaceId = marketplaceId === 'none' || marketplaceId === '' ? null : marketplaceId;
-      
+
       if (effectiveMarketplaceId) {
         const marketplace = await db.marketplace.findUnique({
           where: { id: effectiveMarketplaceId },
         });
-        
+
         if (marketplace) {
+          // Convert Decimal to number safely (handles Neon PostgreSQL Decimal type)
+          let mpFeePercent = toNumber(marketplace.feePercent);
+          const mpFeeFlat = toNumber(marketplace.feeFlat);
           // Safety: normalize fee percent if > 100 (database precision issue fix)
-          let mpFeePercent = marketplace.feePercent;
           if (mpFeePercent > 100) {
             mpFeePercent = mpFeePercent / 1000;
           }
-          platformFee = existingTransaction.nominal * (mpFeePercent / 100) + (marketplace.feeFlat || 0);
+          platformFee = toNumber(existingTransaction.nominal) * (mpFeePercent / 100) + mpFeeFlat;
           updateData.marketplaceId = effectiveMarketplaceId;
         }
       } else {
@@ -200,7 +240,7 @@ export async function PATCH(
 
     return NextResponse.json({
       success: true,
-      data: transaction,
+      data: serializeTransaction(transaction as unknown as Record<string, unknown>),
       message: 'Transaksi berhasil diupdate',
     });
   } catch (error) {

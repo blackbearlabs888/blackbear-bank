@@ -890,12 +890,13 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
     if (form.marketplaceId && form.marketplaceId !== 'none') {
       const mp = marketplaces.find(m => m.id === form.marketplaceId);
       if (mp) {
-        // Safety: normalize marketplace fee percent if > 100
-        let mpFeePercent = mp.feePercent;
+        // Safety: ensure numeric values and normalize marketplace fee percent if > 100
+        let mpFeePercent = Number(mp.feePercent) || 0;
+        const mpFeeFlat = Number(mp.feeFlat) || 0;
         if (mpFeePercent > 100) {
           mpFeePercent = mpFeePercent / 1000;
         }
-        platformFee = nominal * mpFeePercent / 100 + (mp.feeFlat || 0);
+        platformFee = nominal * (mpFeePercent / 100) + mpFeeFlat;
         selectedMp = mp;
       }
     }
@@ -1197,12 +1198,20 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
   // Calculate profit preview when marketplace changes
   const profitPreview = useMemo(() => {
     if (status !== 'verification') return null;
-    
+
     const selectedMp = marketplaces.find(m => m.id === marketplace);
     const currentPlatformFee = tx.platformFee || 0;
-    const newPlatformFee = selectedMp 
-      ? tx.nominal * (selectedMp.feePercent / 100) + (selectedMp.feeFlat || 0)
-      : 0;
+
+    // Safety: ensure numeric values and normalize marketplace fee percent if > 100
+    let newPlatformFee = 0;
+    if (selectedMp) {
+      let mpFeePercent = Number(selectedMp.feePercent) || 0;
+      const mpFeeFlat = Number(selectedMp.feeFlat) || 0;
+      if (mpFeePercent > 100) {
+        mpFeePercent = mpFeePercent / 1000;
+      }
+      newPlatformFee = Number(tx.nominal) * (mpFeePercent / 100) + mpFeeFlat;
+    }
     
     const currentNetMargin = tx.paymentFee - currentPlatformFee;
     const newNetMargin = tx.paymentFee - newPlatformFee;
@@ -1263,7 +1272,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
   return (
     <div className="space-y-2.5 p-4">
       {/* Compact Header */}
-      <div className="flex items-center justify-between -mx-4 -mt-4 mb-0 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 rounded-t-lg">
+      <div className="flex items-center justify-between -mx-4 -mt-4 mb-0 px-4 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-500 rounded-t-lg">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/20">
             <StatusIcon className={cn("w-4 h-4 text-white", tx.status === 'process' && "animate-spin")} />
@@ -1283,7 +1292,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-lg border bg-muted/30 p-2.5">
           <p className="text-[9px] text-muted-foreground mb-0.5">Nominal</p>
-          <p className="text-base font-bold text-emerald-600">{formatCurrency(tx.nominal)}</p>
+          <p className="text-base font-bold text-violet-600">{formatCurrency(tx.nominal)}</p>
           <div className="text-[9px] text-muted-foreground mt-1 space-y-0.5">
             <div className="flex justify-between">
               <span>Fee</span>
@@ -1299,10 +1308,10 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
         </div>
         <div className="rounded-lg bg-slate-900 p-2.5 text-white">
           <p className="text-[9px] text-white/70 mb-0.5">Profit Anda</p>
-          <p className="text-base font-bold text-emerald-400">+{formatCurrency(tx.ownerProfit)}</p>
+          <p className="text-base font-bold text-fuchsia-400">+{formatCurrency(tx.ownerProfit)}</p>
           {tx.partner && (
             <p className="text-[9px] text-white/60 mt-1">
-              {tx.partner.name}: <span className="text-blue-400">+{formatCurrency(tx.partnerProfit)}</span>
+              {tx.partner.name}: <span className="text-violet-400">+{formatCurrency(tx.partnerProfit)}</span>
             </p>
           )}
         </div>
@@ -1437,7 +1446,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
           <Button 
             onClick={save} 
             disabled={updating || !hasChanges} 
-            className="flex-1 h-8 text-xs bg-emerald-500 hover:bg-emerald-600"
+            className="flex-1 h-8 text-xs bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600"
           >
             {updating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
             <span className="ml-1">Simpan</span>

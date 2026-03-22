@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
 import { calculatePaymentFee, calculateMarginBreakdown } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
@@ -44,7 +44,14 @@ export async function POST(request: NextRequest) {
         where: { id: marketplaceId },
       });
       if (marketplace) {
-        platformFee = nominal * (marketplace.feePercent / 100) + marketplace.feeFlat;
+        // Convert Decimal to number safely (handles Neon PostgreSQL Decimal type)
+        let mpFeePercent = toNumber(marketplace.feePercent);
+        const mpFeeFlat = toNumber(marketplace.feeFlat);
+        // Safety: normalize fee percent if > 100 (database precision issue fix)
+        if (mpFeePercent > 100) {
+          mpFeePercent = mpFeePercent / 1000;
+        }
+        platformFee = toNumber(nominal) * (mpFeePercent / 100) + mpFeeFlat;
       }
     }
 
@@ -61,14 +68,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate fees
+    // Convert Decimal values to numbers for PostgreSQL compatibility
     const paymentFee = calculatePaymentFee(
-      nominal,
+      toNumber(nominal),
       {
-        onlineFeePercent: paymentType.onlineFeePercent,
-        onlineFeeFlat: paymentType.onlineFeeFlat,
-        codFeePercent: paymentType.codFeePercent,
-        codFeeFlat: paymentType.codFeeFlat,
-        threshold: paymentType.threshold,
+        onlineFeePercent: toNumber(paymentType.onlineFeePercent),
+        onlineFeeFlat: toNumber(paymentType.onlineFeeFlat),
+        codFeePercent: toNumber(paymentType.codFeePercent),
+        codFeeFlat: toNumber(paymentType.codFeeFlat),
+        threshold: toNumber(paymentType.threshold),
       },
       methodTransaction
     );
@@ -98,8 +106,8 @@ export async function POST(request: NextRequest) {
         marketplace: marketplace ? {
           id: marketplace.id,
           name: marketplace.name,
-          feePercent: marketplace.feePercent,
-          feeFlat: marketplace.feeFlat,
+          feePercent: toNumber(marketplace.feePercent),
+          feeFlat: toNumber(marketplace.feeFlat),
         } : null,
         partner: partner ? {
           id: partner.id,

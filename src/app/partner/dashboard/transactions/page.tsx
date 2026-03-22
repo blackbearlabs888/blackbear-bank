@@ -47,6 +47,7 @@ import {
   Percent,
   TrendingDown,
   BarChart3,
+  Store,
 } from 'lucide-react';
 import { formatCurrency, formatCompactCurrency, formatDate, formatDateAgo } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -487,14 +488,10 @@ export default function PartnerTransactionsPage() {
 
       {/* Transaction Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-primary" />
-              Detail Transaksi
-            </DialogTitle>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-2xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Detail Transaksi</DialogTitle>
           </DialogHeader>
-          
           {selectedTransaction && (
             <TransactionDetailView 
               transaction={selectedTransaction}
@@ -778,249 +775,252 @@ function TransactionDetailView({
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'success': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-      case 'pending': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+      case 'success': 
+        return { 
+          label: 'Berhasil', 
+          color: 'text-green-600 dark:text-green-400',
+          bg: 'bg-green-100 dark:bg-green-900/30',
+          gradient: 'from-green-500 to-emerald-600',
+          icon: CheckCircle 
+        };
+      case 'pending': 
+        return { 
+          label: 'Pending', 
+          color: 'text-amber-600 dark:text-amber-400',
+          bg: 'bg-amber-100 dark:bg-amber-900/30',
+          gradient: 'from-amber-500 to-orange-600',
+          icon: Clock 
+        };
       case 'process': 
-      case 'verification': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'failed': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+        return { 
+          label: 'Proses', 
+          color: 'text-blue-600 dark:text-blue-400',
+          bg: 'bg-blue-100 dark:bg-blue-900/30',
+          gradient: 'from-blue-500 to-cyan-600',
+          icon: Loader2 
+        };
+      case 'verification': 
+        return { 
+          label: 'Verifikasi', 
+          color: 'text-violet-600 dark:text-violet-400',
+          bg: 'bg-violet-100 dark:bg-violet-900/30',
+          gradient: 'from-violet-500 to-purple-600',
+          icon: AlertCircle 
+        };
+      case 'failed': 
+        return { 
+          label: 'Gagal', 
+          color: 'text-red-600 dark:text-red-400',
+          bg: 'bg-red-100 dark:bg-red-900/30',
+          gradient: 'from-red-500 to-rose-600',
+          icon: XCircle 
+        };
+      default: 
+        return { 
+          label: status, 
+          color: 'text-gray-600 dark:text-gray-400',
+          bg: 'bg-gray-100 dark:bg-gray-800',
+          gradient: 'from-gray-500 to-gray-600',
+          icon: Clock 
+        };
     }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'success': return 'Berhasil';
-      case 'pending': return 'Pending';
-      case 'process': return 'Proses';
-      case 'verification': return 'Verifikasi';
-      case 'failed': return 'Gagal';
-      default: return status;
-    }
-  };
-
-  const getProgressStep = (status: string) => {
-    return STATUS_STEPS.findIndex(s => s.key === status);
   };
 
   const getProgressPercent = (status: string) => {
-    // Progress mapping: pending (0%) -> verification (25%) -> process (50%) -> success (100%)
     switch (status) {
       case 'pending': return 0;
-      case 'verification': return 25;
-      case 'process': return 50;
+      case 'verification': return 33;
+      case 'process': return 66;
       case 'success': return 100;
       case 'failed': return 0;
       default: return 0;
     }
   };
 
-  const currentStep = getProgressStep(tx.status);
+  const statusConfig = getStatusConfig(tx.status);
+  const StatusIcon = statusConfig.icon;
+  const currentStep = STATUS_STEPS.findIndex(s => s.key === tx.status);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs text-muted-foreground">Order ID</p>
-          <div className="flex items-center gap-2">
-            <p className="font-mono font-bold">{tx.orderId}</p>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => copyToClipboard(tx.orderId, 'orderId')}
-            >
-              {copiedField === 'orderId' ? (
-                <Check className="w-3 h-3 text-green-600" />
-              ) : (
-                <Copy className="w-3 h-3" />
-              )}
-            </Button>
+    <div className="space-y-0">
+      {/* Compact Header with Status */}
+      <div className={cn(
+        "flex items-center justify-between px-4 py-3 bg-gradient-to-r",
+        statusConfig.gradient
+      )}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+            <StatusIcon className={cn("w-5 h-5 text-white", tx.status === 'process' && "animate-spin")} />
+          </div>
+          <div>
+            <p className="text-[10px] text-white/70 uppercase tracking-wider">Order ID</p>
+            <div className="flex items-center gap-1.5">
+              <p className="font-mono text-sm font-bold text-white">{tx.orderId.slice(0, 12)}...</p>
+              <button
+                onClick={() => copyToClipboard(tx.orderId, 'orderId')}
+                className="p-1 hover:bg-white/20 rounded transition-colors"
+              >
+                {copiedField === 'orderId' ? (
+                  <Check className="w-3 h-3 text-white" />
+                ) : (
+                  <Copy className="w-3 h-3 text-white/70" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
-        <Badge className={cn('text-sm capitalize', getStatusColor(tx.status))}>
-          {getStatusLabel(tx.status)}
+        <Badge className={cn("px-3 py-1.5 text-xs font-semibold", statusConfig.bg, statusConfig.color)}>
+          {statusConfig.label}
         </Badge>
       </div>
 
+      {/* Progress Steps - Compact */}
       {tx.status !== 'failed' && (
-        <div className="space-y-2">
-          <div className="flex justify-between">
+        <div className="px-4 py-3 bg-muted/30 border-b">
+          <div className="flex items-center justify-between mb-2">
             {STATUS_STEPS.map((step, index) => {
               const Icon = step.icon;
               const isActive = index <= currentStep;
               const isCurrent = index === currentStep;
               return (
-                <div 
-                  key={step.key} 
-                  className={cn(
-                    'flex flex-col items-center',
-                    isActive ? 'text-primary' : 'text-muted-foreground'
-                  )}
-                >
+                <div key={step.key} className="flex flex-col items-center flex-1">
                   <div className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center',
-                    isActive ? 'bg-primary text-white' : 'bg-muted',
-                    isCurrent && 'ring-2 ring-primary ring-offset-2'
+                    "w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300",
+                    isActive 
+                      ? "bg-primary text-white shadow-md shadow-primary/30" 
+                      : "bg-muted text-muted-foreground",
+                    isCurrent && "ring-2 ring-primary/50 ring-offset-1"
                   )}>
-                    <Icon className={cn('w-4 h-4', isCurrent && tx.status !== 'success' && 'animate-spin')} />
+                    <Icon className={cn("w-3.5 h-3.5", isCurrent && tx.status !== 'success' && "animate-spin")} />
                   </div>
-                  <span className="text-[10px] mt-1">{step.label}</span>
+                  <span className={cn(
+                    "text-[9px] mt-1 font-medium",
+                    isActive ? "text-foreground" : "text-muted-foreground"
+                  )}>
+                    {step.label}
+                  </span>
                 </div>
               );
             })}
           </div>
-          <Progress value={getProgressPercent(tx.status)} className="h-2" />
+          <Progress value={getProgressPercent(tx.status)} className="h-1.5" />
         </div>
       )}
 
+      {/* Failed Status Banner */}
       {tx.status === 'failed' && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+        <div className="mx-4 mt-3 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
           <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
-            <XCircle className="w-5 h-5" />
-            <span className="font-medium">Transaksi Gagal</span>
+            <XCircle className="w-4 h-4" />
+            <span className="text-sm font-medium">Transaksi Gagal</span>
           </div>
         </div>
       )}
 
-      <Card className="glass-card overflow-hidden">
-        <div className="h-1 gradient-primary" />
-        <CardContent className="p-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground">Nominal</p>
-              <p className="text-lg sm:text-xl font-bold">{formatCompactCurrency(tx.nominal)}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground">Komisi Anda</p>
-              <p className="text-lg sm:text-xl font-bold text-primary">+{formatCompactCurrency(tx.partnerProfit)}</p>
+      {/* Main Amount Card */}
+      <div className="p-4">
+        <div className="rounded-2xl overflow-hidden border shadow-sm">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-[10px] text-white/50 uppercase tracking-wider mb-1">Nominal</p>
+                <p className="text-xl font-bold text-white">{formatCurrency(tx.nominal)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-white/50 uppercase tracking-wider mb-1">Komisi Anda</p>
+                <p className="text-xl font-bold text-primary">+{formatCurrency(tx.partnerProfit)}</p>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-2">
-        <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-          <DollarSign className="w-4 h-4" />
-          Rincian Keuangan
-        </h4>
-        <Card className="glass-card">
-          <CardContent className="p-3 space-y-2 text-sm">
+          <div className="bg-muted/50 p-3 text-xs space-y-1.5">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Payment Fee</span>
-              <span className="font-medium">-{formatCurrency(tx.paymentFee)}</span>
+              <span className="text-red-500">-{formatCurrency(tx.paymentFee)}</span>
             </div>
             {tx.platformFee > 0 && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Platform Fee</span>
-                <span className="font-medium">-{formatCurrency(tx.platformFee)}</span>
+                <span className="text-red-500">-{formatCurrency(tx.platformFee)}</span>
               </div>
             )}
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Net Margin</span>
-              <span className="font-medium">{formatCurrency(tx.netMargin)}</span>
+            <div className="flex justify-between pt-1.5 border-t border-dashed">
+              <span className="font-medium">Total Diterima</span>
+              <span className="font-bold text-green-600">{formatCurrency(tx.totalReceived)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total Diterima</span>
-              <span className="font-bold">{formatCurrency(tx.totalReceived)}</span>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-          <User className="w-4 h-4" />
-          Info Customer
-        </h4>
-        <Card className="glass-card">
-          <CardContent className="p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Nama</p>
-                <p className="font-medium">{tx.customer.name}</p>
-              </div>
+      {/* Customer & Payment - Compact Grid */}
+      <div className="px-4 grid grid-cols-2 gap-3">
+        <div className="rounded-xl border bg-card p-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <User className="w-3.5 h-3.5 text-primary" />
+            <span className="text-[10px] font-medium text-muted-foreground uppercase">Customer</span>
+          </div>
+          <p className="font-semibold text-sm truncate">{tx.customer.name}</p>
+          <div className="flex items-center gap-1.5 mt-1">
+            <p className="text-xs text-muted-foreground">{tx.customer.phone}</p>
+            <a 
+              href={`https://wa.me/${tx.customer.phone.replace(/^0/, '62')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600"
+            >
+              <Phone className="w-3 h-3" />
+            </a>
+          </div>
+          {tx.customer.city && (
+            <p className="text-[10px] text-muted-foreground mt-1">{tx.customer.city}</p>
+          )}
+        </div>
+        
+        <div className="rounded-xl border bg-card p-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <CreditCard className="w-3.5 h-3.5 text-primary" />
+            <span className="text-[10px] font-medium text-muted-foreground uppercase">Pembayaran</span>
+          </div>
+          <p className="font-semibold text-sm">{tx.paymentType.name}</p>
+          <p className="text-xs text-muted-foreground">{tx.methodTransaction}</p>
+          {tx.marketplace && (
+            <div className="flex items-center gap-1 mt-1.5">
+              <Store className="w-3 h-3 text-muted-foreground" />
+              <p className="text-[10px] text-muted-foreground">{tx.marketplace.name}</p>
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">No. WhatsApp</p>
-                <p className="font-medium">{tx.customer.phone}</p>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                <a 
-                  href={`https://wa.me/${tx.customer.phone.replace(/^0/, '62')}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                >
-                  <Phone className="w-4 h-4" />
-                </a>
-              </Button>
-            </div>
-            {tx.customer.city && (
-              <div>
-                <p className="text-xs text-muted-foreground">Kota</p>
-                <p className="font-medium">{tx.customer.city}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-          <CreditCard className="w-4 h-4" />
-          Metode Pembayaran
-        </h4>
-        <Card className="glass-card">
-          <CardContent className="p-3 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Tipe</span>
-              <span className="font-medium">{tx.paymentType.name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Metode</span>
-              <span className="font-medium">{tx.methodTransaction}</span>
-            </div>
-            {tx.marketplace && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Marketplace</span>
-                <span className="font-medium">{tx.marketplace.name}</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
+      {/* Notes - Compact */}
       {tx.notes && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
-            Catatan
-          </h4>
-          <Card className="glass-card">
-            <CardContent className="p-3">
-              <p className="text-sm whitespace-pre-wrap">{tx.notes}</p>
-            </CardContent>
-          </Card>
+        <div className="px-4 mt-3">
+          <div className="rounded-xl border bg-card p-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <MessageSquare className="w-3.5 h-3.5 text-primary" />
+              <span className="text-[10px] font-medium text-muted-foreground uppercase">Catatan</span>
+            </div>
+            <p className="text-sm text-muted-foreground">{tx.notes}</p>
+          </div>
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-muted-foreground pt-2 border-t gap-1">
+      {/* Timestamp - Compact */}
+      <div className="px-4 py-3 mt-3 border-t flex items-center justify-between text-[10px] text-muted-foreground">
         <div className="flex items-center gap-1">
           <Calendar className="w-3 h-3" />
-          <span>Dibuat: {formatDateAgo(tx.createdAt)}</span>
+          <span>Dibuat {formatDateAgo(tx.createdAt)}</span>
         </div>
-        <div className="flex items-center gap-1">
-          <span>Update: {formatDateAgo(tx.updatedAt)}</span>
-        </div>
+        <span>Update {formatDateAgo(tx.updatedAt)}</span>
       </div>
 
-      <div className="space-y-2 pt-2">
+      {/* Actions */}
+      <div className="p-4 pt-0 space-y-2">
         {(tx.status === 'pending' || tx.status === 'process' || tx.status === 'verification') && (
           <Button 
             variant="outline" 
-            className="w-full rounded-xl"
+            className="w-full h-10 rounded-xl border-dashed"
             onClick={() => setNotifyOpen(true)}
           >
             <Bell className="w-4 h-4 mr-2" />
@@ -1028,54 +1028,55 @@ function TransactionDetailView({
           </Button>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <Button variant="outline" onClick={shareOrderId} className="rounded-xl">
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="outline" onClick={shareOrderId} className="h-10 rounded-xl">
             <Share2 className="w-4 h-4 mr-2" />
             Share
           </Button>
-          <Button variant="outline" onClick={onClose} className="rounded-xl">
-            <X className="w-4 h-4 mr-2" />
+          <Button onClick={onClose} className="h-10 rounded-xl gradient-primary text-white">
+            <Check className="w-4 h-4 mr-2" />
             Tutup
           </Button>
         </div>
       </div>
 
+      {/* Notification Dialog */}
       <Dialog open={notifyOpen} onOpenChange={setNotifyOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-lg">
               <Bell className="w-5 h-5 text-primary" />
-              Kirim Notifikasi ke Owner
+              Kirim Notifikasi
             </DialogTitle>
             <DialogDescription>
-              Kirim pesan terkait transaksi ini kepada Owner
+              Kirim pesan ke Owner terkait transaksi ini
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="p-3 bg-muted/50 rounded-xl text-sm">
-              <p className="text-muted-foreground">Order ID:</p>
+            <div className="p-3 bg-muted/50 rounded-xl">
+              <p className="text-[10px] text-muted-foreground uppercase">Order ID</p>
               <p className="font-mono font-bold">{tx.orderId}</p>
             </div>
             <div className="space-y-2">
-              <Label>Pesan Anda</Label>
+              <Label className="text-sm">Pesan</Label>
               <Textarea
-                placeholder="Contoh: Mohon untuk segera diproses, customer sudah menunggu..."
+                placeholder="Contoh: Mohon untuk segera diproses..."
                 value={notifyMessage}
                 onChange={(e) => setNotifyMessage(e.target.value)}
-                rows={4}
-                className="rounded-xl"
+                rows={3}
+                className="rounded-xl resize-none"
               />
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <Button 
                 variant="outline" 
                 onClick={() => setNotifyOpen(false)} 
-                className="flex-1 rounded-xl"
+                className="flex-1 h-10 rounded-xl"
               >
                 Batal
               </Button>
               <Button 
-                className="flex-1 gradient-primary text-white rounded-xl"
+                className="flex-1 h-10 rounded-xl gradient-primary text-white"
                 onClick={sendNotification}
                 disabled={sending}
               >

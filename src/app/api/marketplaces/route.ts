@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
 
 // GET marketplaces
 export async function GET(request: NextRequest) {
@@ -18,9 +18,16 @@ export async function GET(request: NextRequest) {
       orderBy: { name: 'asc' },
     });
 
+    // Convert Decimal values to numbers for frontend compatibility
+    const serializedMarketplaces = marketplaces.map(mp => ({
+      ...mp,
+      feePercent: toNumber(mp.feePercent),
+      feeFlat: toNumber(mp.feeFlat),
+    }));
+
     return NextResponse.json({
       success: true,
-      data: marketplaces,
+      data: serializedMarketplaces,
     });
   } catch (error) {
     console.error('Get marketplaces error:', error);

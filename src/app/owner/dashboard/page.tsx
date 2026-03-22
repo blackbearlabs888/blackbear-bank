@@ -296,7 +296,7 @@ export default function OwnerDashboardPage() {
     <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3 pb-24 md:pb-4">
       {/* Modern Simple Welcome Section */}
       <Card className="overflow-hidden border-0 shadow-lg">
-        <div className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-4 sm:p-5">
+        <div className="bg-gradient-to-br from-violet-600 via-purple-500 to-fuchsia-500 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
             {/* Left: Greeting */}
             <div className="min-w-0 flex-1">
@@ -403,7 +403,7 @@ export default function OwnerDashboardPage() {
           value={formatCurrency(stats?.thisMonthProfit || 0)}
           change={stats?.profitChange || 0}
           icon={DollarSign}
-          gradient="from-emerald-500 to-teal-600"
+          gradient="from-violet-500 to-purple-600"
           subtitle="vs bulan lalu"
           loading={dataLoading}
           sparkline={data?.last7DaysData?.map(d => d.volume)}
@@ -460,8 +460,8 @@ export default function OwnerDashboardPage() {
           title="Total Transaksi"
           value={String(stats?.totalTransactions || 0)}
           icon={ShoppingBag}
-          color="text-emerald-600"
-          bg="bg-emerald-100 dark:bg-emerald-900/30"
+          color="text-violet-600"
+          bg="bg-violet-100 dark:bg-violet-900/30"
           loading={dataLoading}
         />
         <MiniStatCard
@@ -714,12 +714,12 @@ export default function OwnerDashboardPage() {
 
       {/* Volume Chart - Line Chart */}
       <Card className="glass-card animate-slide-up overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
+        <div className="h-1 bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500" />
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                <Activity className="w-4 h-4 text-emerald-500" />
+                <Activity className="w-4 h-4 text-violet-500" />
                 Volume 7 Hari Terakhir
               </CardTitle>
               <CardDescription className="text-[10px] sm:text-xs mt-1">
@@ -754,8 +754,8 @@ export default function OwnerDashboardPage() {
               <AreaChart data={data?.last7DaysData || []}>
                 <defs>
                   <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
@@ -782,7 +782,7 @@ export default function OwnerDashboardPage() {
                 <Area 
                   type="monotone" 
                   dataKey="volume" 
-                  stroke="#10b981" 
+                  stroke="#8b5cf6" 
                   strokeWidth={3} 
                   fillOpacity={1} 
                   fill="url(#colorVolume)" 

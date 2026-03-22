@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
 
 // GET payment types
 export async function GET(request: NextRequest) {
@@ -18,9 +18,19 @@ export async function GET(request: NextRequest) {
       orderBy: { name: 'asc' },
     });
 
+    // Convert Decimal values to numbers for frontend compatibility
+    const serializedPaymentTypes = paymentTypes.map(pt => ({
+      ...pt,
+      onlineFeePercent: toNumber(pt.onlineFeePercent),
+      onlineFeeFlat: toNumber(pt.onlineFeeFlat),
+      codFeePercent: toNumber(pt.codFeePercent),
+      codFeeFlat: toNumber(pt.codFeeFlat),
+      threshold: toNumber(pt.threshold),
+    }));
+
     return NextResponse.json({
       success: true,
-      data: paymentTypes,
+      data: serializedPaymentTypes,
     });
   } catch (error) {
     console.error('Get payment types error:', error);

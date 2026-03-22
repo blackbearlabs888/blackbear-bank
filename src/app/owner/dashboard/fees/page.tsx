@@ -532,7 +532,13 @@ function FeeCalculatorCard({
   // Calculate platform fee
   let platformFee = 0;
   if (selectedMarketplace && nominalNum > 0) {
-    platformFee = nominalNum * (selectedMarketplace.feePercent / 100) + selectedMarketplace.feeFlat;
+    // Safety: ensure numeric values and normalize fee percent if > 100
+    let mpFeePercent = Number(selectedMarketplace.feePercent) || 0;
+    const mpFeeFlat = Number(selectedMarketplace.feeFlat) || 0;
+    if (mpFeePercent > 100) {
+      mpFeePercent = mpFeePercent / 1000;
+    }
+    platformFee = nominalNum * (mpFeePercent / 100) + mpFeeFlat;
   }
 
   const netMargin = paymentFee - platformFee;

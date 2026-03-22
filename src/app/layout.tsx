@@ -33,7 +33,7 @@ export async function generateMetadata(): Promise<Metadata> {
       keywords: ["tarik tunai", "gestun", "kartu kredit", "paylater", "COD", "online"],
       authors: [{ name: `${websiteTitle} Team` }],
       icons: {
-        icon: profile?.faviconUrl || "/logo.svg",
+        icon: profile?.faviconUrl || "/logo.png",
       },
     };
   } catch (error) {
@@ -44,7 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
       keywords: ["tarik tunai", "gestun", "kartu kredit", "paylater", "COD", "online"],
       authors: [{ name: "Black Bear Team" }],
       icons: {
-        icon: "/logo.svg",
+        icon: "/logo.png",
       },
     };
   }

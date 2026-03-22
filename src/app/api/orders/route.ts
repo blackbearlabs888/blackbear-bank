@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
 import { generateOrderId, calculatePaymentFee } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
@@ -45,8 +45,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate payment fee
-    const paymentFee = calculatePaymentFee(nominal, paymentType, methodTransaction);
-    const totalReceived = nominal - paymentFee;
+    // Convert Decimal values to numbers for PostgreSQL compatibility
+    const paymentFee = calculatePaymentFee(
+      toNumber(nominal),
+      {
+        onlineFeePercent: toNumber(paymentType.onlineFeePercent),
+        onlineFeeFlat: toNumber(paymentType.onlineFeeFlat),
+        codFeePercent: toNumber(paymentType.codFeePercent),
+        codFeeFlat: toNumber(paymentType.codFeeFlat),
+        threshold: toNumber(paymentType.threshold),
+      },
+      methodTransaction
+    );
+    const totalReceived = toNumber(nominal) - paymentFee;
 
     // Check if customer exists
     let customer = await db.customer.findFirst({
