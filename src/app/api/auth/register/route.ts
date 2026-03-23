@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if partner with phone exists
-    const existingPartner = await db.partner.findUnique({
+    const existingPartner = await db.partner.findFirst({
       where: { phone },
     });
 
