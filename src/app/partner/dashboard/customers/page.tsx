@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SimplePagination } from '@/components/ui/pagination';
 import { Progress } from '@/components/ui/progress';
@@ -745,9 +746,16 @@ function CustomerDetailView({ customer, onClose }: { customer: Customer; onClose
   );
 }
 
+// Bank list for dropdown
+const BANK_LIST = [
+  'BCA', 'Mandiri', 'BRI', 'BNI', 'CIMB Niaga', 'Permata', 'Danamon',
+  'Panin', 'OCBC NISP', 'Jenius', 'Seabank', 'Bank Jago', 'Lainnya'
+];
+
 function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [customBankName, setCustomBankName] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -763,10 +771,15 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
     setLoading(true);
 
     try {
+      const bankNameToSubmit = formData.bankName === 'Lainnya' ? customBankName : formData.bankName;
+      
       const response = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          bankName: bankNameToSubmit,
+        }),
       });
 
       const result = await response.json();
@@ -774,6 +787,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
         setOpen(false);
         onCreated();
         setFormData({ name: '', phone: '', bankName: '', bankAccount: '', bankHolder: '', city: '', notes: '' });
+        setCustomBankName('');
         toast.success('Customer berhasil ditambahkan');
       } else {
         toast.error(result.error || 'Gagal menambahkan customer');
@@ -829,12 +843,32 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
               <Building2 className="w-3 h-3" />
               Info Bank (Opsional)
             </p>
-            <Input
-              placeholder="Nama Bank (cth: BCA, Mandiri)"
+            <Select
               value={formData.bankName}
-              onChange={(e) => setFormData(prev => ({ ...prev, bankName: e.target.value }))}
-              className="rounded-xl"
-            />
+              onValueChange={(value) => {
+                setFormData(prev => ({ ...prev, bankName: value }));
+                if (value !== 'Lainnya') {
+                  setCustomBankName('');
+                }
+              }}
+            >
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="Pilih bank" />
+              </SelectTrigger>
+              <SelectContent>
+                {BANK_LIST.map((bank) => (
+                  <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {formData.bankName === 'Lainnya' && (
+              <Input
+                placeholder="Ketik nama bank"
+                value={customBankName}
+                onChange={(e) => setCustomBankName(e.target.value)}
+                className="rounded-xl"
+              />
+            )}
             <Input
               placeholder="Nomor Rekening"
               value={formData.bankAccount}

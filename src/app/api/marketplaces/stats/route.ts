@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
 
 // GET marketplace usage stats
 export async function GET() {
@@ -34,15 +34,15 @@ export async function GET() {
     });
 
     const stats = marketplaces.map((mp) => {
-      const totalVolume = mp.transactions.reduce((sum, t) => sum + t.nominal, 0);
-      const totalFees = mp.transactions.reduce((sum, t) => sum + t.platformFee, 0);
+      const totalVolume = mp.transactions.reduce((sum, t) => sum + toNumber(t.nominal), 0);
+      const totalFees = mp.transactions.reduce((sum, t) => sum + toNumber(t.platformFee), 0);
       const transactionCount = mp._count.transactions;
 
       return {
         id: mp.id,
         name: mp.name,
-        feePercent: mp.feePercent,
-        feeFlat: mp.feeFlat,
+        feePercent: toNumber(mp.feePercent),
+        feeFlat: toNumber(mp.feeFlat),
         description: mp.description,
         isActive: mp.isActive,
         transactionCount,

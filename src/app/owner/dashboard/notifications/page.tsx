@@ -7,8 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   Bell,
+  UserPlus,
+  ShoppingCart,
   MessageSquare,
   Calendar,
   Search,
@@ -16,15 +19,28 @@ import {
   User,
   AlertCircle,
   CheckCircle,
-  Clock,
   ArrowLeft,
+  CheckCheck,
 } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatDate, formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { SimplePagination } from '@/components/ui/pagination';
 import Link from 'next/link';
 
-interface Notification {
+interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  data: Record<string, unknown> | null;
+  isRead: boolean;
+  partnerId?: string;
+  transactionId?: string;
+  createdAt: string;
+  readAt?: string;
+}
+
+interface TransactionNotification {
   id: string;
   orderId: string;
   partnerName?: string;
@@ -33,11 +49,11 @@ interface Notification {
   nominal: number;
   status: string;
   updatedAt: string;
-  createdAt: string;
 }
 
 interface NotificationData {
-  notifications: Notification[];
+  notifications: NotificationItem[];
+  unreadCount: number;
   pagination: {
     currentPage: number;
     totalPages: number;
@@ -48,18 +64,39 @@ interface NotificationData {
 
 const ITEMS_PER_PAGE = 15;
 
-const STATUS_CONFIG = {
-  pending: { color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400', icon: Clock },
-  verification: { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: AlertCircle },
-  process: { color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400', icon: Clock },
-  success: { color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: CheckCircle },
-  failed: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: AlertCircle },
+const TYPE_CONFIG: Record<string, { color: string; icon: React.ElementType; bgColor: string }> = {
+  new_partner: { 
+    color: 'text-green-600', 
+    icon: UserPlus, 
+    bgColor: 'bg-green-100 dark:bg-green-900/30' 
+  },
+  new_order: { 
+    color: 'text-violet-600', 
+    icon: ShoppingCart, 
+    bgColor: 'bg-violet-100 dark:bg-violet-900/30' 
+  },
+  transaction_update: { 
+    color: 'text-blue-600', 
+    icon: AlertCircle, 
+    bgColor: 'bg-blue-100 dark:bg-blue-900/30' 
+  },
+  broadcast: { 
+    color: 'text-purple-600', 
+    icon: MessageSquare, 
+    bgColor: 'bg-purple-100 dark:bg-purple-900/30' 
+  },
+  partner_message: { 
+    color: 'text-violet-600', 
+    icon: MessageSquare, 
+    bgColor: 'bg-violet-100 dark:bg-violet-900/30' 
+  },
 };
 
 export default function OwnerNotificationsPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, hasHydrated, hydrate } = useAuthStore();
   const [data, setData] = useState<NotificationData | null>(null);
+  const [partnerMessages, setPartnerMessages] = useState<TransactionNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -82,7 +119,7 @@ export default function OwnerNotificationsPage() {
 
   useEffect(() => {
     if (isAuthenticated && hasHydrated && user?.role === 'owner') {
-      fetchNotifications();
+      fetchAllNotifications();
     }
   }, [isAuthenticated, hasHydrated, user, currentPage]);
 
@@ -90,24 +127,40 @@ export default function OwnerNotificationsPage() {
     const timeoutId = setTimeout(() => {
       if (isAuthenticated && hasHydrated && user?.role === 'owner') {
         setCurrentPage(1);
-        fetchNotifications();
+        fetchAllNotifications();
       }
     }, 500);
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  const fetchNotifications = async () => {
+  const fetchAllNotifications = async () => {
     setLoading(true);
     try {
+      // Fetch notifications and partner messages
       const params = new URLSearchParams();
       params.append('page', currentPage.toString());
       params.append('limit', ITEMS_PER_PAGE.toString());
       if (searchQuery) params.append('search', searchQuery);
-      
-      const response = await fetch(`/api/notifications?${params.toString()}`);
-      const result = await response.json();
-      if (result.success) {
-        setData(result.data);
+
+      const [notifResponse, messagesResponse] = await Promise.all([
+        fetch(`/api/notifications?${params.toString()}`),
+        fetch('/api/notifications?type=messages'),
+      ]);
+
+      if (!notifResponse.ok || !messagesResponse.ok) {
+        console.error('API error:', notifResponse.status, messagesResponse.status);
+        setLoading(false);
+        return;
+      }
+
+      const notifResult = await notifResponse.json();
+      const messagesResult = await messagesResponse.json();
+
+      if (notifResult.success) {
+        setData(notifResult.data);
+      }
+      if (messagesResult.success && messagesResult.data?.messages) {
+        setPartnerMessages(messagesResult.data.messages);
       }
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
@@ -118,6 +171,48 @@ export default function OwnerNotificationsPage() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  const markAsRead = async (id: string) => {
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!response.ok) {
+        console.error('Mark as read error:', response.status);
+        return;
+      }
+
+      fetchAllNotifications();
+      // Dispatch event to update dashboard count
+      window.dispatchEvent(new CustomEvent('notification-count-update'));
+    } catch (err) {
+      console.error('Failed to mark as read:', err);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markAllRead: true }),
+      });
+
+      if (!response.ok) {
+        console.error('Mark all as read error:', response.status);
+        return;
+      }
+
+      fetchAllNotifications();
+      // Dispatch event to update dashboard count
+      window.dispatchEvent(new CustomEvent('notification-count-update'));
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+    }
   };
 
   const formatDateAgo = (dateStr: string | undefined): string => {
@@ -136,19 +231,78 @@ export default function OwnerNotificationsPage() {
     return formatDate(dateStr);
   };
 
-  const extractMessage = (notes: string | null): string => {
-    if (!notes) return 'Tidak ada pesan';
-    const lines = notes.split('\n');
-    const lastLine = lines[lines.length - 1];
-    return lastLine?.replace(/\[.*?\]\s*/, '') || 'Tidak ada pesan';
-  };
+  // Combine all notification types for display
+  const allNotifications: Array<{
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    data: Record<string, unknown> | null;
+    isRead: boolean;
+    createdAt: string;
+    onClick?: () => void;
+  }> = [];
+
+  // Add new system notifications
+  if (data?.notifications) {
+    data.notifications.forEach(n => {
+      allNotifications.push({
+        id: n.id,
+        type: n.type,
+        title: n.title,
+        message: n.message,
+        data: n.data,
+        isRead: n.isRead,
+        createdAt: n.createdAt,
+        onClick: () => {
+          if (!n.isRead) markAsRead(n.id);
+          if (n.type === 'new_partner') {
+            router.push('/owner/dashboard/partners');
+          } else if ((n.type === 'new_order' || n.type === 'transaction_update') && n.transactionId) {
+            router.push(`/owner/dashboard/transactions?highlight=${n.transactionId}`);
+          }
+        },
+      });
+    });
+  }
+
+  // Add partner messages
+  partnerMessages.forEach(msg => {
+    allNotifications.push({
+      id: `msg-${msg.id}`,
+      type: 'partner_message',
+      title: `Pesan dari ${msg.partnerName || 'Partner'}`,
+      message: `${msg.orderId} - ${msg.notes?.split('\n').pop()?.replace(/\[.*?\]\s*/, '') || 'Tidak ada pesan'}`,
+      data: { orderId: msg.orderId, nominal: msg.nominal, transactionId: msg.id },
+      isRead: false,
+      createdAt: msg.updatedAt,
+      onClick: () => router.push(`/owner/dashboard/transactions?highlight=${msg.id}`),
+    });
+  });
+
+  // Sort by date
+  allNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  // Filter by search
+  const filteredNotifications = searchQuery 
+    ? allNotifications.filter(n => 
+        n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        n.message.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : allNotifications;
+
+  // Calculate total unread - only actual unread notifications
+  const totalUnread = data?.unreadCount || 0;
 
   if (isLoading || !hasHydrated) {
     return (
-      <div className="container mx-auto px-3 py-4 sm:px-4 sm:py-6 space-y-4 pb-20 md:pb-6">
-        <Skeleton className="h-10 w-48" />
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
+      <div className="min-h-screen flex flex-col">
+        <div className="flex-1 container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3">
+          <Skeleton className="h-8 w-36" />
+          <Skeleton className="h-10 rounded-xl" />
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
+          </div>
         </div>
       </div>
     );
@@ -159,184 +313,170 @@ export default function OwnerNotificationsPage() {
   }
 
   return (
-    <div className="container mx-auto px-3 py-4 sm:px-4 sm:py-6 space-y-4 pb-20 md:pb-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.push('/owner/dashboard')}
-          className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold">Notifikasi Partner</h1>
-          <p className="text-xs text-muted-foreground">Semua pesan dari partner</p>
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Cari order ID, partner, customer..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 h-10 sm:h-11"
-        />
-      </div>
-
-      {/* Stats Summary */}
-      {data && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-          <Card className="glass-card">
-            <CardContent className="p-2.5 sm:p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                  <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-violet-600" />
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">Total</p>
-                  <p className="text-base sm:text-lg font-bold">{data.pagination.totalItems}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card">
-            <CardContent className="p-2.5 sm:p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">Pending</p>
-                  <p className="text-base sm:text-lg font-bold">
-                    {data.notifications.filter(n => n.status === 'pending').length}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card">
-            <CardContent className="p-2.5 sm:p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">Verifikasi</p>
-                  <p className="text-base sm:text-lg font-bold">
-                    {data.notifications.filter(n => n.status === 'verification').length}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card">
-            <CardContent className="p-2.5 sm:p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">Sukses</p>
-                  <p className="text-base sm:text-lg font-bold">
-                    {data.notifications.filter(n => n.status === 'success').length}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Notifications List */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2 sm:pb-3">
-          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-primary" />
-            Semua Notifikasi
-          </CardTitle>
-          <CardDescription className="text-[10px] sm:text-xs">
-            Pesan dari partner terkait transaksi mereka
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-2 sm:px-6">
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push('/owner/dashboard')}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-base sm:text-lg font-bold">Notifikasi</h1>
+              <p className="text-[10px] text-muted-foreground">
+                {totalUnread} belum dibaca
+              </p>
             </div>
-          ) : data?.notifications && data.notifications.length > 0 ? (
-            <div className="space-y-2 sm:space-y-3">
-              {data.notifications.map((notification) => {
-                const statusConfig = STATUS_CONFIG[notification.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
-                const StatusIcon = statusConfig.icon;
-                
-                return (
-                  <Link
-                    key={notification.id}
-                    href={`/owner/dashboard/transactions?highlight=${notification.id}`}
-                    className="block"
-                  >
-                    <div className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors border border-transparent hover:border-primary/20">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center flex-shrink-0">
-                          <MessageSquare className="w-5 h-5 text-violet-600" />
+          </div>
+          {totalUnread > 0 && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={markAllAsRead}
+              className="text-xs h-8"
+            >
+              <CheckCheck className="w-3.5 h-3.5 mr-1" />
+              Tandai semua dibaca
+            </Button>
+          )}
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Cari notifikasi..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 h-9 sm:h-10 text-sm"
+          />
+        </div>
+
+        {/* Stats Summary */}
+        <div className="grid grid-cols-2 gap-2">
+          <Card className="glass-card">
+            <CardContent className="p-2 sm:p-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                  <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-600" />
+                </div>
+                <div>
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground">Total</p>
+                  <p className="text-sm sm:text-base font-bold">{allNotifications.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card">
+            <CardContent className="p-2 sm:p-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground">Partner Baru</p>
+                  <p className="text-sm sm:text-base font-bold">
+                    {data?.notifications?.filter(n => n.type === 'new_partner').length || 0}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Notifications List */}
+        <Card className="glass-card">
+          <CardHeader className="pb-1.5 sm:pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5">
+              <Bell className="w-3.5 h-3.5 text-primary" />
+              Semua Notifikasi
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-2 sm:px-4">
+            {loading ? (
+              <div className="space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
+              </div>
+            ) : filteredNotifications.length > 0 ? (
+              <div className="space-y-1.5 sm:space-y-2">
+                {filteredNotifications.map((notification) => {
+                  const config = TYPE_CONFIG[notification.type] || TYPE_CONFIG.broadcast;
+                  const Icon = config.icon;
+                  
+                  return (
+                    <div
+                      key={notification.id}
+                      className={cn(
+                        "p-2.5 sm:p-3 rounded-lg sm:rounded-xl transition-colors border cursor-pointer",
+                        notification.isRead 
+                          ? "bg-muted/20 hover:bg-muted/30 border-transparent" 
+                          : "bg-violet-50 dark:bg-violet-950/20 hover:bg-violet-100 dark:hover:bg-violet-950/30 border-violet-200 dark:border-violet-800"
+                      )}
+                      onClick={notification.onClick}
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className={cn(
+                          "w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center flex-shrink-0",
+                          config.bgColor
+                        )}>
+                          <Icon className={cn("w-4 h-4", config.color)} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <p className="font-medium text-sm sm:text-base truncate">
-                              {notification.partnerName || 'Partner'}
+                          <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                            <p className={cn(
+                              "text-xs sm:text-sm truncate",
+                              !notification.isRead && "font-semibold"
+                            )}>
+                              {notification.title}
                             </p>
-                            <Badge variant="outline" className="text-[10px] sm:text-xs font-mono">
-                              {notification.orderId}
-                            </Badge>
-                            <Badge className={cn('text-[10px]', statusConfig.color)}>
-                              {notification.status}
-                            </Badge>
+                            {!notification.isRead && (
+                              <Badge className="h-4 px-1 text-[9px] bg-violet-500 text-white">Baru</Badge>
+                            )}
                           </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-2">
-                            {extractMessage(notification.notes)}
+                          <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-2 mb-1">
+                            {notification.message}
                           </p>
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <span className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
-                              <User className="w-3 h-3" />
-                              {notification.customerName}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[9px] sm:text-[10px] text-muted-foreground flex items-center gap-0.5">
+                              <Calendar className="w-2.5 h-2.5" />
+                              {formatDateAgo(notification.createdAt)}
                             </span>
-                            <span className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {formatDateAgo(notification.updatedAt)}
-                            </span>
-                            <span className="text-[10px] sm:text-xs font-semibold text-primary">
-                              {formatCurrency(notification.nominal)}
-                            </span>
+                            {notification.data?.nominal && (
+                              <span className="text-[9px] sm:text-[10px] font-semibold text-primary">
+                                {formatCurrency(notification.data.nominal as number)}
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                        <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       </div>
                     </div>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <Bell className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
-              <p className="text-sm text-muted-foreground">Tidak ada notifikasi</p>
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Bell className="w-10 h-10 mx-auto mb-2 text-muted-foreground opacity-30" />
+                <p className="text-xs text-muted-foreground">Tidak ada notifikasi</p>
+              </div>
+            )}
 
-          {/* Pagination */}
-          {data?.pagination && data.pagination.totalPages > 1 && (
-            <SimplePagination
-              currentPage={data.pagination.currentPage}
-              totalPages={data.pagination.totalPages}
-              totalItems={data.pagination.totalItems}
-              itemsPerPage={data.pagination.itemsPerPage}
-              onPageChange={handlePageChange}
-            />
-          )}
-        </CardContent>
-      </Card>
+            {/* Pagination */}
+            {data?.pagination && data.pagination.totalPages > 1 && (
+              <SimplePagination
+                currentPage={data.pagination.currentPage}
+                totalPages={data.pagination.totalPages}
+                totalItems={data.pagination.totalItems}
+                itemsPerPage={data.pagination.itemsPerPage}
+                onPageChange={handlePageChange}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

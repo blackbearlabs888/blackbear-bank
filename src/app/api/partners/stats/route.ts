@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
 
 export async function GET() {
   try {
@@ -29,20 +29,28 @@ export async function GET() {
       },
     });
 
-    const totalPartners = partners.length;
-    const activePartners = partners.filter(p => p.status === 'active').length;
-    const suspendedPartners = partners.filter(p => p.status === 'suspended').length;
+    // Convert Decimal fields to numbers
+    const partnersData = partners.map(p => ({
+      ...p,
+      totalProfit: toNumber(p.totalProfit),
+      totalVolume: toNumber(p.totalVolume),
+      target: toNumber(p.target),
+    }));
 
-    const totalVolume = partners.reduce((sum, p) => sum + (p.totalVolume || 0), 0);
-    const totalProfit = partners.reduce((sum, p) => sum + (p.totalProfit || 0), 0);
-    const totalTransactions = partners.reduce((sum, p) => sum + (p.totalTransactions || 0), 0);
+    const totalPartners = partnersData.length;
+    const activePartners = partnersData.filter(p => p.status === 'active').length;
+    const suspendedPartners = partnersData.filter(p => p.status === 'suspended').length;
+
+    const totalVolume = partnersData.reduce((sum, p) => sum + (p.totalVolume || 0), 0);
+    const totalProfit = partnersData.reduce((sum, p) => sum + (p.totalProfit || 0), 0);
+    const totalTransactions = partnersData.reduce((sum, p) => sum + (p.totalTransactions || 0), 0);
 
     const avgProfitPerPartner = totalPartners > 0 ? totalProfit / totalPartners : 0;
     const avgVolumePerPartner = totalPartners > 0 ? totalVolume / totalPartners : 0;
 
     // Tier distribution
     const tierMap = new Map<string, { count: number; volume: number; profit: number }>();
-    for (const p of partners) {
+    for (const p of partnersData) {
       const tier = p.tier || 'Bronze';
       const existing = tierMap.get(tier) || { count: 0, volume: 0, profit: 0 };
       tierMap.set(tier, {
@@ -58,7 +66,7 @@ export async function GET() {
     }));
 
     // Top partners by profit
-    const topPartnersByProfit = [...partners]
+    const topPartnersByProfit = [...partnersData]
       .sort((a, b) => (b.totalProfit || 0) - (a.totalProfit || 0))
       .slice(0, 5)
       .map(p => ({
@@ -71,7 +79,7 @@ export async function GET() {
       }));
 
     // Top partners by volume
-    const topPartnersByVolume = [...partners]
+    const topPartnersByVolume = [...partnersData]
       .sort((a, b) => (b.totalVolume || 0) - (a.totalVolume || 0))
       .slice(0, 5)
       .map(p => ({
@@ -85,7 +93,7 @@ export async function GET() {
 
     // Top cities
     const cityMap = new Map<string, { count: number; volume: number }>();
-    for (const p of partners) {
+    for (const p of partnersData) {
       if (p.city) {
         const existing = cityMap.get(p.city) || { count: 0, volume: 0 };
         cityMap.set(p.city, {
@@ -105,19 +113,19 @@ export async function GET() {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    const newThisMonth = partners.filter(p => new Date(p.joinedAt) >= startOfMonth).length;
+    const newThisMonth = partnersData.filter(p => new Date(p.joinedAt) >= startOfMonth).length;
 
     // Calculate growth rate (partners who joined this month vs last month)
     const startOfLastMonth = new Date(startOfMonth);
     startOfLastMonth.setMonth(startOfLastMonth.getMonth() - 1);
 
-    const lastMonthPartners = partners.filter(p => {
+    const lastMonthPartners = partnersData.filter(p => {
       const joinedAt = new Date(p.joinedAt);
       return joinedAt >= startOfLastMonth && joinedAt < startOfMonth;
     }).length;
 
-    const growthRate = lastMonthPartners > 0 
-      ? ((newThisMonth - lastMonthPartners) / lastMonthPartners) * 100 
+    const growthRate = lastMonthPartners > 0
+      ? ((newThisMonth - lastMonthPartners) / lastMonthPartners) * 100
       : newThisMonth > 0 ? 100 : 0;
 
     return NextResponse.json({

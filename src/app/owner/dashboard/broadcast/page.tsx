@@ -40,6 +40,7 @@ import {
   Timer,
   Sparkles,
   Zap,
+  ChevronRight,
 } from 'lucide-react';
 import { formatDate, formatShortDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -83,7 +84,6 @@ const getStatusInfo = (announcement: Announcement): StatusInfo => {
   }
 
   if (startDate && startDate > now) {
-    // Scheduled - calculate time until start
     const diff = startDate.getTime() - now.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -109,7 +109,6 @@ const getStatusInfo = (announcement: Announcement): StatusInfo => {
     };
   }
 
-  // Active - calculate time remaining
   let countdown: string | undefined;
   if (expireDate) {
     const diff = expireDate.getTime() - now.getTime();
@@ -136,13 +135,13 @@ const getStatusInfo = (announcement: Announcement): StatusInfo => {
 // Running Text Preview Component
 function RunningTextPreview({ text }: { text: string }) {
   return (
-    <div className="bg-violet-50 dark:bg-violet-950/30 rounded-lg p-3 border border-violet-200 dark:border-violet-800 overflow-hidden">
-      <div className="text-xs text-violet-600 dark:text-violet-400 mb-1.5 font-medium flex items-center gap-1">
+    <div className="bg-violet-50 dark:bg-violet-950/30 rounded-lg p-2.5 sm:p-3 border border-violet-200 dark:border-violet-800 overflow-hidden">
+      <div className="text-[10px] sm:text-xs text-violet-600 dark:text-violet-400 mb-1 font-medium flex items-center gap-1">
         <Play className="w-3 h-3" />
         Preview Running Text
       </div>
       <div className="overflow-hidden">
-        <div className="animate-marquee whitespace-nowrap text-sm text-violet-700 dark:text-violet-300">
+        <div className="animate-marquee whitespace-nowrap text-xs sm:text-sm text-violet-700 dark:text-violet-300">
           📢 {text} 📢 {text} 📢 {text} 📢 {text} 📢 {text}
         </div>
       </div>
@@ -245,11 +244,18 @@ export default function OwnerBroadcastPage() {
 
   if (isLoading || !hasHydrated) {
     return (
-      <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-12 rounded-xl" />
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+      <div className="min-h-screen flex flex-col">
+        <div className="flex-1 container mx-auto px-3 py-3 sm:py-4 space-y-3">
+          <Skeleton className="h-8 w-36" />
+          <div className="grid grid-cols-3 gap-2">
+            <Skeleton className="h-16 rounded-xl" />
+            <Skeleton className="h-16 rounded-xl" />
+            <Skeleton className="h-16 rounded-xl" />
+          </div>
+          <Skeleton className="h-11 rounded-xl" />
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+          </div>
         </div>
       </div>
     );
@@ -272,149 +278,154 @@ export default function OwnerBroadcastPage() {
   }).length;
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Broadcast</h1>
-          <p className="text-sm text-muted-foreground">Kelola promo, broadcast & pengumuman</p>
-        </div>
-        <Badge variant="outline" className="bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300">
-          <Zap className="w-3 h-3 mr-1" />
-          {totalActive} Aktif
-        </Badge>
-      </div>
-
-      {/* Active Broadcasts Summary */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <SummaryCard
-          title="Promo"
-          count={promoCount}
-          icon={Tag}
-          color="violet"
-          isActive={activeTab === 'promo'}
-          onClick={() => setActiveTab('promo')}
-        />
-        <SummaryCard
-          title="Broadcast"
-          count={broadcastCount}
-          icon={Radio}
-          color="purple"
-          isActive={activeTab === 'broadcast'}
-          onClick={() => setActiveTab('broadcast')}
-        />
-        <SummaryCard
-          title="Pengumuman"
-          count={announcementCount}
-          icon={FileText}
-          color="fuchsia"
-          isActive={activeTab === 'announcement'}
-          onClick={() => setActiveTab('announcement')}
-        />
-      </div>
-
-      {/* Expired Warning */}
-      {expiredCount > 0 && (
-        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30">
-          <CardContent className="p-3 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                {expiredCount} item sudah kedaluwarsa
-              </p>
-              <p className="text-xs text-amber-600 dark:text-amber-500">
-                Perpanjang atau nonaktifkan item yang sudah tidak relevan
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-11">
-          <TabsTrigger value="promo" className="gap-1.5">
-            <Tag className="w-4 h-4" />
-            <span className="hidden sm:inline">Promo</span>
-            {promoCount > 0 && (
-              <Badge className="ml-1 h-5 px-1.5 text-[10px] bg-violet-500 text-white">{promoCount}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="broadcast" className="gap-1.5">
-            <Radio className="w-4 h-4" />
-            <span className="hidden sm:inline">Broadcast</span>
-            {broadcastCount > 0 && (
-              <Badge className="ml-1 h-5 px-1.5 text-[10px] bg-purple-500 text-white">{broadcastCount}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="announcement" className="gap-1.5">
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">Pengumuman</span>
-            {announcementCount > 0 && (
-              <Badge className="ml-1 h-5 px-1.5 text-[10px] bg-fuchsia-500 text-white">{announcementCount}</Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Content per tab */}
-        <TabsContent value={activeTab} className="space-y-4 mt-4">
-          {/* Search & Add */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder={`Cari ${activeTab}...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-10"
-              />
-            </div>
-            <CreateDialog type={activeTab} onCreated={fetchAnnouncements} />
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 container mx-auto px-3 py-3 sm:py-4 space-y-3">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold">Broadcast</h1>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Kelola promo, broadcast & pengumuman</p>
           </div>
+          <Badge variant="outline" className="bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300 text-[10px] sm:text-xs">
+            <Zap className="w-3 h-3 mr-1" />
+            {totalActive} Aktif
+          </Badge>
+        </div>
 
-          {/* Running Text Preview for Announcement Tab */}
-          {activeTab === 'announcement' && announcementCount > 0 && (
-            <RunningTextPreview 
-              text={announcements
-                .filter(a => a.type === 'announcement' && a.isActive)
-                .map(a => a.description)
-                .join(' | ')} 
-            />
-          )}
+        {/* Active Broadcasts Summary - Compact Cards */}
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+          <SummaryCard
+            title="Promo"
+            count={promoCount}
+            icon={Tag}
+            color="violet"
+            isActive={activeTab === 'promo'}
+            onClick={() => setActiveTab('promo')}
+          />
+          <SummaryCard
+            title="Broadcast"
+            count={broadcastCount}
+            icon={Radio}
+            color="purple"
+            isActive={activeTab === 'broadcast'}
+            onClick={() => setActiveTab('broadcast')}
+          />
+          <SummaryCard
+            title="Info"
+            count={announcementCount}
+            icon={FileText}
+            color="fuchsia"
+            isActive={activeTab === 'announcement'}
+            onClick={() => setActiveTab('announcement')}
+          />
+        </div>
 
-          {/* List */}
-          <ScrollArea className="max-h-[calc(100vh-420px)]">
-            <div className="space-y-2 pr-2">
-              {loading ? (
-                [...Array(3)].map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)
-              ) : filteredAnnouncements.length > 0 ? (
-                filteredAnnouncements.map((announcement) => (
-                  <AnnouncementCard
-                    key={announcement.id}
-                    announcement={announcement}
-                    onToggle={toggleAnnouncement}
-                    onDelete={deleteAnnouncement}
-                    onUpdated={fetchAnnouncements}
-                  />
-                ))
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  {activeTab === 'promo' && <Tag className="w-12 h-12 mx-auto mb-3 opacity-30" />}
-                  {activeTab === 'broadcast' && <Radio className="w-12 h-12 mx-auto mb-3 opacity-30" />}
-                  {activeTab === 'announcement' && <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />}
-                  <p className="text-sm">Belum ada {activeTab}</p>
-                  <p className="text-xs mt-1">Klik tombol + untuk menambah baru</p>
-                </div>
-              )}
+        {/* Expired Warning */}
+        {expiredCount > 0 && (
+          <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30">
+            <CardContent className="p-2.5 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-400 truncate">
+                  {expiredCount} item sudah kedaluwarsa
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 h-auto p-0.5">
+            <TabsTrigger value="promo" className="flex-col sm:flex-row py-1.5 sm:py-2 gap-0.5 sm:gap-1 data-[state=active]:bg-violet-100 data-[state=active]:dark:bg-violet-900/30">
+              <div className="flex items-center gap-1">
+                <Tag className="w-3.5 h-3.5" />
+                {promoCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-violet-500 text-white text-[9px] flex items-center justify-center font-medium">{promoCount}</span>
+                )}
+              </div>
+              <span className="text-[10px] sm:text-xs font-medium">Promo</span>
+            </TabsTrigger>
+            <TabsTrigger value="broadcast" className="flex-col sm:flex-row py-1.5 sm:py-2 gap-0.5 sm:gap-1 data-[state=active]:bg-purple-100 data-[state=active]:dark:bg-purple-900/30">
+              <div className="flex items-center gap-1">
+                <Radio className="w-3.5 h-3.5" />
+                {broadcastCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-purple-500 text-white text-[9px] flex items-center justify-center font-medium">{broadcastCount}</span>
+                )}
+              </div>
+              <span className="text-[10px] sm:text-xs font-medium">Broadcast</span>
+            </TabsTrigger>
+            <TabsTrigger value="announcement" className="flex-col sm:flex-row py-1.5 sm:py-2 gap-0.5 sm:gap-1 data-[state=active]:bg-fuchsia-100 data-[state=active]:dark:bg-fuchsia-900/30">
+              <div className="flex items-center gap-1">
+                <FileText className="w-3.5 h-3.5" />
+                {announcementCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-fuchsia-500 text-white text-[9px] flex items-center justify-center font-medium">{announcementCount}</span>
+                )}
+              </div>
+              <span className="text-[10px] sm:text-xs font-medium">Info</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Content per tab */}
+          <TabsContent value={activeTab} className="space-y-3 mt-3">
+            {/* Search & Add */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  placeholder={`Cari ${activeTab}...`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 h-9 sm:h-10 text-sm"
+                />
+              </div>
+              <CreateDialog type={activeTab} onCreated={fetchAnnouncements} />
             </div>
-          </ScrollArea>
-        </TabsContent>
-      </Tabs>
+
+            {/* Running Text Preview for Announcement Tab */}
+            {activeTab === 'announcement' && announcementCount > 0 && (
+              <RunningTextPreview 
+                text={announcements
+                  .filter(a => a.type === 'announcement' && a.isActive)
+                  .map(a => a.description)
+                  .join(' | ')} 
+              />
+            )}
+
+            {/* List */}
+            <ScrollArea className="flex-1 max-h-[calc(100vh-320px)] sm:max-h-[calc(100vh-380px)]">
+              <div className="space-y-2 pr-1">
+                {loading ? (
+                  [...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
+                ) : filteredAnnouncements.length > 0 ? (
+                  filteredAnnouncements.map((announcement) => (
+                    <AnnouncementCard
+                      key={announcement.id}
+                      announcement={announcement}
+                      onToggle={toggleAnnouncement}
+                      onDelete={deleteAnnouncement}
+                      onUpdated={fetchAnnouncements}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {activeTab === 'promo' && <Tag className="w-10 h-10 mx-auto mb-2 opacity-30" />}
+                    {activeTab === 'broadcast' && <Radio className="w-10 h-10 mx-auto mb-2 opacity-30" />}
+                    {activeTab === 'announcement' && <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />}
+                    <p className="text-xs">Belum ada {activeTab}</p>
+                    <p className="text-[10px] mt-1">Klik tombol + untuk menambah baru</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
 
-// Summary Card Component
+// Summary Card Component - Mobile Optimized
 function SummaryCard({
   title,
   count,
@@ -461,17 +472,17 @@ function SummaryCard({
       )}
       onClick={onClick}
     >
-      <CardContent className="p-3 sm:p-4">
-        <div className="flex items-center gap-2 sm:gap-3">
+      <CardContent className="p-2 sm:p-3">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <div className={cn(
-            "w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center",
+            "w-7 h-7 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center flex-shrink-0",
             colors.icon
           )}>
-            <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
           </div>
-          <div>
-            <p className={cn("text-xl sm:text-2xl font-bold", colors.text)}>{count}</p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">{title}</p>
+          <div className="min-w-0">
+            <p className={cn("text-base sm:text-xl font-bold leading-tight", colors.text)}>{count}</p>
+            <p className="text-[9px] sm:text-[10px] text-muted-foreground leading-tight truncate">{title}</p>
           </div>
         </div>
       </CardContent>
@@ -479,7 +490,7 @@ function SummaryCard({
   );
 }
 
-// Announcement Card Component
+// Announcement Card Component - Mobile Optimized
 function AnnouncementCard({
   announcement,
   onToggle,
@@ -499,54 +510,54 @@ function AnnouncementCard({
       "glass-card tap-highlight active-scale transition-all",
       announcement.isActive && !status.isExpired && !status.isScheduled && "border-violet-300 dark:border-violet-700"
     )}>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
+      <CardContent className="p-3">
+        <div className="flex items-start gap-2">
           <div className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+            "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0",
             announcement.isActive && !status.isExpired 
               ? "bg-violet-100 dark:bg-violet-900/30" 
               : "bg-muted"
           )}>
-            {announcement.type === 'promo' && <Tag className={cn("w-5 h-5", status.color)} />}
-            {announcement.type === 'broadcast' && <Radio className={cn("w-5 h-5", status.color)} />}
-            {announcement.type === 'announcement' && <FileText className={cn("w-5 h-5", status.color)} />}
+            {announcement.type === 'promo' && <Tag className={cn("w-4 h-4", status.color)} />}
+            {announcement.type === 'broadcast' && <Radio className={cn("w-4 h-4", status.color)} />}
+            {announcement.type === 'announcement' && <FileText className={cn("w-4 h-4", status.color)} />}
           </div>
           
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-medium truncate">{announcement.title}</p>
-              <Badge variant={status.variant} className="text-[10px] gap-1">
-                <StatusIcon className="w-3 h-3" />
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="font-medium text-sm truncate">{announcement.title}</p>
+              <Badge variant={status.variant} className="text-[9px] gap-0.5 h-4 px-1">
+                <StatusIcon className="w-2.5 h-2.5" />
                 {status.label}
               </Badge>
             </div>
-            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
               {announcement.description}
             </p>
             
             {/* Status info - countdown or expired badge */}
             {status.countdown && (
-              <div className="flex items-center gap-2 mt-2">
-                <Badge variant="outline" className="text-[10px] bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800 text-violet-600 dark:text-violet-400">
-                  <Timer className="w-3 h-3 mr-1" />
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <Badge variant="outline" className="text-[9px] bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800 text-violet-600 dark:text-violet-400 h-4 px-1">
+                  <Timer className="w-2.5 h-2.5 mr-0.5" />
                   {status.countdown}
                 </Badge>
               </div>
             )}
 
             {status.isExpired && (
-              <div className="flex items-center gap-2 mt-2">
-                <Badge variant="destructive" className="text-[10px]">
-                  <AlertCircle className="w-3 h-3 mr-1" />
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <Badge variant="destructive" className="text-[9px] h-4 px-1">
+                  <AlertCircle className="w-2.5 h-2.5 mr-0.5" />
                   Sudah tidak aktif
                 </Badge>
               </div>
             )}
 
             {status.isScheduled && status.countdown && (
-              <div className="flex items-center gap-2 mt-2">
-                <Badge variant="outline" className="text-[10px] bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400">
-                  <Clock className="w-3 h-3 mr-1" />
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <Badge variant="outline" className="text-[9px] bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 h-4 px-1">
+                  <Clock className="w-2.5 h-2.5 mr-0.5" />
                   Mulai dalam {status.countdown}
                 </Badge>
               </div>
@@ -558,60 +569,60 @@ function AnnouncementCard({
                 href={announcement.link} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-violet-600 hover:text-violet-700 mt-2 hover:underline"
+                className="inline-flex items-center gap-0.5 text-[10px] text-violet-600 hover:text-violet-700 mt-1.5 hover:underline"
               >
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="w-2.5 h-2.5" />
                 Lihat Link
               </a>
             )}
 
             {/* Date range for promo and broadcast */}
             {(announcement.type === 'promo' || announcement.type === 'broadcast') && announcement.startDate && announcement.expireDate && (
-              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                <Calendar className="w-3 h-3" />
+              <div className="flex items-center gap-1 mt-1.5 text-[10px] text-muted-foreground">
+                <Calendar className="w-2.5 h-2.5" />
                 <span>{formatShortDate(announcement.startDate)} - {formatShortDate(announcement.expireDate)}</span>
               </div>
             )}
             
             {/* Running text preview for announcement */}
             {announcement.type === 'announcement' && announcement.isActive && !status.isExpired && (
-              <div className="mt-2 bg-violet-50 dark:bg-violet-950/30 rounded-md px-2 py-1.5 border border-violet-100 dark:border-violet-900">
-                <p className="text-xs text-violet-700 dark:text-violet-300 truncate">
+              <div className="mt-1.5 bg-violet-50 dark:bg-violet-950/30 rounded-md px-2 py-1 border border-violet-100 dark:border-violet-900">
+                <p className="text-[10px] text-violet-700 dark:text-violet-300 truncate">
                   📢 {announcement.description}
                 </p>
               </div>
             )}
 
-            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              Dibuat: {formatDate(announcement.createdAt)}
+            <p className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-0.5">
+              <Calendar className="w-2.5 h-2.5" />
+              {formatDate(announcement.createdAt)}
             </p>
           </div>
 
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               <EditDialog announcement={announcement} onUpdated={onUpdated} />
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent>
+                <AlertDialogContent className="max-w-sm">
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Hapus {announcement.type}?</AlertDialogTitle>
-                    <AlertDialogDescription>
+                    <AlertDialogTitle className="text-base">Hapus {announcement.type}?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-sm">
                       Tindakan ini tidak dapat dibatalkan. &quot;{announcement.title}&quot; akan dihapus secara permanen.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogCancel className="h-9">Batal</AlertDialogCancel>
                     <AlertDialogAction
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 h-9"
                       onClick={() => onDelete(announcement.id)}
                     >
                       Hapus
@@ -623,6 +634,7 @@ function AnnouncementCard({
             <Switch
               checked={announcement.isActive}
               onCheckedChange={() => onToggle(announcement.id, announcement.isActive)}
+              className="scale-75"
             />
           </div>
         </div>
@@ -631,7 +643,7 @@ function AnnouncementCard({
   );
 }
 
-// Create Dialog Component
+// Create Dialog Component - Mobile Optimized
 function CreateDialog({ type, onCreated }: { type: TabType; onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -669,7 +681,6 @@ function CreateDialog({ type, onCreated }: { type: TabType; onCreated: () => voi
 
       if (type === 'promo') {
         payload.link = formData.link;
-        // Include dates for promo too
         if (formData.startDate) payload.startDate = formData.startDate;
         if (formData.expireDate) payload.expireDate = formData.expireDate;
       }
@@ -711,73 +722,78 @@ function CreateDialog({ type, onCreated }: { type: TabType; onCreated: () => voi
 
   const getDescription = () => {
     switch (type) {
-      case 'promo': return 'Buat promo yang akan dikirim ke partner';
+      case 'promo': return 'Buat promo untuk dikirim ke partner';
       case 'broadcast': return 'Buat broadcast dengan periode waktu';
-      case 'announcement': return 'Buat pengumuman running text di dashboard partner';
+      case 'announcement': return 'Buat pengumuman running text';
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
       <DialogTrigger asChild>
-        <Button size="icon" className="h-10 w-10 bg-violet-500 hover:bg-violet-600 text-white rounded-xl">
-          <Plus className="w-5 h-5" />
+        <Button size="icon" className="h-9 w-9 sm:h-10 sm:w-10 bg-violet-500 hover:bg-violet-600 text-white rounded-lg">
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>{getTitle()}</DialogTitle>
-          <DialogDescription>{getDescription()}</DialogDescription>
+          <DialogTitle className="text-base">{getTitle()}</DialogTitle>
+          <DialogDescription className="text-xs">{getDescription()}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Judul *</Label>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Judul *</Label>
             <Input
               placeholder="Judul"
               value={formData.title}
               onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               required
+              className="h-9 text-sm"
             />
           </div>
           
-          <div className="space-y-2">
-            <Label>Deskripsi *</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Deskripsi *</Label>
             <Textarea
               placeholder="Isi deskripsi..."
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               rows={3}
               required
+              className="text-sm"
             />
           </div>
 
           {type === 'promo' && (
             <>
-              <div className="space-y-2">
-                <Label>Link (G.Drive/Canva) *</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Link (G.Drive/Canva) *</Label>
                 <Input
                   type="url"
                   placeholder="https://..."
                   value={formData.link}
                   onChange={(e) => setFormData(prev => ({ ...prev, link: e.target.value }))}
                   required
+                  className="h-9 text-sm"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Tanggal Mulai</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tanggal Mulai</Label>
                   <Input
                     type="datetime-local"
                     value={formData.startDate}
                     onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="h-9 text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Tanggal Selesai</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tanggal Selesai</Label>
                   <Input
                     type="datetime-local"
                     value={formData.expireDate}
                     onChange={(e) => setFormData(prev => ({ ...prev, expireDate: e.target.value }))}
+                    className="h-9 text-sm"
                   />
                 </div>
               </div>
@@ -785,35 +801,37 @@ function CreateDialog({ type, onCreated }: { type: TabType; onCreated: () => voi
           )}
 
           {type === 'broadcast' && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Tanggal Mulai *</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tanggal Mulai *</Label>
                 <Input
                   type="datetime-local"
                   value={formData.startDate}
                   onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
                   required
+                  className="h-9 text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Tanggal Selesai *</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tanggal Selesai *</Label>
                 <Input
                   type="datetime-local"
                   value={formData.expireDate}
                   onChange={(e) => setFormData(prev => ({ ...prev, expireDate: e.target.value }))}
                   required
+                  className="h-9 text-sm"
                 />
               </div>
             </div>
           )}
 
           {type === 'announcement' && (
-            <div className="bg-violet-50 dark:bg-violet-950/30 rounded-lg p-3 border border-violet-200 dark:border-violet-800">
-              <div className="flex items-start gap-2">
-                <Sparkles className="w-4 h-4 text-violet-500 mt-0.5 flex-shrink-0" />
+            <div className="bg-violet-50 dark:bg-violet-950/30 rounded-lg p-2.5 border border-violet-200 dark:border-violet-800">
+              <div className="flex items-start gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-violet-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-violet-700 dark:text-violet-300">Running Text</p>
-                  <p className="text-xs text-violet-600 dark:text-violet-400 mt-1">
+                  <p className="text-xs font-medium text-violet-700 dark:text-violet-300">Running Text</p>
+                  <p className="text-[10px] text-violet-600 dark:text-violet-400 mt-0.5">
                     Pengumuman akan ditampilkan sebagai teks berjalan di dashboard partner
                   </p>
                 </div>
@@ -824,38 +842,15 @@ function CreateDialog({ type, onCreated }: { type: TabType; onCreated: () => voi
           <Separator />
 
           <div className="flex items-center justify-between">
-            <Label>Aktifkan sekarang</Label>
+            <Label className="text-xs">Aktifkan sekarang</Label>
             <Switch
               checked={formData.isActive}
               onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
             />
           </div>
-
-          {/* Push Notification Placeholder */}
-          <div className="bg-muted/50 rounded-lg p-3 border">
-            <div className="flex items-start gap-2">
-              <Bell className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">Push Notification</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Kirim notifikasi ke semua partner saat simpan
-                </p>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-2 h-8 text-xs"
-                  disabled
-                >
-                  <Send className="w-3 h-3 mr-1" />
-                  Segera Hadir
-                </Button>
-              </div>
-            </div>
-          </div>
           
-          <Button type="submit" className="w-full bg-violet-500 hover:bg-violet-600 text-white h-11 rounded-xl" disabled={loading}>
-            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+          <Button type="submit" className="w-full bg-violet-500 hover:bg-violet-600 text-white h-10 rounded-lg text-sm" disabled={loading}>
+            {loading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Send className="w-4 h-4 mr-1.5" />}
             Simpan
           </Button>
         </form>
@@ -864,7 +859,7 @@ function CreateDialog({ type, onCreated }: { type: TabType; onCreated: () => voi
   );
 }
 
-// Edit Dialog Component
+// Edit Dialog Component - Mobile Optimized
 function EditDialog({ announcement, onUpdated }: { announcement: Announcement; onUpdated: () => void }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -934,63 +929,68 @@ function EditDialog({ announcement, onUpdated }: { announcement: Announcement; o
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Edit className="w-4 h-4" />
+        <Button variant="ghost" size="icon" className="h-7 w-7">
+          <Edit className="w-3.5 h-3.5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>Edit {announcement.type}</DialogTitle>
+          <DialogTitle className="text-base">Edit {announcement.type}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Judul *</Label>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Judul *</Label>
             <Input
               placeholder="Judul"
               value={formData.title}
               onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               required
+              className="h-9 text-sm"
             />
           </div>
           
-          <div className="space-y-2">
-            <Label>Deskripsi *</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Deskripsi *</Label>
             <Textarea
               placeholder="Isi deskripsi..."
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               rows={3}
               required
+              className="text-sm"
             />
           </div>
 
           {announcement.type === 'promo' && (
             <>
-              <div className="space-y-2">
-                <Label>Link (G.Drive/Canva) *</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Link (G.Drive/Canva) *</Label>
                 <Input
                   type="url"
                   placeholder="https://..."
                   value={formData.link}
                   onChange={(e) => setFormData(prev => ({ ...prev, link: e.target.value }))}
                   required
+                  className="h-9 text-sm"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Tanggal Mulai</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tanggal Mulai</Label>
                   <Input
                     type="datetime-local"
                     value={formData.startDate}
                     onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="h-9 text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Tanggal Selesai</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tanggal Selesai</Label>
                   <Input
                     type="datetime-local"
                     value={formData.expireDate}
                     onChange={(e) => setFormData(prev => ({ ...prev, expireDate: e.target.value }))}
+                    className="h-9 text-sm"
                   />
                 </div>
               </div>
@@ -998,35 +998,37 @@ function EditDialog({ announcement, onUpdated }: { announcement: Announcement; o
           )}
 
           {announcement.type === 'broadcast' && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Tanggal Mulai *</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tanggal Mulai *</Label>
                 <Input
                   type="datetime-local"
                   value={formData.startDate}
                   onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
                   required
+                  className="h-9 text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Tanggal Selesai *</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tanggal Selesai *</Label>
                 <Input
                   type="datetime-local"
                   value={formData.expireDate}
                   onChange={(e) => setFormData(prev => ({ ...prev, expireDate: e.target.value }))}
                   required
+                  className="h-9 text-sm"
                 />
               </div>
             </div>
           )}
 
           {announcement.type === 'announcement' && (
-            <div className="bg-violet-50 dark:bg-violet-950/30 rounded-lg p-3 border border-violet-200 dark:border-violet-800">
-              <div className="flex items-start gap-2">
-                <Sparkles className="w-4 h-4 text-violet-500 mt-0.5 flex-shrink-0" />
+            <div className="bg-violet-50 dark:bg-violet-950/30 rounded-lg p-2.5 border border-violet-200 dark:border-violet-800">
+              <div className="flex items-start gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-violet-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-violet-700 dark:text-violet-300">Running Text Preview</p>
-                  <p className="text-xs text-violet-600 dark:text-violet-400 mt-1 line-clamp-2">
+                  <p className="text-xs font-medium text-violet-700 dark:text-violet-300">Preview</p>
+                  <p className="text-[10px] text-violet-600 dark:text-violet-400 mt-0.5 line-clamp-2">
                     📢 {formData.description || 'Isi deskripsi...'}
                   </p>
                 </div>
@@ -1037,38 +1039,15 @@ function EditDialog({ announcement, onUpdated }: { announcement: Announcement; o
           <Separator />
 
           <div className="flex items-center justify-between">
-            <Label>Aktif</Label>
+            <Label className="text-xs">Aktif</Label>
             <Switch
               checked={formData.isActive}
               onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
             />
           </div>
-
-          {/* Push Notification Placeholder */}
-          <div className="bg-muted/50 rounded-lg p-3 border">
-            <div className="flex items-start gap-2">
-              <Bell className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">Push Notification</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Kirim notifikasi ke semua partner
-                </p>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-2 h-8 text-xs"
-                  disabled
-                >
-                  <Send className="w-3 h-3 mr-1" />
-                  Segera Hadir
-                </Button>
-              </div>
-            </div>
-          </div>
           
-          <Button type="submit" className="w-full bg-violet-500 hover:bg-violet-600 text-white h-11 rounded-xl" disabled={loading}>
-            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+          <Button type="submit" className="w-full bg-violet-500 hover:bg-violet-600 text-white h-10 rounded-lg text-sm" disabled={loading}>
+            {loading && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
             Simpan Perubahan
           </Button>
         </form>

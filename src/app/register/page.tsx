@@ -396,7 +396,7 @@ export default function RegisterPage() {
                         value={formData.name}
                         onChange={(e) => handleChange('name', e.target.value)}
                         required
-                        className="h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
+                        className="h-12 rounded-xl border-2 focus:border-primary transition-colors"
                         autoComplete="name"
                       />
                     </div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,15 +60,15 @@ export async function GET(request: NextRequest) {
       select: { ownerProfit: true, nominal: true },
     });
 
-    // Calculate forecast
-    const currentMonthProfit = currentMonthTxs.reduce((sum, tx) => sum + tx.ownerProfit, 0);
-    const currentMonthVolume = currentMonthTxs.reduce((sum, tx) => sum + tx.nominal, 0);
+    // Calculate forecast - use toNumber for PostgreSQL Decimal compatibility
+    const currentMonthProfit = currentMonthTxs.reduce((sum, tx) => sum + toNumber(tx.ownerProfit), 0);
+    const currentMonthVolume = currentMonthTxs.reduce((sum, tx) => sum + toNumber(tx.nominal), 0);
     const avgDailyProfit = daysPassed > 0 ? currentMonthProfit / daysPassed : 0;
     const avgDailyVolume = daysPassed > 0 ? currentMonthVolume / daysPassed : 0;
     const projectedProfit = currentMonthProfit + (avgDailyProfit * daysRemaining);
     const projectedVolume = currentMonthVolume + (avgDailyVolume * daysRemaining);
-    const lastMonthProfit = lastMonthTxs.reduce((sum, tx) => sum + tx.ownerProfit, 0);
-    const lastMonthVolume = lastMonthTxs.reduce((sum, tx) => sum + tx.nominal, 0);
+    const lastMonthProfit = lastMonthTxs.reduce((sum, tx) => sum + toNumber(tx.ownerProfit), 0);
+    const lastMonthVolume = lastMonthTxs.reduce((sum, tx) => sum + toNumber(tx.nominal), 0);
     const lastMonthAvgDaily = daysInLastMonth > 0 ? lastMonthProfit / daysInLastMonth : 0;
     const profitChange = lastMonthProfit > 0 
       ? ((currentMonthProfit - (lastMonthProfit * (daysPassed / daysInLastMonth))) / (lastMonthProfit * (daysPassed / daysInLastMonth))) * 100
@@ -93,11 +93,11 @@ export async function GET(request: NextRequest) {
     });
 
     const totalTransactions = successfulTxs.length;
-    const totalPaymentFee = successfulTxs.reduce((sum, tx) => sum + tx.paymentFee, 0);
-    const totalPlatformFee = successfulTxs.reduce((sum, tx) => sum + tx.platformFee, 0);
-    const totalNetMargin = successfulTxs.reduce((sum, tx) => sum + tx.netMargin, 0);
-    const totalVolume = successfulTxs.reduce((sum, tx) => sum + tx.nominal, 0);
-    const totalOwnerProfit = successfulTxs.reduce((sum, tx) => sum + tx.ownerProfit, 0);
+    const totalPaymentFee = successfulTxs.reduce((sum, tx) => sum + toNumber(tx.paymentFee), 0);
+    const totalPlatformFee = successfulTxs.reduce((sum, tx) => sum + toNumber(tx.platformFee), 0);
+    const totalNetMargin = successfulTxs.reduce((sum, tx) => sum + toNumber(tx.netMargin), 0);
+    const totalVolume = successfulTxs.reduce((sum, tx) => sum + toNumber(tx.nominal), 0);
+    const totalOwnerProfit = successfulTxs.reduce((sum, tx) => sum + toNumber(tx.ownerProfit), 0);
 
     // Fee percentage from volume
     const avgPaymentFeePercent = totalVolume > 0 ? (totalPaymentFee / totalVolume) * 100 : 0;
@@ -129,8 +129,8 @@ export async function GET(request: NextRequest) {
         return txDate === dateStr;
       });
       
-      const profit = dayTxs.filter(tx => tx.status === 'success').reduce((sum, tx) => sum + tx.ownerProfit, 0);
-      const volume = dayTxs.reduce((sum, tx) => sum + tx.nominal, 0);
+      const profit = dayTxs.filter(tx => tx.status === 'success').reduce((sum, tx) => sum + toNumber(tx.ownerProfit), 0);
+      const volume = dayTxs.reduce((sum, tx) => sum + toNumber(tx.nominal), 0);
       const count = dayTxs.length;
       
       dailyTrends.push({
@@ -163,11 +163,11 @@ export async function GET(request: NextRequest) {
 
     const paymentTypeStats = paymentTypes.map(pt => {
       const transactions = pt.transactions;
-      const totalVolume = transactions.reduce((sum, tx) => sum + tx.nominal, 0);
-      const totalProfit = transactions.reduce((sum, tx) => sum + tx.ownerProfit, 0);
-      const totalFee = transactions.reduce((sum, tx) => sum + tx.paymentFee, 0);
+      const totalVolume = transactions.reduce((sum, tx) => sum + toNumber(tx.nominal), 0);
+      const totalProfit = transactions.reduce((sum, tx) => sum + toNumber(tx.ownerProfit), 0);
+      const totalFee = transactions.reduce((sum, tx) => sum + toNumber(tx.paymentFee), 0);
       const successCount = transactions.filter(tx => tx.status === 'success').length;
-      
+
       return {
         id: pt.id,
         name: pt.name,
@@ -202,8 +202,8 @@ export async function GET(request: NextRequest) {
       if (statusCounts[key]) {
         statusCounts[key] = {
           count: item._count.id,
-          volume: item._sum.nominal || 0,
-          profit: item._sum.ownerProfit || 0,
+          volume: toNumber(item._sum.nominal),
+          profit: toNumber(item._sum.ownerProfit),
         };
       }
     });
@@ -230,11 +230,11 @@ export async function GET(request: NextRequest) {
       id: p.id,
       name: p.name,
       tier: p.tier,
-      commission: p.commission,
-      totalVolume: p.totalVolume,
-      totalProfit: p.totalProfit,
+      commission: toNumber(p.commission),
+      totalVolume: toNumber(p.totalVolume),
+      totalProfit: toNumber(p.totalProfit),
       totalTransactions: p.totalTransactions,
-      last30DaysVolume: p.transactions.reduce((sum, tx) => sum + tx.nominal, 0),
+      last30DaysVolume: p.transactions.reduce((sum, tx) => sum + toNumber(tx.nominal), 0),
       last30DaysTransactions: p.transactions.length,
       last30DaysSuccessCount: p.transactions.filter(tx => tx.status === 'success').length,
     })).sort((a, b) => b.last30DaysVolume - a.last30DaysVolume);
@@ -253,10 +253,10 @@ export async function GET(request: NextRequest) {
     const marketplaceAnalysis = marketplaceStats.map(mp => ({
       id: mp.id,
       name: mp.name,
-      feePercent: mp.feePercent,
+      feePercent: toNumber(mp.feePercent),
       transactionCount: mp.transactions.length,
-      totalVolume: mp.transactions.reduce((sum, tx) => sum + tx.nominal, 0),
-      totalFee: mp.transactions.reduce((sum, tx) => sum + tx.platformFee, 0),
+      totalVolume: mp.transactions.reduce((sum, tx) => sum + toNumber(tx.nominal), 0),
+      totalFee: mp.transactions.reduce((sum, tx) => sum + toNumber(tx.platformFee), 0),
     }));
 
     // Hourly distribution (for peak hours analysis)

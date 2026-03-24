@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,9 @@ import {
   Star,
   Globe,
   Phone,
+  Search,
+  Package,
+  RefreshCw,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -157,6 +160,56 @@ function StepRecipient({
   onNext: () => void;
 }) {
   const isValid = formData.name && formData.phone;
+  const [searchPhone, setSearchPhone] = useState('');
+  const [loadingLookup, setLoadingLookup] = useState(false);
+  const [lookupError, setLookupError] = useState('');
+  const [foundCustomer, setFoundCustomer] = useState<{name: string; transactions: number} | null>(null);
+
+  // Auto-lookup when phone number is entered (debounced)
+  const handleLookupCustomer = async () => {
+    const phone = searchPhone.trim() || formData.phone.trim();
+    if (!phone || phone.length < 10) {
+      setLookupError('Masukkan nomor WhatsApp yang valid');
+      return;
+    }
+
+    setLoadingLookup(true);
+    setLookupError('');
+    setFoundCustomer(null);
+
+    try {
+      const response = await fetch(`/api/customers/lookup?phone=${encodeURIComponent(phone)}`);
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        // Auto-fill all customer data
+        const customer = data.data;
+        onChange('name', customer.name || '');
+        onChange('phone', customer.phone || formData.phone);
+        
+        // Handle bank - check if in list or use custom
+        const customerBank = customer.bankName || '';
+        if (customerBank && !banks.includes(customerBank)) {
+          onChange('bank', 'Lainnya');
+          onChange('bankCustom', customerBank);
+        } else {
+          onChange('bank', customerBank);
+          onChange('bankCustom', '');
+        }
+        
+        onChange('bankAccount', customer.bankAccount || '');
+        onChange('bankHolder', customer.bankHolder || '');
+        onChange('city', customer.city || '');
+        setFoundCustomer({ name: customer.name, transactions: customer.totalTransactions });
+      } else {
+        setLookupError('Nomor belum terdaftar, silakan isi data manual');
+      }
+    } catch {
+      setLookupError('Terjadi kesalahan. Silakan coba lagi.');
+    } finally {
+      setLoadingLookup(false);
+    }
+  };
 
   return (
     <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-2xl shadow-primary/5">
@@ -173,6 +226,57 @@ function StepRecipient({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Returning Customer Section */}
+        <div className="p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20">
+          <div className="flex items-center gap-2 mb-3">
+            <RefreshCw className="w-4 h-4 text-blue-500" />
+            <p className="text-sm font-medium text-blue-700 dark:text-blue-400">Sudah Pernah Order?</p>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Masukkan nomor WhatsApp untuk mengisi otomatis data penerima
+          </p>
+          <div className="flex gap-2">
+            <Input
+              type="tel"
+              placeholder="08xxxxxxxxxx"
+              value={searchPhone}
+              onChange={(e) => setSearchPhone(e.target.value)}
+              className="h-10 flex-1 text-sm rounded-lg bg-white/50 dark:bg-black/20 border-2 focus:border-blue-500"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleLookupCustomer}
+              disabled={loadingLookup}
+              className="h-10 px-4 rounded-lg border-blue-500/50 hover:bg-blue-500/10"
+            >
+              {loadingLookup ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : foundCustomer ? (
+                <Check className="w-4 h-4 text-green-500" />
+              ) : (
+                <Search className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+          {lookupError && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">{lookupError}</p>
+          )}
+          {foundCustomer && (
+            <p className="text-xs text-green-500 mt-2 flex items-center gap-1">
+              <Check className="w-3 h-3" />
+              {foundCustomer.name} - {foundCustomer.transactions} transaksi sebelumnya
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Separator className="flex-1" />
+          <span className="text-xs text-muted-foreground">atau isi manual</span>
+          <Separator className="flex-1" />
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
@@ -211,19 +315,42 @@ function StepRecipient({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-sm">Bank</Label>
-            <Select
-              value={formData.bank}
-              onValueChange={(value) => onChange('bank', value)}
-            >
-              <SelectTrigger className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2">
-                <SelectValue placeholder="Pilih bank" />
-              </SelectTrigger>
-              <SelectContent>
-                {banks.map((bank) => (
-                  <SelectItem key={bank} value={bank}>{bank}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {formData.bank === 'Lainnya' ? (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nama bank"
+                  value={formData.bankCustom || ''}
+                  onChange={(e) => onChange('bankCustom', e.target.value)}
+                  className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    onChange('bank', '');
+                    onChange('bankCustom', '');
+                  }}
+                  className="h-12 px-3 rounded-xl"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <Select
+                value={formData.bank}
+                onValueChange={(value) => onChange('bank', value)}
+              >
+                <SelectTrigger className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2">
+                  <SelectValue placeholder="Pilih bank" />
+                </SelectTrigger>
+                <SelectContent>
+                  {banks.map((bank) => (
+                    <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div className="space-y-2">
             <Label className="text-sm">No. Rekening</Label>
@@ -536,10 +663,10 @@ function StepCalculation({
             <MapPin className="w-4 h-4 text-muted-foreground" />
             <span>{formData.city || '-'}</span>
           </div>
-          {formData.bank && (
+          {(formData.bank || formData.bankCustom) && (
             <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
               <Building className="w-4 h-4 text-muted-foreground" />
-              <span>{formData.bank} - {formData.bankAccount} a.n {formData.bankHolder}</span>
+              <span>{formData.bank === 'Lainnya' ? formData.bankCustom : formData.bank} - {formData.bankAccount} a.n {formData.bankHolder}</span>
             </div>
           )}
           <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
@@ -669,6 +796,7 @@ export default function OrderPage() {
     name: '',
     phone: '',
     bank: '',
+    bankCustom: '',
     bankAccount: '',
     bankHolder: '',
     nominal: '',
@@ -726,12 +854,16 @@ export default function OrderPage() {
     setError('');
     setLoading(true);
 
+    // Determine the actual bank value
+    const actualBank = formData.bank === 'Lainnya' ? formData.bankCustom : formData.bank;
+
     try {
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          bank: actualBank,
           nominal: parseFloat(formData.nominal),
         }),
       });

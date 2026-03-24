@@ -16,13 +16,20 @@ export function formatCurrency(value: number): string {
 
 // Compact format for mobile - shows shorter numbers like 1.5jt, 500rb
 export function formatCompactCurrency(value: number): string {
+  if (value >= 1000000000000) {
+    // Triliun (trillion)
+    return `Rp ${(value / 1000000000000).toFixed(1).replace(/\.0$/, '')}T`;
+  }
   if (value >= 1000000000) {
+    // Miliar (billion)
     return `Rp ${(value / 1000000000).toFixed(1).replace(/\.0$/, '')}M`;
   }
   if (value >= 1000000) {
+    // Juta (million)
     return `Rp ${(value / 1000000).toFixed(1).replace(/\.0$/, '')}jt`;
   }
   if (value >= 1000) {
+    // Ribu (thousand)
     return `Rp ${(value / 1000).toFixed(0)}rb`;
   }
   return `Rp ${value}`;

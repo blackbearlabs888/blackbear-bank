@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
 
 // GET payment types usage stats
 export async function GET() {
@@ -35,8 +35,8 @@ export async function GET() {
     });
 
     const stats = paymentTypes.map((pt) => {
-      const totalVolume = pt.transactions.reduce((sum, t) => sum + t.nominal, 0);
-      const totalFees = pt.transactions.reduce((sum, t) => sum + t.paymentFee, 0);
+      const totalVolume = pt.transactions.reduce((sum, t) => sum + toNumber(t.nominal), 0);
+      const totalFees = pt.transactions.reduce((sum, t) => sum + toNumber(t.paymentFee), 0);
       const transactionCount = pt._count.transactions;
 
       // Count by method
@@ -46,11 +46,11 @@ export async function GET() {
       return {
         id: pt.id,
         name: pt.name,
-        onlineFeePercent: pt.onlineFeePercent,
-        onlineFeeFlat: pt.onlineFeeFlat,
-        codFeePercent: pt.codFeePercent,
-        codFeeFlat: pt.codFeeFlat,
-        threshold: pt.threshold,
+        onlineFeePercent: toNumber(pt.onlineFeePercent),
+        onlineFeeFlat: toNumber(pt.onlineFeeFlat),
+        codFeePercent: toNumber(pt.codFeePercent),
+        codFeeFlat: toNumber(pt.codFeeFlat),
+        threshold: toNumber(pt.threshold),
         isActive: pt.isActive,
         transactionCount,
         onlineCount,

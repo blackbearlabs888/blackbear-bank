@@ -27,6 +27,8 @@ import {
   Zap,
   Shield,
   XCircle,
+  ExternalLink,
+  MessageCircle,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -45,6 +47,9 @@ interface OrderData {
   paymentType: string;
   methodTransaction: string;
   partner: string | null;
+  partnerPhone: string | null;
+  ownerWhatsapp: string | null;
+  transactionLink?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -465,6 +470,46 @@ function TrackOrderContent() {
                 <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
                   <p className="text-xs text-muted-foreground mb-1">Partner</p>
                   <p className="font-medium text-primary">{order.partner}</p>
+                </div>
+              )}
+
+              {/* Follow Up Button */}
+              {(order.partnerPhone || order.ownerWhatsapp) && (
+                <Button
+                  asChild
+                  className="w-full h-12 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg shadow-green-500/20"
+                >
+                  <a
+                    href={`https://wa.me/${order.partnerPhone || order.ownerWhatsapp}?text=${encodeURIComponent(`Halo, saya ingin menanyakan status order saya dengan Order ID: ${order.orderId}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <MessageCircle className="w-5 h-5 mr-2" />
+                    Follow Up via WhatsApp
+                    {order.partner ? ` (${order.partner})` : ' (Owner)'}
+                  </a>
+                </Button>
+              )}
+
+              {/* Transaction Link Gestun */}
+              {order.transactionLink && (
+                <div className="p-4 rounded-xl bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-violet-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ExternalLink className="w-4 h-4 text-violet-500" />
+                    <p className="text-sm font-medium text-violet-700 dark:text-violet-400">Link Transaksi Gestun</p>
+                  </div>
+                  <a 
+                    href={order.transactionLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-2 p-3 rounded-lg bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/30 transition-colors group"
+                  >
+                    <span className="text-sm text-muted-foreground truncate flex-1">{order.transactionLink}</span>
+                    <div className="flex items-center gap-1.5 text-violet-600 dark:text-violet-400">
+                      <span className="text-xs font-medium">Buka</span>
+                      <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </a>
                 </div>
               )}
 

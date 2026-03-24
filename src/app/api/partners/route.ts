@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
 import { hashPassword } from '@/lib/auth';
+
+// Helper to serialize partner data
+function serializePartner(partner: Record<string, unknown>) {
+  return {
+    ...partner,
+    commission: toNumber(partner.commission),
+    target: toNumber(partner.target),
+    totalProfit: toNumber(partner.totalProfit),
+    totalVolume: toNumber(partner.totalVolume),
+  };
+}
 
 // GET partners
 export async function GET() {
@@ -21,7 +32,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      data: partners,
+      data: partners.map(p => serializePartner(p as unknown as Record<string, unknown>)),
     });
   } catch (error) {
     console.error('Get partners error:', error);
@@ -111,7 +122,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: newUser.partner,
+      data: newUser.partner ? serializePartner(newUser.partner as unknown as Record<string, unknown>) : null,
       message: 'Partner berhasil dibuat',
     });
   } catch (error) {

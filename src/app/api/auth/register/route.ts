@@ -9,6 +9,27 @@ import {
   validatePhone
 } from '@/lib/auth';
 
+// Helper to safely create notification
+async function createNotification(data: {
+  type: string;
+  title: string;
+  message: string;
+  data?: string;
+  targetType: string;
+  transactionId?: string;
+  partnerId?: string;
+}) {
+  try {
+    // Check if notification model exists
+    if ('notification' in db && typeof db.notification?.create === 'function') {
+      await db.notification.create({ data });
+    }
+  } catch (error) {
+    console.error('Failed to create notification:', error);
+    // Don't throw - notification failure shouldn't break the main flow
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -117,6 +138,22 @@ export async function POST(request: NextRequest) {
     // Create session
     const sessionId = await createSession(user.id);
     await setSessionCookie(sessionId);
+
+    // Create notification for owner about new partner registration
+    await createNotification({
+      type: 'new_partner',
+      title: 'Partner Baru Mendaftar',
+      message: `${name} (${email}) baru saja mendaftar sebagai partner dari ${city}`,
+      data: JSON.stringify({
+        partnerId: user.partner?.id,
+        partnerName: name,
+        partnerEmail: email,
+        partnerPhone: phone,
+        partnerCity: city,
+      }),
+      targetType: 'owner',
+      partnerId: user.partner?.id,
+    });
 
     // Return user data
     const { password: _, ...userWithoutPassword } = user;

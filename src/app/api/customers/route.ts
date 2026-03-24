@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
 
 // GET customers with pagination
 export async function GET(request: NextRequest) {
@@ -24,12 +24,27 @@ export async function GET(request: NextRequest) {
 
     let where: Record<string, unknown> = {};
 
-    // Only filter by partner if 'all' is not 'true'
+    // For partners: show customers they have transactions with OR customers they created
     if (all !== 'true' && user.role === 'partner') {
       const partner = await db.partner.findUnique({
         where: { userId: user.id },
       });
-      where.partnerId = partner?.id;
+      
+      if (partner) {
+        // Get customer IDs from transactions where this partner is involved
+        const partnerTransactions = await db.transaction.findMany({
+          where: { partnerId: partner.id },
+          select: { customerId: true },
+          distinct: ['customerId'],
+        });
+        const customerIdsFromTransactions = partnerTransactions.map(t => t.customerId);
+        
+        // Show customers: created by partner OR have transactions with partner
+        where.OR = [
+          { partnerId: partner.id },
+          { id: { in: customerIdsFromTransactions } },
+        ];
+      }
     }
 
     if (search) {

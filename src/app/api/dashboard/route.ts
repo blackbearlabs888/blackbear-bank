@@ -1,23 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
 
 // Helper function to get last 7 days data
 async function getLast7DaysData() {
   const data = [];
   const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-  
+
   // Get current date in local timezone
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
+
   for (let i = 6; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
-    
+
     const nextDate = new Date(date);
     nextDate.setDate(nextDate.getDate() + 1);
-    
+
     // Get all transactions for volume (excluding only failed)
     const transactions = await db.transaction.findMany({
       where: {
@@ -33,9 +33,9 @@ async function getLast7DaysData() {
         nominal: true,
       },
     });
-    
-    const volume = transactions.reduce((sum, tx) => sum + tx.nominal, 0);
-    
+
+    const volume = transactions.reduce((sum, tx) => sum + toNumber(tx.nominal), 0);
+
     data.push({
       date: date.toISOString().split('T')[0],
       dayName: dayNames[date.getDay()],
@@ -43,7 +43,7 @@ async function getLast7DaysData() {
       count: transactions.length,
     });
   }
-  
+
   return data;
 }
 
@@ -168,17 +168,22 @@ export async function GET(request: NextRequest) {
         : 0;
 
       // Calculate average transaction value this month
-      const avgTransactionValue = monthStats._count > 0 
-        ? (monthStats._sum.nominal || 0) / monthStats._count 
+      const avgTransactionValue = monthStats._count > 0
+        ? toNumber(monthStats._sum.nominal) / monthStats._count
         : 0;
 
-      // Growth calculations
-      const profitGrowth = lastMonthStats._sum.ownerProfit 
-        ? ((monthStats._sum.ownerProfit || 0) - (lastMonthStats._sum.ownerProfit || 0)) / (lastMonthStats._sum.ownerProfit || 1) * 100
+      // Growth calculations - use toNumber for PostgreSQL Decimal compatibility
+      const thisMonthProfitNum = toNumber(monthStats._sum.ownerProfit);
+      const lastMonthProfitNum = toNumber(lastMonthStats._sum.ownerProfit);
+      const thisMonthVolumeNum = toNumber(monthStats._sum.nominal);
+      const lastMonthVolumeNum = toNumber(lastMonthStats._sum.nominal);
+
+      const profitGrowth = lastMonthProfitNum > 0
+        ? ((thisMonthProfitNum - lastMonthProfitNum) / lastMonthProfitNum) * 100
         : 0;
-      
-      const volumeGrowth = lastMonthStats._sum.nominal 
-        ? ((monthStats._sum.nominal || 0) - (lastMonthStats._sum.nominal || 0)) / (lastMonthStats._sum.nominal || 1) * 100
+
+      const volumeGrowth = lastMonthVolumeNum > 0
+        ? ((thisMonthVolumeNum - lastMonthVolumeNum) / lastMonthVolumeNum) * 100
         : 0;
 
       // Partner acquisition this month vs last month
@@ -302,7 +307,7 @@ export async function GET(request: NextRequest) {
           action: 'Transaksi baru',
           name: tx.customer.name,
           timestamp: tx.createdAt,
-          detail: `Rp ${tx.nominal.toLocaleString('id-ID')}`,
+          detail: `Rp ${toNumber(tx.nominal).toLocaleString('id-ID')}`,
         });
       });
 
@@ -333,12 +338,20 @@ export async function GET(request: NextRequest) {
       // Sort by timestamp descending
       activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-      // Active announcements
+      // Active announcements - include those without date restrictions or within date range
       const announcements = await db.announcement.findMany({
         where: {
           isActive: true,
-          startDate: { lte: now },
-          expireDate: { gte: now },
+          OR: [
+            // No date restrictions
+            { startDate: null, expireDate: null },
+            // Only start date, not expired yet
+            { startDate: { lte: now }, expireDate: null },
+            // Only expire date, started already
+            { startDate: null, expireDate: { gte: now } },
+            // Both dates, within range
+            { startDate: { lte: now }, expireDate: { gte: now } },
+          ],
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -348,8 +361,12 @@ export async function GET(request: NextRequest) {
         where: {
           type: 'promo',
           isActive: true,
-          startDate: { lte: now },
-          expireDate: { gte: now },
+          OR: [
+            { startDate: null, expireDate: null },
+            { startDate: { lte: now }, expireDate: null },
+            { startDate: null, expireDate: { gte: now } },
+            { startDate: { lte: now }, expireDate: { gte: now } },
+          ],
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -357,8 +374,12 @@ export async function GET(request: NextRequest) {
       const legacyPromos = await db.promo.findMany({
         where: {
           isActive: true,
-          startDate: { lte: now },
-          expireDate: { gte: now },
+          OR: [
+            { startDate: null, expireDate: null },
+            { startDate: { lte: now }, expireDate: null },
+            { startDate: null, expireDate: { gte: now } },
+            { startDate: { lte: now }, expireDate: { gte: now } },
+          ],
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -389,15 +410,15 @@ export async function GET(request: NextRequest) {
         data: {
           stats: {
             totalTransactions,
-            totalVolume: totalVolume._sum.nominal || 0,
-            totalProfit: totalProfit._sum.ownerProfit || 0,
+            totalVolume: toNumber(totalVolume._sum.nominal),
+            totalProfit: toNumber(totalProfit._sum.ownerProfit),
             activePartners,
             totalCustomers,
-            thisMonthProfit: monthStats._sum.ownerProfit || 0,
-            lastMonthProfit: lastMonthStats._sum.ownerProfit || 0,
+            thisMonthProfit: thisMonthProfitNum,
+            lastMonthProfit: lastMonthProfitNum,
             profitChange: profitGrowth,
-            thisMonthVolume: monthStats._sum.nominal || 0,
-            lastMonthVolume: lastMonthStats._sum.nominal || 0,
+            thisMonthVolume: thisMonthVolumeNum,
+            lastMonthVolume: lastMonthVolumeNum,
             volumeChange: volumeGrowth,
             newCustomersThisMonth,
             newPartnersThisMonth,
@@ -413,7 +434,7 @@ export async function GET(request: NextRequest) {
             id: p.id,
             name: p.name,
             tier: p.tier,
-            profit: p.totalProfit,
+            profit: toNumber(p.totalProfit),
           })),
           partnersCloseToTarget: await db.partner.findMany({
             where: {
@@ -426,9 +447,9 @@ export async function GET(request: NextRequest) {
             .map(p => ({
               id: p.id,
               name: p.name,
-              achievement: p.target > 0 ? (p.totalProfit / p.target) * 100 : 0,
-              profit: p.totalProfit,
-              target: p.target,
+              achievement: toNumber(p.target) > 0 ? (toNumber(p.totalProfit) / toNumber(p.target)) * 100 : 0,
+              profit: toNumber(p.totalProfit),
+              target: toNumber(p.target),
             }))
             .filter(p => p.achievement >= 90)
           ),
@@ -442,7 +463,7 @@ export async function GET(request: NextRequest) {
             id: c.id,
             name: c.name,
             label: c.label || 'New',
-            volume: c.totalVolume,
+            volume: toNumber(c.totalVolume),
             transactions: c.totalTransactions,
           })),
           last7DaysData: await getLast7DaysData(),
@@ -462,7 +483,7 @@ export async function GET(request: NextRequest) {
             partnerName: tx.partner?.name,
             customerName: tx.customer.name,
             notes: tx.notes,
-            nominal: tx.nominal,
+            nominal: toNumber(tx.nominal),
             status: tx.status,
             updatedAt: tx.updatedAt,
           })),
@@ -506,13 +527,17 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      // Active announcements
+      // Active announcements - include those without date restrictions or within date range
       const now = new Date();
       const announcements = await db.announcement.findMany({
         where: {
           isActive: true,
-          startDate: { lte: now },
-          expireDate: { gte: now },
+          OR: [
+            { startDate: null, expireDate: null },
+            { startDate: { lte: now }, expireDate: null },
+            { startDate: null, expireDate: { gte: now } },
+            { startDate: { lte: now }, expireDate: { gte: now } },
+          ],
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -522,8 +547,12 @@ export async function GET(request: NextRequest) {
         where: {
           type: 'promo',
           isActive: true,
-          startDate: { lte: now },
-          expireDate: { gte: now },
+          OR: [
+            { startDate: null, expireDate: null },
+            { startDate: { lte: now }, expireDate: null },
+            { startDate: null, expireDate: { gte: now } },
+            { startDate: { lte: now }, expireDate: { gte: now } },
+          ],
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -532,8 +561,12 @@ export async function GET(request: NextRequest) {
       const legacyPromos = await db.promo.findMany({
         where: {
           isActive: true,
-          startDate: { lte: now },
-          expireDate: { gte: now },
+          OR: [
+            { startDate: null, expireDate: null },
+            { startDate: { lte: now }, expireDate: null },
+            { startDate: null, expireDate: { gte: now } },
+            { startDate: { lte: now }, expireDate: { gte: now } },
+          ],
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -554,15 +587,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         data: {
-          partner,
+          partner: {
+            ...partner,
+            commission: toNumber(partner.commission),
+            target: toNumber(partner.target),
+            totalProfit: toNumber(partner.totalProfit),
+            totalVolume: toNumber(partner.totalVolume),
+          },
           stats: {
             totalTransactions,
-            totalVolume: partner.totalVolume || 0,
-            totalProfit: partner.totalProfit || 0,
+            totalVolume: toNumber(partner.totalVolume),
+            totalProfit: toNumber(partner.totalProfit),
             pendingTransactions,
             newCustomersThisMonth,
           },
-          leaderboard,
+          leaderboard: leaderboard.map(lb => ({
+            ...lb,
+            totalProfit: toNumber(lb.totalProfit),
+          })),
           announcements,
           promos,
         },

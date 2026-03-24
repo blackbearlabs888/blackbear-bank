@@ -43,6 +43,7 @@ import {
   X,
   Bell,
   Info,
+  ExternalLink,
   Calculator,
   Percent,
   TrendingDown,
@@ -94,6 +95,7 @@ interface Transaction {
   methodTransaction: string;
   status: string;
   notes?: string;
+  transactionLink?: string | null;
   createdAt: string;
   updatedAt: string;
   customer: Customer;
@@ -1006,6 +1008,30 @@ function TransactionDetailView({
         </div>
       )}
 
+      {/* Transaction Link from Owner */}
+      {tx.transactionLink && (
+        <div className="px-4 mt-3">
+          <div className="rounded-xl border border-violet-200 dark:border-violet-800 bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-900/20 dark:to-fuchsia-900/20 p-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <ExternalLink className="w-3.5 h-3.5 text-violet-600" />
+              <span className="text-[10px] font-medium text-violet-700 dark:text-violet-400 uppercase">Link Transaksi dari Owner</span>
+            </div>
+            <a
+              href={tx.transactionLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-white/60 dark:bg-black/20 hover:bg-white dark:hover:bg-black/30 transition-colors group"
+            >
+              <span className="text-xs text-muted-foreground truncate flex-1">{tx.transactionLink}</span>
+              <div className="flex items-center gap-1 text-violet-600 dark:text-violet-400">
+                <span className="text-[10px] font-medium">Buka</span>
+                <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </div>
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Timestamp - Compact */}
       <div className="px-4 py-3 mt-3 border-t flex items-center justify-between text-[10px] text-muted-foreground">
         <div className="flex items-center gap-1">
@@ -1095,6 +1121,12 @@ function TransactionDetailView({
   );
 }
 
+// Bank list for dropdown
+const BANK_LIST = [
+  'BCA', 'Mandiri', 'BRI', 'BNI', 'CIMB Niaga', 'Permata', 'Danamon',
+  'Panin', 'OCBC NISP', 'Jenius', 'Seabank', 'Bank Jago', 'Lainnya'
+];
+
 // New Transaction Dialog with Calculation Simulation
 function NewTransactionDialog({ onCreated }: { onCreated: () => void }) {
   const { partner } = useAuthStore();
@@ -1106,6 +1138,7 @@ function NewTransactionDialog({ onCreated }: { onCreated: () => void }) {
   const [searching, setSearching] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [newCustomerMode, setNewCustomerMode] = useState(false);
+  const [customBankName, setCustomBankName] = useState('');
   const [newCustomer, setNewCustomer] = useState({ 
     name: '', 
     phone: '', 
@@ -1242,13 +1275,16 @@ function NewTransactionDialog({ onCreated }: { onCreated: () => void }) {
       let customerId = formData.customerId;
 
       if (newCustomerMode && newCustomer.name && newCustomer.phone) {
+        // Handle bank name: use customBankName if "Lainnya" is selected
+        const bankNameToSubmit = newCustomer.bankName === 'Lainnya' ? customBankName : newCustomer.bankName;
+        
         const customerRes = await fetch('/api/customers', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: newCustomer.name,
             phone: newCustomer.phone,
-            bankName: newCustomer.bankName || null,
+            bankName: bankNameToSubmit || null,
             bankAccount: newCustomer.bankAccount || null,
             bankHolder: newCustomer.bankHolder || null,
             city: newCustomer.city || null,
@@ -1285,6 +1321,7 @@ function NewTransactionDialog({ onCreated }: { onCreated: () => void }) {
         // Reset form
         setSelectedCustomer(null);
         setNewCustomerMode(false);
+        setCustomBankName('');
         setNewCustomer({ name: '', phone: '', bankName: '', bankAccount: '', bankHolder: '', city: '' });
         setFormData({
           customerId: '',
@@ -1449,12 +1486,24 @@ function NewTransactionDialog({ onCreated }: { onCreated: () => void }) {
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1.5">
                             <Label className="text-xs">Nama Bank</Label>
-                            <Input
-                              placeholder="BCA, Mandiri, dll"
+                            <Select
                               value={newCustomer.bankName}
-                              onChange={(e) => setNewCustomer(prev => ({ ...prev, bankName: e.target.value }))}
-                              className="h-10 rounded-lg"
-                            />
+                              onValueChange={(value) => {
+                                setNewCustomer(prev => ({ ...prev, bankName: value }));
+                                if (value !== 'Lainnya') {
+                                  setCustomBankName('');
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-10 rounded-lg">
+                                <SelectValue placeholder="Pilih Bank" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {BANK_LIST.map((bank) => (
+                                  <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="space-y-1.5">
                             <Label className="text-xs">No. Rekening</Label>
@@ -1466,6 +1515,17 @@ function NewTransactionDialog({ onCreated }: { onCreated: () => void }) {
                             />
                           </div>
                         </div>
+                        {newCustomer.bankName === 'Lainnya' && (
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Nama Bank Lainnya</Label>
+                            <Input
+                              placeholder="Ketik nama bank"
+                              value={customBankName}
+                              onChange={(e) => setCustomBankName(e.target.value)}
+                              className="h-10 rounded-lg"
+                            />
+                          </div>
+                        )}
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1.5">
                             <Label className="text-xs">Atas Nama</Label>

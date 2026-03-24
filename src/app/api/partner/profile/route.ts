@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { hashPassword, verifyPassword } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
+
+// Helper to serialize partner data
+function serializePartner(partner: Record<string, unknown>) {
+  return {
+    ...partner,
+    commission: toNumber(partner.commission),
+    target: toNumber(partner.target),
+    totalProfit: toNumber(partner.totalProfit),
+    totalVolume: toNumber(partner.totalVolume),
+  };
+}
 
 // GET partner profile
 export async function GET() {
@@ -36,7 +47,7 @@ export async function GET() {
           name: user.name,
           avatar: user.avatar,
         },
-        partner,
+        partner: serializePartner(partner as unknown as Record<string, unknown>),
       },
     });
   } catch (error) {
@@ -150,7 +161,7 @@ export async function PATCH(request: NextRequest) {
       message: 'Profil berhasil diperbarui',
       data: {
         user: updatedUser,
-        partner: updatedPartner,
+        partner: updatedPartner ? serializePartner(updatedPartner as unknown as Record<string, unknown>) : null,
       },
     });
   } catch (error) {

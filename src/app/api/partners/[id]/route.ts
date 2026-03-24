@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser, hashPassword } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
 import { randomBytes } from 'crypto';
+
+// Helper to serialize partner data
+function serializePartner(partner: Record<string, unknown>) {
+  return {
+    ...partner,
+    commission: toNumber(partner.commission),
+    target: toNumber(partner.target),
+    totalProfit: toNumber(partner.totalProfit),
+    totalVolume: toNumber(partner.totalVolume),
+  };
+}
 
 // Generate random password
 function generateRandomPassword(length: number = 8): string {
@@ -81,10 +92,10 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: {
-        ...partner,
+        ...serializePartner(partner as unknown as Record<string, unknown>),
         monthlyStats: {
-          volume: monthlyStats._sum.nominal || 0,
-          profit: monthlyStats._sum.partnerProfit || 0,
+          volume: toNumber(monthlyStats._sum.nominal),
+          profit: toNumber(monthlyStats._sum.partnerProfit),
           transactions: monthlyStats._count,
         },
       },
@@ -192,7 +203,7 @@ export async function PATCH(
 
     return NextResponse.json({
       success: true,
-      data: updatedPartner,
+      data: serializePartner(updatedPartner as unknown as Record<string, unknown>),
       message: 'Partner berhasil diperbarui',
       newPassword: newPassword, // Only returned when generating new password
     });

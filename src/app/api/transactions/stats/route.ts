@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, toNumber } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
@@ -87,23 +87,23 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Calculate current month stats
+    // Calculate current month stats - use toNumber for PostgreSQL Decimal compatibility
     const currentMonthProfit = currentMonthTransactions.reduce(
-      (sum, tx) => sum + tx.ownerProfit,
+      (sum, tx) => sum + toNumber(tx.ownerProfit),
       0
     );
     const currentMonthVolume = currentMonthTransactions.reduce(
-      (sum, tx) => sum + tx.nominal,
+      (sum, tx) => sum + toNumber(tx.nominal),
       0
     );
 
     // Calculate last month stats
     const lastMonthProfit = lastMonthTransactions.reduce(
-      (sum, tx) => sum + tx.ownerProfit,
+      (sum, tx) => sum + toNumber(tx.ownerProfit),
       0
     );
     const lastMonthVolume = lastMonthTransactions.reduce(
-      (sum, tx) => sum + tx.nominal,
+      (sum, tx) => sum + toNumber(tx.nominal),
       0
     );
 
@@ -117,11 +117,11 @@ export async function GET(request: NextRequest) {
       ? ((currentMonthProfit - lastMonthProfit) / lastMonthProfit) * 100 
       : 0;
 
-    // Calculate fee analysis
-    const totalPaymentFee = allSuccessTransactions.reduce((sum, tx) => sum + tx.paymentFee, 0);
-    const totalPlatformFee = allSuccessTransactions.reduce((sum, tx) => sum + tx.platformFee, 0);
-    const totalNetMargin = allSuccessTransactions.reduce((sum, tx) => sum + tx.netMargin, 0);
-    const totalVolume = allSuccessTransactions.reduce((sum, tx) => sum + tx.nominal, 0);
+    // Calculate fee analysis - use toNumber for PostgreSQL Decimal compatibility
+    const totalPaymentFee = allSuccessTransactions.reduce((sum, tx) => sum + toNumber(tx.paymentFee), 0);
+    const totalPlatformFee = allSuccessTransactions.reduce((sum, tx) => sum + toNumber(tx.platformFee), 0);
+    const totalNetMargin = allSuccessTransactions.reduce((sum, tx) => sum + toNumber(tx.netMargin), 0);
+    const totalVolume = allSuccessTransactions.reduce((sum, tx) => sum + toNumber(tx.nominal), 0);
     
     const avgPaymentFee = allSuccessTransactions.length > 0
       ? totalPaymentFee / allSuccessTransactions.length
@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
         id: pt.id,
         name: pt.name,
         transactionCount: pt.transactions.length,
-        totalVolume: successTx.reduce((sum, tx) => sum + tx.nominal, 0),
+        totalVolume: successTx.reduce((sum, tx) => sum + toNumber(tx.nominal), 0),
         successCount: successTx.length,
       };
     }).filter((pt) => pt.transactionCount > 0);

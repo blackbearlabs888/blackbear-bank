@@ -172,6 +172,7 @@ export default function OwnerDashboardPage() {
   const [transactionsPage, setTransactionsPage] = useState(1);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const redirectAttempted = useRef(false);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -193,8 +194,33 @@ export default function OwnerDashboardPage() {
   useEffect(() => {
     if (isAuthenticated && hasHydrated && user?.role === 'owner') {
       fetchDashboard(1);
+      fetchUnreadNotifications();
     }
   }, [isAuthenticated, hasHydrated, user]);
+
+  // Fetch unread notifications count
+  const fetchUnreadNotifications = async () => {
+    try {
+      const response = await fetch('/api/notifications?limit=1');
+
+      if (!response.ok) {
+        console.error('Notifications API error:', response.status);
+        return;
+      }
+
+      const notifResult = await response.json();
+
+      // Only count actual unread notifications
+      let totalCount = 0;
+      if (notifResult.success) {
+        totalCount = notifResult.data.unreadCount || 0;
+      }
+
+      setUnreadNotifications(totalCount);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    }
+  };
 
   // Auto-refresh every 1 minute
   useEffect(() => {
@@ -215,11 +241,23 @@ export default function OwnerDashboardPage() {
     const handleFocus = () => {
       if (isAuthenticated && hasHydrated && user?.role === 'owner') {
         fetchDashboard(transactionsPage);
+        fetchUnreadNotifications();
       }
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [isAuthenticated, hasHydrated, user, transactionsPage]);
+
+  // Custom event for notification count refresh
+  useEffect(() => {
+    const handleNotificationUpdate = () => {
+      if (isAuthenticated && hasHydrated && user?.role === 'owner') {
+        fetchUnreadNotifications();
+      }
+    };
+    window.addEventListener('notification-count-update', handleNotificationUpdate);
+    return () => window.removeEventListener('notification-count-update', handleNotificationUpdate);
+  }, [isAuthenticated, hasHydrated, user]);
 
   const fetchDashboard = async (page = transactionsPage, isAutoRefresh = false) => {
     if (isAutoRefresh) {
@@ -326,14 +364,17 @@ export default function OwnerDashboardPage() {
               >
                 <RefreshCw className={cn("w-4 h-4 text-white", isRefreshing && "animate-spin")} />
               </button>
-              {notifications > 0 && (
-                <button className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all">
-                  <Bell className="w-4 h-4 text-white" />
+              <Link
+                href="/owner/dashboard/notifications"
+                className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all"
+              >
+                <Bell className="w-4 h-4 text-white" />
+                {unreadNotifications > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center">
-                    {notifications}
+                    {unreadNotifications}
                   </span>
-                </button>
-              )}
+                )}
+              </Link>
             </div>
           </div>
 
@@ -769,7 +810,13 @@ export default function OwnerDashboardPage() {
                 <YAxis 
                   tick={{ fontSize: 9 }} 
                   stroke="#9ca3af" 
-                  tickFormatter={(v) => `${(v/1000).toFixed(0)}K`} 
+                  tickFormatter={(v) => {
+                    if (v >= 1000000000000) return `${(v/1000000000000).toFixed(0)}T`;
+                    if (v >= 1000000000) return `${(v/1000000000).toFixed(0)}M`;
+                    if (v >= 1000000) return `${(v/1000000).toFixed(0)}jt`;
+                    if (v >= 1000) return `${(v/1000).toFixed(0)}rb`;
+                    return v.toString();
+                  }}
                   width={35}
                   tickLine={false}
                   axisLine={false}
@@ -819,7 +866,7 @@ export default function OwnerDashboardPage() {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="px-1 sm:px-6">
+          <CardContent className="px-3 sm:px-6 overflow-hidden">
             {dataLoading ? (
               <div className="space-y-2">
                 {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 sm:h-16 rounded-lg sm:rounded-xl" />)}
@@ -827,7 +874,7 @@ export default function OwnerDashboardPage() {
             ) : data?.topPartnersThisMonth?.length ? (
               <div className="space-y-1 sm:space-y-2">
                 {data.topPartnersThisMonth.slice(0, 5).map((partner, index) => (
-                  <div key={partner.id} className="flex items-center gap-2 sm:gap-3 py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors tap-highlight active-scale">
+                  <div key={partner.id} className="flex items-center gap-2 sm:gap-3 py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors tap-highlight active-scale overflow-hidden">
                     <div className={cn(
                       'w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-[10px] sm:text-xs flex-shrink-0',
                       index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white' :
@@ -837,13 +884,13 @@ export default function OwnerDashboardPage() {
                     )}>
                       {index + 1}
                     </div>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 overflow-hidden">
                       <p className="font-medium text-xs sm:text-sm truncate">{partner.name}</p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                      <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                         Profit: {formatCurrency(partner.profit || 0)}
                       </p>
                     </div>
-                    <Badge variant="outline" className="text-[9px] sm:text-[10px]">{partner.tier}</Badge>
+                    <Badge variant="outline" className="text-[9px] sm:text-[10px] flex-shrink-0 truncate max-w-[60px] sm:max-w-none">{partner.tier}</Badge>
                   </div>
                 ))}
               </div>
@@ -869,7 +916,7 @@ export default function OwnerDashboardPage() {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="px-1 sm:px-6">
+          <CardContent className="px-3 sm:px-6 overflow-hidden">
             {dataLoading ? (
               <div className="space-y-2">
                 {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 sm:h-16 rounded-lg sm:rounded-xl" />)}
@@ -877,7 +924,7 @@ export default function OwnerDashboardPage() {
             ) : data?.topCustomersThisMonth?.length ? (
               <div className="space-y-1 sm:space-y-2">
                 {data.topCustomersThisMonth.slice(0, 5).map((customer, index) => (
-                  <div key={customer.id} className="flex items-center gap-2 sm:gap-3 py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors tap-highlight active-scale">
+                  <div key={customer.id} className="flex items-center gap-2 sm:gap-3 py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors tap-highlight active-scale overflow-hidden">
                     <div className={cn(
                       'w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-[10px] sm:text-xs flex-shrink-0',
                       index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white' :
@@ -887,13 +934,13 @@ export default function OwnerDashboardPage() {
                     )}>
                       {index + 1}
                     </div>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 overflow-hidden">
                       <p className="font-medium text-xs sm:text-sm truncate">{customer.name}</p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                      <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                         {formatCurrency(customer.volume || 0)} • {customer.transactions} trx
                       </p>
                     </div>
-                    <CustomerLabelBadge label={customer.label} />
+                    <div className="flex-shrink-0"><CustomerLabelBadge label={customer.label} /></div>
                   </div>
                 ))}
               </div>
@@ -915,7 +962,7 @@ export default function OwnerDashboardPage() {
             </CardTitle>
             <CardDescription className="text-[10px] sm:text-xs">Partner dengan pencapaian 80%+</CardDescription>
           </CardHeader>
-          <CardContent className="px-1 sm:px-6">
+          <CardContent className="px-3 sm:px-6 overflow-hidden">
             {dataLoading ? (
               <div className="space-y-2">
                 {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 sm:h-16 rounded-lg sm:rounded-xl" />)}
@@ -924,11 +971,11 @@ export default function OwnerDashboardPage() {
               <ScrollArea className="max-h-40 sm:max-h-48">
                 <div className="space-y-1.5 sm:space-y-2 pr-1 sm:pr-2">
                   {data.partnersCloseToTarget.map((partner) => (
-                    <div key={partner.id} className="py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center justify-between mb-1">
+                    <div key={partner.id} className="py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors overflow-hidden">
+                      <div className="flex items-center justify-between mb-1 gap-2">
                         <p className="font-medium text-xs sm:text-sm truncate">{partner.name}</p>
                         <Badge className={cn(
-                          "text-[9px] sm:text-[10px]",
+                          "text-[9px] sm:text-[10px] flex-shrink-0",
                           (partner.achievement || 0) >= 90 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
                         )}>
                           {partner.achievement?.toFixed(0)}%
@@ -942,7 +989,7 @@ export default function OwnerDashboardPage() {
                         )} 
                       />
                       <div className="flex justify-between mt-1">
-                        <p className="text-[9px] sm:text-[10px] text-muted-foreground">
+                        <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">
                           {formatCurrency(partner.profit || 0)} / {formatCurrency(partner.target || 0)}
                         </p>
                       </div>
@@ -965,7 +1012,7 @@ export default function OwnerDashboardPage() {
             </CardTitle>
             <CardDescription className="text-[10px] sm:text-xs">{stats?.newPartnersThisMonth || 0} partner bergabung</CardDescription>
           </CardHeader>
-          <CardContent className="px-1 sm:px-6">
+          <CardContent className="px-3 sm:px-6 overflow-hidden">
             {dataLoading ? (
               <div className="space-y-2">
                 {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 sm:h-14 rounded-lg sm:rounded-xl" />)}
@@ -974,17 +1021,17 @@ export default function OwnerDashboardPage() {
               <ScrollArea className="max-h-40 sm:max-h-48">
                 <div className="space-y-1 sm:space-y-2 pr-1 sm:pr-2">
                   {data.newPartners.map((partner) => (
-                    <div key={partner.id} className="flex items-center gap-2 sm:gap-3 py-1.5 sm:py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div key={partner.id} className="flex items-center gap-2 sm:gap-3 py-1.5 sm:py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors overflow-hidden">
                       <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full gradient-primary flex items-center justify-center flex-shrink-0">
                         <span className="text-xs sm:text-sm font-bold text-white">{partner.name.charAt(0).toUpperCase()}</span>
                       </div>
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 overflow-hidden">
                         <p className="font-medium text-xs sm:text-sm truncate">{partner.name}</p>
-                        <p className="text-[9px] sm:text-[10px] text-muted-foreground">
+                        <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">
                           Bergabung {formatDateAgo(partner.joinedAt)}
                         </p>
                       </div>
-                      <Badge variant="outline" className="text-[9px] sm:text-[10px]">{partner.tier}</Badge>
+                      <Badge variant="outline" className="text-[9px] sm:text-[10px] flex-shrink-0 truncate max-w-[60px] sm:max-w-none">{partner.tier}</Badge>
                     </div>
                   ))}
                 </div>
@@ -1463,8 +1510,9 @@ function formatDateAgo(dateString: string): string {
 }
 
 function formatCompactCurrency(value: number): string {
-  if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1)}M`;
-  if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(1)}jt`;
+  if (value >= 1000000000000) return `Rp ${(value / 1000000000000).toFixed(1).replace(/\.0$/, '')}T`;
+  if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(1).replace(/\.0$/, '')}jt`;
   if (value >= 1000) return `Rp ${(value / 1000).toFixed(0)}rb`;
   return `Rp ${value}`;
 }

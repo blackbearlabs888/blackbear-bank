@@ -21,7 +21,8 @@ import {
   CheckCircle, XCircle, ChevronLeft, ChevronRight as ChevronRightIcon,
   RefreshCw, Eye, Zap, Filter, Calendar, ArrowRightLeft, Sparkles,
   Store, DollarSign, PiggyBank, Building2, ArrowRight, MinusCircle, Copy,
-  BarChart3, PieChart, LineChart, Activity, Layers, Users,
+  BarChart3, PieChart, LineChart, Activity, Layers, Users, MessageSquare,
+  ExternalLink,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart as RePieChart, Pie, Cell,
@@ -80,6 +81,7 @@ interface Transaction {
   methodTransaction: string;
   status: string;
   notes: string | null;
+  transactionLink?: string | null;
   createdAt: string;
   customer: { id: string; name: string; phone: string; city?: string; bankName?: string; bankAccount?: string; bankHolder?: string; };
   paymentType: { id: string; name: string; };
@@ -196,13 +198,13 @@ export default function OwnerTransactionsPage() {
     finally { setAnalyticsLoading(false); }
   };
 
-  const updateStatus = async (id: string, status: string, notes?: string, marketplaceId?: string) => {
+  const updateStatus = async (id: string, status: string, notes?: string, marketplaceId?: string, transactionLink?: string) => {
     setUpdatingStatus(true);
     try {
       const res = await fetch(`/api/transactions/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, notes, marketplaceId }),
+        body: JSON.stringify({ status, notes, marketplaceId, transactionLink }),
       });
       const data = await res.json();
       if (data.success) {
@@ -496,7 +498,18 @@ function ModernAnalyticsDashboard({ analytics, loading }: { analytics: Analytics
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
                   <XAxis dataKey="day" tick={{ fontSize: 9 }} stroke="#9ca3af" />
-                  <YAxis tick={{ fontSize: 9 }} stroke="#9ca3af" tickFormatter={(v) => `${(v/1000).toFixed(0)}K`} width={35} />
+                  <YAxis 
+                    tick={{ fontSize: 9 }} 
+                    stroke="#9ca3af" 
+                    tickFormatter={(v) => {
+                      if (v >= 1000000000000) return `${(v/1000000000000).toFixed(0)}T`;
+                      if (v >= 1000000000) return `${(v/1000000000).toFixed(0)}M`;
+                      if (v >= 1000000) return `${(v/1000000).toFixed(0)}jt`;
+                      if (v >= 1000) return `${(v/1000).toFixed(0)}rb`;
+                      return v.toString();
+                    }} 
+                    width={35} 
+                  />
                   <Tooltip 
                     formatter={(value: number) => formatCurrency(value)}
                     labelStyle={{ fontSize: 11 }}
@@ -667,6 +680,15 @@ function ModernAnalyticsDashboard({ analytics, loading }: { analytics: Analytics
   );
 }
 
+// Compact currency formatter for large numbers
+function formatCompactCurrency(value: number): string {
+  if (value >= 1000000000000) return `Rp ${(value / 1000000000000).toFixed(1).replace(/\.0$/, '')}T`;
+  if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(1).replace(/\.0$/, '')}jt`;
+  if (value >= 1000) return `Rp ${(value / 1000).toFixed(0)}rb`;
+  return `Rp ${value}`;
+}
+
 // Modern KPI Card Component
 function ModernKPICard({ title, value, subtitle, change, icon, color, isPercent }: {
   title: string;
@@ -698,6 +720,13 @@ function ModernKPICard({ title, value, subtitle, change, icon, color, isPercent 
     purple: 'text-purple-600',
   };
 
+  // Format value safely
+  const formatValue = (val: number | string): string => {
+    if (typeof val === 'string') return val;
+    if (isNaN(val) || !isFinite(val)) return 'Rp 0';
+    return formatCompactCurrency(val);
+  };
+
   return (
     <Card className={cn("glass-card overflow-hidden", bgColorClasses[color])}>
       <div className={cn("h-0.5 sm:h-1 bg-gradient-to-r", colorClasses[color])} />
@@ -706,12 +735,12 @@ function ModernKPICard({ title, value, subtitle, change, icon, color, isPercent 
           <div className="min-w-0 flex-1">
             <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{title}</p>
             <p className={cn("text-sm sm:text-lg font-bold truncate", textColorClasses[color])}>
-              {isPercent ? value : formatCurrency(value as number)}
+              {isPercent ? value : formatValue(value)}
             </p>
             {subtitle && (
               <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{subtitle}</p>
             )}
-            {change !== undefined && (
+            {change !== undefined && !isNaN(change) && (
               <div className={cn("flex items-center gap-0.5 text-[9px] sm:text-[10px]", change >= 0 ? 'text-green-600' : 'text-red-600')}>
                 {change >= 0 ? <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
                 <span>{change >= 0 ? '+' : ''}{change.toFixed(1)}%</span>
@@ -828,6 +857,12 @@ function LoadingState() {
   );
 }
 
+// Bank list for dropdown
+const BANK_LIST = [
+  'BCA', 'Mandiri', 'BRI', 'BNI', 'CIMB Niaga', 'Permata', 'Danamon',
+  'Panin', 'OCBC NISP', 'Jenius', 'Seabank', 'Bank Jago', 'Lainnya'
+];
+
 // New Transaction Dialog
 function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenChange: (v: boolean) => void; onCreated: () => void }) {
   const [loading, setLoading] = useState(false);
@@ -841,6 +876,7 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
   const [isNewCust, setIsNewCust] = useState(false);
   const [showPartner, setShowPartner] = useState(false);
+  const [customBankName, setCustomBankName] = useState('');
 
   const [form, setForm] = useState({
     customerId: '', customerName: '', customerPhone: '', customerCity: '',
@@ -927,11 +963,15 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
         ? form.marketplaceId 
         : null;
       
+      // Handle bank name: use customBankName if "Lainnya" is selected
+      const bankNameToSubmit = form.customerBankName === 'Lainnya' ? customBankName : form.customerBankName;
+      
       const res = await fetch('/api/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           ...form, 
+          customerBankName: bankNameToSubmit,
           nominal: parseFloat(form.nominal), 
           marketplaceId: normalizedMarketplaceId, 
           partnerId: form.partnerId || null, 
@@ -946,6 +986,7 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
         setSelectedPartner(null);
         setIsNewCust(false);
         setShowPartner(false);
+        setCustomBankName('');
         setForm({ customerId: '', customerName: '', customerPhone: '', customerCity: '', customerBankName: '', customerBankAccount: '', customerBankHolder: '', nominal: '', paymentTypeId: '', methodTransaction: 'Online', marketplaceId: '', partnerId: '' });
         toast.success('Transaksi dibuat (Status: Process)');
       } else toast.error(d.error || 'Gagal');
@@ -986,11 +1027,31 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
                   <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
                     <Building2 className="w-3 h-3" /> Rekening (Opsional)
                   </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Input placeholder="Nama Bank" value={form.customerBankName} onChange={e => setForm(p => ({ ...p, customerBankName: e.target.value }))} className="h-8 text-xs" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select
+                      value={form.customerBankName}
+                      onValueChange={(value) => {
+                        setForm(p => ({ ...p, customerBankName: value }));
+                        if (value !== 'Lainnya') {
+                          setCustomBankName('');
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Pilih Bank" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BANK_LIST.map((bank) => (
+                          <SelectItem key={bank} value={bank} className="text-xs">{bank}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Input placeholder="No. Rekening" value={form.customerBankAccount} onChange={e => setForm(p => ({ ...p, customerBankAccount: e.target.value }))} className="h-8 text-xs" />
-                    <Input placeholder="Atas Nama" value={form.customerBankHolder} onChange={e => setForm(p => ({ ...p, customerBankHolder: e.target.value }))} className="h-8 text-xs" />
                   </div>
+                  {form.customerBankName === 'Lainnya' && (
+                    <Input placeholder="Ketik Nama Bank" value={customBankName} onChange={e => setCustomBankName(e.target.value)} className="h-8 text-xs" />
+                  )}
+                  <Input placeholder="Atas Nama" value={form.customerBankHolder} onChange={e => setForm(p => ({ ...p, customerBankHolder: e.target.value }))} className="h-8 text-xs" />
                 </div>
               </div>
             ) : selectedCust ? (
@@ -1171,8 +1232,9 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
 }
 
 // Transaction Detail Dialog Content (uses key pattern for reset)
-function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Transaction; onUpdate: (id: string, status: string, notes?: string, mp?: string) => void; onDelete: (id: string) => void; updating: boolean }) {
+function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Transaction; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string) => void; onDelete: (id: string) => void; updating: boolean }) {
   const [notes, setNotes] = useState(tx.notes || '');
+  const [transactionLink, setTransactionLink] = useState(tx.transactionLink || '');
   const [status, setStatus] = useState(tx.status);
   const [marketplace, setMarketplace] = useState(tx.marketplace?.id || 'none');
   const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
@@ -1255,7 +1317,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
 
   const save = () => { 
     // Send 'none' explicitly so backend knows to clear marketplace
-    onUpdate(tx.id, status, notes, marketplace); 
+    onUpdate(tx.id, status, notes, marketplace, transactionLink); 
   };
 
   const config = STATUS_CONFIG[tx.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
@@ -1267,12 +1329,13 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
   const hasChanges = status !== tx.status || 
     marketplace !== originalMarketplace || 
     notes !== (tx.notes || '') ||
+    transactionLink !== (tx.transactionLink || '') ||
     status === 'verification'; // Always allow save when status is verification
 
   return (
     <div className="space-y-2.5 p-4">
       {/* Compact Header */}
-      <div className="flex items-center justify-between -mx-4 -mt-4 mb-0 px-4 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-500 rounded-t-lg">
+      <div className="flex items-center justify-between -mx-4 -mt-4 mb-0 px-4 py-2.5 pr-12 bg-gradient-to-r from-violet-600 to-fuchsia-500 rounded-t-lg">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/20">
             <StatusIcon className={cn("w-4 h-4 text-white", tx.status === 'process' && "animate-spin")} />
@@ -1284,7 +1347,20 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
         </div>
         <div className="text-right">
           <p className="text-[9px] text-white/70">ID</p>
-          <p className="text-[10px] font-mono text-white bg-white/20 px-1.5 py-0.5 rounded">{tx.orderId}</p>
+          <div className="flex items-center justify-end gap-1">
+            <p className="text-[10px] font-mono text-white bg-white/20 px-1.5 py-0.5 rounded truncate max-w-[120px]">{tx.orderId}</p>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(tx.orderId);
+                toast.success('Order ID disalin');
+              }}
+              className="p-1 hover:bg-white/20 rounded transition-colors"
+              title="Salin Order ID"
+            >
+              <Copy className="w-3 h-3 text-white/80" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1324,7 +1400,31 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
             <User className="w-2.5 h-2.5" /> Customer
           </p>
           <p className="text-xs font-semibold truncate">{tx.customer?.name}</p>
-          <p className="text-[9px] text-muted-foreground">{tx.customer?.phone}</p>
+          <div className="flex items-center gap-1 mt-0.5">
+            <p className="text-[9px] text-muted-foreground">{tx.customer?.phone}</p>
+            <div className="flex items-center gap-0.5 ml-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(tx.customer?.phone || '');
+                  toast.success('No. WA disalin');
+                }}
+                className="p-1 hover:bg-muted rounded transition-colors"
+                title="Salin No. WA"
+              >
+                <Copy className="w-3 h-3 text-muted-foreground" />
+              </button>
+              <a
+                href={`https://wa.me/${tx.customer?.phone?.replace(/^0/, '62')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors"
+                title="Buka WhatsApp"
+              >
+                <MessageSquare className="w-3 h-3 text-green-600" />
+              </a>
+            </div>
+          </div>
         </div>
         <div className="rounded-lg border bg-muted/30 p-2.5">
           <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
@@ -1414,29 +1514,118 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
             </Select>
 
             {profitPreview && (
-              <div className="grid grid-cols-2 gap-2 text-[10px]">
+              <div className="space-y-2 text-[10px]">
+                {/* Owner Profit Comparison */}
                 <div className="p-2 rounded-lg bg-muted/30">
-                  <p className="text-muted-foreground">Saat ini</p>
-                  <p className="font-bold">{formatCurrency(profitPreview.currentOwnerProfit)}</p>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="font-medium text-muted-foreground flex items-center gap-1">
+                      <PiggyBank className="w-3 h-3" /> Profit Owner
+                    </p>
+                    {profitPreview.profitChange !== 0 && (
+                      <span className={cn(
+                        "text-[9px] font-bold px-1.5 py-0.5 rounded",
+                        profitPreview.profitChange >= 0 
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" 
+                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      )}>
+                        {profitPreview.profitChange >= 0 ? '+' : ''}{formatCurrency(profitPreview.profitChange)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-[9px] text-muted-foreground">Saat ini</p>
+                      <p className="font-bold text-sm">{formatCurrency(profitPreview.currentOwnerProfit)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-muted-foreground">Baru</p>
+                      <p className={cn(
+                        "font-bold text-sm",
+                        profitPreview.profitChange >= 0 ? "text-emerald-600" : "text-red-600"
+                      )}>{formatCurrency(profitPreview.newOwnerProfit)}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className={cn(
-                  "p-2 rounded-lg",
-                  profitPreview.profitChange >= 0 ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-red-100 dark:bg-red-900/30"
-                )}>
-                  <p className="text-muted-foreground">Baru</p>
-                  <p className="font-bold">{formatCurrency(profitPreview.newOwnerProfit)}</p>
-                </div>
+                
+                {/* Partner Profit Comparison - only show if there's a partner */}
+                {tx.partner && profitPreview.currentPartnerProfit !== undefined && (
+                  <div className="p-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="font-medium text-muted-foreground flex items-center gap-1">
+                        <Users className="w-3 h-3" /> Profit Partner
+                        <span className="text-[9px] text-blue-600">({tx.partner.name})</span>
+                      </p>
+                      {profitPreview.newPartnerProfit !== undefined && (
+                        <span className={cn(
+                          "text-[9px] font-bold px-1.5 py-0.5 rounded",
+                          (profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit) >= 0 
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" 
+                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                        )}>
+                          {(profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit) >= 0 ? '+' : ''}
+                          {formatCurrency(profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <p className="text-[9px] text-muted-foreground">Saat ini</p>
+                        <p className="font-bold text-sm text-blue-600">{formatCurrency(profitPreview.currentPartnerProfit)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-muted-foreground">Baru</p>
+                        <p className={cn(
+                          "font-bold text-sm",
+                          profitPreview.newPartnerProfit !== undefined && 
+                          (profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit) >= 0 
+                            ? "text-emerald-600" 
+                            : "text-red-600"
+                        )}>
+                          {profitPreview.newPartnerProfit !== undefined ? formatCurrency(profitPreview.newPartnerProfit) : '-'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Platform Fee Info */}
+                {profitPreview.newPlatformFee > 0 && profitPreview.selectedMp && (
+                  <div className="flex items-center justify-between text-[9px] p-1.5 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
+                    <div className="flex items-center gap-1">
+                      <Store className="w-3 h-3 text-orange-600" />
+                      <span className="text-orange-700 dark:text-orange-400">{profitPreview.selectedMp.name}</span>
+                    </div>
+                    <span className="text-red-600 font-medium">-{formatCurrency(profitPreview.newPlatformFee)}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
 
-        {/* Notes */}
-        <div className="mt-2">
+        {/* Transaction Link & Notes */}
+        <div className="mt-2 space-y-2">
+          {/* Transaction Link */}
+          <div className="p-2 rounded-lg border border-dashed bg-violet-50/50 dark:bg-violet-900/10 border-violet-200 dark:border-violet-800">
+            <p className="text-[9px] font-medium text-violet-700 dark:text-violet-400 flex items-center gap-1 mb-1.5">
+              <ExternalLink className="w-3 h-3" />
+              Link Transaksi
+            </p>
+            <Input
+              type="url"
+              value={transactionLink}
+              onChange={e => setTransactionLink(e.target.value)}
+              placeholder="https://contoh.com/transaksi..."
+              className="h-8 text-xs"
+            />
+            <p className="text-[9px] text-muted-foreground">Link untuk customer/partner melakukan transaksi</p>
+          </div>
+          
+          {/* Notes */}
           <Textarea 
             value={notes} 
             onChange={e => setNotes(e.target.value)} 
-            placeholder="Catatan..." 
+            placeholder="Catatan untuk customer/partner..." 
             className="h-10 text-xs resize-none" 
           />
         </div>

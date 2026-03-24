@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SimplePagination } from '@/components/ui/pagination';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Users,
   Search,
@@ -44,6 +46,11 @@ import {
   RefreshCw,
   PieChart,
   Target,
+  CreditCard,
+  Receipt,
+  Clock,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -847,6 +854,31 @@ function CustomerActionsDialogContent({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<'info' | 'transactions'>('info');
+  const [transactions, setTransactions] = useState<Record<string, unknown>[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+
+  // Fetch transactions when tab changes
+  useEffect(() => {
+    if (activeTab === 'transactions' && transactions.length === 0) {
+      fetchTransactions();
+    }
+  }, [activeTab, customer.id]);
+
+  const fetchTransactions = async () => {
+    setTransactionsLoading(true);
+    try {
+      const response = await fetch(`/api/customers/${customer.id}/transactions?limit=20`);
+      const result = await response.json();
+      if (result.success) {
+        setTransactions(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch transactions:', err);
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
 
   const handleCopyPhone = async () => {
     try {
@@ -936,7 +968,7 @@ function CustomerActionsDialogContent({
   };
 
   return (
-    <DialogContent className="max-w-md">
+    <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <User className="w-5 h-5 text-primary" />
@@ -945,188 +977,286 @@ function CustomerActionsDialogContent({
         <DialogDescription>Kelola informasi customer</DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-4">
+      {/* Tab Buttons */}
+      <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
+        <button
+          onClick={() => setActiveTab('info')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-xs font-medium transition-all",
+            activeTab === 'info' 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <User className="w-3.5 h-3.5" />
+          Info
+        </button>
+        <button
+          onClick={() => setActiveTab('transactions')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-xs font-medium transition-all",
+            activeTab === 'transactions' 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Receipt className="w-3.5 h-3.5" />
+          Transaksi
+          <Badge variant="secondary" className="text-[10px] h-4 px-1">
+            {customer.totalTransactions}
+          </Badge>
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto -mx-6 px-6">
         {error && (
-          <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 text-sm">
+          <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 text-sm mb-4">
             {error}
           </div>
         )}
 
-        {/* Customer Info */}
-        <div className="p-3 rounded-lg bg-muted/50 space-y-2">
-          <div className="flex items-center gap-2">
-            <Phone className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm">{customer.phone}</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 p-0 ml-auto"
-              onClick={handleCopyPhone}
-            >
-              {copied ? (
-                <Check className="w-3 h-3 text-green-600" />
-              ) : (
-                <Copy className="w-3 h-3 text-muted-foreground" />
+        {activeTab === 'info' ? (
+          <div className="space-y-4">
+            {/* Customer Info */}
+            <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm">{customer.phone}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 p-0 ml-auto"
+                  onClick={handleCopyPhone}
+                >
+                  {copied ? (
+                    <Check className="w-3 h-3 text-green-600" />
+                  ) : (
+                    <Copy className="w-3 h-3 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
+              {customer.city && (
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm">{customer.city}</span>
+                </div>
               )}
-            </Button>
-          </div>
-          {customer.city && (
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm">{customer.city}</span>
-            </div>
-          )}
-          {(customer.bankName || customer.bankAccount) && (
-            <div className="flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm">
-                {customer.bankName}
-                {customer.bankAccount && ` - ${customer.bankAccount}`}
-                {customer.bankHolder && ` a.n ${customer.bankHolder}`}
-              </span>
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm">{formatCurrency(customer.totalVolume)} ({customer.totalTransactions} trx)</span>
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Change Label */}
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2">
-            <Crown className="w-4 h-4" />
-            Label / Tier
-          </Label>
-          <Select value={label} onValueChange={setLabel}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="VIP">
+              {(customer.bankName || customer.bankAccount) && (
                 <div className="flex items-center gap-2">
-                  <Crown className="w-4 h-4 text-amber-600" />
-                  VIP
-                </div>
-              </SelectItem>
-              <SelectItem value="Regular">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-gray-600" />
-                  Regular
-                </div>
-              </SelectItem>
-              <SelectItem value="New">
-                <div className="flex items-center gap-2">
-                  <Star className="w-4 h-4 text-blue-600" />
-                  New
-                </div>
-              </SelectItem>
-              <SelectItem value="Blacklist">
-                <div className="flex items-center gap-2">
-                  <Ban className="w-4 h-4 text-red-600" />
-                  Blacklist
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Notes */}
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            Catatan
-          </Label>
-          <Textarea
-            placeholder="Tambahkan catatan..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-          />
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col gap-2">
-          <Button
-            onClick={handleUpdate}
-            className="w-full gradient-primary text-white h-11 rounded-xl"
-            disabled={loading}
-          >
-            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Edit className="w-4 h-4 mr-2" />}
-            Simpan Perubahan
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={handleBlacklistToggle}
-            className={cn(
-              "w-full h-11 rounded-xl",
-              customer.label === 'Blacklist' && "text-green-600 border-green-200 hover:bg-green-50"
-            )}
-            disabled={loading}
-          >
-            {customer.label === 'Blacklist' ? (
-              <>
-                <User className="w-4 h-4 mr-2" />
-                Hapus dari Blacklist
-              </>
-            ) : (
-              <>
-                <Ban className="w-4 h-4 mr-2" />
-                Tambah ke Blacklist
-              </>
-            )}
-          </Button>
-        </div>
-
-        <Separator />
-
-        {/* Delete Button */}
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="ghost"
-              className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Hapus Customer
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Hapus Customer?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tindakan ini tidak dapat dibatalkan. Customer <strong>{customer.name}</strong> akan dihapus secara permanen.
-                {customer.totalTransactions > 0 && (
-                  <span className="block mt-2 text-amber-600">
-                    Customer ini memiliki {customer.totalTransactions} transaksi dan tidak dapat dihapus.
+                  <Wallet className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    {customer.bankName}
+                    {customer.bankAccount && ` - ${customer.bankAccount}`}
+                    {customer.bankHolder && ` a.n ${customer.bankHolder}`}
                   </span>
-                )}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Batal</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDelete}
-                className="bg-red-600 hover:bg-red-700"
-                disabled={loading || customer.totalTransactions > 0}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm">{formatCurrency(customer.totalVolume)} ({customer.totalTransactions} trx)</span>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Change Label */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Crown className="w-4 h-4" />
+                Label / Tier
+              </Label>
+              <Select value={label} onValueChange={setLabel}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="VIP">
+                    <div className="flex items-center gap-2">
+                      <Crown className="w-4 h-4 text-amber-600" />
+                      VIP
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="Regular">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-gray-600" />
+                      Regular
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="New">
+                    <div className="flex items-center gap-2">
+                      <Star className="w-4 h-4 text-blue-600" />
+                      New
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="Blacklist">
+                    <div className="flex items-center gap-2">
+                      <Ban className="w-4 h-4 text-red-600" />
+                      Blacklist
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Catatan
+              </Label>
+              <Textarea
+                placeholder="Tambahkan catatan..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={handleUpdate}
+                className="w-full gradient-primary text-white h-11 rounded-xl"
+                disabled={loading}
               >
-                Hapus
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Edit className="w-4 h-4 mr-2" />}
+                Simpan Perubahan
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleBlacklistToggle}
+                className={cn(
+                  "w-full h-11 rounded-xl",
+                  customer.label === 'Blacklist' && "text-green-600 border-green-200 hover:bg-green-50"
+                )}
+                disabled={loading}
+              >
+                {customer.label === 'Blacklist' ? (
+                  <>
+                    <User className="w-4 h-4 mr-2" />
+                    Hapus dari Blacklist
+                  </>
+                ) : (
+                  <>
+                    <Ban className="w-4 h-4 mr-2" />
+                    Tambah ke Blacklist
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <Separator />
+
+            {/* Delete Button */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Hapus Customer
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Hapus Customer?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tindakan ini tidak dapat dibatalkan. Customer <strong>{customer.name}</strong> akan dihapus secara permanen.
+                    {customer.totalTransactions > 0 && (
+                      <span className="block mt-2 text-amber-600">
+                        Customer ini memiliki {customer.totalTransactions} transaksi dan tidak dapat dihapus.
+                      </span>
+                    )}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    className="bg-red-600 hover:bg-red-700"
+                    disabled={loading || customer.totalTransactions > 0}
+                  >
+                    Hapus
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        ) : (
+          <div className="space-y-3 pb-4">
+            {transactionsLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}
+              </div>
+            ) : transactions.length > 0 ? (
+              transactions.map((tx) => {
+                const status = tx.status as string;
+                const statusColors: Record<string, string> = {
+                  pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                  verification: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                  process: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+                  success: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                  failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+                };
+                return (
+                  <Card key={tx.id as string} className="glass-card overflow-hidden">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-mono text-muted-foreground">{tx.orderId as string}</span>
+                        <Badge className={cn("text-[10px]", statusColors[status] || statusColors.pending)}>
+                          {status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-primary">{formatCurrency(tx.nominal as number)}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Fee: {formatCurrency(tx.paymentFee as number)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs">{tx.paymentType?.name as string}</p>
+                          <p className="text-[10px] text-muted-foreground">{tx.methodTransaction as string}</p>
+                        </div>
+                      </div>
+                      {tx.partner && (
+                        <div className="mt-2 pt-2 border-t">
+                          <p className="text-[10px] text-muted-foreground">
+                            Partner: <span className="font-medium">{(tx.partner as {name: string}).name}</span>
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })
+            ) : (
+              <div className="text-center py-8">
+                <Receipt className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-30" />
+                <p className="text-sm text-muted-foreground">Belum ada transaksi</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </DialogContent>
   );
 }
 
+// Bank list for dropdown
+const BANK_LIST = [
+  'BCA', 'Mandiri', 'BRI', 'BNI', 'CIMB Niaga', 'Permata', 'Danamon',
+  'Panin', 'OCBC NISP', 'Jenius', 'Seabank', 'Bank Jago', 'Lainnya'
+];
+
 // New Customer Dialog
+
 function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [customBankName, setCustomBankName] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -1142,10 +1272,15 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
     setLoading(true);
 
     try {
+      const bankNameToSubmit = formData.bankName === 'Lainnya' ? customBankName : formData.bankName;
+      
       const response = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          bankName: bankNameToSubmit,
+        }),
       });
 
       const result = await response.json();
@@ -1153,6 +1288,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
         setOpen(false);
         onCreated();
         setFormData({ name: '', phone: '', email: '', bankName: '', bankAccount: '', bankHolder: '', city: '' });
+        setCustomBankName('');
         toast.success('Customer berhasil ditambahkan');
       }
     } catch (err) {
@@ -1231,13 +1367,36 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
             <p className="text-sm font-medium text-muted-foreground">Informasi Bank (Opsional)</p>
             <div className="space-y-2">
               <Label>Nama Bank</Label>
-              <Input
-                placeholder="Contoh: BCA, BRI, Mandiri"
+              <Select
                 value={formData.bankName}
-                onChange={(e) => setFormData(prev => ({ ...prev, bankName: e.target.value }))}
-                className="rounded-xl"
-              />
+                onValueChange={(value) => {
+                  setFormData(prev => ({ ...prev, bankName: value }));
+                  if (value !== 'Lainnya') {
+                    setCustomBankName('');
+                  }
+                }}
+              >
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Pilih bank" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BANK_LIST.map((bank) => (
+                    <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+            {formData.bankName === 'Lainnya' && (
+              <div className="space-y-2">
+                <Label>Nama Bank Lainnya</Label>
+                <Input
+                  placeholder="Ketik nama bank"
+                  value={customBankName}
+                  onChange={(e) => setCustomBankName(e.target.value)}
+                  className="rounded-xl"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Nomor Rekening</Label>
               <Input

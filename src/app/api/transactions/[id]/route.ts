@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { db, toNumber } from '@/lib/db';
+// Force recompile for transactionLink field
 
 // Helper to serialize transaction with Decimal fields
 function serializeTransaction(tx: Record<string, unknown>) {
@@ -124,7 +125,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status, notes, marketplaceId } = body;
+    const { status, notes, marketplaceId, transactionLink } = body;
 
     // Get existing transaction
     const existingTransaction = await db.transaction.findUnique({
@@ -185,6 +186,10 @@ export async function PATCH(
     
     if (notes !== undefined) {
       updateData.notes = notes || null;
+    }
+    
+    if (transactionLink !== undefined) {
+      updateData.transactionLink = transactionLink || null;
     }
 
     // Handle marketplace selection during verification

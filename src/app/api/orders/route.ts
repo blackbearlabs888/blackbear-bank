@@ -2,6 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, toNumber } from '@/lib/db';
 import { generateOrderId, calculatePaymentFee } from '@/lib/auth';
 
+// Helper to safely create notification
+async function createNotification(data: {
+  type: string;
+  title: string;
+  message: string;
+  data?: string;
+  targetType: string;
+  transactionId?: string;
+  partnerId?: string;
+}) {
+  try {
+    // Check if notification model exists
+    if ('notification' in db && typeof db.notification?.create === 'function') {
+      await db.notification.create({ data });
+    }
+  } catch (error) {
+    console.error('Failed to create notification:', error);
+    // Don't throw - notification failure shouldn't break the main flow
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -59,9 +80,18 @@ export async function POST(request: NextRequest) {
     );
     const totalReceived = toNumber(nominal) - paymentFee;
 
-    // Check if customer exists
+    // Check if customer exists (handle various phone formats)
+    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
     let customer = await db.customer.findFirst({
-      where: { phone },
+      where: {
+        OR: [
+          { phone: cleanPhone },
+          { phone: cleanPhone.replace(/^0/, '62') },
+          { phone: cleanPhone.replace(/^62/, '0') },
+          { phone: `0${cleanPhone.replace(/^62/, '')}` },
+          { phone: `62${cleanPhone.replace(/^0/, '')}` },
+        ],
+      },
     });
 
     // Create or update customer
@@ -69,17 +99,20 @@ export async function POST(request: NextRequest) {
       customer = await db.customer.create({
         data: {
           name,
-          phone,
+          phone: cleanPhone,
           bankName: bank || null,
           bankAccount: bankAccount || null,
           bankHolder: bankHolder || null,
           city: city || null,
           label: 'New',
+          addedBy: 'public',
+          totalVolume: nominal,
+          totalTransactions: 1,
         },
       });
     } else {
       // Update customer info if provided
-      if (bank || bankAccount || bankHolder || city) {
+      if (bank || bankAccount || bankHolder || city || name !== customer.name) {
         customer = await db.customer.update({
           where: { id: customer.id },
           data: {
@@ -88,6 +121,18 @@ export async function POST(request: NextRequest) {
             bankAccount: bankAccount || customer.bankAccount,
             bankHolder: bankHolder || customer.bankHolder,
             city: city || customer.city,
+            // Increment customer stats for new transaction
+            totalVolume: { increment: nominal },
+            totalTransactions: { increment: 1 },
+          },
+        });
+      } else {
+        // Still increment stats even if no other updates
+        customer = await db.customer.update({
+          where: { id: customer.id },
+          data: {
+            totalVolume: { increment: nominal },
+            totalTransactions: { increment: 1 },
           },
         });
       }
@@ -116,6 +161,23 @@ export async function POST(request: NextRequest) {
         customer: true,
         paymentType: true,
       },
+    });
+
+    // Create notification for owner about new public order
+    await createNotification({
+      type: 'new_order',
+      title: 'Order Baru dari Public',
+      message: `Order ${orderId} dari ${name} - Rp ${nominal.toLocaleString('id-ID')}`,
+      data: JSON.stringify({
+        orderId,
+        customerName: name,
+        customerPhone: cleanPhone,
+        nominal,
+        paymentType: paymentType.name,
+        methodTransaction,
+      }),
+      targetType: 'owner',
+      transactionId: transaction.id,
     });
 
     return NextResponse.json({
