@@ -31,9 +31,9 @@ async function main() {
       name: 'Black Bear Owner',
       email: 'owner@blackbear.id',
       websiteTitle: 'Black Bear',
-      footerWhatsapp: '6281234567890',
-      footerInstagram: 'https://instagram.com/blackbear',
-      footerFacebook: 'https://facebook.com/blackbear',
+      footerWhatsapp: '628551110023',
+      footerInstagram: 'https://instagram.com/blackbear_bank',
+      footerFacebook: 'https://facebook.com/blackbear.bank',
       maintenanceMode: false,
     },
   });
@@ -50,9 +50,9 @@ async function main() {
     },
     {
       name: 'GoPay Later',
-      onlineFeePercent: 8,
-      onlineFeeFlat: 80000,
-      codFeePercent: 12,
+      onlineFeePercent: 15,
+      onlineFeeFlat: 100000,
+      codFeePercent: 18,
       codFeeFlat: 120000,
       threshold: 1000000,
     },
@@ -68,16 +68,16 @@ async function main() {
       name: 'Akulaku',
       onlineFeePercent: 10,
       onlineFeeFlat: 100000,
-      codFeePercent: 14,
+      codFeePercent: 15,
       codFeeFlat: 140000,
       threshold: 1000000,
     },
     {
       name: 'Kredivo',
-      onlineFeePercent: 8,
-      onlineFeeFlat: 80000,
-      codFeePercent: 12,
-      codFeeFlat: 120000,
+      onlineFeePercent: 13,
+      onlineFeeFlat: 100000,
+      codFeePercent: 18,
+      codFeeFlat: 100000,
       threshold: 1000000,
     },
   ];
@@ -94,11 +94,11 @@ async function main() {
 
   // Create marketplaces
   const marketplaces = [
-    { name: 'Tokopedia', feePercent: 2 },
-    { name: 'Shopee', feePercent: 2.5 },
-    { name: 'Lazada', feePercent: 3 },
-    { name: 'Bukalapak', feePercent: 1.5 },
-    { name: 'Blibli', feePercent: 2 },
+    { name: 'Tokopedia', feePercent: 9 },
+    { name: 'Shopee', feePercent: 0 },
+    { name: 'Lazada', feePercent: 5 },
+    { name: 'Bukalapak', feePercent: 5 },
+    { name: 'Blibli', feePercent: 5 },
   ];
 
   for (const mp of marketplaces) {

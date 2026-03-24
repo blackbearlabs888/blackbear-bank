@@ -144,7 +144,8 @@ model Transaction {
   marketplaceId   String?   // for platform fee deduction
   
   status          String    @default("pending") // pending, verification, process, success, failed
-  notes           String?
+  notes           String?   // catatan dari owner
+  transactionLink String?   // link untuk transaksi dari owner
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -227,6 +228,34 @@ model Promo {
   updatedAt       DateTime  @updatedAt
   
   @@map("promos")
+}
+
+// ==================== NOTIFICATIONS ====================
+
+model Notification {
+  id              String    @id @default(cuid())
+  type            String    // "new_partner", "new_order", "transaction_update", "broadcast"
+  title           String
+  message         String
+  data            String?   // JSON string for additional data
+  isRead          Boolean   @default(false)
+  
+  // For targeting specific users (null = all owners)
+  targetType      String    @default("owner") // owner, partner, all
+  targetUserId    String?   // specific user ID if needed
+  
+  // Reference to related entities
+  partnerId       String?
+  transactionId   String?
+  
+  createdAt       DateTime  @default(now())
+  readAt          DateTime?
+  
+  @@index([type])
+  @@index([isRead])
+  @@index([targetType])
+  @@index([createdAt])
+  @@map("notifications")
 }
 
 // ==================== SITE CONFIGURATION ====================
