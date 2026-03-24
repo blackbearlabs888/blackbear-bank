@@ -46,33 +46,33 @@ model Session {
 // ==================== PARTNER ====================
 
 model Partner {
-  id              String    @id @default(cuid())
-  userId          String    @unique
-  name            String
-  email           String    @unique
-  phone           String
-  bankName        String
-  bankAccount     String
-  bankHolder      String
-  city            String
-  commission      Decimal   @default(30) // percentage
-  target          Decimal   @default(5000000) // monthly target
-  tier            String    @default("Bronze") // Bronze, Silver, Gold, Platinum
-  badge           String    @default("Newbie") // Newbie, Rising Star, Champion, Legend
-  status          String    @default("active") // active, suspended
-  totalProfit     Decimal   @default(0)
-  totalVolume     Decimal   @default(0)
-  totalTransactions Int     @default(0)
-  notes           String?   // additional notes from owner
-  joinedAt        DateTime  @default(now())
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  name              String
+  email             String    @unique
+  phone             String
+  bankName          String
+  bankAccount       String
+  bankHolder        String
+  city              String
+  commission        Decimal   @default(30) // percentage
+  target            Decimal   @default(5000000) // monthly target
+  tier              String    @default("Bronze") // Bronze, Silver, Gold, Platinum
+  badge             String    @default("Newbie") // Newbie, Rising Star, Champion, Legend
+  status            String    @default("active") // active, suspended
+  totalProfit       Decimal   @default(0)
+  totalVolume       Decimal   @default(0)
+  totalTransactions Int       @default(0)
+  notes             String?   // additional notes from owner
+  joinedAt          DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   
   // Relations
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions    Transaction[]
-  customers       Customer[]
-  rankingHistory  MonthlyRankingHistory[]
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions      Transaction[]
+  customers         Customer[]
+  rankingHistory    MonthlyRankingHistory[]
   
   @@index([status])
   @@index([tier])
@@ -100,25 +100,25 @@ model MonthlyRankingHistory {
 // ==================== CUSTOMER ====================
 
 model Customer {
-  id              String    @id @default(cuid())
-  name            String
-  phone           String
-  bankName        String?
-  bankAccount     String?
-  bankHolder      String?
-  city            String?
-  label           String    @default("Regular") // VIP, Regular, New, Blacklist
-  totalVolume     Decimal   @default(0)
-  totalTransactions Int     @default(0)
-  partnerId       String?   // nullable - can be added by partner
-  addedBy         String    @default("owner") // owner, partner, public - who added this customer
-  notes           String?   // additional notes
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  name              String
+  phone             String
+  bankName          String?
+  bankAccount       String?
+  bankHolder        String?
+  city              String?
+  label             String    @default("Regular") // VIP, Regular, New, Blacklist
+  totalVolume       Decimal   @default(0)
+  totalTransactions Int       @default(0)
+  partnerId         String?   // nullable - can be added by partner
+  addedBy           String    @default("owner") // owner, partner, public - who added this customer
+  notes             String?   // additional notes
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   
   // Relations
-  partner         Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
-  transactions    Transaction[]
+  partner           Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  transactions      Transaction[]
   
   @@index([phone])
   @@index([city])
@@ -129,34 +129,35 @@ model Customer {
 // ==================== TRANSACTION ====================
 
 model Transaction {
-  id              String    @id @default(cuid())
-  orderId         String    @unique // public order ID
-  customerId      String
-  partnerId       String?
+  id                String    @id @default(cuid())
+  orderId           String    @unique // public order ID
+  customerId        String
+  partnerId         String?
   
-  nominal         Decimal   // nominal gestun
-  paymentFee      Decimal   // calculated fee
-  platformFee     Decimal   @default(0) // marketplace fee
-  netMargin       Decimal   // paymentFee - platformFee
-  partnerProfit   Decimal   @default(0)
-  ownerProfit     Decimal   @default(0)
-  totalReceived   Decimal   // nominal - paymentFee
+  nominal           Decimal   // nominal gestun
+  paymentFee        Decimal   // calculated fee
+  platformFee       Decimal   @default(0) // marketplace fee
+  netMargin         Decimal   // paymentFee - platformFee
+  partnerProfit     Decimal   @default(0)
+  ownerProfit       Decimal   @default(0)
+  totalReceived     Decimal   // nominal - paymentFee
   
-  paymentTypeId   String
-  methodTransaction String  @default("Online") // Online, COD
-  marketplaceId   String?   // for platform fee deduction
+  paymentTypeId     String
+  methodTransaction String    @default("Online") // Online, COD
+  marketplaceId     String?   // for platform fee deduction
   
-  status          String    @default("pending") // pending, verification, process, success, failed
-  notes           String?
+  status            String    @default("pending") // pending, verification, process, success, failed
+  notes             String?   // catatan dari owner
+  transactionLink   String?   // link untuk transaksi dari owner
   
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   
   // Relations
-  customer        Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  partner         Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
-  paymentType     PaymentType @relation(fields: [paymentTypeId], references: [id])
-  marketplace     Marketplace? @relation(fields: [marketplaceId], references: [id], onDelete: SetNull)
+  customer          Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  partner           Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  paymentType       PaymentType @relation(fields: [paymentTypeId], references: [id])
+  marketplace       Marketplace? @relation(fields: [marketplaceId], references: [id], onDelete: SetNull)
   
   @@index([customerId])
   @@index([partnerId])
@@ -168,19 +169,19 @@ model Transaction {
 // ==================== PAYMENT & FEE MANAGEMENT ====================
 
 model PaymentType {
-  id               String    @id @default(cuid())
-  name             String    @unique  // e.g., "Kartu Kredit", "Paylater"
-  onlineFeePercent Decimal   @default(0) // percentage
-  onlineFeeFlat    Decimal   @default(0) // flat fee under threshold
-  codFeePercent    Decimal   @default(0)
-  codFeeFlat       Decimal   @default(0)
-  threshold        Decimal   @default(1000000) // threshold for percentage vs flat
-  isActive         Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  name              String    @unique  // e.g., "Kartu Kredit", "Paylater"
+  onlineFeePercent  Decimal   @default(0) // percentage
+  onlineFeeFlat     Decimal   @default(0) // flat fee under threshold
+  codFeePercent     Decimal   @default(0)
+  codFeeFlat        Decimal   @default(0)
+  threshold         Decimal   @default(1000000) // threshold for percentage vs flat
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   
   // Relations
-  transactions    Transaction[]
+  transactions      Transaction[]
   
   @@map("payment_types")
 }
@@ -232,6 +233,34 @@ model Promo {
   updatedAt       DateTime  @updatedAt
   
   @@map("promos")
+}
+
+// ==================== NOTIFICATIONS ====================
+
+model Notification {
+  id              String    @id @default(cuid())
+  type            String    // "new_partner", "new_order", "transaction_update", "broadcast"
+  title           String
+  message         String
+  data            String?   // JSON string for additional data
+  isRead          Boolean   @default(false)
+  
+  // For targeting specific users (null = all owners)
+  targetType      String    @default("owner") // owner, partner, all
+  targetUserId    String?   // specific user ID if needed
+  
+  // Reference to related entities
+  partnerId       String?
+  transactionId   String?
+  
+  createdAt       DateTime  @default(now())
+  readAt          DateTime?
+  
+  @@index([type])
+  @@index([isRead])
+  @@index([targetType])
+  @@index([createdAt])
+  @@map("notifications")
 }
 
 // ==================== SITE CONFIGURATION ====================
