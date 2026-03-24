@@ -14,7 +14,12 @@ const inter = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
-
+// Meta Data
+export const metadata = {
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+  },
+};
 // Generate dynamic metadata from database
 export async function generateMetadata(): Promise<Metadata> {
   try {
@@ -60,6 +65,7 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#1a1520" },
   ],
 };
+
 
 export default function RootLayout({
   children,
