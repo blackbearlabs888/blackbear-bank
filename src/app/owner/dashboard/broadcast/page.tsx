@@ -507,136 +507,126 @@ function AnnouncementCard({
 
   return (
     <Card className={cn(
-      "glass-card tap-highlight active-scale transition-all",
-      announcement.isActive && !status.isExpired && !status.isScheduled && "border-violet-300 dark:border-violet-700"
+      "tap-highlight active-scale transition-all",
+      announcement.isActive && !status.isExpired && !status.isScheduled && "border-violet-300 dark:border-violet-700 bg-violet-50/50 dark:bg-violet-950/20"
     )}>
-      <CardContent className="p-3">
-        <div className="flex items-start gap-2">
+      <CardContent className="p-2.5 sm:p-3">
+        {/* Header Row */}
+        <div className="flex items-center gap-2">
           <div className={cn(
-            "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0",
+            "w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center flex-shrink-0",
             announcement.isActive && !status.isExpired 
               ? "bg-violet-100 dark:bg-violet-900/30" 
               : "bg-muted"
           )}>
-            {announcement.type === 'promo' && <Tag className={cn("w-4 h-4", status.color)} />}
-            {announcement.type === 'broadcast' && <Radio className={cn("w-4 h-4", status.color)} />}
-            {announcement.type === 'announcement' && <FileText className={cn("w-4 h-4", status.color)} />}
+            {announcement.type === 'promo' && <Tag className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", status.color)} />}
+            {announcement.type === 'broadcast' && <Radio className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", status.color)} />}
+            {announcement.type === 'announcement' && <FileText className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", status.color)} />}
           </div>
           
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <p className="font-medium text-sm truncate">{announcement.title}</p>
-              <Badge variant={status.variant} className="text-[9px] gap-0.5 h-4 px-1">
+            <div className="flex items-center gap-1 flex-wrap">
+              <p className="font-medium text-xs sm:text-sm truncate">{announcement.title}</p>
+              <Badge variant={status.variant} className="text-[9px] gap-0.5 h-4 px-1 shrink-0">
                 <StatusIcon className="w-2.5 h-2.5" />
                 {status.label}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+            <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-1 mt-0.5">
               {announcement.description}
-            </p>
-            
-            {/* Status info - countdown or expired badge */}
-            {status.countdown && (
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <Badge variant="outline" className="text-[9px] bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800 text-violet-600 dark:text-violet-400 h-4 px-1">
-                  <Timer className="w-2.5 h-2.5 mr-0.5" />
-                  {status.countdown}
-                </Badge>
-              </div>
-            )}
-
-            {status.isExpired && (
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <Badge variant="destructive" className="text-[9px] h-4 px-1">
-                  <AlertCircle className="w-2.5 h-2.5 mr-0.5" />
-                  Sudah tidak aktif
-                </Badge>
-              </div>
-            )}
-
-            {status.isScheduled && status.countdown && (
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <Badge variant="outline" className="text-[9px] bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 h-4 px-1">
-                  <Clock className="w-2.5 h-2.5 mr-0.5" />
-                  Mulai dalam {status.countdown}
-                </Badge>
-              </div>
-            )}
-            
-            {/* Type-specific info */}
-            {announcement.type === 'promo' && announcement.link && (
-              <a 
-                href={announcement.link} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-0.5 text-[10px] text-violet-600 hover:text-violet-700 mt-1.5 hover:underline"
-              >
-                <ExternalLink className="w-2.5 h-2.5" />
-                Lihat Link
-              </a>
-            )}
-
-            {/* Date range for promo and broadcast */}
-            {(announcement.type === 'promo' || announcement.type === 'broadcast') && announcement.startDate && announcement.expireDate && (
-              <div className="flex items-center gap-1 mt-1.5 text-[10px] text-muted-foreground">
-                <Calendar className="w-2.5 h-2.5" />
-                <span>{formatShortDate(announcement.startDate)} - {formatShortDate(announcement.expireDate)}</span>
-              </div>
-            )}
-            
-            {/* Running text preview for announcement */}
-            {announcement.type === 'announcement' && announcement.isActive && !status.isExpired && (
-              <div className="mt-1.5 bg-violet-50 dark:bg-violet-950/30 rounded-md px-2 py-1 border border-violet-100 dark:border-violet-900">
-                <p className="text-[10px] text-violet-700 dark:text-violet-300 truncate">
-                  📢 {announcement.description}
-                </p>
-              </div>
-            )}
-
-            <p className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-0.5">
-              <Calendar className="w-2.5 h-2.5" />
-              {formatDate(announcement.createdAt)}
             </p>
           </div>
 
-          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <div className="flex items-center gap-0.5">
-              <EditDialog announcement={announcement} onUpdated={onUpdated} />
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="max-w-sm">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="text-base">Hapus {announcement.type}?</AlertDialogTitle>
-                    <AlertDialogDescription className="text-sm">
-                      Tindakan ini tidak dapat dibatalkan. &quot;{announcement.title}&quot; akan dihapus secara permanen.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel className="h-9">Batal</AlertDialogCancel>
-                    <AlertDialogAction
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 h-9"
-                      onClick={() => onDelete(announcement.id)}
-                    >
-                      Hapus
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
+          {/* Actions */}
+          <div className="flex items-center gap-0.5 flex-shrink-0">
             <Switch
               checked={announcement.isActive}
               onCheckedChange={() => onToggle(announcement.id, announcement.isActive)}
-              className="scale-75"
+              className="scale-75 sm:scale-90"
             />
+            <EditDialog announcement={announcement} onUpdated={onUpdated} />
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="max-w-sm">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-base">Hapus {announcement.type}?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-sm">
+                    Tindakan ini tidak dapat dibatalkan. &quot;{announcement.title}&quot; akan dihapus secara permanen.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="h-9">Batal</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 h-9"
+                    onClick={() => onDelete(announcement.id)}
+                  >
+                    Hapus
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
+        </div>
+
+        {/* Info Row - kondisional berdasarkan type dan status */}
+        <div className="flex items-center gap-2 mt-2 flex-wrap">
+          {/* Countdown untuk aktif */}
+          {status.countdown && !status.isScheduled && (
+            <Badge variant="outline" className="text-[9px] bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800 text-violet-600 dark:text-violet-400 h-4 px-1">
+              <Timer className="w-2.5 h-2.5 mr-0.5" />
+              {status.countdown}
+            </Badge>
+          )}
+
+          {/* Scheduled */}
+          {status.isScheduled && status.countdown && (
+            <Badge variant="outline" className="text-[9px] bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 h-4 px-1">
+              <Clock className="w-2.5 h-2.5 mr-0.5" />
+              Mulai {status.countdown}
+            </Badge>
+          )}
+
+          {/* Expired */}
+          {status.isExpired && (
+            <Badge variant="destructive" className="text-[9px] h-4 px-1">
+              <AlertCircle className="w-2.5 h-2.5 mr-0.5" />
+              Tidak aktif
+            </Badge>
+          )}
+
+          {/* Link untuk promo */}
+          {announcement.type === 'promo' && announcement.link && (
+            <a 
+              href={announcement.link} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 text-[9px] text-violet-600 hover:text-violet-700 hover:underline"
+            >
+              <ExternalLink className="w-2.5 h-2.5" />
+              Link
+            </a>
+          )}
+
+          {/* Date range */}
+          {(announcement.type === 'promo' || announcement.type === 'broadcast') && announcement.startDate && announcement.expireDate && (
+            <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+              <Calendar className="w-2.5 h-2.5" />
+              {formatShortDate(announcement.startDate)} - {formatShortDate(announcement.expireDate)}
+            </span>
+          )}
+
+          {/* Created date */}
+          <span className="text-[9px] text-muted-foreground ml-auto">
+            {formatDate(announcement.createdAt)}
+          </span>
         </div>
       </CardContent>
     </Card>
