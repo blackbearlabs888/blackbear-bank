@@ -23,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
     const websiteTitle = profile?.websiteTitle || "Black Bear";
     const metaTitle = profile?.metaTitle || `${websiteTitle} - Layanan Tarik Tunai Terpercaya`;
     const metaDescription = profile?.metaDescription || "Layanan tarik tunai profesional untuk Kartu Kredit & Paylater dengan proses cepat dan aman. Tarik tunai kartu kredit, GoPay Paylater, Shopee Paylater, dan berbagai metode pembayaran lainnya.";
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blackbear.id";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blackbear.cc";
     const logoUrl = profile?.logoUrl || `${siteUrl}/logo.png`;
     
     return {
