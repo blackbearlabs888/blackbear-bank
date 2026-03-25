@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 import { db } from '@/lib/db';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Get dynamic content
