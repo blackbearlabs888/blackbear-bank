@@ -23,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
     const websiteTitle = profile?.websiteTitle || "Black Bear";
     const metaTitle = profile?.metaTitle || `${websiteTitle} - Layanan Tarik Tunai Terpercaya`;
     const metaDescription = profile?.metaDescription || "Layanan tarik tunai profesional untuk Kartu Kredit & Paylater dengan proses cepat dan aman. Tarik tunai kartu kredit, GoPay Paylater, Shopee Paylater, dan berbagai metode pembayaran lainnya.";
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blackbear.cc";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blackbear.id";
     const logoUrl = profile?.logoUrl || `${siteUrl}/logo.png`;
     
     return {
@@ -35,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: metaDescription,
       keywords: [
         // Primary keywords
-        "tarik tunai",
+        "gesek tunai",
         "gestun",
         "tarik tunai kartu kredit",
         "gestun kartu kredit",
@@ -43,19 +43,47 @@ export async function generateMetadata(): Promise<Metadata> {
         "paylater",
         "GoPay Paylater",
         "Shopee Paylater",
-        "Akulaku Paylater",
+        "Tiktok Paylater",
         "COD",
         "cash on delivery",
         // Long-tail keywords
-        "jasa tarik tunai terpercaya",
-        "tarik tunai online",
-        "tarik tunai aman",
-        "tarik tunai cepat",
+        "jasa gesek tunai terpercaya",
+        "gesek tunai online",
+        "gesek tunai aman",
+        "gesek tunai cepat",
         "gestun online",
         "jasa gestun profesional",
         // Location-based
-        "tarik tunai Indonesia",
+        "gesek tunai Indonesia",
         "gestun Indonesia",
+        "gestun Palangkaraya",
+        "gestun Banjarmasin",
+        "gestun Pontianak",
+        "gestun Balikpapan",
+        "gestun Samarinda",
+        "gestun Bontang",
+        "gestun Tarakan",
+        "gestun Makassar",
+        "gestun Jakarta",
+        "gestun Gorontalo",
+        "gestun Palu",
+        "gestun Bandung",
+        "gestun Tangerang",
+        "gestun Medan",
+        "gestun Surabaya",
+        "gestun Bali",
+        "gestun Yogyakarta",
+        "gestun Malang",
+        "gestun Solo",
+        "gestun Bima",
+        "gestun Kupang",
+        "gestun Ambon",
+        "gestun Baubau",
+        "gestun Sampit",
+        "gestun Kapuas",
+        "gestun Pulang Pisau",
+        "gestun Buntok",
+        "gestun Murung Raya",
         // Related terms
         "kartu kredit",
         "credit card",
@@ -106,21 +134,21 @@ export async function generateMetadata(): Promise<Metadata> {
         },
       },
       verification: {
-        google: "google-site-verification-code", // Replace with actual code
+        google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
       },
       alternates: {
         canonical: siteUrl,
       },
       icons: {
-        icon: profile?.faviconUrl || "/logo.png",
-        apple: profile?.faviconUrl || "/logo.png",
+        icon: profile?.faviconUrl || "/logo.svg",
+        apple: profile?.faviconUrl || "/logo.svg",
       },
       manifest: "/manifest.json",
       category: "finance",
     };
   } catch (error) {
     // Fallback to defaults if database fails
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blackbear.cc";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blackbear.id";
     return {
       metadataBase: new URL(siteUrl),
       title: "Black Bear - Layanan Tarik Tunai Terpercaya",
@@ -128,7 +156,10 @@ export async function generateMetadata(): Promise<Metadata> {
       keywords: ["tarik tunai", "gestun", "kartu kredit", "paylater", "COD", "online"],
       authors: [{ name: "Black Bear Team" }],
       icons: {
-        icon: "/logo.png",
+        icon: "/logo.svg",
+      },
+      verification: {
+        google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
       },
     };
   }
