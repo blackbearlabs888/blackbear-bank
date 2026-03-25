@@ -20,6 +20,7 @@ import {
   Wifi,
 } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
+import { OrganizationJsonLd, FAQJsonLd } from '@/components/seo/json-ld';
 
 const features = [
   {
@@ -268,83 +269,88 @@ export default function LandingPage() {
   const siteName = config.websiteTitle || 'Black Bear';
 
   return (
-    <div className="min-h-screen bg-background relative">
-      {/* Animated Background */}
-      <AnimatedBackground />
+    <>
+      {/* JSON-LD Structured Data for SEO */}
+      <OrganizationJsonLd />
+      <FAQJsonLd />
       
-      {/* Hero Section */}
-      <section className="relative py-16 md:py-24 lg:py-32 overflow-hidden">
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="flex flex-col lg:flex-row gap-12 items-center">
-            {/* Left Content */}
-            <div className="flex-1 max-w-xl text-center lg:text-left">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-                <Sparkles className="w-4 h-4" />
-                Layanan Tarik Tunai Terpercaya
+      <div className="min-h-screen bg-background relative">
+        {/* Animated Background */}
+        <AnimatedBackground />
+        
+        {/* Hero Section */}
+        <header className="relative py-16 md:py-24 lg:py-32 overflow-hidden">
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="flex flex-col lg:flex-row gap-12 items-center">
+              {/* Left Content */}
+              <div className="flex-1 max-w-xl text-center lg:text-left">
+                {/* Badge */}
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
+                  <Sparkles className="w-4 h-4" aria-hidden="true" />
+                  <span>Layanan Tarik Tunai Terpercaya</span>
+                </div>
+
+                {/* Title */}
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight tracking-tight">
+                  Butuh Dana Cepat?
+                  <br />
+                  <span className="text-primary">{siteName} Solusinya</span>
+                </h1>
+
+                {/* Description */}
+                <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
+                  {config.metaDescription || 'Layanan tarik tunai profesional untuk Kartu Kredit & Paylater dengan proses cepat, aman, dan transparan.'}
+                </p>
+
+                {/* CTA Buttons */}
+                <nav className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8" aria-label="Main actions">
+                  <Button asChild size="lg" className="h-14 px-8 text-base">
+                    <Link href="/order">
+                      Order Sekarang
+                      <ArrowRight className="w-5 h-5 ml-2" aria-hidden="true" />
+                    </Link>
+                  </Button>
+                  <Button asChild size="lg" variant="outline" className="h-14 px-8 text-base">
+                    <Link href="/track">
+                      <Clock className="w-5 h-5 mr-2" aria-hidden="true" />
+                      Track Order
+                    </Link>
+                  </Button>
+                </nav>
+
+                {/* Trust Indicators */}
+                <ul className="flex flex-wrap items-center justify-center lg:justify-start gap-6 text-sm text-muted-foreground" aria-label="Trust indicators">
+                  <li className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-emerald-500" aria-hidden="true" />
+                    <span>Aman 100%</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-amber-500" aria-hidden="true" />
+                    <span>Proses Cepat</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Star className="w-5 h-5 text-primary" aria-hidden="true" />
+                    <span>Terpercaya</span>
+                  </li>
+                </ul>
               </div>
 
-              {/* Title */}
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight tracking-tight">
-                Butuh Dana Cepat?
-                <br />
-                <span className="text-primary">{siteName} Solusinya</span>
-              </h1>
-
-              {/* Description */}
-              <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
-                {config.metaDescription || 'Layanan tarik tunai profesional untuk Kartu Kredit & Paylater dengan proses cepat, aman, dan transparan.'}
-              </p>
-
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
-                <Button asChild size="lg" className="h-14 px-8 text-base">
-                  <Link href="/order">
-                    Order Sekarang
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Link>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="h-14 px-8 text-base">
-                  <Link href="/track">
-                    <Clock className="w-5 h-5 mr-2" />
-                    Track Order
-                  </Link>
-                </Button>
+              {/* Right Content - Credit Card */}
+              <div className="flex-1 flex justify-center items-center" role="img" aria-label="Credit card illustration">
+                <CreditCardVisual 
+                  siteName={siteName} 
+                  getInitials={getInitials}
+                  logoUrl={config.logoUrl}
+                  logoError={logoError}
+                  setLogoError={setLogoError}
+                />
               </div>
-
-              {/* Trust Indicators */}
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-emerald-500" />
-                  <span>Aman 100%</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-amber-500" />
-                  <span>Proses Cepat</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Star className="w-5 h-5 text-primary" />
-                  <span>Terpercaya</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Content - Credit Card */}
-            <div className="flex-1 flex justify-center items-center">
-              <CreditCardVisual 
-                siteName={siteName} 
-                getInitials={getInitials}
-                logoUrl={config.logoUrl}
-                logoError={logoError}
-                setLogoError={setLogoError}
-              />
             </div>
           </div>
-        </div>
-      </section>
+        </header>
 
       {/* Stats Section */}
-      <section className="relative py-12 border-y bg-muted/30 backdrop-blur-sm z-10">
+      <section className="relative py-12 border-y bg-muted/30 backdrop-blur-sm z-10" aria-label="Statistics">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
             {[
@@ -363,75 +369,74 @@ export default function LandingPage() {
       </section>
 
       {/* Services Section */}
-      <section className="relative py-20 md:py-28 z-10">
+      <section className="relative py-20 md:py-28 z-10" aria-labelledby="services-heading">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Layanan Kami</h2>
+            <h2 id="services-heading" className="text-3xl md:text-4xl font-bold mb-4">Layanan Kami</h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
               Pilih layanan tarik tunai yang sesuai dengan kebutuhan Anda
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto" role="list">
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <Card 
-                  key={index} 
-                  className="border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-300 group"
-                >
-                  <CardContent className="p-6">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                      <Icon className="w-6 h-6 text-primary" />
-                    </div>
-                    <h3 className="font-semibold text-lg mb-2">{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {feature.description}
-                    </p>
-                  </CardContent>
-                </Card>
+                <li key={index}>
+                  <Card 
+                    className="border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-300 group h-full"
+                  >
+                    <CardContent className="p-6">
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                        <Icon className="w-6 h-6 text-primary" aria-hidden="true" />
+                      </div>
+                      <h3 className="font-semibold text-lg mb-2">{feature.title}</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {feature.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </li>
               );
             })}
-          </div>
+          </ul>
         </div>
       </section>
 
       {/* How It Works Section */}
-      <section className="relative py-20 md:py-28 bg-muted/30 backdrop-blur-sm z-10">
+      <section className="relative py-20 md:py-28 bg-muted/30 backdrop-blur-sm z-10" aria-labelledby="how-it-works-heading">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Cara Kerja</h2>
+            <h2 id="how-it-works-heading" className="text-3xl md:text-4xl font-bold mb-4">Cara Kerja</h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
               Hanya 3 langkah sederhana untuk mendapatkan dana Anda
             </p>
           </div>
 
-          <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {steps.map((step, index) => (
-                <div key={index} className="text-center">
-                  <div className="text-5xl font-bold text-primary/20 mb-4">{step.step}</div>
-                  <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
-                  <p className="text-sm text-muted-foreground">{step.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <ol className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+            {steps.map((step, index) => (
+              <li key={index} className="text-center">
+                <div className="text-5xl font-bold text-primary/20 mb-4" aria-hidden="true">{step.step}</div>
+                <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
+                <p className="text-sm text-muted-foreground">{step.description}</p>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
       {/* Partner Section */}
-      <section className="relative py-20 md:py-28 z-10">
+      <section className="relative py-20 md:py-28 z-10" aria-labelledby="partner-heading">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               {/* Content */}
               <div>
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-                  <Users className="w-4 h-4" />
-                  Program Mitra
+                  <Users className="w-4 h-4" aria-hidden="true" />
+                  <span>Program Mitra</span>
                 </div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                <h2 id="partner-heading" className="text-3xl md:text-4xl font-bold mb-4">
                   Bergabung Sebagai Mitra {siteName}
                 </h2>
                 <p className="text-muted-foreground mb-8 leading-relaxed">
@@ -439,13 +444,13 @@ export default function LandingPage() {
                   Sistem komisi transparan dengan dashboard real-time untuk memantau profit Anda.
                 </p>
                 
-                <ul className="space-y-4 mb-8">
+                <ul className="space-y-4 mb-8" role="list">
                   {partnerBenefits.map((benefit, index) => {
                     const BenefitIcon = benefit.icon;
                     return (
                       <li key={index} className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <BenefitIcon className="w-5 h-5 text-primary" />
+                          <BenefitIcon className="w-5 h-5 text-primary" aria-hidden="true" />
                         </div>
                         <span>{benefit.text}</span>
                       </li>
@@ -456,13 +461,13 @@ export default function LandingPage() {
                 <Button asChild size="lg" className="h-14 px-8 text-base">
                   <Link href="/register">
                     Daftar Mitra Sekarang
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                    <ArrowRight className="w-5 h-5 ml-2" aria-hidden="true" />
                   </Link>
                 </Button>
               </div>
 
               {/* Card */}
-              <div className="lg:pl-8">
+              <aside className="lg:pl-8">
                 <Card className="border-border/50 overflow-hidden">
                   <CardContent className="p-8">
                     <div className="text-center">
@@ -502,8 +507,9 @@ export default function LandingPage() {
                           <a 
                             href={`https://wa.me/${config.footerWhatsapp}`}
                             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                            aria-label="Contact via WhatsApp"
                           >
-                            <MessageCircle className="w-4 h-4" />
+                            <MessageCircle className="w-4 h-4" aria-hidden="true" />
                             WhatsApp
                           </a>
                         )}
@@ -511,6 +517,7 @@ export default function LandingPage() {
                           <a 
                             href={`mailto:${config.footerEmail}`}
                             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                            aria-label="Contact via Email"
                           >
                             Contact
                           </a>
@@ -519,7 +526,7 @@ export default function LandingPage() {
                     </div>
                   </CardContent>
                 </Card>
-              </div>
+              </aside>
             </div>
           </div>
         </div>
@@ -721,6 +728,8 @@ export default function LandingPage() {
           animation: twinkle 3s ease-in-out infinite;
         }
       `}</style>
-    </div>
+      </div>
+    </>
   );
 }
+

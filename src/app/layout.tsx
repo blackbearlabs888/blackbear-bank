@@ -22,23 +22,107 @@ export async function generateMetadata(): Promise<Metadata> {
     
     const websiteTitle = profile?.websiteTitle || "Black Bear";
     const metaTitle = profile?.metaTitle || `${websiteTitle} - Layanan Tarik Tunai Terpercaya`;
-    const metaDescription = profile?.metaDescription || "Layanan tarik tunai profesional untuk Kartu Kredit & Paylater dengan proses cepat dan aman.";
+    const metaDescription = profile?.metaDescription || "Layanan tarik tunai profesional untuk Kartu Kredit & Paylater dengan proses cepat dan aman. Tarik tunai kartu kredit, GoPay Paylater, Shopee Paylater, dan berbagai metode pembayaran lainnya.";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blackbear.id";
+    const logoUrl = profile?.logoUrl || `${siteUrl}/logo.png`;
     
     return {
+      metadataBase: new URL(siteUrl),
       title: {
         default: metaTitle,
         template: `%s | ${websiteTitle}`,
       },
       description: metaDescription,
-      keywords: ["tarik tunai", "gestun", "kartu kredit", "paylater", "COD", "online"],
-      authors: [{ name: `${websiteTitle} Team` }],
+      keywords: [
+        // Primary keywords
+        "tarik tunai",
+        "gestun",
+        "tarik tunai kartu kredit",
+        "gestun kartu kredit",
+        // Secondary keywords
+        "paylater",
+        "GoPay Paylater",
+        "Shopee Paylater",
+        "Akulaku Paylater",
+        "COD",
+        "cash on delivery",
+        // Long-tail keywords
+        "jasa tarik tunai terpercaya",
+        "tarik tunai online",
+        "tarik tunai aman",
+        "tarik tunai cepat",
+        "gestun online",
+        "jasa gestun profesional",
+        // Location-based
+        "tarik tunai Indonesia",
+        "gestun Indonesia",
+        // Related terms
+        "kartu kredit",
+        "credit card",
+        "pencairan dana",
+        "pinjaman online",
+        "dana cepat",
+      ],
+      authors: [{ name: `${websiteTitle} Team`, url: siteUrl }],
+      creator: websiteTitle,
+      publisher: websiteTitle,
+      formatDetection: {
+        email: false,
+        address: false,
+        telephone: false,
+      },
+      openGraph: {
+        type: "website",
+        locale: "id_ID",
+        url: siteUrl,
+        siteName: websiteTitle,
+        title: metaTitle,
+        description: metaDescription,
+        images: [
+          {
+            url: logoUrl,
+            width: 1200,
+            height: 630,
+            alt: `${websiteTitle} - Layanan Tarik Tunai Terpercaya`,
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: metaTitle,
+        description: metaDescription,
+        images: [logoUrl],
+        creator: `@${websiteTitle.toLowerCase().replace(/\s+/g, '')}`,
+      },
+      robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+          index: true,
+          follow: true,
+          "max-video-preview": -1,
+          "max-image-preview": "large",
+          "max-snippet": -1,
+        },
+      },
+      verification: {
+        google: "google-site-verification-code", // Replace with actual code
+      },
+      alternates: {
+        canonical: siteUrl,
+      },
       icons: {
         icon: profile?.faviconUrl || "/logo.png",
+        apple: profile?.faviconUrl || "/logo.png",
       },
+      manifest: "/manifest.json",
+      category: "finance",
     };
   } catch (error) {
     // Fallback to defaults if database fails
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blackbear.id";
     return {
+      metadataBase: new URL(siteUrl),
       title: "Black Bear - Layanan Tarik Tunai Terpercaya",
       description: "Layanan tarik tunai profesional untuk Kartu Kredit & Paylater dengan proses cepat dan aman.",
       keywords: ["tarik tunai", "gestun", "kartu kredit", "paylater", "COD", "online"],
@@ -60,7 +144,6 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#1a1520" },
   ],
 };
-
 
 export default function RootLayout({
   children,
