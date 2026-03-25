@@ -36,6 +36,10 @@ import {
   Eye,
   Monitor,
   Youtube,
+  Bell,
+  Send,
+  Check,
+  X,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
@@ -107,6 +111,21 @@ export default function OwnerSettingsPage() {
     maintenanceMode: false,
   });
 
+  // Notification settings state
+  const [notificationSettings, setNotificationSettings] = useState({
+    telegramBotToken: '',
+    telegramChatId: '',
+    telegramEnabled: false,
+    notifyNewTransaction: true,
+    notifyTransactionStatus: true,
+    notifyNewPartner: true,
+    notifyNewCustomer: false,
+    notifyDailyReport: false,
+    hasBotToken: false,
+  });
+  const [testingTelegram, setTestingTelegram] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
   // Trigger hydration on mount
   useEffect(() => {
     hydrate();
@@ -156,6 +175,23 @@ export default function OwnerSettingsPage() {
           footerYoutube: result.data.footerYoutube || '',
           footerThreads: result.data.footerThreads || '',
           maintenanceMode: result.data.maintenanceMode || false,
+        });
+      }
+
+      // Fetch notification settings
+      const notifResponse = await fetch('/api/notifications/settings');
+      const notifResult = await notifResponse.json();
+      if (notifResult.success && notifResult.data) {
+        setNotificationSettings({
+          telegramBotToken: notifResult.data.telegramBotToken || '',
+          telegramChatId: notifResult.data.telegramChatId || '',
+          telegramEnabled: notifResult.data.telegramEnabled || false,
+          notifyNewTransaction: notifResult.data.notifyNewTransaction ?? true,
+          notifyTransactionStatus: notifResult.data.notifyTransactionStatus ?? true,
+          notifyNewPartner: notifResult.data.notifyNewPartner ?? true,
+          notifyNewCustomer: notifResult.data.notifyNewCustomer ?? false,
+          notifyDailyReport: notifResult.data.notifyDailyReport ?? false,
+          hasBotToken: notifResult.data.hasBotToken || false,
         });
       }
     } catch (err) {
@@ -216,6 +252,70 @@ export default function OwnerSettingsPage() {
     if (field === 'logoUrl') setLogoError(false);
     if (field === 'faviconUrl') setFaviconError(false);
     if (field === 'avatar') setAvatarError(false);
+  };
+
+  // Handle notification settings change
+  const handleNotificationChange = (field: string, value: string | boolean) => {
+    setNotificationSettings(prev => ({ ...prev, [field]: value }));
+    setTestResult(null); // Clear test result when settings change
+  };
+
+  // Save notification settings
+  const handleSaveNotificationSettings = async () => {
+    setSaving(true);
+    try {
+      // Only send relevant fields, exclude hasBotToken
+      const { hasBotToken, ...settingsToSave } = notificationSettings;
+      const response = await fetch('/api/notifications/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settingsToSave),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success('Pengaturan notifikasi berhasil disimpan');
+        if (result.data) {
+          setNotificationSettings(prev => ({
+            ...prev,
+            telegramBotToken: result.data.telegramBotToken || '',
+            hasBotToken: result.data.hasBotToken || false,
+          }));
+        }
+      } else {
+        toast.error(result.error || 'Gagal menyimpan pengaturan notifikasi');
+      }
+    } catch (err) {
+      console.error('Save notification settings error:', err);
+      toast.error('Terjadi kesalahan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Test Telegram connection
+  const handleTestTelegram = async () => {
+    setTestingTelegram(true);
+    setTestResult(null);
+    try {
+      const response = await fetch('/api/notifications/test-telegram', {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+      setTestResult({
+        success: result.success,
+        message: result.success ? result.message : result.error,
+      });
+    } catch (err) {
+      console.error('Test Telegram error:', err);
+      setTestResult({
+        success: false,
+        message: 'Gagal menghubungi server',
+      });
+    } finally {
+      setTestingTelegram(false);
+    }
   };
 
   const handleLogout = () => {
@@ -289,7 +389,7 @@ export default function OwnerSettingsPage() {
 
       {/* Settings Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full grid grid-cols-5 h-12">
+        <TabsList className="w-full grid grid-cols-6 h-12">
           <TabsTrigger value="profile" className="flex-col gap-1 py-2">
             <User className="w-4 h-4" />
             <span className="text-[10px]">Profil</span>
@@ -305,6 +405,10 @@ export default function OwnerSettingsPage() {
           <TabsTrigger value="social" className="flex-col gap-1 py-2">
             <Share2 className="w-4 h-4" />
             <span className="text-[10px]">Sosial</span>
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex-col gap-1 py-2">
+            <Bell className="w-4 h-4" />
+            <span className="text-[10px]">Notif</span>
           </TabsTrigger>
           <TabsTrigger value="system" className="flex-col gap-1 py-2">
             <Shield className="w-4 h-4" />
@@ -974,6 +1078,201 @@ export default function OwnerSettingsPage() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">URL profil Threads</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Notifications Tab */}
+        <TabsContent value="notifications" className="space-y-4 mt-4">
+          {/* Telegram Configuration */}
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Send className="w-4 h-4" />
+                    Notifikasi Telegram
+                  </CardTitle>
+                  <CardDescription className="text-xs">Kirim notifikasi ke Telegram</CardDescription>
+                </div>
+                <Switch
+                  checked={notificationSettings.telegramEnabled}
+                  onCheckedChange={(checked) => handleNotificationChange('telegramEnabled', checked)}
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Bot Token */}
+              <div className="space-y-2">
+                <Label className="text-sm">Bot Token</Label>
+                <Input
+                  type="password"
+                  value={notificationSettings.telegramBotToken}
+                  onChange={(e) => handleNotificationChange('telegramBotToken', e.target.value)}
+                  placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
+                  className="h-11"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Dapatkan dari @BotFather di Telegram
+                </p>
+              </div>
+
+              {/* Chat ID */}
+              <div className="space-y-2">
+                <Label className="text-sm">Chat ID</Label>
+                <Input
+                  value={notificationSettings.telegramChatId}
+                  onChange={(e) => handleNotificationChange('telegramChatId', e.target.value)}
+                  placeholder="-1001234567890"
+                  className="h-11"
+                />
+                <p className="text-xs text-muted-foreground">
+                  ID chat atau grup tujuan (gunakan @userinfobot untuk mendapatkan ID)
+                </p>
+              </div>
+
+              {/* Test Connection */}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleTestTelegram}
+                  disabled={testingTelegram || !notificationSettings.hasBotToken || !notificationSettings.telegramChatId}
+                  className="flex-1"
+                >
+                  {testingTelegram ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4 mr-2" />
+                  )}
+                  Test Koneksi
+                </Button>
+                <Button
+                  onClick={handleSaveNotificationSettings}
+                  disabled={saving}
+                  className="gradient-primary text-white"
+                >
+                  {saving ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Simpan
+                </Button>
+              </div>
+
+              {/* Test Result */}
+              {testResult && (
+                <div className={cn(
+                  "flex items-center gap-2 p-3 rounded-lg text-sm",
+                  testResult.success ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive"
+                )}>
+                  {testResult.success ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <X className="w-4 h-4" />
+                  )}
+                  {testResult.message}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Notification Preferences */}
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Preferensi Notifikasi</CardTitle>
+              <CardDescription className="text-xs">Pilih event yang ingin di-notifikasi</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* New Transaction */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
+                <div>
+                  <p className="font-medium text-sm">Transaksi Baru</p>
+                  <p className="text-xs text-muted-foreground">Notif saat ada transaksi baru</p>
+                </div>
+                <Switch
+                  checked={notificationSettings.notifyNewTransaction}
+                  onCheckedChange={(checked) => handleNotificationChange('notifyNewTransaction', checked)}
+                  disabled={!notificationSettings.telegramEnabled}
+                />
+              </div>
+
+              {/* Transaction Status */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
+                <div>
+                  <p className="font-medium text-sm">Update Status Transaksi</p>
+                  <p className="text-xs text-muted-foreground">Notif saat status berubah</p>
+                </div>
+                <Switch
+                  checked={notificationSettings.notifyTransactionStatus}
+                  onCheckedChange={(checked) => handleNotificationChange('notifyTransactionStatus', checked)}
+                  disabled={!notificationSettings.telegramEnabled}
+                />
+              </div>
+
+              {/* New Partner */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
+                <div>
+                  <p className="font-medium text-sm">Partner Baru</p>
+                  <p className="text-xs text-muted-foreground">Notif saat partner bergabung</p>
+                </div>
+                <Switch
+                  checked={notificationSettings.notifyNewPartner}
+                  onCheckedChange={(checked) => handleNotificationChange('notifyNewPartner', checked)}
+                  disabled={!notificationSettings.telegramEnabled}
+                />
+              </div>
+
+              {/* New Customer */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
+                <div>
+                  <p className="font-medium text-sm">Pelanggan Baru</p>
+                  <p className="text-xs text-muted-foreground">Notif saat pelanggan baru ditambahkan</p>
+                </div>
+                <Switch
+                  checked={notificationSettings.notifyNewCustomer}
+                  onCheckedChange={(checked) => handleNotificationChange('notifyNewCustomer', checked)}
+                  disabled={!notificationSettings.telegramEnabled}
+                />
+              </div>
+
+              {/* Daily Report */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
+                <div>
+                  <p className="font-medium text-sm">Laporan Harian</p>
+                  <p className="text-xs text-muted-foreground">Ringkasan transaksi harian</p>
+                </div>
+                <Switch
+                  checked={notificationSettings.notifyDailyReport}
+                  onCheckedChange={(checked) => handleNotificationChange('notifyDailyReport', checked)}
+                  disabled={!notificationSettings.telegramEnabled}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* How to Setup Telegram */}
+          <Card className="glass-card border-primary/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base text-primary">Cara Setup Telegram</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex gap-3">
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">1</div>
+                <p className="text-muted-foreground">Buka Telegram, cari <strong>@BotFather</strong> dan buat bot baru dengan perintah <code className="bg-muted px-1 rounded">/newbot</code></p>
+              </div>
+              <div className="flex gap-3">
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">2</div>
+                <p className="text-muted-foreground">Simpan <strong>API Token</strong> yang diberikan oleh BotFather</p>
+              </div>
+              <div className="flex gap-3">
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">3</div>
+                <p className="text-muted-foreground">Untuk Chat ID personal: cari <strong>@userinfobot</strong> dan kirim pesan untuk mendapatkan ID</p>
+              </div>
+              <div className="flex gap-3">
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">4</div>
+                <p className="text-muted-foreground">Untuk grup: tambahkan bot ke grup, lalu gunakan <strong>@userinfobot</strong> di grup tersebut</p>
               </div>
             </CardContent>
           </Card>
