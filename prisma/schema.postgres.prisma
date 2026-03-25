@@ -298,5 +298,35 @@ model OwnerProfile {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
+  // Relations
+  notificationSettings NotificationSettings?
+  
   @@map("owner_profiles")
+}
+
+// ==================== NOTIFICATION SETTINGS ====================
+
+model NotificationSettings {
+  id                    String    @id @default(cuid())
+  ownerProfileId        String    @unique
+  
+  // Telegram Configuration
+  telegramBotToken      String?
+  telegramChatId        String?
+  telegramEnabled       Boolean   @default(false)
+  
+  // Notification Preferences
+  notifyNewTransaction  Boolean   @default(true)
+  notifyTransactionStatus Boolean  @default(true)
+  notifyNewPartner      Boolean   @default(true)
+  notifyNewCustomer     Boolean   @default(false)
+  notifyDailyReport     Boolean   @default(false)
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  // Relations
+  ownerProfile          OwnerProfile @relation(fields: [ownerProfileId], references: [id], onDelete: Cascade)
+  
+  @@map("notification_settings")
 }
