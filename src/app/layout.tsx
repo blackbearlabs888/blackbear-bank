@@ -120,7 +120,7 @@ export async function generateMetadata(): Promise<Metadata> {
     };
   } catch (error) {
     // Fallback to defaults if database fails
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blackbear.id";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blackbear.cc";
     return {
       metadataBase: new URL(siteUrl),
       title: "Black Bear - Layanan Tarik Tunai Terpercaya",
