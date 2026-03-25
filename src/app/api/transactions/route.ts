@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { db, toNumber } from '@/lib/db';
 import { generateOrderId, calculatePaymentFee, calculateMarginBreakdown } from '@/lib/auth';
+import { sendTelegramNotification, formatCurrency } from '@/lib/telegram';
 
 // Helper to serialize transaction with Decimal fields
 function serializeTransaction(tx: Record<string, unknown>) {
@@ -317,6 +318,58 @@ export async function POST(request: NextRequest) {
     // Note: Partner stats (totalProfit, totalVolume) are only updated when transaction status changes to 'success'
     // This ensures partner targets are based on actual successful transactions
     // See PATCH handler in /api/transactions/[id]/route.ts for the stats update logic
+
+    // Create notification for owner about new transaction
+    try {
+      const ownerProfile = await db.ownerProfile.findFirst();
+      if (ownerProfile) {
+        await db.notification.create({
+          data: {
+            type: 'new_order',
+            title: 'Transaksi Baru',
+            message: `${transaction.customer?.name || 'Customer'} - ${formatCurrency(toNumber(nominal))}`,
+            data: JSON.stringify({
+              orderId: transaction.orderId,
+              customerName: transaction.customer?.name,
+              nominal: toNumber(nominal),
+              paymentFee: toNumber(paymentFee),
+              paymentType: transaction.paymentType?.name,
+              partnerName: transaction.partner?.name,
+            }),
+            targetType: 'owner',
+            transactionId: transaction.id,
+            partnerId: actualPartnerId,
+          },
+        });
+
+        // Send Telegram notification if enabled
+        const notifSettings = await db.notificationSettings.findUnique({
+          where: { ownerProfileId: ownerProfile.id },
+        });
+
+        if (notifSettings?.telegramEnabled && notifSettings.telegramBotToken && notifSettings.telegramChatId && notifSettings.notifyNewTransaction) {
+          await sendTelegramNotification(
+            notifSettings.telegramBotToken,
+            notifSettings.telegramChatId,
+            {
+              type: 'new_order',
+              title: '💳 Transaksi Baru',
+              message: `Order ID: ${transaction.orderId}`,
+              additionalData: {
+                'Pelanggan': transaction.customer?.name,
+                'Nominal': formatCurrency(toNumber(nominal)),
+                'Fee': formatCurrency(toNumber(paymentFee)),
+                'Tipe': transaction.paymentType?.name,
+                'Partner': transaction.partner?.name || '-',
+              },
+            }
+          );
+        }
+      }
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+      // Don't fail the request if notification fails
+    }
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { db, toNumber } from '@/lib/db';
+import { sendTelegramNotification, formatCurrency } from '@/lib/telegram';
 // Force recompile for transactionLink field
 
 // Helper to serialize transaction with Decimal fields
@@ -242,6 +243,64 @@ export async function PATCH(
         partner: true,
       },
     });
+
+    // Create notification for status update
+    if (status && status !== existingTransaction.status) {
+      try {
+        const ownerProfile = await db.ownerProfile.findFirst();
+        if (ownerProfile) {
+          await db.notification.create({
+            data: {
+              type: 'transaction_update',
+              title: 'Update Status Transaksi',
+              message: `${transaction.orderId} - ${transaction.customer?.name || 'Customer'} - Status: ${status.toUpperCase()}`,
+              data: JSON.stringify({
+                orderId: transaction.orderId,
+                customerName: transaction.customer?.name,
+                nominal: toNumber(transaction.nominal),
+                oldStatus: existingTransaction.status,
+                newStatus: status,
+              }),
+              targetType: 'owner',
+              transactionId: transaction.id,
+              partnerId: transaction.partnerId,
+            },
+          });
+
+          // Send Telegram notification if enabled
+          const notifSettings = await db.notificationSettings.findUnique({
+            where: { ownerProfileId: ownerProfile.id },
+          });
+
+          if (notifSettings?.telegramEnabled && notifSettings.telegramBotToken && notifSettings.telegramChatId && notifSettings.notifyTransactionStatus) {
+            const statusEmoji: Record<string, string> = {
+              pending: '⏳',
+              verification: '🔍',
+              process: '⚙️',
+              success: '✅',
+              failed: '❌',
+            };
+            await sendTelegramNotification(
+              notifSettings.telegramBotToken,
+              notifSettings.telegramChatId,
+              {
+                type: 'transaction_update',
+                title: `${statusEmoji[status] || '📝'} Update Transaksi`,
+                message: `Order ID: ${transaction.orderId}`,
+                additionalData: {
+                  'Pelanggan': transaction.customer?.name,
+                  'Nominal': formatCurrency(toNumber(transaction.nominal)),
+                  'Status': status.toUpperCase(),
+                  'Catatan': notes || '-',
+                },
+              }
+            );
+          }
+        }
+      } catch (notifError) {
+        console.error('Failed to create notification:', notifError);
+      }
+    }
 
     return NextResponse.json({
       success: true,

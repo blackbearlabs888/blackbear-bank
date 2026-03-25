@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { sendTelegramNotification, formatCurrency } from '@/lib/telegram';
 
 // GET notifications for current user
 export async function GET(request: NextRequest) {
@@ -309,6 +310,49 @@ export async function POST(request: NextRequest) {
         transactionId,
       },
     });
+
+    // Send Telegram notification to owner if this is for owner
+    if ((targetType === 'owner' || targetType === 'all') || (!targetType && user.role === 'partner')) {
+      try {
+        // Get owner notification settings
+        const ownerProfile = await db.ownerProfile.findFirst();
+        if (ownerProfile) {
+          const notifSettings = await db.notificationSettings.findUnique({
+            where: { ownerProfileId: ownerProfile.id },
+          });
+
+          if (notifSettings?.telegramEnabled && notifSettings.telegramBotToken && notifSettings.telegramChatId) {
+            // Check if this notification type should be sent
+            const shouldSend = 
+              (type === 'new_order' && notifSettings.notifyNewTransaction) ||
+              (type === 'transaction_update' && notifSettings.notifyTransactionStatus) ||
+              (type === 'new_partner' && notifSettings.notifyNewPartner) ||
+              (type === 'new_customer' && notifSettings.notifyNewCustomer) ||
+              (type === 'partner_notification'); // Always send partner notifications
+
+            if (shouldSend) {
+              await sendTelegramNotification(
+                notifSettings.telegramBotToken,
+                notifSettings.telegramChatId,
+                {
+                  type,
+                  title: finalTitle || `${type}`,
+                  message,
+                  additionalData: data || (transactionData ? {
+                    'Order ID': transactionData.orderId,
+                    'Pelanggan': transactionData.customer?.name,
+                    'Nominal': formatCurrency(transactionData.nominal),
+                  } : undefined),
+                }
+              );
+            }
+          }
+        }
+      } catch (telegramError) {
+        console.error('Failed to send Telegram notification:', telegramError);
+        // Don't fail the request if Telegram fails
+      }
+    }
 
     return NextResponse.json({
       success: true,

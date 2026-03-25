@@ -1,27 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toNumber } from '@/lib/db';
 import { generateOrderId, calculatePaymentFee } from '@/lib/auth';
-
-// Helper to safely create notification
-async function createNotification(data: {
-  type: string;
-  title: string;
-  message: string;
-  data?: string;
-  targetType: string;
-  transactionId?: string;
-  partnerId?: string;
-}) {
-  try {
-    // Check if notification model exists
-    if ('notification' in db && typeof db.notification?.create === 'function') {
-      await db.notification.create({ data });
-    }
-  } catch (error) {
-    console.error('Failed to create notification:', error);
-    // Don't throw - notification failure shouldn't break the main flow
-  }
-}
+import { sendTelegramNotification, formatCurrency } from '@/lib/telegram';
 
 export async function POST(request: NextRequest) {
   try {
@@ -164,21 +144,56 @@ export async function POST(request: NextRequest) {
     });
 
     // Create notification for owner about new public order
-    await createNotification({
-      type: 'new_order',
-      title: 'Order Baru dari Public',
-      message: `Order ${orderId} dari ${name} - Rp ${nominal.toLocaleString('id-ID')}`,
-      data: JSON.stringify({
-        orderId,
-        customerName: name,
-        customerPhone: cleanPhone,
-        nominal,
-        paymentType: paymentType.name,
-        methodTransaction,
-      }),
-      targetType: 'owner',
-      transactionId: transaction.id,
-    });
+    try {
+      await db.notification.create({
+        data: {
+          type: 'new_order',
+          title: 'Order Baru dari Public',
+          message: `Order ${orderId} dari ${name} - ${formatCurrency(toNumber(nominal))}`,
+          data: JSON.stringify({
+            orderId,
+            customerName: name,
+            customerPhone: cleanPhone,
+            nominal,
+            paymentType: paymentType.name,
+            methodTransaction,
+          }),
+          targetType: 'owner',
+          transactionId: transaction.id,
+        },
+      });
+
+      // Send Telegram notification to owner
+      const ownerProfile = await db.ownerProfile.findFirst();
+      if (ownerProfile) {
+        const notifSettings = await db.notificationSettings.findUnique({
+          where: { ownerProfileId: ownerProfile.id },
+        });
+
+        if (notifSettings?.telegramEnabled && notifSettings.telegramBotToken && notifSettings.telegramChatId && notifSettings.notifyNewTransaction) {
+          await sendTelegramNotification(
+            notifSettings.telegramBotToken,
+            notifSettings.telegramChatId,
+            {
+              type: 'new_order',
+              title: '💳 Order Baru dari Public',
+              message: `Order ID: ${orderId}`,
+              additionalData: {
+                'Pelanggan': name,
+                'Telepon': cleanPhone,
+                'Nominal': formatCurrency(toNumber(nominal)),
+                'Fee': formatCurrency(paymentFee),
+                'Tipe': paymentType.name,
+                'Metode': methodTransaction,
+              },
+            }
+          );
+        }
+      }
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+      // Don't throw - notification failure shouldn't break order creation
+    }
 
     return NextResponse.json({
       success: true,
