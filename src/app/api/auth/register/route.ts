@@ -8,27 +8,7 @@ import {
   validatePassword,
   validatePhone
 } from '@/lib/auth';
-
-// Helper to safely create notification
-async function createNotification(data: {
-  type: string;
-  title: string;
-  message: string;
-  data?: string;
-  targetType: string;
-  transactionId?: string;
-  partnerId?: string;
-}) {
-  try {
-    // Check if notification model exists
-    if ('notification' in db && typeof db.notification?.create === 'function') {
-      await db.notification.create({ data });
-    }
-  } catch (error) {
-    console.error('Failed to create notification:', error);
-    // Don't throw - notification failure shouldn't break the main flow
-  }
-}
+import { sendTelegramNotification } from '@/lib/telegram';
 
 export async function POST(request: NextRequest) {
   try {
@@ -140,20 +120,53 @@ export async function POST(request: NextRequest) {
     await setSessionCookie(sessionId);
 
     // Create notification for owner about new partner registration
-    await createNotification({
-      type: 'new_partner',
-      title: 'Partner Baru Mendaftar',
-      message: `${name} (${email}) baru saja mendaftar sebagai partner dari ${city}`,
-      data: JSON.stringify({
-        partnerId: user.partner?.id,
-        partnerName: name,
-        partnerEmail: email,
-        partnerPhone: phone,
-        partnerCity: city,
-      }),
-      targetType: 'owner',
-      partnerId: user.partner?.id,
-    });
+    try {
+      await db.notification.create({
+        data: {
+          type: 'new_partner',
+          title: 'Partner Baru Mendaftar',
+          message: `${name} (${email}) baru saja mendaftar sebagai partner dari ${city}`,
+          data: JSON.stringify({
+            partnerId: user.partner?.id,
+            partnerName: name,
+            partnerEmail: email,
+            partnerPhone: phone,
+            partnerCity: city,
+          }),
+          targetType: 'owner',
+          partnerId: user.partner?.id,
+        },
+      });
+
+      // Send Telegram notification to owner
+      const ownerProfile = await db.ownerProfile.findFirst();
+      if (ownerProfile) {
+        const notifSettings = await db.notificationSettings.findUnique({
+          where: { ownerProfileId: ownerProfile.id },
+        });
+
+        if (notifSettings?.telegramEnabled && notifSettings.telegramBotToken && notifSettings.telegramChatId && notifSettings.notifyNewPartner) {
+          await sendTelegramNotification(
+            notifSettings.telegramBotToken,
+            notifSettings.telegramChatId,
+            {
+              type: 'new_partner',
+              title: '🤝 Partner Baru Bergabung',
+              message: `${name} baru saja mendaftar sebagai partner`,
+              additionalData: {
+                'Nama': name,
+                'Email': email,
+                'Telepon': phone,
+                'Kota': city,
+              },
+            }
+          );
+        }
+      }
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+      // Don't throw - notification failure shouldn't break registration
+    }
 
     // Return user data
     const { password: _, ...userWithoutPassword } = user;
