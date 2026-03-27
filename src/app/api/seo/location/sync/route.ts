@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
-import { getCityCoordinates, generateLocationContent } from '@/lib/indonesia-cities';
+import { getCityData, generateLocationContent } from '@/lib/indonesia-cities';
 
 function generateSlug(name: string): string {
   return name
@@ -26,15 +26,31 @@ export async function POST(request: NextRequest) {
     // Get all unique cities from active partners
     const partners = await db.partner.findMany({
       where: { status: 'active' },
-      select: { city: true },
+      select: { city: true, name: true },
     });
 
-    // Get unique cities
+    console.log('Found partners:', partners.length);
+    console.log('Partner cities:', partners.map(p => ({ name: p.name, city: p.city })));
+
+    // Get unique cities (trim and filter empty)
     const uniqueCities = [...new Set(partners.map(p => p.city.trim()).filter(Boolean))];
     
+    console.log('Unique cities:', uniqueCities);
+
+    if (uniqueCities.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'Tidak ada kota ditemukan dari partner aktif. Pastikan partner sudah diisi kota dan status aktif.',
+        data: {
+          totalPartners: partners.length,
+          partnersWithCity: partners.filter(p => p.city.trim()).length,
+        },
+      });
+    }
+
     // Get existing locations
     const existingLocations = await db.location.findMany({
-      select: { slug: true },
+      select: { slug: true, name: true },
     });
     const existingSlugs = new Set(existingLocations.map(l => l.slug));
 
@@ -42,6 +58,8 @@ export async function POST(request: NextRequest) {
     let skipped = 0;
     let noCoords = 0;
     const createdLocations: string[] = [];
+    const skippedLocations: string[] = [];
+    const errors: string[] = [];
 
     for (const city of uniqueCities) {
       const slug = generateSlug(city);
@@ -49,42 +67,70 @@ export async function POST(request: NextRequest) {
       // Skip if already exists
       if (existingSlugs.has(slug)) {
         skipped++;
+        skippedLocations.push(city);
+        console.log(`Skipping ${city} - already exists with slug ${slug}`);
         continue;
       }
 
-      // Get coordinates from library
-      const coords = getCityCoordinates(city);
-      
-      // Generate SEO content
-      const content = generateLocationContent(city, coords.province);
+      try {
+        // Get full city data (coordinates, province, island) from library
+        const cityData = getCityData(city);
+        console.log(`City data for ${city}:`, cityData);
+        
+        // Generate SEO content with province if available
+        const content = generateLocationContent(city, cityData?.province);
+        console.log(`Generated content for ${city}`);
 
-      // Create location with full content
-      await db.location.create({
-        data: {
-          name: city,
-          slug,
-          description: content.description,
-          content: content.content,
-          metaTitle: content.metaTitle,
-          metaDescription: content.metaDescription,
-          keywords: content.keywords,
-          latitude: coords.lat,
-          longitude: coords.lng,
-          isActive: true,
-        },
-      });
-      
-      created++;
-      createdLocations.push(city);
-      
-      if (!coords.lat || !coords.lng) {
-        noCoords++;
+        // Create location with full content
+        await db.location.create({
+          data: {
+            name: city,
+            slug,
+            description: content.description,
+            content: content.content,
+            metaTitle: content.metaTitle,
+            metaDescription: content.metaDescription,
+            keywords: content.keywords,
+            latitude: cityData?.lat || null,
+            longitude: cityData?.lng || null,
+            isActive: true,
+          },
+        });
+        
+        created++;
+        createdLocations.push(city);
+        console.log(`Created location for ${city}`);
+        
+        if (!cityData?.lat || !cityData?.lng) {
+          noCoords++;
+        }
+      } catch (createError) {
+        console.error(`Failed to create location for ${city}:`, createError);
+        errors.push(`${city}: ${createError instanceof Error ? createError.message : 'Unknown error'}`);
       }
+    }
+
+    // Build response message
+    let message = '';
+    if (created > 0) {
+      message = `✅ ${created} lokasi baru dibuat: ${createdLocations.join(', ')}.`;
+    }
+    if (skipped > 0) {
+      message += ` ⏭️ ${skipped} lokasi sudah ada: ${skippedLocations.join(', ')}.`;
+    }
+    if (noCoords > 0) {
+      message += ` 📍 ${noCoords} lokasi tanpa koordinat (perlu input manual).`;
+    }
+    if (errors.length > 0) {
+      message += ` ⚠️ Error: ${errors.join(', ')}`;
+    }
+    if (created === 0 && skipped === 0) {
+      message = 'Tidak ada perubahan.';
     }
 
     return NextResponse.json({
       success: true,
-      message: `Sync berhasil! ${created} lokasi baru dibuat, ${skipped} lokasi sudah ada.${noCoords > 0 ? ` ${noCoords} lokasi tanpa koordinat (perlu input manual).` : ''}`,
+      message,
       data: {
         created,
         skipped,
@@ -92,6 +138,8 @@ export async function POST(request: NextRequest) {
         totalPartners: partners.length,
         uniqueCities: uniqueCities.length,
         createdLocations,
+        skippedLocations,
+        errors,
       },
     });
   } catch (error) {
