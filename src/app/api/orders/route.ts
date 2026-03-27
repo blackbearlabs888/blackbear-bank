@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, toNumber } from '@/lib/db';
 import { generateOrderId, calculatePaymentFee } from '@/lib/auth';
 import { sendTelegramNotification, formatCurrency } from '@/lib/telegram';
+import { checkCustomerDuplicate, normalizePhone } from '@/lib/customer-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,26 +61,34 @@ export async function POST(request: NextRequest) {
     );
     const totalReceived = toNumber(nominal) - paymentFee;
 
-    // Check if customer exists (handle various phone formats)
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-    let customer = await db.customer.findFirst({
-      where: {
-        OR: [
-          { phone: cleanPhone },
-          { phone: cleanPhone.replace(/^0/, '62') },
-          { phone: cleanPhone.replace(/^62/, '0') },
-          { phone: `0${cleanPhone.replace(/^62/, '')}` },
-          { phone: `62${cleanPhone.replace(/^0/, '')}` },
-        ],
-      },
-    });
-
-    // Create or update customer
-    if (!customer) {
+    // Normalize phone and check for existing customer
+    const normalizedPhone = normalizePhone(phone);
+    const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, name);
+    
+    let customer;
+    
+    if (duplicateCheck.isDuplicate && duplicateCheck.existingCustomer) {
+      // Update existing customer with new info
+      customer = await db.customer.update({
+        where: { id: duplicateCheck.existingCustomer.id },
+        data: {
+          name, // Update name
+          phone: normalizedPhone,
+          bankName: bank || duplicateCheck.existingCustomer.bankName,
+          bankAccount: bankAccount || duplicateCheck.existingCustomer.bankAccount,
+          bankHolder: bankHolder || duplicateCheck.existingCustomer.bankHolder,
+          city: city || duplicateCheck.existingCustomer.city,
+          // Increment customer stats for new transaction
+          totalVolume: { increment: nominal },
+          totalTransactions: { increment: 1 },
+        },
+      });
+    } else {
+      // Create new customer
       customer = await db.customer.create({
         data: {
           name,
-          phone: cleanPhone,
+          phone: normalizedPhone,
           bankName: bank || null,
           bankAccount: bankAccount || null,
           bankHolder: bankHolder || null,
@@ -90,32 +99,6 @@ export async function POST(request: NextRequest) {
           totalTransactions: 1,
         },
       });
-    } else {
-      // Update customer info if provided
-      if (bank || bankAccount || bankHolder || city || name !== customer.name) {
-        customer = await db.customer.update({
-          where: { id: customer.id },
-          data: {
-            name,
-            bankName: bank || customer.bankName,
-            bankAccount: bankAccount || customer.bankAccount,
-            bankHolder: bankHolder || customer.bankHolder,
-            city: city || customer.city,
-            // Increment customer stats for new transaction
-            totalVolume: { increment: nominal },
-            totalTransactions: { increment: 1 },
-          },
-        });
-      } else {
-        // Still increment stats even if no other updates
-        customer = await db.customer.update({
-          where: { id: customer.id },
-          data: {
-            totalVolume: { increment: nominal },
-            totalTransactions: { increment: 1 },
-          },
-        });
-      }
     }
 
     // Generate order ID
@@ -153,7 +136,7 @@ export async function POST(request: NextRequest) {
           data: JSON.stringify({
             orderId,
             customerName: name,
-            customerPhone: cleanPhone,
+            customerPhone: normalizedPhone,
             nominal,
             paymentType: paymentType.name,
             methodTransaction,
@@ -180,7 +163,7 @@ export async function POST(request: NextRequest) {
               message: `Order ID: ${orderId}`,
               additionalData: {
                 'Pelanggan': name,
-                'Telepon': cleanPhone,
+                'Telepon': normalizedPhone,
                 'Nominal': formatCurrency(toNumber(nominal)),
                 'Fee': formatCurrency(paymentFee),
                 'Tipe': paymentType.name,
