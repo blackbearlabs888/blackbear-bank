@@ -102,6 +102,20 @@ export function CitySearch({
     setSearch(newValue);
     setIsOpen(true);
     setHighlightedIndex(0);
+    // Also update parent value so form has the current input
+    onChange(newValue);
+  };
+
+  // Handle blur - sync search to value if needed
+  const handleBlur = () => {
+    // Small delay to allow click events on dropdown items
+    setTimeout(() => {
+      if (search && !value) {
+        // If user typed but didn't select, use their input
+        onChange(search);
+      }
+      setSearch('');
+    }, 150);
   };
 
   return (
@@ -114,6 +128,7 @@ export function CitySearch({
           value={search || value}
           onChange={(e) => handleSearchChange(e.target.value)}
           onFocus={() => setIsOpen(true)}
+          onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
