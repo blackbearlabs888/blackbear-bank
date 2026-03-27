@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { db, toNumber } from '@/lib/db';
+import { checkCustomerDuplicate, normalizePhone } from '@/lib/customer-utils';
 
 // GET customers with pagination
 export async function GET(request: NextRequest) {
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, phone, bankName, bankAccount, bankHolder, city, label } = body;
+    const { name, phone, bankName, bankAccount, bankHolder, city, label, updateExisting } = body;
 
     // Validation
     if (!name || !phone) {
@@ -127,16 +128,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if customer exists
-    let customer = await db.customer.findFirst({
-      where: { phone },
-    });
+    // Normalize phone number
+    const normalizedPhone = normalizePhone(phone);
 
-    if (customer) {
+    // Check for duplicate customer (by phone OR name)
+    const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, name);
+    
+    // If duplicate found, return existing customer (for auto-fill)
+    // Don't create duplicate - just return the existing one
+    if (duplicateCheck.isDuplicate && duplicateCheck.existingCustomer) {
+      // Optionally update existing customer with new data if updateExisting is true
+      if (updateExisting) {
+        const updatedCustomer = await db.customer.update({
+          where: { id: duplicateCheck.existingCustomer.id },
+          data: {
+            name,
+            phone: normalizedPhone,
+            bankName: bankName || duplicateCheck.existingCustomer.bankName,
+            bankAccount: bankAccount || duplicateCheck.existingCustomer.bankAccount,
+            bankHolder: bankHolder || duplicateCheck.existingCustomer.bankHolder,
+            city: city || duplicateCheck.existingCustomer.city,
+            label: label || duplicateCheck.existingCustomer.label,
+          },
+        });
+        
+        return NextResponse.json({
+          success: true,
+          isExisting: true,
+          duplicateType: duplicateCheck.duplicateType,
+          data: updatedCustomer,
+          message: `Customer ditemukan dan diupdate: ${duplicateCheck.message}`,
+        });
+      }
+      
+      // Just return existing customer without update
       return NextResponse.json({
         success: true,
-        data: customer,
-        message: 'Customer sudah ada',
+        isExisting: true,
+        duplicateType: duplicateCheck.duplicateType,
+        data: duplicateCheck.existingCustomer,
+        message: `Customer sudah ada: ${duplicateCheck.message}`,
       });
     }
 
@@ -152,11 +183,11 @@ export async function POST(request: NextRequest) {
       addedBy = 'partner';
     }
 
-    // Create customer
-    customer = await db.customer.create({
+    // Create new customer (no duplicate found)
+    const customer = await db.customer.create({
       data: {
         name,
-        phone,
+        phone: normalizedPhone,
         bankName: bankName || null,
         bankAccount: bankAccount || null,
         bankHolder: bankHolder || null,
@@ -169,8 +200,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      isExisting: false,
       data: customer,
-      message: 'Customer berhasil dibuat',
+      message: 'Customer baru berhasil dibuat',
     });
   } catch (error) {
     console.error('Create customer error:', error);
