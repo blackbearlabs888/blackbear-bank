@@ -13,52 +13,68 @@ Pastikan Anda memiliki akun berikut:
 
 ---
 
+## 🚀 Quick Deploy (3 Langkah)
+
+### Langkah 1: Setup Neon Database
+1. Buat akun di [neon.tech](https://neon.tech)
+2. Buat project baru dengan nama `black-bear-webapp`
+3. Pilih region **Singapore** (terdekat dengan Indonesia)
+4. Salin **Connection String** yang diberikan
+
+### Langkah 2: Push ke GitHub
+```bash
+git add .
+git commit -m "Ready for production"
+git remote add origin https://github.com/USERNAME/black-bear-webapp.git
+git push -u origin main
+```
+
+### Langkah 3: Deploy ke Vercel
+1. Buka [vercel.com](https://vercel.com) → Login dengan GitHub
+2. Klik **Add New Project** → Import `black-bear-webapp`
+3. **Environment Variables** (WAJIB):
+   ```
+   DATABASE_URL=postgresql://username:password@ep-xxx.neon.tech/db?sslmode=require
+   NEXTAUTH_SECRET=random-32-char-string
+   NEXTAUTH_URL=https://your-app.vercel.app
+   ```
+4. Klik **Deploy** dan tunggu proses selesai
+
+✅ **Sekarang SEMUA otomatis:**
+- ✅ Database tables tercreate
+- ✅ Owner account terbuat
+- ✅ Payment types terbuat
+- ✅ Marketplaces terbuat
+
+**Langsung login dengan:**
+- Email: `owner@blackbear.id`
+- Password: `owner123`
+
+---
+
+## 📖 Detail Panduan
+
 ## 1️⃣ Setup Neon Database
 
-### Langkah 1: Buat Akun Neon
-1. Kunjungi [neon.tech](https://neon.tech)
-2. Klik "Sign Up" dan pilih metode pendaftaran (Google, GitHub, atau Email)
-3. Ikuti proses pendaftaran hingga selesai
+### Buat Project Neon
+1. Login ke [neon.tech](https://neon.tech)
+2. Klik "Create a project"
+3. Isi:
+   - **Project name**: `black-bear-webapp`
+   - **Database name**: `blackbear` (atau default)
+   - **Region**: **Singapore** (untuk Indonesia)
+   - **Postgres version**: 17 (terbaru)
+4. Klik "Create project"
+5. **Salin Connection String** yang muncul
 
-### Langkah 2: Buat Project Database
-1. Setelah login, klik "Create a project"
-2. Isi form:
-   - **Project name**: `black-bear-webapp` (atau nama pilihan Anda)
-   - **Database name**: `blackbear` (atau biarkan default)
-   - **Region**: Pilih region terdekat dengan target user (Singapore untuk Indonesia)
-   - **Postgres version**: Pilih versi terbaru (17)
-3. Klik "Create project"
-
-### Langkah 3: Salin Connection String
-1. Setelah project dibuat, Anda akan melihat connection string
-2. Salin connection string yang formatnya seperti ini:
-   ```
-   postgresql://username:password@ep-xxx-xxx.us-east-2.aws.neon.tech/blackbear?sslmode=require
-   ```
-3. Simpan string ini dengan aman - akan digunakan sebagai `DATABASE_URL`
-
-### Langkah 4: Buat Database Schema (Optional)
-Jika Anda ingin membuat branch development terpisah:
-1. Klik "Branches" di sidebar
-2. Klik "Create branch"
-3. Beri nama branch (misal: `development`)
+Format connection string:
+```
+postgresql://username:password@ep-xxx-xxx.us-east-2.aws.neon.tech/blackbear?sslmode=require
+```
 
 ---
 
 ## 2️⃣ Push ke GitHub
-
-### Langkah 1: Buat Repository GitHub
-1. Login ke [GitHub](https://github.com)
-2. Klik tombol "+" di pojok kanan atas → "New repository"
-3. Isi form:
-   - **Repository name**: `black-bear-webapp`
-   - **Description**: Gestun Management System
-   - **Visibility**: Private (recommended) atau Public
-   - ⚠️ **JANGAN** centang "Add a README file", "Add .gitignore", atau "Choose a license"
-4. Klik "Create repository"
-
-### Langkah 2: Inisialisasi Git di Project Lokal
-Buka terminal di folder project dan jalankan:
 
 ```bash
 # Inisialisasi git (jika belum)
@@ -67,314 +83,162 @@ git init
 # Tambahkan semua file
 git add .
 
-# Buat commit pertama
+# Commit
 git commit -m "Initial commit: Black Bear WebApp"
 
-# Tambahkan remote repository
+# Tambahkan remote
 git remote add origin https://github.com/USERNAME/black-bear-webapp.git
 
-# Push ke GitHub
+# Push
+git branch -M main
 git push -u origin main
 ```
-
-### Langkah 3: Verifikasi Push
-1. Refresh halaman repository GitHub
-2. Pastikan semua file sudah ter-upload
 
 ---
 
 ## 3️⃣ Deploy ke Vercel
 
-### Langkah 1: Buat Akun Vercel
-1. Kunjungi [vercel.com](https://vercel.com)
-2. Klik "Sign Up" dan pilih "Continue with GitHub"
-3. Authorize Vercel untuk mengakses GitHub Anda
+### Import Project
+1. Login [Vercel](https://vercel.com) dengan GitHub
+2. Klik **Add New...** → **Project**
+3. Pilih repository `black-bear-webapp`
+4. Klik **Import**
 
-### Langkah 2: Import Project
-1. Setelah login, klik "Add New..." → "Project"
-2. Pilih repository `black-bear-webapp` dari list
-3. Klik "Import"
+### Environment Variables (WAJIB!)
 
-### Langkah 3: Konfigurasi Project
-1. **Framework Preset**: Next.js (auto-detected)
-2. **Root Directory**: `./` (default)
-3. **Build Command**: `bun run build` atau `npm run build`
-4. **Output Directory**: `.next` (default)
-5. **Install Command**: `bun install` atau `npm install`
+| Variable | Value | Contoh |
+|----------|-------|--------|
+| `DATABASE_URL` | Connection string Neon | `postgresql://user:pass@ep-xxx.neon.tech/db?sslmode=require` |
+| `NEXTAUTH_SECRET` | Random 32+ karakter | `a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6` |
+| `NEXTAUTH_URL` | URL production | `https://black-bear-webapp.vercel.app` |
 
-### Langkah 4: Set Environment Variables
-Klik "Environment Variables" dan tambahkan variabel berikut:
-
-```env
-# Database
-DATABASE_URL=postgresql://username:password@ep-xxx-xxx.us-east-2.aws.neon.tech/blackbear?sslmode=require
-
-# Authentication
-NEXTAUTH_SECRET=your-random-secret-key-min-32-characters
-NEXTAUTH_URL=https://your-app-name.vercel.app
-
-# App Config (Optional)
-NEXT_PUBLIC_APP_URL=https://your-app-name.vercel.app
-```
-
-**Cara generate NEXTAUTH_SECRET:**
+**Generate NEXTAUTH_SECRET:**
 ```bash
-# Di terminal (Linux/Mac)
 openssl rand -base64 32
-
-# Atau gunakan online generator
-# https://generate-secret.vercel.app/32
 ```
 
-### Langkah 5: Deploy
-1. Klik "Deploy"
-2. Tunggu proses build selesai (2-5 menit)
-3. Setelah selesai, Anda akan melihat URL production
+### Deploy!
+1. Klik **Deploy**
+2. Tunggu 2-5 menit
+3. Selesai! 🎉
 
 ---
 
-## 4️⃣ Post-Deployment Setup
+## 4️⃣ Setelah Deploy
 
-### Langkah 1: Jalankan Database Migration
-Setelah deploy pertama kali, Anda perlu menjalankan migration untuk membuat tabel:
+### Semua Sudah Otomatis! ✅
 
-**Option A: Via Vercel CLI**
-```bash
-# Install Vercel CLI
-npm install -g vercel
+**Build process akan otomatis:**
+1. Switch schema ke PostgreSQL
+2. Generate Prisma Client
+3. Push schema ke database (create tables)
+4. Run seed (create default data)
 
-# Login ke Vercel
-vercel login
+**Default data yang terbuat:**
+- 👤 Owner: `owner@blackbear.id` / `owner123`
+- 💳 5 Payment Types (Kartu Kredit, GoPay Later, Shopee PayLater, Akulaku, Kredivo)
+- 🛒 5 Marketplaces (Tokopedia, Shopee, Lazada, Bukalapak, Blibli)
 
-# Link project
-vercel link
-
-# Jalankan migration (connect ke production database)
-DATABASE_URL="your-neon-connection-string" npx prisma migrate deploy
-```
-
-**Option B: Via Prisma Studio Locally**
-```bash
-# Set DATABASE_URL ke Neon di .env.local
-DATABASE_URL="your-neon-connection-string"
-
-# Generate Prisma Client
-npx prisma generate
-
-# Push schema ke database
-npx prisma db push
-
-# Atau jalankan migration
-npx prisma migrate deploy
-```
-
-**Option C: Via Neon SQL Editor**
-1. Buka Neon Console
-2. Pilih project
-3. Klik "SQL Editor"
-4. Copy paste schema dari `prisma/schema.prisma`
-5. Jalankan query
-
-### Langkah 2: Buat Owner Account
-Jalankan seeder untuk membuat akun owner pertama:
-
-```bash
-# Via Vercel CLI atau lokal dengan DATABASE_URL production
-npx prisma db seed
-```
-
-Atau buat manual via Prisma Studio:
-```bash
-npx prisma studio
-```
-
-### Langkah 3: Update NEXTAUTH_URL
-Jika Anda menggunakan custom domain:
-1. Buka Vercel Dashboard → Settings → Environment Variables
-2. Update `NEXTAUTH_URL` dengan domain production Anda
-3. Redeploy project
+### Langsung Login!
+1. Buka URL production Anda
+2. Login dengan owner@blackbear.id / owner123
+3. **GANTI PASSWORD** di settings! 🔐
 
 ---
 
 ## 5️⃣ Environment Variables Reference
 
-Buat file `.env` atau `.env.local` dengan variabel berikut:
-
 ```env
-# Database (Neon PostgreSQL)
-DATABASE_URL="postgresql://username:password@ep-xxx-xxx.us-east-2.aws.neon.tech/blackbear?sslmode=require"
+# Database (WAJIB)
+DATABASE_URL="postgresql://username:password@ep-xxx.neon.tech/db?sslmode=require"
 
-# NextAuth.js
-NEXTAUTH_SECRET="your-random-secret-key-min-32-characters-long"
-NEXTAUTH_URL="https://your-app-name.vercel.app"
+# NextAuth (WAJIB)
+NEXTAUTH_SECRET="your-random-32-character-secret-key"
+NEXTAUTH_URL="https://your-app.vercel.app"
 
-# Optional: Custom Domain
-NEXT_PUBLIC_APP_URL="https://your-custom-domain.com"
-
-# Optional: Analytics
-NEXT_PUBLIC_ANALYTICS_ID="your-analytics-id"
-
-# Optional: Image Storage (if using external)
-# CLOUDINARY_URL="cloudinary://api_key:api_secret@cloud_name"
+# Optional
+NEXT_PUBLIC_APP_URL="https://your-app.vercel.app"
 ```
 
 ---
 
-## 6️⃣ Custom Domain Setup
+## 🔧 Troubleshooting
 
-### Langkah 1: Tambah Domain di Vercel
-1. Buka Vercel Dashboard → Project Settings → Domains
-2. Masukkan domain Anda (contoh: `blackbear.yourcompany.com`)
-3. Pilih tipe:
-   - **Apex Domain**: `yourcompany.com`
-   - **Subdomain**: `app.yourcompany.com`
+### Build Failed: Prisma Error
+```bash
+# Cek format DATABASE_URL
+# Pastikan: postgresql:// dan sslmode=require
 
-### Langkah 2: Update DNS Records
-Di provider domain Anda, tambahkan DNS record:
+# Contoh benar:
+DATABASE_URL="postgresql://user:pass@ep-xxx.neon.tech/db?sslmode=require"
+```
 
-**Untuk Subdomain:**
+### Database Connection Error
+```bash
+# Neon free tier suspend setelah 5 menit idle
+# Cukup buka Neon Console untuk wake up database
+```
+
+### Login Failed
+```bash
+# Pastikan seed sudah dijalankan (otomatis saat deploy)
+# Cek di Vercel logs apakah ada error saat seed
+```
+
+### Manual Seed (jika perlu)
+```bash
+# Set DATABASE_URL di terminal lokal
+export DATABASE_URL="postgresql://..."
+
+# Run seed
+bun run db:seed
+```
+
+---
+
+## 🌐 Custom Domain
+
+### Tambah Domain di Vercel
+1. Project Settings → Domains
+2. Masukkan domain (contoh: `app.yourcompany.com`)
+
+### Update DNS
 ```
 Type: CNAME
-Name: app (atau nama subdomain)
+Name: app
 Value: cname.vercel-dns.com
 ```
 
-**Untuk Apex Domain:**
+### Update NEXTAUTH_URL
 ```
-Type: A
-Name: @
-Value: 76.76.21.21
+NEXTAUTH_URL=https://app.yourcompany.com
 ```
-
-### Langkah 3: Update Environment Variables
-1. Update `NEXTAUTH_URL` dengan custom domain
-2. Update `NEXT_PUBLIC_APP_URL` jika ada
-3. Redeploy project
-
----
-
-## 7️⃣ Automatic Deployment Setup
-
-### Konfigurasi Auto-Deploy
-Vercel otomatis mendeploy setiap ada push ke branch `main`.
-
-### Branch Preview
-1. Setiap pull request akan mendapat preview URL
-2. Berguna untuk testing sebelum merge ke production
-
-### Production Branch
-1. Default: `main` branch
-2. Bisa diubah di Settings → Git
-
----
-
-## 8️⃣ Troubleshooting
-
-### Error: Database Connection Failed
-```bash
-# Cek koneksi database
-npx prisma db pull
-
-# Jika error, cek DATABASE_URL format
-# Pastikan sslmode=require ada
-```
-
-### Error: NextAuth Session Invalid
-```bash
-# Generate ulang NEXTAUTH_SECRET
-openssl rand -base64 32
-
-# Update di Vercel Environment Variables
-# Redeploy project
-```
-
-### Error: Prisma Client Not Found
-```bash
-# Generate Prisma Client
-npx prisma generate
-
-# Redeploy di Vercel
-```
-
-### Error: Build Failed
-1. Cek log build di Vercel Dashboard
-2. Pastikan semua dependencies ada di `package.json`
-3. Pastikan `prisma generate` dijalankan di build script
-
-### Database Migration di Production
-```bash
-# Option 1: Via Prisma CLI dengan database URL production
-DATABASE_URL="production-url" npx prisma migrate deploy
-
-# Option 2: Via Vercel CLI
-vercel env pull .env.production
-npx prisma migrate deploy
-```
-
----
-
-## 9️⃣ Backup & Monitoring
-
-### Backup Database
-Neon otomatis membuat backup, tapi Anda juga bisa:
-1. Neon Console → Backups
-2. Atau export manual:
-```bash
-pg_dump $DATABASE_URL > backup.sql
-```
-
-### Monitoring
-1. **Vercel Analytics**: Dashboard → Analytics
-2. **Vercel Logs**: Dashboard → Deployments → Function Logs
-3. **Neon Monitoring**: Neon Console → Monitoring
 
 ---
 
 ## 🔒 Security Checklist
 
-- [ ] `DATABASE_URL` disimpan dengan aman
+- [ ] `DATABASE_URL` disimpan dengan aman (jangan commit!)
 - [ ] `NEXTAUTH_SECRET` minimal 32 karakter random
-- [ ] `NEXTAUTH_URL` sesuai dengan domain production
-- [ ] Database access dibatasi (Neon default: secure)
-- [ ] HTTPS enabled (Vercel default)
+- [ ] `NEXTAUTH_URL` sesuai domain production
+- [ ] **Ganti password owner** setelah login pertama
 - [ ] Environment variables tidak di-commit ke Git
-- [ ] `.env` ada di `.gitignore`
+
+---
+
+## 📊 Monitoring
+
+- **Vercel Analytics**: Dashboard → Analytics
+- **Vercel Logs**: Deployments → Function Logs
+- **Neon Metrics**: Neon Console → Monitoring
 
 ---
 
 ## 📞 Support
 
-Jika mengalami masalah:
-1. **Vercel**: [vercel.com/support](https://vercel.com/support)
-2. **Neon**: [neon.tech/docs](https://neon.tech/docs)
-3. **Prisma**: [prisma.io/docs](https://prisma.io/docs)
-
----
-
-## Quick Reference Commands
-
-```bash
-# Generate Prisma Client
-npx prisma generate
-
-# Push schema changes to database
-npx prisma db push
-
-# Run migrations
-npx prisma migrate deploy
-
-# Open Prisma Studio
-npx prisma studio
-
-# Create new migration
-npx prisma migrate dev --name description
-
-# Reset database (DEVELOPMENT ONLY!)
-npx prisma migrate reset
-
-# Check database connection
-npx prisma db pull
-```
+- **Vercel**: [vercel.com/support](https://vercel.com/support)
+- **Neon**: [neon.tech/docs](https://neon.tech/docs)
+- **Prisma**: [prisma.io/docs](https://prisma.io/docs)
 
 ---
 
