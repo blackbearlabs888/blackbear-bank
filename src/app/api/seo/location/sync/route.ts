@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
-import { getCityData, generateLocationContent } from '@/lib/indonesia-cities';
+import { getCityData, generateLocationContent } from '@/lib/city-utils';
 
 function generateSlug(name: string): string {
   return name
