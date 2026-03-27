@@ -3,6 +3,68 @@
 
 import { INDONESIAN_CITIES, CityData } from './indonesia-cities';
 
+// Re-export types
+export type { CityData } from './indonesia-cities';
+
+// Generate SEO content for a city
+export function generateLocationContent(city: string, province?: string): {
+  description: string;
+  metaTitle: string;
+  metaDescription: string;
+  keywords: string;
+  content: string;
+} {
+  const cityLower = city.toLowerCase();
+  const provinceText = province ? ` ${province}` : '';
+  
+  return {
+    description: `Layanan gestun dan tarik tunai terpercaya di ${city}${provinceText}. Proses cepat, aman, dan transparan dengan fee kompetitif. Tersedia untuk semua jenis kartu kredit dan paylater.`,
+    
+    metaTitle: `Gestun ${city} - Layanan Tarik Tunai Terpercaya | Black Bear`,
+    
+    metaDescription: `Jasa gestun ${cityLower} terpercaya dengan proses cepat dan aman. Tarik tunai kartu kredit dan paylater dengan fee terbaik. Hubungi kami sekarang untuk layanan profesional.`,
+    
+    keywords: `gestun ${cityLower}, tarik tunai ${cityLower}, jasa gestun ${cityLower}, gestun kartu kredit ${cityLower}, gestun paylater ${cityLower}, tarik tunai kartu kredit ${cityLower}, gestun terpercaya ${cityLower}, jasa tarik tunai ${cityLower}`,
+    
+    content: `## Layanan Gestun ${city} - Black Bear
+
+Black Bear menyediakan layanan gestun dan tarik tunai terpercaya di ${city}${provinceText}. Kami melayani berbagai jenis transaksi dengan proses cepat, aman, dan transparan.
+
+### Layanan Kami di ${city}
+
+**1. Gestun Kartu Kredit**
+- Semua jenis kartu kredit (Visa, Mastercard, JCB, dll)
+- Proses cepat dalam hitungan menit
+- Fee kompetitif dan transparan
+
+**2. Gestun Paylater**
+- GoPay Later
+- Shopee Paylater
+- Akulaku
+- Kredivo
+- Dan lainnya
+
+**3. Tarik Tunai**
+- Proses instan
+- Tanpa ribet
+- Aman dan terpercaya
+
+### Mengapa Memilih Black Bear ${city}?
+
+✅ **Aman & Terpercaya** - Ribuan pelanggan puas dengan layanan kami
+✅ **Proses Cepat** - Transaksi selesai dalam hitungan menit
+✅ **Fee Transparan** - Tidak ada biaya tersembunyi
+✅ **Layanan 24 Jam** - Kami siap melayani kapan saja
+
+### Hubungi Kami
+
+Tertarik dengan layanan gestun di ${city}? Hubungi kami sekarang melalui WhatsApp untuk konsultasi gratis dan informasi lebih lanjut.
+
+**Black Bear ${city}** - Partner terpercaya untuk kebutuhan gestun dan tarik tunai Anda.
+`,
+  };
+}
+
 /**
  * Get city data (coordinates, province, island) by city name
  * Supports fuzzy matching - case insensitive, handles extra spaces
