@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { db } from '@/lib/db';
 import LocationDetailClient from './client';
 
 interface Location {
@@ -22,19 +23,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/seo/location/${slug}`,
-      { cache: 'no-store' }
-    );
-    const result = await response.json();
+    const location = await db.location.findUnique({
+      where: { slug },
+    });
 
-    if (!result.success || !result.data) {
+    if (!location) {
       return {
         title: 'Lokasi Tidak Ditemukan',
       };
     }
 
-    const location: Location = result.data;
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id';
     
     const title = location.metaTitle || `Gestun ${location.name} - Layanan Tarik Tunai Terpercaya`;
@@ -72,38 +70,33 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 // Generate static params for build
 export async function generateStaticParams() {
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/seo/location?public=true`
-    );
-    const result = await response.json();
+    const locations = await db.location.findMany({
+      where: { isActive: true },
+      select: { slug: true },
+    });
 
-    if (result.success && result.data) {
-      return result.data.map((location: Location) => ({
-        slug: location.slug,
-      }));
-    }
+    return locations.map((location) => ({
+      slug: location.slug,
+    }));
   } catch {
     console.error('Failed to generate static params for locations');
+    return [];
   }
-  
-  return [];
 }
 
 export default async function LocationDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   
-  // Fetch location server-side for initial render
+  // Fetch location directly from database
   let location: Location | null = null;
   
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/seo/location/${slug}`,
-      { cache: 'no-store' }
-    );
-    const result = await response.json();
+    const result = await db.location.findUnique({
+      where: { slug },
+    });
 
-    if (result.success && result.data) {
-      location = result.data;
+    if (result) {
+      location = result;
     }
   } catch (error) {
     console.error('Failed to fetch location:', error);
