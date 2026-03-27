@@ -15,6 +15,7 @@ import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { SimplePagination } from '@/components/ui/pagination';
+import { CitySearch } from '@/components/ui/city-search';
 import {
   Plus,
   Search,
@@ -1538,11 +1539,11 @@ function NewTransactionDialog({ onCreated }: { onCreated: () => void }) {
                           </div>
                           <div className="space-y-1.5">
                             <Label className="text-xs">Kota</Label>
-                            <Input
-                              placeholder="Jakarta"
+                            <CitySearch
                               value={newCustomer.city}
-                              onChange={(e) => setNewCustomer(prev => ({ ...prev, city: e.target.value }))}
-                              className="h-10 rounded-lg"
+                              onChange={(value) => setNewCustomer(prev => ({ ...prev, city: value }))}
+                              placeholder="Cari kota..."
+                              className="h-10"
                             />
                           </div>
                         </div>
