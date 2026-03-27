@@ -1,140 +1,148 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { 
-  hashPassword, 
-  createSession, 
-  setSessionCookie,
-  validateEmail,
-  validatePassword,
-  validatePhone
-} from '@/lib/auth';
-import { sendTelegramNotification } from '@/lib/telegram';
+import { db, toNumber } from '@/lib/db';
+import { generateOrderId, calculatePaymentFee } from '@/lib/auth';
+import { sendTelegramNotification, formatCurrency } from '@/lib/telegram';
+import { checkCustomerDuplicate, normalizePhone } from '@/lib/customer-utils';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      name, 
-      email, 
-      phone, 
-      password, 
-      confirmPassword,
-      bankName,
+    const {
+      name,
+      phone,
+      bank,
       bankAccount,
       bankHolder,
-      city 
+      nominal,
+      paymentTypeId,
+      methodTransaction,
+      city,
     } = body;
 
     // Validation
-    if (!name || !email || !phone || !password || !confirmPassword || !bankName || !bankAccount || !bankHolder || !city) {
+    if (!name || !phone || !nominal || !paymentTypeId || !methodTransaction) {
       return NextResponse.json(
-        { success: false, error: 'Semua field harus diisi' },
+        { success: false, error: 'Field wajib harus diisi' },
         { status: 400 }
       );
     }
 
-    if (!validateEmail(email)) {
+    if (nominal <= 0) {
       return NextResponse.json(
-        { success: false, error: 'Format email tidak valid' },
+        { success: false, error: 'Nominal harus lebih dari 0' },
         { status: 400 }
       );
     }
 
-    if (!validatePassword(password)) {
-      return NextResponse.json(
-        { success: false, error: 'Password minimal 6 karakter' },
-        { status: 400 }
-      );
-    }
-
-    if (password !== confirmPassword) {
-      return NextResponse.json(
-        { success: false, error: 'Konfirmasi password tidak cocok' },
-        { status: 400 }
-      );
-    }
-
-    if (!validatePhone(phone)) {
-      return NextResponse.json(
-        { success: false, error: 'Format nomor WhatsApp tidak valid (contoh: 08xxx)' },
-        { status: 400 }
-      );
-    }
-
-    // Check if user exists
-    const existingUser = await db.user.findUnique({
-      where: { email: email.toLowerCase() },
+    // Get payment type
+    const paymentType = await db.paymentType.findUnique({
+      where: { id: paymentTypeId },
     });
 
-    if (existingUser) {
+    if (!paymentType) {
       return NextResponse.json(
-        { success: false, error: 'Email sudah terdaftar' },
+        { success: false, error: 'Tipe pembayaran tidak valid' },
         { status: 400 }
       );
     }
 
-    // Check if partner with phone exists
-    const existingPartner = await db.partner.findFirst({
-      where: { phone },
-    });
-
-    if (existingPartner) {
-      return NextResponse.json(
-        { success: false, error: 'Nomor WhatsApp sudah terdaftar' },
-        { status: 400 }
-      );
-    }
-
-    // Hash password
-    const hashedPassword = await hashPassword(password);
-
-    // Create user and partner
-    const user = await db.user.create({
-      data: {
-        email: email.toLowerCase(),
-        name,
-        password: hashedPassword,
-        role: 'partner',
-        partner: {
-          create: {
-            name,
-            email: email.toLowerCase(),
-            phone,
-            bankName,
-            bankAccount,
-            bankHolder,
-            city,
-            commission: 30,
-            target: 5000000,
-            tier: 'Bronze',
-            badge: 'Newbie',
-            status: 'active',
-          },
-        },
+    // Calculate payment fee
+    // Convert Decimal values to numbers for PostgreSQL compatibility
+    const paymentFee = calculatePaymentFee(
+      toNumber(nominal),
+      {
+        onlineFeePercent: toNumber(paymentType.onlineFeePercent),
+        onlineFeeFlat: toNumber(paymentType.onlineFeeFlat),
+        codFeePercent: toNumber(paymentType.codFeePercent),
+        codFeeFlat: toNumber(paymentType.codFeeFlat),
+        threshold: toNumber(paymentType.threshold),
       },
-      include: { partner: true },
+      methodTransaction
+    );
+    const totalReceived = toNumber(nominal) - paymentFee;
+
+    // Normalize phone and check for existing customer
+    const normalizedPhone = normalizePhone(phone);
+    const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, name);
+    
+    let customer;
+    
+    if (duplicateCheck.isDuplicate && duplicateCheck.existingCustomer) {
+      // Update existing customer with new info
+      customer = await db.customer.update({
+        where: { id: duplicateCheck.existingCustomer.id },
+        data: {
+          name, // Update name
+          phone: normalizedPhone,
+          bankName: bank || duplicateCheck.existingCustomer.bankName,
+          bankAccount: bankAccount || duplicateCheck.existingCustomer.bankAccount,
+          bankHolder: bankHolder || duplicateCheck.existingCustomer.bankHolder,
+          city: city || duplicateCheck.existingCustomer.city,
+          // Increment customer stats for new transaction
+          totalVolume: { increment: nominal },
+          totalTransactions: { increment: 1 },
+        },
+      });
+    } else {
+      // Create new customer
+      customer = await db.customer.create({
+        data: {
+          name,
+          phone: normalizedPhone,
+          bankName: bank || null,
+          bankAccount: bankAccount || null,
+          bankHolder: bankHolder || null,
+          city: city || null,
+          label: 'New',
+          addedBy: 'public',
+          totalVolume: nominal,
+          totalTransactions: 1,
+        },
+      });
+    }
+
+    // Generate order ID
+    const orderId = generateOrderId();
+
+    // Create transaction
+    const transaction = await db.transaction.create({
+      data: {
+        orderId,
+        customerId: customer.id,
+        nominal,
+        paymentFee,
+        platformFee: 0,
+        netMargin: paymentFee,
+        partnerProfit: 0,
+        ownerProfit: paymentFee,
+        totalReceived,
+        paymentTypeId,
+        methodTransaction,
+        status: 'pending',
+      },
+      include: {
+        customer: true,
+        paymentType: true,
+      },
     });
 
-    // Create session
-    const sessionId = await createSession(user.id);
-    await setSessionCookie(sessionId);
-
-    // Create notification for owner about new partner registration
+    // Create notification for owner about new public order
     try {
       await db.notification.create({
         data: {
-          type: 'new_partner',
-          title: 'Partner Baru Mendaftar',
-          message: `${name} (${email}) baru saja mendaftar sebagai partner dari ${city}`,
+          type: 'new_order',
+          title: 'Order Baru dari Public',
+          message: `Order ${orderId} dari ${name} - ${formatCurrency(toNumber(nominal))}`,
           data: JSON.stringify({
-            partnerId: user.partner?.id,
-            partnerName: name,
-            partnerEmail: email,
-            partnerPhone: phone,
-            partnerCity: city,
+            orderId,
+            customerName: name,
+            customerPhone: normalizedPhone,
+            nominal,
+            paymentType: paymentType.name,
+            methodTransaction,
           }),
           targetType: 'owner',
-          partnerId: user.partner?.id,
+          transactionId: transaction.id,
         },
       });
 
@@ -145,19 +153,21 @@ export async function POST(request: NextRequest) {
           where: { ownerProfileId: ownerProfile.id },
         });
 
-        if (notifSettings?.telegramEnabled && notifSettings.telegramBotToken && notifSettings.telegramChatId && notifSettings.notifyNewPartner) {
+        if (notifSettings?.telegramEnabled && notifSettings.telegramBotToken && notifSettings.telegramChatId && notifSettings.notifyNewTransaction) {
           await sendTelegramNotification(
             notifSettings.telegramBotToken,
             notifSettings.telegramChatId,
             {
-              type: 'new_partner',
-              title: '🤝 Partner Baru Bergabung',
-              message: `${name} baru saja mendaftar sebagai partner`,
+              type: 'new_order',
+              title: '💳 Order Baru dari Public',
+              message: `Order ID: ${orderId}`,
               additionalData: {
-                'Nama': name,
-                'Email': email,
-                'Telepon': phone,
-                'Kota': city,
+                'Pelanggan': name,
+                'Telepon': normalizedPhone,
+                'Nominal': formatCurrency(toNumber(nominal)),
+                'Fee': formatCurrency(paymentFee),
+                'Tipe': paymentType.name,
+                'Metode': methodTransaction,
               },
             }
           );
@@ -165,20 +175,26 @@ export async function POST(request: NextRequest) {
       }
     } catch (notifError) {
       console.error('Failed to create notification:', notifError);
-      // Don't throw - notification failure shouldn't break registration
+      // Don't throw - notification failure shouldn't break order creation
     }
-
-    // Return user data
-    const { password: _, ...userWithoutPassword } = user;
 
     return NextResponse.json({
       success: true,
-      user: userWithoutPassword,
-      partner: user.partner,
-      message: 'Registrasi berhasil',
+      data: {
+        orderId: transaction.orderId,
+        nominal: transaction.nominal,
+        paymentFee: transaction.paymentFee,
+        totalReceived: transaction.totalReceived,
+        status: transaction.status,
+        customer: transaction.customer,
+        paymentType: transaction.paymentType.name,
+        methodTransaction: transaction.methodTransaction,
+        createdAt: transaction.createdAt,
+      },
+      message: 'Order berhasil dibuat',
     });
   } catch (error) {
-    console.error('Register error:', error);
+    console.error('Create order error:', error);
     return NextResponse.json(
       { success: false, error: 'Terjadi kesalahan server' },
       { status: 500 }
