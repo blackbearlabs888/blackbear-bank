@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getPhoneVariations, normalizePhone } from '@/lib/customer-utils';
 
 // Lookup customer by phone number to prevent duplicates
 export async function GET(request: NextRequest) {
@@ -14,19 +15,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Clean phone number (remove spaces, dashes, etc.)
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+    // Get all phone variations for comprehensive search
+    const phoneVariations = getPhoneVariations(phone);
+    const normalizedPhone = normalizePhone(phone);
 
-    // Find customer by phone (try with and without country code)
+    // Build OR conditions for all phone variations
+    const orConditions = phoneVariations.map(p => ({ phone: p }));
+    
+    // Also search with contains for partial matches
+    phoneVariations.forEach(p => {
+      orConditions.push({ phone: { contains: p.replace(/^62/, '0') } });
+      orConditions.push({ phone: { contains: p.replace(/^0/, '62') } });
+    });
+
+    // Find customer by phone variations
     const customer = await db.customer.findFirst({
       where: {
-        OR: [
-          { phone: cleanPhone },
-          { phone: cleanPhone.replace(/^0/, '62') },
-          { phone: cleanPhone.replace(/^62/, '0') },
-          { phone: `0${cleanPhone.replace(/^62/, '')}` },
-          { phone: `62${cleanPhone.replace(/^0/, '')}` },
-        ],
+        OR: orConditions,
       },
       select: {
         id: true,
@@ -38,6 +43,9 @@ export async function GET(request: NextRequest) {
         city: true,
         totalTransactions: true,
         totalVolume: true,
+        label: true,
+        addedBy: true,
+        createdAt: true,
       },
     });
 
@@ -51,7 +59,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: customer,
+      data: {
+        ...customer,
+        totalVolume: Number(customer.totalVolume),
+      },
       message: `Ditemukan! ${customer.name} - ${customer.totalTransactions} transaksi sebelumnya`,
     });
   } catch (error) {
