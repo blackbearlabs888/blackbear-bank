@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { db, toNumber } from '@/lib/db';
 import { generateOrderId, calculatePaymentFee, calculateMarginBreakdown } from '@/lib/auth';
 import { sendTelegramNotification, formatCurrency } from '@/lib/telegram';
+import { checkCustomerDuplicate, normalizePhone } from '@/lib/customer-utils';
 
 // Helper to serialize transaction with Decimal fields
 function serializeTransaction(tx: Record<string, unknown>) {
@@ -255,19 +256,34 @@ export async function POST(request: NextRequest) {
     let finalCustomerId = customerId;
 
     if (isNewCustomer && user.role === 'owner') {
-      // Check if customer with same phone exists
-      const existingCustomer = await db.customer.findFirst({
-        where: { phone: customerPhone },
-      });
+      // Normalize phone number
+      const normalizedPhone = normalizePhone(customerPhone);
+      
+      // Check for duplicate customer (by phone OR name)
+      const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, customerName);
 
-      if (existingCustomer) {
-        finalCustomerId = existingCustomer.id;
+      if (duplicateCheck.isDuplicate && duplicateCheck.existingCustomer) {
+        // Use existing customer - update with new info if provided
+        finalCustomerId = duplicateCheck.existingCustomer.id;
+        
+        // Update customer info if new data provided
+        await db.customer.update({
+          where: { id: finalCustomerId },
+          data: {
+            name: customerName,
+            phone: normalizedPhone,
+            city: customerCity || undefined,
+            bankName: customerBankName || undefined,
+            bankAccount: customerBankAccount || undefined,
+            bankHolder: customerBankHolder || undefined,
+          },
+        });
       } else {
         // Create new customer with bank details
         const newCustomer = await db.customer.create({
           data: {
             name: customerName,
-            phone: customerPhone,
+            phone: normalizedPhone,
             city: customerCity || null,
             bankName: customerBankName || null,
             bankAccount: customerBankAccount || null,
