@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { db } from '@/lib/db';
 import LocationListingClient from './client';
 
 // Generate metadata for SEO
@@ -22,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function LocationListingPage() {
-  // Fetch locations server-side for SEO
+  // Fetch locations directly from database
   let locations: Array<{
     id: string;
     name: string;
@@ -35,15 +36,20 @@ export default async function LocationListingPage() {
   }> = [];
   
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/seo/location?public=true`,
-      { cache: 'no-store' }
-    );
-    const result = await response.json();
-
-    if (result.success && result.data) {
-      locations = result.data;
-    }
+    locations = await db.location.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        featuredImage: true,
+        latitude: true,
+        longitude: true,
+        isActive: true,
+      },
+      orderBy: { name: 'asc' },
+    });
   } catch (error) {
     console.error('Failed to fetch locations:', error);
   }
