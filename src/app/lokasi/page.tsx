@@ -29,6 +29,8 @@ export default async function LocationListingPage() {
     slug: string;
     description: string | null;
     featuredImage: string | null;
+    latitude: number | null;
+    longitude: number | null;
     isActive: boolean;
   }> = [];
   
