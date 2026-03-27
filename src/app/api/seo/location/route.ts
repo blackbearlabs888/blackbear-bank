@@ -8,28 +8,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const isPublic = searchParams.get('public') === 'true';
 
-    // Use raw query to get all fields including latitude/longitude
-    let locations;
-    if (isPublic) {
-      locations = await db.$queryRaw`
-        SELECT 
-          id, name, slug, description, content, featuredImage,
-          metaTitle, metaDescription, keywords,
-          latitude, longitude, isActive, createdAt, updatedAt
-        FROM locations
-        WHERE isActive = 1
-        ORDER BY name ASC
-      `;
-    } else {
-      locations = await db.$queryRaw`
-        SELECT 
-          id, name, slug, description, content, featuredImage,
-          metaTitle, metaDescription, keywords,
-          latitude, longitude, isActive, createdAt, updatedAt
-        FROM locations
-        ORDER BY name ASC
-      `;
-    }
+    // Use Prisma client instead of raw query for PostgreSQL compatibility
+    const locations = await db.location.findMany({
+      where: isPublic ? { isActive: true } : undefined,
+      orderBy: { name: 'asc' },
+    });
 
     return NextResponse.json({
       success: true,
