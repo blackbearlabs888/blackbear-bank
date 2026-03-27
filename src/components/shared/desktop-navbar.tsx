@@ -13,6 +13,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
   Sun,
@@ -22,6 +25,15 @@ import {
   Menu,
   X,
   ChevronDown,
+  Wallet,
+  Users,
+  Settings,
+  Megaphone,
+  FileText,
+  HelpCircle,
+  MapPin,
+  Percent,
+  Bell,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -31,16 +43,41 @@ const publicLinks = [
   { href: '/', label: 'Home' },
   { href: '/order', label: 'Order' },
   { href: '/track', label: 'Track' },
+  { href: '/blog', label: 'Blog' },
+  { href: '/faq', label: 'FAQ' },
+  { href: '/lokasi', label: 'Lokasi' },
 ];
 
-const ownerLinks = [
-  { href: '/owner/dashboard', label: 'Dashboard' },
-  { href: '/owner/dashboard/transactions', label: 'Transaksi' },
-  { href: '/owner/dashboard/partners', label: 'Partner' },
-  { href: '/owner/dashboard/customers', label: 'Customer' },
-  { href: '/owner/dashboard/fees', label: 'Fee' },
-  { href: '/owner/dashboard/broadcast', label: 'Broadcast' },
-  { href: '/owner/dashboard/settings', label: 'Config' },
+// Owner menu structure with groups - more precise organization
+const ownerMenuGroups = {
+  pengguna: {
+    label: 'Pengguna',
+    items: [
+      { href: '/owner/dashboard/partners', label: 'Partner', icon: Users },
+      { href: '/owner/dashboard/customers', label: 'Customer', icon: Users },
+    ],
+  },
+  transaksi: {
+    label: 'Transaksi',
+    items: [
+      { href: '/owner/dashboard/transactions', label: 'Semua Transaksi', icon: Wallet },
+      { href: '/owner/dashboard/notifications', label: 'Notifikasi', icon: Bell },
+    ],
+  },
+  pengaturan: {
+    label: 'Pengaturan',
+    items: [
+      { href: '/owner/dashboard/fees', label: 'Fee', icon: Percent },
+      { href: '/owner/dashboard/broadcast', label: 'Broadcast', icon: Megaphone },
+    ],
+  },
+};
+
+// SEO submenu
+const seoMenuItems = [
+  { href: '/owner/dashboard/seo/blog', label: 'Blog', icon: FileText },
+  { href: '/owner/dashboard/seo/faq', label: 'FAQ', icon: HelpCircle },
+  { href: '/owner/dashboard/seo/location', label: 'Lokasi', icon: MapPin },
 ];
 
 const partnerLinks = [
@@ -61,11 +98,9 @@ export function DesktopNavbar() {
   const isAuthPage = pathname === '/login' || pathname === '/register';
   const isDashboardPage = pathname?.startsWith('/owner/') || pathname?.startsWith('/partner/') || pathname?.startsWith('/dashboard');
 
-  const links = !isAuthenticated 
-    ? publicLinks 
-    : user?.role === 'owner' 
-      ? ownerLinks 
-      : partnerLinks;
+  // Check if any item in a group is active
+  const isGroupActive = (items: { href: string }[]) => 
+    items.some(item => pathname === item.href || pathname?.startsWith(item.href + '/'));
 
   return (
     <>
@@ -97,45 +132,250 @@ export function DesktopNavbar() {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-1 lg:gap-2">
-              {links.map((link) => {
-                const isActive = pathname === link.href;
-                return (
+              {!isAuthenticated ? (
+                // Public Links
+                publicLinks.map((link) => {
+                  const isActive = pathname === link.href;
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        'relative px-3 py-2 rounded-xl text-sm font-medium transition-all duration-300 ease-out tap-highlight group',
+                        isActive
+                          ? 'text-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <span className={cn(
+                        'absolute inset-0 rounded-xl transition-all duration-300 ease-out',
+                        isActive 
+                          ? 'bg-primary/10 shadow-sm' 
+                          : 'bg-transparent group-hover:bg-muted/80 group-hover:shadow-sm'
+                      )} />
+                      {isActive && (
+                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary shadow-sm shadow-primary/50" />
+                      )}
+                      <span className="relative z-10">{link.label}</span>
+                    </Link>
+                  );
+                })
+              ) : user?.role === 'owner' ? (
+                // Owner Navigation with Dropdowns
+                <div className="flex items-center gap-1">
+                  {/* Dashboard Link */}
                   <Link
-                    key={link.href}
-                    href={link.href}
+                    href="/owner/dashboard"
                     className={cn(
-                      'relative px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ease-out tap-highlight group',
-                      isActive
+                      'relative h-9 px-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out tap-highlight group flex items-center',
+                      pathname === '/owner/dashboard'
                         ? 'text-foreground'
                         : 'text-muted-foreground hover:text-foreground'
                     )}
                   >
-                    {/* Background hover effect */}
                     <span className={cn(
                       'absolute inset-0 rounded-xl transition-all duration-300 ease-out',
-                      isActive 
+                      pathname === '/owner/dashboard'
                         ? 'bg-primary/10 shadow-sm' 
                         : 'bg-transparent group-hover:bg-muted/80 group-hover:shadow-sm'
                     )} />
-                    
-                    {/* Active indicator dot */}
-                    {isActive && (
-                      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary shadow-sm shadow-primary/50" />
+                    {pathname === '/owner/dashboard' && (
+                      <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary shadow-sm shadow-primary/50" />
                     )}
-                    
-                    {/* Link text */}
-                    <span className="relative z-10">{link.label}</span>
-                    
-                    {/* Underline animation */}
-                    <span className={cn(
-                      'absolute bottom-2 left-4 right-4 h-0.5 rounded-full bg-primary transition-all duration-300 ease-out origin-left',
-                      isActive 
-                        ? 'scale-x-100 opacity-100' 
-                        : 'scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-60'
-                    )} />
+                    <span className="relative z-10">Dashboard</span>
                   </Link>
-                );
-              })}
+
+                  {/* Pengguna Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className={cn(
+                        'relative h-9 px-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out tap-highlight group flex items-center gap-1',
+                        isGroupActive(ownerMenuGroups.pengguna.items)
+                          ? 'text-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}>
+                        <span className={cn(
+                          'absolute inset-0 rounded-xl transition-all duration-300 ease-out',
+                          isGroupActive(ownerMenuGroups.pengguna.items)
+                            ? 'bg-primary/10 shadow-sm' 
+                            : 'bg-transparent group-hover:bg-muted/80 group-hover:shadow-sm'
+                        )} />
+                        {isGroupActive(ownerMenuGroups.pengguna.items) && (
+                          <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary shadow-sm shadow-primary/50" />
+                        )}
+                        <span className="relative z-10">Pengguna</span>
+                        <ChevronDown className="w-3.5 h-3.5 relative z-10 opacity-60" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48 p-1.5 rounded-xl">
+                      {ownerMenuGroups.pengguna.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = pathname === item.href;
+                        return (
+                          <DropdownMenuItem key={item.href} asChild className="rounded-lg px-3 py-2 cursor-pointer">
+                            <Link href={item.href} className={cn(
+                              'flex items-center gap-2.5',
+                              isActive && 'bg-primary/10 text-primary'
+                            )}>
+                              <Icon className="w-4 h-4 text-muted-foreground" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Transaksi Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className={cn(
+                        'relative h-9 px-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out tap-highlight group flex items-center gap-1',
+                        isGroupActive(ownerMenuGroups.transaksi.items)
+                          ? 'text-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}>
+                        <span className={cn(
+                          'absolute inset-0 rounded-xl transition-all duration-300 ease-out',
+                          isGroupActive(ownerMenuGroups.transaksi.items)
+                            ? 'bg-primary/10 shadow-sm' 
+                            : 'bg-transparent group-hover:bg-muted/80 group-hover:shadow-sm'
+                        )} />
+                        {isGroupActive(ownerMenuGroups.transaksi.items) && (
+                          <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary shadow-sm shadow-primary/50" />
+                        )}
+                        <span className="relative z-10">Transaksi</span>
+                        <ChevronDown className="w-3.5 h-3.5 relative z-10 opacity-60" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48 p-1.5 rounded-xl">
+                      {ownerMenuGroups.transaksi.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = pathname === item.href;
+                        return (
+                          <DropdownMenuItem key={item.href} asChild className="rounded-lg px-3 py-2 cursor-pointer">
+                            <Link href={item.href} className={cn(
+                              'flex items-center gap-2.5',
+                              isActive && 'bg-primary/10 text-primary'
+                            )}>
+                              <Icon className="w-4 h-4 text-muted-foreground" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Pengaturan Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className={cn(
+                        'relative h-9 px-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out tap-highlight group flex items-center gap-1',
+                        isGroupActive(ownerMenuGroups.pengaturan.items) || isGroupActive(seoMenuItems) || pathname === '/owner/dashboard/settings'
+                          ? 'text-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}>
+                        <span className={cn(
+                          'absolute inset-0 rounded-xl transition-all duration-300 ease-out',
+                          isGroupActive(ownerMenuGroups.pengaturan.items) || isGroupActive(seoMenuItems) || pathname === '/owner/dashboard/settings'
+                            ? 'bg-primary/10 shadow-sm' 
+                            : 'bg-transparent group-hover:bg-muted/80 group-hover:shadow-sm'
+                        )} />
+                        {(isGroupActive(ownerMenuGroups.pengaturan.items) || isGroupActive(seoMenuItems) || pathname === '/owner/dashboard/settings') && (
+                          <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary shadow-sm shadow-primary/50" />
+                        )}
+                        <span className="relative z-10">Pengaturan</span>
+                        <ChevronDown className="w-3.5 h-3.5 relative z-10 opacity-60" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48 p-1.5 rounded-xl">
+                      {ownerMenuGroups.pengaturan.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = pathname === item.href;
+                        return (
+                          <DropdownMenuItem key={item.href} asChild className="rounded-lg px-3 py-2 cursor-pointer">
+                            <Link href={item.href} className={cn(
+                              'flex items-center gap-2.5',
+                              isActive && 'bg-primary/10 text-primary'
+                            )}>
+                              <Icon className="w-4 h-4 text-muted-foreground" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                      
+                      {/* SEO Submenu */}
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger className="rounded-lg px-3 py-2">
+                          <span className="flex items-center gap-2.5">
+                            <FileText className="w-4 h-4 text-muted-foreground" />
+                            <span>SEO</span>
+                          </span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent className="w-44 p-1.5 rounded-xl">
+                          {seoMenuItems.map((item) => {
+                            const Icon = item.icon;
+                            const isActive = pathname === item.href;
+                            return (
+                              <DropdownMenuItem key={item.href} asChild className="rounded-lg px-3 py-2 cursor-pointer">
+                                <Link href={item.href} className={cn(
+                                  'flex items-center gap-2.5',
+                                  isActive && 'bg-primary/10 text-primary'
+                                )}>
+                                  <Icon className="w-4 h-4 text-muted-foreground" />
+                                  <span>{item.label}</span>
+                                </Link>
+                              </DropdownMenuItem>
+                            );
+                          })}
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+
+                      <DropdownMenuSeparator className="my-1" />
+                      
+                      <DropdownMenuItem asChild className="rounded-lg px-3 py-2 cursor-pointer">
+                        <Link href="/owner/dashboard/settings" className={cn(
+                          'flex items-center gap-2.5',
+                          pathname === '/owner/dashboard/settings' && 'bg-primary/10 text-primary'
+                        )}>
+                          <Settings className="w-4 h-4 text-muted-foreground" />
+                          <span>Config</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ) : (
+                // Partner Navigation
+                partnerLinks.map((link) => {
+                  const isActive = pathname === link.href;
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        'relative px-3 py-2 rounded-xl text-sm font-medium transition-all duration-300 ease-out tap-highlight group',
+                        isActive
+                          ? 'text-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <span className={cn(
+                        'absolute inset-0 rounded-xl transition-all duration-300 ease-out',
+                        isActive 
+                          ? 'bg-primary/10 shadow-sm' 
+                          : 'bg-transparent group-hover:bg-muted/80 group-hover:shadow-sm'
+                      )} />
+                      {isActive && (
+                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary shadow-sm shadow-primary/50" />
+                      )}
+                      <span className="relative z-10">{link.label}</span>
+                    </Link>
+                  );
+                })
+              )}
             </nav>
 
             {/* Right side */}
@@ -288,52 +528,64 @@ export function DesktopNavbar() {
           
           {/* Menu content */}
           <nav className="flex flex-col p-4 gap-1 overflow-y-auto h-[calc(100%-64px)]">
-            {links.map((link, index) => {
-              const isActive = pathname === link.href;
-              return (
+            {!isAuthenticated ? (
+              // Public mobile menu
+              publicLinks.map((link, index) => {
+                const isActive = pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      'relative px-4 py-3.5 rounded-xl text-base font-medium transition-all duration-300 tap-highlight overflow-hidden',
+                      isActive
+                        ? 'text-foreground'
+                        : 'text-muted-foreground active:text-foreground'
+                    )}
+                    style={{ 
+                      transitionDelay: mobileMenuOpen ? `${index * 50}ms` : '0ms',
+                      transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(20px)',
+                      opacity: mobileMenuOpen ? 1 : 0
+                    }}
+                  >
+                    <span className={cn(
+                      'absolute inset-0 rounded-xl transition-all duration-300',
+                      isActive 
+                        ? 'bg-primary/15' 
+                        : 'bg-transparent active:bg-muted'
+                    )} />
+                    {isActive && (
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 w-1 h-6 rounded-full bg-primary" />
+                    )}
+                    <span className="relative z-10">{link.label}</span>
+                  </Link>
+                );
+              })
+            ) : (
+              // Auth mobile menu
+              <>
                 <Link
-                  key={link.href}
-                  href={link.href}
+                  href="/"
                   onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    'relative px-4 py-3.5 rounded-xl text-base font-medium transition-all duration-300 tap-highlight overflow-hidden',
-                    isActive
-                      ? 'text-foreground'
-                      : 'text-muted-foreground active:text-foreground'
-                  )}
-                  style={{ 
-                    transitionDelay: mobileMenuOpen ? `${index * 50}ms` : '0ms',
-                    transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(20px)',
-                    opacity: mobileMenuOpen ? 1 : 0
-                  }}
+                  className="relative px-4 py-3.5 rounded-xl text-base font-medium text-muted-foreground"
                 >
-                  {/* Background effect */}
-                  <span className={cn(
-                    'absolute inset-0 rounded-xl transition-all duration-300',
-                    isActive 
-                      ? 'bg-primary/15' 
-                      : 'bg-transparent active:bg-muted'
-                  )} />
-                  
-                  {/* Active indicator */}
-                  {isActive && (
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 w-1 h-6 rounded-full bg-primary" />
-                  )}
-                  
-                  <span className="relative z-10">{link.label}</span>
+                  <span className="relative z-10">← Back to Home</span>
                 </Link>
-              );
-            })}
+                <Link
+                  href={user?.role === 'owner' ? '/owner/dashboard' : '/partner/dashboard'}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="relative px-4 py-3.5 rounded-xl text-base font-medium text-primary"
+                >
+                  <span className="relative z-10">Go to Dashboard</span>
+                </Link>
+              </>
+            )}
             
             {!isAuthenticated && !isAuthPage && (
               <Button 
                 asChild 
                 className="gradient-primary text-white rounded-xl h-12 mt-4 shadow-lg shadow-primary/25"
-                style={{ 
-                  transitionDelay: mobileMenuOpen ? `${links.length * 50}ms` : '0ms',
-                  transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(20px)',
-                  opacity: mobileMenuOpen ? 1 : 0
-                }}
               >
                 <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
                   Login

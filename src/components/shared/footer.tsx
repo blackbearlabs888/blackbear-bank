@@ -153,6 +153,24 @@ export function Footer() {
               >
                 Mitra
               </Link>
+              <Link 
+                href="/blog" 
+                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
+              >
+                Blog
+              </Link>
+              <Link 
+                href="/faq" 
+                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
+              >
+                FAQ
+              </Link>
+              <Link 
+                href="/lokasi" 
+                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
+              >
+                Lokasi
+              </Link>
             </div>
             
             {/* Operating hours */}
