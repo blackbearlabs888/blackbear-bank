@@ -743,3 +743,153 @@ Tertarik dengan layanan gestun di ${city}? Hubungi kami sekarang melalui WhatsAp
 `,
   };
 }
+
+// ==================== CITY COORDINATE LOOKUP UTILITIES ====================
+
+/**
+ * Get city data (coordinates, province, island) by city name
+ * Supports fuzzy matching - case insensitive, handles extra spaces
+ * 
+ * @param cityName - Name of the city to look up
+ * @returns CityData with lat, lng, province, island or null if not found
+ * 
+ * @example
+ * const data = getCityData('Banjarmasin');
+ * // Returns: { lat: -3.3194, lng: 114.5908, province: 'Kalimantan Selatan', island: 'Kalimantan' }
+ * 
+ * const data2 = getCityData('JAKARTA'); // case insensitive
+ * // Returns: { lat: -6.2088, lng: 106.8456, province: 'DKI Jakarta', island: 'Jawa' }
+ */
+export function getCityData(cityName: string): CityData | null {
+  if (!cityName) return null;
+  
+  // Normalize: lowercase and trim
+  const normalized = cityName.toLowerCase().trim();
+  
+  // Direct lookup
+  if (INDONESIAN_CITIES[normalized]) {
+    return INDONESIAN_CITIES[normalized];
+  }
+  
+  // Fuzzy search: find closest match
+  const cityKeys = Object.keys(INDONESIAN_CITIES);
+  
+  // Try to find a city that contains the search term or vice versa
+  for (const key of cityKeys) {
+    if (key.includes(normalized) || normalized.includes(key)) {
+      return INDONESIAN_CITIES[key];
+    }
+  }
+  
+  // Try removing common suffixes like "kota", "kabupaten"
+  const cleanName = normalized
+    .replace(/kota$/i, '')
+    .replace(/kabupaten$/i, '')
+    .replace(/kab$/i, '')
+    .trim();
+    
+  if (INDONESIAN_CITIES[cleanName]) {
+    return INDONESIAN_CITIES[cleanName];
+  }
+  
+  return null;
+}
+
+/**
+ * Get coordinates for a city
+ * Convenience function that returns [lat, lng] array or null
+ * 
+ * @param cityName - Name of the city
+ * @returns [latitude, longitude] or null if not found
+ * 
+ * @example
+ * const coords = getCityCoordinates('Bandung');
+ * // Returns: [-6.9175, 107.6191]
+ */
+export function getCityCoordinates(cityName: string): [number, number] | null {
+  const data = getCityData(cityName);
+  if (!data) return null;
+  return [data.lat, data.lng];
+}
+
+/**
+ * Get province for a city
+ * 
+ * @param cityName - Name of the city
+ * @returns Province name or null if not found
+ */
+export function getCityProvince(cityName: string): string | null {
+  const data = getCityData(cityName);
+  return data?.province || null;
+}
+
+/**
+ * Get island for a city
+ * 
+ * @param cityName - Name of the city
+ * @returns Island name or null if not found
+ */
+export function getCityIsland(cityName: string): string | null {
+  const data = getCityData(cityName);
+  return data?.island || null;
+}
+
+/**
+ * Check if a city exists in the database
+ * 
+ * @param cityName - Name of the city to check
+ * @returns true if city exists, false otherwise
+ */
+export function cityExists(cityName: string): boolean {
+  return getCityData(cityName) !== null;
+}
+
+/**
+ * Get all cities in a specific province
+ * 
+ * @param provinceName - Name of the province
+ * @returns Array of city names in that province
+ */
+export function getCitiesByProvince(provinceName: string): string[] {
+  const normalized = provinceName.toLowerCase().trim();
+  return Object.entries(INDONESIAN_CITIES)
+    .filter(([_, data]) => data.province?.toLowerCase().includes(normalized))
+    .map(([name]) => name);
+}
+
+/**
+ * Get all cities on a specific island
+ * 
+ * @param islandName - Name of the island
+ * @returns Array of city names on that island
+ */
+export function getCitiesByIsland(islandName: string): string[] {
+  const normalized = islandName.toLowerCase().trim();
+  return Object.entries(INDONESIAN_CITIES)
+    .filter(([_, data]) => data.island?.toLowerCase().includes(normalized))
+    .map(([name]) => name);
+}
+
+/**
+ * Search cities by name (fuzzy search)
+ * Returns up to 10 matching cities
+ * 
+ * @param query - Search query
+ * @param limit - Maximum results (default 10)
+ * @returns Array of { name, data } objects
+ */
+export function searchCities(query: string, limit: number = 10): Array<{ name: string; data: CityData }> {
+  if (!query) return [];
+  
+  const normalized = query.toLowerCase().trim();
+  const results: Array<{ name: string; data: CityData }> = [];
+  
+  for (const [name, data] of Object.entries(INDONESIAN_CITIES)) {
+    if (name.includes(normalized)) {
+      results.push({ name, data });
+      if (results.length >= limit) break;
+    }
+  }
+  
+  return results;
+}
