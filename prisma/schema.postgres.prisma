@@ -384,6 +384,8 @@ model Location {
   metaTitle       String?   // SEO title
   metaDescription String?   // SEO description
   keywords        String?   // Comma-separated keywords
+  latitude        Float?    // GPS latitude for map
+  longitude       Float?    // GPS longitude for map
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
