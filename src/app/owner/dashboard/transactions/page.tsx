@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SimplePagination } from '@/components/ui/pagination';
+import { CitySearch } from '@/components/ui/city-search';
 import {
   Plus, Search, Loader2, ChevronRight, ArrowUp, ArrowDown, Target,
   Percent, AlertCircle, X, Check, User, Clock, Hash, Trash2, Edit3,
@@ -1020,7 +1021,12 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
                 <div className="grid grid-cols-3 gap-2">
                   <Input placeholder="Nama" value={form.customerName} onChange={e => setForm(p => ({ ...p, customerName: e.target.value }))} required className="h-8 text-xs" />
                   <Input placeholder="WA" value={form.customerPhone} onChange={e => setForm(p => ({ ...p, customerPhone: e.target.value }))} required className="h-8 text-xs" />
-                  <Input placeholder="Kota" value={form.customerCity} onChange={e => setForm(p => ({ ...p, customerCity: e.target.value }))} className="h-8 text-xs" />
+                  <CitySearch
+                    value={form.customerCity}
+                    onChange={(value) => setForm(p => ({ ...p, customerCity: value }))}
+                    placeholder="Kota"
+                    className="h-8"
+                  />
                 </div>
                 {/* Bank Account Fields */}
                 <div className="p-2 bg-muted/50 rounded-lg space-y-2">
