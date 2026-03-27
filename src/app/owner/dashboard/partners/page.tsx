@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatShortDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { CitySearch } from '@/components/ui/city-search';
 import {
   PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -1521,12 +1522,10 @@ function NewPartnerDialog({ onCreated }: { onCreated: () => void }) {
 
           <div className="space-y-1">
             <Label className="text-xs">Kota *</Label>
-            <Input
-              placeholder="Kota"
+            <CitySearch
               value={formData.city}
-              onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
-              required
-              className="h-9"
+              onChange={(value) => setFormData((prev) => ({ ...prev, city: value }))}
+              placeholder="Cari kota..."
             />
           </div>
 

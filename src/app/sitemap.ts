@@ -1,62 +1,133 @@
 import { MetadataRoute } from 'next';
 import { db } from '@/lib/db';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Get dynamic content
-  let announcements: Array<{ id: string; updatedAt: Date }> = [];
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.blackbear.cc';
   
   try {
-    announcements = await db.announcement.findMany({
-      where: { isActive: true },
-      select: { id: true, updatedAt: true },
-    });
-  } catch (error) {
-    console.error('Failed to fetch announcements for sitemap:', error);
-  }
+    // Fetch dynamic content
+    const [blogPosts, locations] = await Promise.all([
+      db.blogPost.findMany({
+        where: { isPublished: true },
+        select: { slug: true, updatedAt: true },
+        orderBy: { updatedAt: 'desc' },
+      }),
+      db.location.findMany({
+        where: { isActive: true },
+        select: { slug: true, updatedAt: true },
+        orderBy: { updatedAt: 'desc' },
+      }),
+    ]);
 
-  // Static pages
-  const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: siteUrl,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 1,
-    },
-    {
-      url: `${siteUrl}/order`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    {
-      url: `${siteUrl}/track`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${siteUrl}/register`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
+    // Static pages
+    const staticPages: MetadataRoute.Sitemap = [
+      {
+        url: siteUrl,
+        lastModified: new Date(),
+        changeFrequency: 'daily',
+        priority: 1,
+      },
+      {
+        url: `${siteUrl}/order`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly',
+        priority: 0.8,
+      },
+      {
+        url: `${siteUrl}/track`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly',
+        priority: 0.8,
+      },
+      {
+        url: `${siteUrl}/register`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly',
+        priority: 0.7,
+      },
+      {
+        url: `${siteUrl}/blog`,
+        lastModified: new Date(),
+        changeFrequency: 'daily',
+        priority: 0.9,
+      },
+      {
+        url: `${siteUrl}/faq`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly',
+        priority: 0.7,
+      },
+      {
+        url: `${siteUrl}/lokasi`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly',
+        priority: 0.8,
+      },
+    ];
+
+    // Blog post pages
+    const blogPages: MetadataRoute.Sitemap = blogPosts.map((post) => ({
+      url: `${siteUrl}/blog/${post.slug}`,
+      lastModified: post.updatedAt,
+      changeFrequency: 'weekly' as const,
       priority: 0.7,
-    },
-    {
-      url: `${siteUrl}/login`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-  ];
+    }));
 
-  // Announcement pages (if you have public announcement pages)
-  const announcementPages: MetadataRoute.Sitemap = announcements.map((announcement) => ({
-    url: `${siteUrl}/announcement/${announcement.id}`,
-    lastModified: announcement.updatedAt,
-    changeFrequency: 'weekly' as const,
-    priority: 0.6,
-  }));
+    // Location pages
+    const locationPages: MetadataRoute.Sitemap = locations.map((location) => ({
+      url: `${siteUrl}/lokasi/${location.slug}`,
+      lastModified: location.updatedAt,
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    }));
 
-  return [...staticPages, ...announcementPages];
+    return [...staticPages, ...blogPages, ...locationPages];
+  } catch (error) {
+    console.error('Sitemap error:', error);
+    // Return static pages only if database fails
+    return [
+      {
+        url: siteUrl,
+        lastModified: new Date(),
+        changeFrequency: 'daily',
+        priority: 1,
+      },
+      {
+        url: `${siteUrl}/order`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly',
+        priority: 0.8,
+      },
+      {
+        url: `${siteUrl}/track`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly',
+        priority: 0.8,
+      },
+      {
+        url: `${siteUrl}/register`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly',
+        priority: 0.7,
+      },
+      {
+        url: `${siteUrl}/blog`,
+        lastModified: new Date(),
+        changeFrequency: 'daily',
+        priority: 0.9,
+      },
+      {
+        url: `${siteUrl}/faq`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly',
+        priority: 0.7,
+      },
+      {
+        url: `${siteUrl}/lokasi`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly',
+        priority: 0.8,
+      },
+    ];
+  }
 }

@@ -39,6 +39,7 @@ interface OrderData {
   paymentFee: number;
   totalReceived: number;
   status: string;
+  notes: string | null;
   customer: {
     name: string;
     bankName: string | null;
@@ -470,6 +471,17 @@ function TrackOrderContent() {
                 <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
                   <p className="text-xs text-muted-foreground mb-1">Partner</p>
                   <p className="font-medium text-primary">{order.partner}</p>
+                </div>
+              )}
+
+              {/* Notes from Owner */}
+              {order.notes && (
+                <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageCircle className="w-4 h-4 text-amber-600" />
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Catatan dari Admin</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{order.notes}</p>
                 </div>
               )}
 

@@ -55,6 +55,7 @@ import {
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { CitySearch } from '@/components/ui/city-search';
 import {
   PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -1351,11 +1352,10 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
             </div>
             <div className="space-y-2">
               <Label>Lokasi / Kota (Opsional)</Label>
-              <Input
-                placeholder="Contoh: Jakarta, Bandung"
+              <CitySearch
                 value={formData.city}
-                onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                className="rounded-xl"
+                onChange={(value) => setFormData(prev => ({ ...prev, city: value }))}
+                placeholder="Cari kota..."
               />
             </div>
           </div>

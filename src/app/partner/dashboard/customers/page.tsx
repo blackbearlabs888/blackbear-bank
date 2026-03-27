@@ -41,6 +41,7 @@ import {
 import { formatCurrency, formatCompactCurrency, formatDate, formatDateAgo } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { CitySearch } from '@/components/ui/city-search';
 
 interface Customer {
   id: string;
@@ -885,11 +886,10 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
 
           <div className="space-y-2">
             <Label>Lokasi / Kota</Label>
-            <Input
-              placeholder="Jakarta, Bandung, dll"
+            <CitySearch
               value={formData.city}
-              onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-              className="rounded-xl"
+              onChange={(value) => setFormData(prev => ({ ...prev, city: value }))}
+              placeholder="Cari kota..."
             />
           </div>
 

@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
         paymentFee: toNumber(transaction.paymentFee),
         totalReceived: toNumber(transaction.totalReceived),
         status: transaction.status,
+        notes: transaction.notes || null,
         customer: {
           name: transaction.customer.name,
           phone: transaction.customer.phone,

@@ -41,6 +41,7 @@ import {
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { useSiteConfig } from '@/hooks/use-site-config';
+import { CitySearch } from '@/components/ui/city-search';
 
 interface PaymentType {
   id: string;
@@ -376,11 +377,10 @@ function StepRecipient({
           </div>
           <div className="space-y-2">
             <Label className="text-sm">Kota</Label>
-            <Input
-              placeholder="Kota domisili"
+            <CitySearch
               value={formData.city}
-              onChange={(e) => onChange('city', e.target.value)}
-              className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
+              onChange={(value) => onChange('city', value)}
+              placeholder="Cari kota domisili..."
             />
           </div>
         </div>

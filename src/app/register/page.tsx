@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSiteConfig } from '@/hooks/use-site-config';
+import { CitySearch } from '@/components/ui/city-search';
 
 const banks = [
   'BCA', 'Mandiri', 'BRI', 'BNI', 'CIMB Niaga', 'Permata', 'Danamon', 
@@ -580,13 +581,10 @@ export default function RegisterPage() {
                         <MapPin className="w-4 h-4 text-muted-foreground" />
                         Kota
                       </Label>
-                      <Input
-                        placeholder="Kota domisili"
+                      <CitySearch
                         value={formData.city}
-                        onChange={(e) => handleChange('city', e.target.value)}
-                        required
-                        className="h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
-                        autoComplete="address-level2"
+                        onChange={(value) => handleChange('city', value)}
+                        placeholder="Cari kota domisili..."
                       />
                     </div>
                   </div>
