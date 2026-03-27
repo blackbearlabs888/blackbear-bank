@@ -56,6 +56,7 @@ import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CitySearch } from '@/components/ui/city-search';
+import { isValidIndonesianPhone, normalizePhone } from '@/lib/customer-utils';
 import {
   PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -1270,16 +1271,24 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate phone number
+    if (!isValidIndonesianPhone(formData.phone)) {
+      toast.error('Format nomor WA tidak valid. Gunakan format 08xxx');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const bankNameToSubmit = formData.bankName === 'Lainnya' ? customBankName : formData.bankName;
-      
+
       const response = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          phone: normalizePhone(formData.phone),
           bankName: bankNameToSubmit,
         }),
       });
@@ -1290,7 +1299,13 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
         onCreated();
         setFormData({ name: '', phone: '', email: '', bankName: '', bankAccount: '', bankHolder: '', city: '' });
         setCustomBankName('');
-        toast.success('Customer berhasil ditambahkan');
+        if (result.isExisting) {
+          toast.info(result.message || 'Customer sudah ada, data diperbarui');
+        } else {
+          toast.success('Customer berhasil ditambahkan');
+        }
+      } else {
+        toast.error(result.error || 'Gagal menambahkan customer');
       }
     } catch (err) {
       console.error('Failed to create customer:', err);
