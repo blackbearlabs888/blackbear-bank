@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { CitySearch } from '@/components/ui/city-search';
 import {
   Moon,
   Bell,
@@ -692,10 +693,10 @@ export default function PartnerSettingsPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Kota / Lokasi</Label>
-              <Input
+              <CitySearch
                 value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Jakarta, Bandung, dll"
+                onChange={(value) => setCity(value)}
+                placeholder="Cari kota..."
                 className="rounded-xl"
               />
             </div>
