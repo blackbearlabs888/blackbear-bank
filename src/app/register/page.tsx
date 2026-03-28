@@ -139,6 +139,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [logoError, setLogoError] = useState(false);
+  const [customBankName, setCustomBankName] = useState('');
 
   const siteName = config.websiteTitle || 'Black Bear';
 
@@ -178,6 +179,11 @@ export default function RegisterPage() {
 
     if (!/^08[0-9]{8,12}$/.test(formData.phone)) {
       setError('Format nomor WhatsApp tidak valid (contoh: 08xxx)');
+      return;
+    }
+
+    if (formData.bankName === 'Lainnya' && !customBankName.trim()) {
+      setError('Nama bank harus diisi');
       return;
     }
 
@@ -311,7 +317,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex flex-col items-center mb-6">
-            <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center shadow-xl shadow-primary/25 mb-4">
+            <div className="w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center shadow-xl shadow-primary/25 mb-4">
               {config.logoUrl && !logoError ? (
                 <img 
                   src={config.logoUrl} 
@@ -320,7 +326,7 @@ export default function RegisterPage() {
                   onError={() => setLogoError(true)}
                 />
               ) : (
-                <span className="text-white font-bold text-xl">{getInitials()}</span>
+                <span className="text-white font-bold text-lg">{getInitials()}</span>
               )}
             </div>
             <h1 className="text-xl font-bold">{siteName}</h1>
@@ -344,26 +350,26 @@ export default function RegisterPage() {
             hasHydrated && "animate-in fade-in slide-in-from-bottom-4 duration-500"
           )}>
             {/* Gradient accent line */}
-            <div className="h-1.5 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
+            <div className="h-1 sm:h-1.5 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
             
-            <CardContent className="p-6 sm:p-8">
+            <CardContent className="p-4 sm:p-8">
               {/* Header */}
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold mb-2">Daftar Mitra</h2>
+              <div className="text-center mb-4">
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">Daftar Mitra</h2>
                 <p className="text-muted-foreground">Bergabung dengan {siteName}</p>
               </div>
 
               {/* Benefits badges */}
-              <div className="flex flex-wrap justify-center gap-2 mb-6">
-                <Badge variant="secondary" className="px-3 py-1.5 gap-1.5 rounded-full">
+              <div className="flex flex-wrap justify-center gap-2 mb-4">
+                <Badge variant="secondary" className="px-2.5 py-1 sm:px-3 sm:py-1.5 gap-1.5 rounded-full">
                   <CreditCard className="w-3.5 h-3.5 text-primary" />
                   Komisi 30%
                 </Badge>
-                <Badge variant="secondary" className="px-3 py-1.5 gap-1.5 rounded-full">
+                <Badge variant="secondary" className="px-2.5 py-1 sm:px-3 sm:py-1.5 gap-1.5 rounded-full">
                   <User className="w-3.5 h-3.5 text-primary" />
                   Target 5jt
                 </Badge>
-                <Badge variant="secondary" className="px-3 py-1.5 gap-1.5 rounded-full">
+                <Badge variant="secondary" className="px-2.5 py-1 sm:px-3 sm:py-1.5 gap-1.5 rounded-full">
                   <Shield className="w-3.5 h-3.5 text-primary" />
                   Aman
                 </Badge>
@@ -375,7 +381,7 @@ export default function RegisterPage() {
                 </Alert>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 {/* Personal Info Section */}
                 <div className="space-y-4">
                   <StepIndicator 
@@ -397,12 +403,12 @@ export default function RegisterPage() {
                         value={formData.name}
                         onChange={(e) => handleChange('name', e.target.value)}
                         required
-                        className="h-12 rounded-xl border-2 focus:border-primary transition-colors"
+                        className="h-11 sm:h-12 rounded-xl border-2 focus:border-primary transition-colors"
                         autoComplete="name"
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                       <div className="space-y-2">
                         <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
                           <Mail className="w-4 h-4 text-muted-foreground" />
@@ -415,7 +421,7 @@ export default function RegisterPage() {
                           value={formData.email}
                           onChange={(e) => handleChange('email', e.target.value)}
                           required
-                          className="h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
+                          className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
                           autoComplete="email"
                         />
                       </div>
@@ -432,14 +438,14 @@ export default function RegisterPage() {
                           value={formData.phone}
                           onChange={(e) => handleChange('phone', e.target.value)}
                           required
-                          className="h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
+                          className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
                           autoComplete="tel"
                         />
                       </div>
                     </div>
 
                     {/* Password Fields */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                       <div className="space-y-2">
                         <Label htmlFor="password" className="text-sm font-medium flex items-center gap-2">
                           <Lock className="w-4 h-4 text-muted-foreground" />
@@ -454,14 +460,14 @@ export default function RegisterPage() {
                             onChange={(e) => handleChange('password', e.target.value)}
                             required
                             minLength={6}
-                            className="h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pr-12"
+                            className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pr-12"
                             autoComplete="new-password"
                           />
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 hover:bg-muted rounded-lg tap-highlight"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 sm:h-10 sm:w-10 hover:bg-muted rounded-lg tap-highlight"
                             onClick={() => setShowPassword(!showPassword)}
                           >
                             {showPassword ? (
@@ -487,14 +493,14 @@ export default function RegisterPage() {
                             onChange={(e) => handleChange('confirmPassword', e.target.value)}
                             required
                             minLength={6}
-                            className="h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pr-12"
+                            className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pr-12"
                             autoComplete="new-password"
                           />
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 hover:bg-muted rounded-lg tap-highlight"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 sm:h-10 sm:w-10 hover:bg-muted rounded-lg tap-highlight"
                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                           >
                             {showConfirmPassword ? (
@@ -534,24 +540,40 @@ export default function RegisterPage() {
                         <Building2 className="w-4 h-4 text-muted-foreground" />
                         Nama Bank
                       </Label>
-                      <Select
-                        value={formData.bankName}
-                        onValueChange={(value) => handleChange('bankName', value)}
-                      >
-                        <SelectTrigger className="h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors">
-                          <SelectValue placeholder="Pilih bank" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {banks.map((bank) => (
-                            <SelectItem key={bank} value={bank}>
-                              {bank}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {formData.bankName !== 'Lainnya' ? (
+                        <Select
+                          value={formData.bankName}
+                          onValueChange={(value) => {
+                            handleChange('bankName', value);
+                            if (value !== 'Lainnya') setCustomBankName('');
+                          }}
+                        >
+                          <SelectTrigger className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors">
+                            <SelectValue placeholder="Pilih bank" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {banks.map((bank) => (
+                              <SelectItem key={bank} value={bank}>
+                                {bank}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          placeholder="Ketik nama bank Anda"
+                          value={customBankName}
+                          onChange={(e) => {
+                            setCustomBankName(e.target.value);
+                            handleChange('bankName', `Lainnya: ${e.target.value}`);
+                          }}
+                          required
+                          className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
+                        />
+                      )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">No. Rekening</Label>
                         <Input
@@ -559,7 +581,7 @@ export default function RegisterPage() {
                           value={formData.bankAccount}
                           onChange={(e) => handleChange('bankAccount', e.target.value)}
                           required
-                          className="h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
+                          className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
                           inputMode="numeric"
                         />
                       </div>
@@ -571,7 +593,7 @@ export default function RegisterPage() {
                           value={formData.bankHolder}
                           onChange={(e) => handleChange('bankHolder', e.target.value)}
                           required
-                          className="h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
+                          className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
                         />
                       </div>
                     </div>
@@ -593,7 +615,7 @@ export default function RegisterPage() {
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-300"
+                  className="w-full h-11 sm:h-12 rounded-xl text-sm sm:text-base font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-300"
                   disabled={loading}
                 >
                   {loading ? (
@@ -612,7 +634,7 @@ export default function RegisterPage() {
               </form>
 
               {/* Login Link */}
-              <div className="mt-6 text-center">
+              <div className="mt-4 text-center">
                 <p className="text-sm text-muted-foreground">
                   Sudah punya akun?{' '}
                   <Link href="/login" className="text-primary font-semibold hover:underline tap-highlight inline-flex items-center gap-1">
@@ -623,7 +645,7 @@ export default function RegisterPage() {
               </div>
 
               {/* Trust Badge */}
-              <div className="mt-6 pt-6 border-t border-dashed border-border/50">
+              <div className="mt-4 pt-4 border-t border-dashed border-border/50">
                 <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                   <Shield className="w-3.5 h-3.5 text-primary" />
                   <span>Data Anda aman dan terenkripsi</span>
