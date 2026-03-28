@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,15 +13,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { SimplePagination } from '@/components/ui/pagination';
+import { Progress } from '@/components/ui/progress';
 import {
   Wallet, ArrowRightLeft, Search, RefreshCw,
   Loader2, AlertCircle, CheckCircle, XCircle, User, CreditCard, Store,
   MessageSquare, Copy, Edit3, Clock, ArrowUp, ArrowDown, Plus,
-  Sparkles, Calculator, Building2, Save, Send,
+  Sparkles, Calculator, Building2, Save, Send, TrendingUp, Activity,
+  DollarSign, ShoppingBag, BarChart3, PieChart,
 } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CitySearch } from '@/components/ui/city-search';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart as RechartsPie, Pie, Cell,
+} from 'recharts';
 
 interface Transaction {
   id: string;
@@ -147,6 +153,67 @@ export default function PartnerTransactionsPage() {
     return tx.orderId?.toLowerCase().includes(q) || tx.customer?.name?.toLowerCase().includes(q) || tx.customer?.phone?.includes(q);
   }), [transactions, searchQuery]);
 
+  // Calculate analytics from transactions
+  const analytics = useMemo(() => {
+    const totalVolume = transactions.reduce((sum, tx) => sum + tx.nominal, 0);
+    const totalProfit = transactions.reduce((sum, tx) => sum + tx.partnerProfit, 0);
+    const pendingCount = transactions.filter(tx => tx.status === 'pending').length;
+    const successCount = transactions.filter(tx => tx.status === 'success').length;
+    const processCount = transactions.filter(tx => tx.status === 'process' || tx.status === 'verification').length;
+    const failedCount = transactions.filter(tx => tx.status === 'failed').length;
+
+    // Group by date for chart (last 7 days)
+    const last7Days: { [key: string]: { volume: number; profit: number; count: number } } = {};
+    const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const key = date.toISOString().split('T')[0];
+      last7Days[key] = { volume: 0, profit: 0, count: 0 };
+    }
+
+    transactions.forEach(tx => {
+      const key = tx.createdAt.split('T')[0];
+      if (last7Days[key]) {
+        last7Days[key].volume += tx.nominal;
+        last7Days[key].profit += tx.partnerProfit;
+        last7Days[key].count += 1;
+      }
+    });
+
+    const chartData = Object.entries(last7Days).map(([date, data]) => {
+      const d = new Date(date);
+      return {
+        date,
+        dayName: dayNames[d.getDay()],
+        volume: data.volume,
+        profit: data.profit,
+        count: data.count,
+      };
+    });
+
+    // Status distribution for pie chart
+    const statusData = [
+      { name: 'Sukses', value: successCount, color: '#22c55e' },
+      { name: 'Pending', value: pendingCount, color: '#f97316' },
+      { name: 'Proses', value: processCount, color: '#06b6d4' },
+      { name: 'Gagal', value: failedCount, color: '#ef4444' },
+    ].filter(d => d.value > 0);
+
+    return {
+      totalTransactions: transactions.length,
+      totalVolume,
+      totalProfit,
+      pendingCount,
+      successCount,
+      processCount,
+      failedCount,
+      chartData,
+      statusData,
+    };
+  }, [transactions]);
+
   if (isLoading || !hasHydrated) return <LoadingState />;
   if (!isAuthenticated || user?.role !== 'partner') return null;
 
@@ -181,6 +248,202 @@ export default function PartnerTransactionsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Stats Overview - Same Style as Customer Page */}
+      {!loading && transactions.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          <Card className="glass-card">
+            <CardContent className="p-2 sm:p-3">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] sm:text-xs text-muted-foreground">Trx</p>
+                  <p className="text-sm sm:text-lg font-bold">{analytics.totalTransactions}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-2 sm:p-3">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] sm:text-xs text-muted-foreground">Profit</p>
+                  <p className="text-[11px] sm:text-sm font-bold truncate">{formatCurrency(analytics.totalProfit)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-2 sm:p-3">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] sm:text-xs text-muted-foreground">Volume</p>
+                  <p className="text-[11px] sm:text-sm font-bold truncate">{formatCurrency(analytics.totalVolume)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className={cn(
+            "glass-card",
+            analytics.pendingCount > 0 && "ring-2 ring-orange-300 dark:ring-orange-700"
+          )}>
+            <CardContent className="p-2 sm:p-3">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className={cn(
+                  "w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0",
+                  analytics.pendingCount > 0 
+                    ? "bg-orange-100 dark:bg-orange-900/30" 
+                    : "bg-muted"
+                )}>
+                  <Clock className={cn(
+                    "w-4 h-4 sm:w-5 sm:h-5",
+                    analytics.pendingCount > 0 ? "text-orange-600" : "text-muted-foreground"
+                  )} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] sm:text-xs text-muted-foreground">Pending</p>
+                  <p className="text-sm sm:text-lg font-bold">{analytics.pendingCount}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Charts Section - Mobile Optimized */}
+      {!loading && transactions.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* Volume Chart */}
+          <Card className="glass-card">
+            <CardHeader className="pb-1 sm:pb-2 pt-3 sm:pt-4 px-3 sm:px-4">
+              <CardTitle className="text-xs sm:text-sm flex items-center gap-2">
+                <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+                Volume 7 Hari
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-2 sm:px-4 pb-3 sm:pb-4">
+              <ResponsiveContainer width="100%" height={120}>
+                <AreaChart data={analytics.chartData}>
+                  <defs>
+                    <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                  <XAxis 
+                    dataKey="dayName" 
+                    tick={{ fontSize: 9 }} 
+                    stroke="#9ca3af" 
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 9 }} 
+                    stroke="#9ca3af" 
+                    width={30}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => {
+                      if (v >= 1000000) return `${(v/1000000).toFixed(0)}jt`;
+                      if (v >= 1000) return `${(v/1000).toFixed(0)}rb`;
+                      return v.toString();
+                    }}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => formatCurrency(value)}
+                    labelStyle={{ fontSize: 10 }}
+                    contentStyle={{ fontSize: 9, borderRadius: 6, border: '1px solid #e5e7eb' }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="volume" 
+                    stroke="#8b5cf6" 
+                    strokeWidth={2} 
+                    fillOpacity={1} 
+                    fill="url(#colorVolume)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Status Distribution */}
+          <Card className="glass-card">
+            <CardHeader className="pb-1 sm:pb-2 pt-3 sm:pt-4 px-3 sm:px-4">
+              <CardTitle className="text-xs sm:text-sm flex items-center gap-2">
+                <PieChart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+                Status Transaksi
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4">
+              <div className="flex items-center gap-3 sm:gap-4">
+                {/* Pie Chart */}
+                <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPie>
+                      <Pie
+                        data={analytics.statusData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={20}
+                        outerRadius={35}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {analytics.statusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </RechartsPie>
+                  </ResponsiveContainer>
+                </div>
+                
+                {/* Legend */}
+                <div className="flex-1 space-y-1.5 sm:space-y-2">
+                  {analytics.statusData.map((item) => (
+                    <div key={item.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <div 
+                          className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: item.color }} 
+                        />
+                        <span className="text-[10px] sm:text-xs text-muted-foreground">{item.name}</span>
+                      </div>
+                      <span className="text-[10px] sm:text-xs font-bold">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="h-2 sm:h-2.5 rounded-full overflow-hidden flex bg-muted mt-3">
+                {analytics.statusData.map((item) => (
+                  <div 
+                    key={item.name}
+                    className="h-full" 
+                    style={{ 
+                      width: `${(item.value / analytics.totalTransactions) * 100}%`,
+                      backgroundColor: item.color 
+                    }} 
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Status Filter Pills */}
       <div className="overflow-x-auto -mx-3 px-3 scrollbar-hide">
@@ -587,13 +850,13 @@ function TxCard({ tx, onClick }: { tx: Transaction; onClick: () => void }) {
             </div>
             <p className="text-[11px] sm:text-xs font-medium truncate">{tx.customer?.name}</p>
             <div className="flex items-center justify-between gap-1 mt-0.5">
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{tx.paymentType?.name} • {tx.methodTransaction}</p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{tx.paymentType?.name} â¢ {tx.methodTransaction}</p>
               <p className="text-[10px] sm:text-xs font-bold text-primary flex-shrink-0">+{formatCurrency(tx.partnerProfit)}</p>
             </div>
           </div>
         </div>
         <div className="flex items-center justify-between px-2 sm:px-2.5 py-1.5 bg-muted/30 border-t text-[9px] sm:text-[10px]">
-          <span className="text-muted-foreground truncate">{formatCurrency(tx.nominal)} • {formatDate(tx.createdAt)}</span>
+          <span className="text-muted-foreground truncate">{formatCurrency(tx.nominal)} â¢ {formatDate(tx.createdAt)}</span>
           {tx.marketplace && (
             <Badge variant="outline" className="text-[8px] sm:text-[9px] h-3.5 sm:h-4 px-1 flex items-center gap-0.5">
               <Store className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
