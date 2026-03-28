@@ -1,794 +1,517 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { CitySearch } from '@/components/ui/city-search';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { SimplePagination } from '@/components/ui/pagination';
 import {
-  Moon,
-  Bell,
-  Shield,
-  LogOut,
-  ChevronRight,
-  Target,
-  Wallet,
-  User,
-  Lock,
-  Image as ImageIcon,
-  MapPin,
-  Building2,
-  Eye,
-  EyeOff,
-  Save,
-  Loader2,
-  Check,
-  AlertCircle,
+  Wallet, ArrowRightLeft, Search, RefreshCw,
+  Loader2, AlertCircle, CheckCircle, XCircle, User, CreditCard, Store,
+  MessageSquare, Copy, Edit3, Clock, ArrowUp, ArrowDown,
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
-export default function PartnerSettingsPage() {
+interface Transaction {
+  id: string;
+  orderId: string;
+  nominal: number;
+  paymentFee: number;
+  platformFee: number;
+  ownerProfit: number;
+  partnerProfit: number;
+  totalReceived: number;
+  methodTransaction: string;
+  status: string;
+  notes: string | null;
+  transactionLink?: string | null;
+  createdAt: string;
+  customer: { id: string; name: string; phone: string; city?: string; bankName?: string; bankAccount?: string; bankHolder?: string; };
+  paymentType: { id: string; name: string; onlineFeePercent?: number; onlineFeeFlat?: number; codFeePercent?: number; codFeeFlat?: number; threshold?: number; };
+  marketplace?: { id: string; name: string; feePercent: number; feeFlat?: number; isActive?: boolean; } | null;
+  partner?: { id: string; name: string; tier: string; commission?: number; } | null;
+}
+
+const STATUS_CONFIG = {
+  pending: { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', icon: Clock, iconColor: 'text-orange-600', gradient: 'from-orange-500 to-amber-600' },
+  verification: { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: AlertCircle, iconColor: 'text-blue-600', gradient: 'from-blue-500 to-indigo-600' },
+  process: { color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400', icon: Loader2, iconColor: 'text-cyan-600', gradient: 'from-cyan-500 to-teal-600' },
+  success: { color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: ArrowUp, iconColor: 'text-green-600', gradient: 'from-green-500 to-emerald-600' },
+  failed: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: ArrowDown, iconColor: 'text-red-600', gradient: 'from-red-500 to-rose-600' },
+};
+
+export default function PartnerTransactionsPage() {
   const router = useRouter();
-  const { user, partner, isAuthenticated, isLoading, hasHydrated, hydrate, logout, setPartner, setUser } = useAuthStore();
-  const { theme, setTheme } = useTheme();
-  const { toast } = useToast();
-  const redirectAttempted = useRef(false);
+  const { user, isAuthenticated, isLoading, hasHydrated, hydrate } = useAuthStore();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const ITEMS_PER_PAGE = 10;
 
-  // Password change state
-  const [passwordOpen, setPasswordOpen] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPasswords, setShowPasswords] = useState(false);
-  const [passwordLoading, setPasswordLoading] = useState(false);
-
-  // Avatar change state
-  const [avatarOpen, setAvatarOpen] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [avatarLoading, setAvatarLoading] = useState(false);
-
-  // Location change state
-  const [locationOpen, setLocationOpen] = useState(false);
-  const [city, setCity] = useState('');
-  const [locationLoading, setLocationLoading] = useState(false);
-
-  // Bank change state
-  const [bankOpen, setBankOpen] = useState(false);
-  const [bankName, setBankName] = useState('');
-  const [bankAccount, setBankAccount] = useState('');
-  const [bankHolder, setBankHolder] = useState('');
-  const [bankLoading, setBankLoading] = useState(false);
+  useEffect(() => { if (!hasHydrated) hydrate(); }, [hasHydrated, hydrate]);
 
   useEffect(() => {
-    if (!hasHydrated) hydrate();
-  }, [hasHydrated, hydrate]);
-
-  useEffect(() => {
-    if (hasHydrated && !isLoading && !redirectAttempted.current) {
-      redirectAttempted.current = true;
-      if (!isAuthenticated) {
-        router.replace('/login');
-      } else if (user?.role === 'owner') {
-        router.replace('/owner/dashboard');
-      }
+    if (hasHydrated && !isLoading) {
+      if (!isAuthenticated) router.replace('/login');
+      else if (user?.role === 'owner') router.replace('/owner/dashboard');
     }
   }, [hasHydrated, isLoading, isAuthenticated, user, router]);
 
   useEffect(() => {
-    // Initialize form values from partner data
-    if (partner) {
-      setCity(partner.city || '');
-      setBankName(partner.bankName || '');
-      setBankAccount(partner.bankAccount || '');
-      setBankHolder(partner.bankHolder || '');
+    if (isAuthenticated && hasHydrated && user?.role === 'partner') {
+      fetchTransactions();
     }
-    if (user) {
-      setAvatarUrl(user.avatar || '');
+  }, [isAuthenticated, hasHydrated, user, activeTab, currentPage]);
+
+  const fetchTransactions = async (isAutoRefresh = false) => {
+    if (isAutoRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setLoading(true);
     }
-  }, [partner, user]);
-
-  const handleLogout = async () => {
-    await logout();
-    router.replace('/login');
-  };
-
-  // Password change handler
-  const handlePasswordChange = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Semua field harus diisi',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Password baru tidak cocok',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      toast({
-        title: 'Error',
-        description: 'Password minimal 6 karakter',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setPasswordLoading(true);
     try {
-      const response = await fetch('/api/partner/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          currentPassword,
-          newPassword,
-        }),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: 'Berhasil!',
-          description: 'Password berhasil diubah',
-        });
-        setPasswordOpen(false);
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      } else {
-        throw new Error(result.error);
+      const params = new URLSearchParams();
+      params.append('days', '30');
+      params.append('page', currentPage.toString());
+      params.append('limit', ITEMS_PER_PAGE.toString());
+      if (activeTab !== 'all') params.append('status', activeTab);
+      const res = await fetch(`/api/transactions?${params}`);
+      const data = await res.json();
+      if (data.success) {
+        setTransactions(data.data);
+        if (data.pagination) {
+          setTotalPages(data.pagination.totalPages);
+          setTotalItems(data.pagination.totalItems);
+        }
+        setLastUpdated(new Date());
       }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Gagal mengubah password',
-        variant: 'destructive',
-      });
-    } finally {
-      setPasswordLoading(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); setIsRefreshing(false); }
   };
 
-  // Avatar change handler
-  const handleAvatarChange = async () => {
-    if (!avatarUrl.trim()) {
-      toast({
-        title: 'Error',
-        description: 'URL avatar tidak boleh kosong',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const filtered = useMemo(() => transactions.filter(tx => {
+    const q = searchQuery.toLowerCase();
+    return tx.orderId?.toLowerCase().includes(q) || tx.customer?.name?.toLowerCase().includes(q) || tx.customer?.phone?.includes(q);
+  }), [transactions, searchQuery]);
 
-    // Validate URL format
-    try {
-      new URL(avatarUrl);
-    } catch {
-      toast({
-        title: 'Error',
-        description: 'URL tidak valid',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setAvatarLoading(true);
-    try {
-      const response = await fetch('/api/partner/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatar: avatarUrl }),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: 'Berhasil!',
-          description: 'Avatar berhasil diubah',
-        });
-        setUser({ ...user!, avatar: avatarUrl });
-        setAvatarOpen(false);
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Gagal mengubah avatar',
-        variant: 'destructive',
-      });
-    } finally {
-      setAvatarLoading(false);
-    }
-  };
-
-  // Location change handler
-  const handleLocationChange = async () => {
-    if (!city.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Kota tidak boleh kosong',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setLocationLoading(true);
-    try {
-      const response = await fetch('/api/partner/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ city }),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: 'Berhasil!',
-          description: 'Lokasi berhasil diubah',
-        });
-        setPartner({ ...partner!, city });
-        setLocationOpen(false);
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Gagal mengubah lokasi',
-        variant: 'destructive',
-      });
-    } finally {
-      setLocationLoading(false);
-    }
-  };
-
-  // Bank change handler
-  const handleBankChange = async () => {
-    if (!bankName.trim() || !bankAccount.trim() || !bankHolder.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Semua field bank harus diisi',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setBankLoading(true);
-    try {
-      const response = await fetch('/api/partner/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bankName,
-          bankAccount,
-          bankHolder,
-        }),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: 'Berhasil!',
-          description: 'Info bank berhasil diubah',
-        });
-        setPartner({ 
-          ...partner!, 
-          bankName, 
-          bankAccount, 
-          bankHolder 
-        });
-        setBankOpen(false);
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Gagal mengubah info bank',
-        variant: 'destructive',
-      });
-    } finally {
-      setBankLoading(false);
-    }
-  };
-
-  if (isLoading || !hasHydrated) {
-    return (
-      <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
-        <Skeleton className="h-10 w-32" />
-        <Skeleton className="h-32 rounded-xl" />
-        <div className="space-y-3">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated || user?.role !== 'partner') {
-    return null;
-  }
-
-  const progressPercent = Math.min(((partner?.totalProfit || 0) / (partner?.target || 1)) * 100, 100);
+  if (isLoading || !hasHydrated) return <LoadingState />;
+  if (!isAuthenticated || user?.role !== 'partner') return null;
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
+    <div className="container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3 pb-20 md:pb-4">
       {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold">Pengaturan</h1>
-        <p className="text-sm text-muted-foreground">Kelola profil & preferensi</p>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-base sm:text-lg font-bold flex items-center gap-2">
+            <ArrowRightLeft className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+            <span className="truncate">Transaksi Saya</span>
+          </h1>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Riwayat transaksi partner</p>
+        </div>
+        <Button
+          onClick={() => fetchTransactions()}
+          size="sm"
+          variant="outline"
+          className="h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-lg"
+          disabled={isRefreshing}
+        >
+          <RefreshCw className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", isRefreshing && "animate-spin")} />
+        </Button>
       </div>
 
-      {/* Profile Card */}
-      <Card className="glass-card overflow-hidden">
-        <div className="h-1 gradient-primary" />
-        <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <div className="relative group">
-              {user?.avatar ? (
-                <img 
-                  src={user.avatar} 
-                  alt={`${user.name}'s avatar`}
-                  className="w-16 h-16 rounded-2xl object-cover shadow-lg"
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center shadow-lg">
-                  <span className="text-white font-bold text-2xl">
-                    {user?.name?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+      {/* Status Filter Pills */}
+      <div className="overflow-x-auto -mx-3 px-3 scrollbar-hide">
+        <div className="flex gap-1.5 min-w-max pb-1">
+          {[
+            { value: 'all', label: 'Semua' },
+            { value: 'pending', label: 'Pending', color: 'orange' },
+            { value: 'verification', label: 'Verif', color: 'blue' },
+            { value: 'process', label: 'Proses', color: 'cyan' },
+            { value: 'success', label: 'Sukses', color: 'green' },
+            { value: 'failed', label: 'Gagal', color: 'red' },
+          ].map(tab => (
+            <button
+              key={tab.value}
+              onClick={() => setActiveTab(tab.value)}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-all whitespace-nowrap",
+                activeTab === tab.value
+                  ? cn(
+                      tab.color === 'orange' && "bg-orange-500 text-white shadow-sm",
+                      tab.color === 'blue' && "bg-blue-500 text-white shadow-sm",
+                      tab.color === 'cyan' && "bg-cyan-500 text-white shadow-sm",
+                      tab.color === 'green' && "bg-green-500 text-white shadow-sm",
+                      tab.color === 'red' && "bg-red-500 text-white shadow-sm",
+                      !tab.color && "bg-primary text-primary-foreground shadow-sm"
+                    )
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
               )}
-              <button
-                onClick={() => setAvatarOpen(true)}
-                className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <ImageIcon className="w-6 h-6 text-white" />
-              </button>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold truncate">{user?.name}</p>
-              <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge className="gradient-primary text-white text-xs">{partner?.tier}</Badge>
-                <Badge variant="outline" className="text-xs">{partner?.commission}% Komisi</Badge>
-              </div>
-            </div>
-          </div>
-
-          {/* Target Progress */}
-          <div className="mt-4 pt-4 border-t">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium">Progress Target</span>
-              </div>
-              <span className="text-sm font-bold">{progressPercent.toFixed(0)}%</span>
-            </div>
-            <Progress value={progressPercent} className="h-2" />
-            <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-              <span>{formatCurrency(partner?.totalProfit || 0)}</span>
-              <span>Target: {formatCurrency(partner?.target || 0)}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Account Info - Read Only */}
-      <Card className="glass-card">
-        <CardContent className="p-4 space-y-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <AlertCircle className="w-4 h-4" />
-            <span>Email dan nama tidak dapat diubah</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs text-muted-foreground">Email</Label>
-              <p className="font-medium truncate">{user?.email}</p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Nama</Label>
-              <p className="font-medium truncate">{user?.name}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Settings List */}
-      <div className="space-y-2">
-        {/* Password */}
-        <Card className="glass-card tap-highlight active-scale cursor-pointer" onClick={() => setPasswordOpen(true)}>
-          <CardContent className="p-0">
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                  <Lock className="w-5 h-5 text-red-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Ubah Password</p>
-                  <p className="text-xs text-muted-foreground">Ganti password akun</p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Avatar */}
-        <Card className="glass-card tap-highlight active-scale cursor-pointer" onClick={() => setAvatarOpen(true)}>
-          <CardContent className="p-0">
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <ImageIcon className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Ganti Avatar</p>
-                  <p className="text-xs text-muted-foreground">Ubah foto profil via URL</p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Location */}
-        <Card className="glass-card tap-highlight active-scale cursor-pointer" onClick={() => setLocationOpen(true)}>
-          <CardContent className="p-0">
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Ganti Lokasi</p>
-                  <p className="text-xs text-muted-foreground">{partner?.city || 'Belum diatur'}</p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Bank Info */}
-        <Card className="glass-card tap-highlight active-scale cursor-pointer" onClick={() => setBankOpen(true)}>
-          <CardContent className="p-0">
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Info Bank</p>
-                  <p className="text-xs text-muted-foreground">{partner?.bankName} • {partner?.bankAccount}</p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Appearance */}
-        <Card className="glass-card">
-          <CardContent className="p-0">
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
-                  <Moon className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Mode Gelap</p>
-                  <p className="text-xs text-muted-foreground">Ubah tampilan</p>
-                </div>
-              </div>
-              <Switch
-                checked={theme === 'dark'}
-                onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-              />
-            </div>
-          </CardContent>
-        </Card>
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Logout */}
-      <Card className="glass-card border-destructive/20">
-        <CardContent className="p-0">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 p-4 text-destructive tap-highlight active-scale"
-          >
-            <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center">
-              <LogOut className="w-5 h-5" />
-            </div>
-            <div className="text-left">
-              <p className="font-medium text-sm">Keluar</p>
-              <p className="text-xs text-muted-foreground">Logout dari akun</p>
-            </div>
-          </button>
-        </CardContent>
-      </Card>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+        <Input
+          placeholder="Cari order ID, nama, no. WA..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 sm:pl-10 h-9 sm:h-10 rounded-xl text-sm"
+        />
+      </div>
 
-      {/* Version */}
-      <p className="text-center text-xs text-muted-foreground pt-4">
-        Black Bear v1.0.0
-      </p>
+      {/* Transaction List */}
+      <div className="space-y-2">
+        {loading ? (
+          [...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 sm:h-20 rounded-xl" />)
+        ) : filtered.length > 0 ? (
+          filtered.map(tx => (
+            <TxCard key={tx.id} tx={tx} onClick={() => { setSelectedTransaction(tx); setDetailOpen(true); }} />
+          ))
+        ) : (
+          <div className="text-center py-12">
+            <Wallet className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+            <p className="text-xs sm:text-sm text-muted-foreground">Tidak ada transaksi</p>
+          </div>
+        )}
+      </div>
 
-      {/* Password Change Dialog */}
-      <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Lock className="w-5 h-5 text-primary" />
-              Ubah Password
-            </DialogTitle>
-            <DialogDescription>
-              Masukkan password lama dan password baru
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Password Saat Ini</Label>
-              <div className="relative">
-                <Input
-                  type={showPasswords ? 'text' : 'password'}
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Masukkan password saat ini"
-                  className="pr-10 rounded-xl"
-                />
-                <Button
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <SimplePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+        />
+      )}
+
+      {/* Detail Dialog */}
+      <TxDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        tx={selectedTransaction}
+      />
+    </div>
+  );
+}
+
+// Transaction Card
+function TxCard({ tx, onClick }: { tx: Transaction; onClick: () => void }) {
+  const config = STATUS_CONFIG[tx.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
+  const Icon = config.icon;
+
+  return (
+    <Card className="glass-card overflow-hidden active-scale cursor-pointer hover:shadow-md transition-all tap-highlight" onClick={onClick}>
+      <CardContent className="p-0">
+        <div className="flex items-center gap-2 p-2 sm:gap-2.5 sm:p-2.5">
+          <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center bg-gradient-to-br flex-shrink-0", config.gradient)}>
+            <Icon className={cn("w-4 h-4 sm:w-5 sm:h-5 text-white", tx.status === 'process' && "animate-spin")} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <p className="font-mono text-[9px] sm:text-[10px] text-muted-foreground truncate">{tx.orderId}</p>
+              <Badge className={cn("text-[8px] sm:text-[9px] capitalize px-1.5 sm:px-2", config.color)}>{tx.status}</Badge>
+            </div>
+            <p className="text-[11px] sm:text-xs font-medium truncate">{tx.customer?.name}</p>
+            <div className="flex items-center justify-between gap-1 mt-0.5">
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{tx.paymentType?.name} • {tx.methodTransaction}</p>
+              <p className="text-[10px] sm:text-xs font-bold text-primary flex-shrink-0">+{formatCurrency(tx.partnerProfit)}</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center justify-between px-2 sm:px-2.5 py-1.5 bg-muted/30 border-t text-[9px] sm:text-[10px]">
+          <span className="text-muted-foreground truncate">{formatCurrency(tx.nominal)} • {formatDate(tx.createdAt)}</span>
+          {tx.marketplace && (
+            <Badge variant="outline" className="text-[8px] sm:text-[9px] h-3.5 sm:h-4 px-1 flex items-center gap-0.5">
+              <Store className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
+              <span className="truncate max-w-[50px] sm:max-w-none">{tx.marketplace.name}</span>
+            </Badge>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Transaction Detail Dialog Content
+function TxDetailDialogContent({ tx }: { tx: Transaction }) {
+  const [editNominal, setEditNominal] = useState(false);
+  const [nominal, setNominal] = useState(tx.nominal.toString());
+
+  // Check if nominal can be edited (only pending and verification status)
+  const canEditNominal = tx.status === 'pending' || tx.status === 'verification';
+
+  // Calculate preview when nominal changes
+  const previewCalc = useMemo(() => {
+    if (!editNominal) return null;
+
+    const newNominal = parseFloat(nominal);
+    if (isNaN(newNominal) || newNominal <= 0) return null;
+
+    const isOnline = tx.methodTransaction === 'Online';
+    let feePercent = isOnline ? (tx.paymentType?.onlineFeePercent || 0) : (tx.paymentType?.codFeePercent || 0);
+    const feeFlat = isOnline ? (tx.paymentType?.onlineFeeFlat || 0) : (tx.paymentType?.codFeeFlat || 0);
+    const threshold = tx.paymentType?.threshold || 1000000;
+
+    if (feePercent > 100) feePercent = feePercent / 1000;
+
+    let paymentFee: number;
+    if (newNominal >= threshold) {
+      paymentFee = newNominal * (feePercent / 100);
+    } else {
+      paymentFee = feeFlat;
+    }
+
+    let platformFee = 0;
+    if (tx.marketplace) {
+      let mpFeePercent = tx.marketplace.feePercent || 0;
+      const mpFeeFlat = tx.marketplace.feeFlat || 0;
+      if (mpFeePercent > 100) mpFeePercent = mpFeePercent / 1000;
+      platformFee = newNominal * (mpFeePercent / 100) + mpFeeFlat;
+    }
+
+    const netMargin = paymentFee - platformFee;
+    const partnerRate = tx.partner?.commission || 0;
+    const partnerProfit = netMargin * (partnerRate / 100);
+    const ownerProfit = netMargin - partnerProfit;
+    const totalReceived = newNominal - paymentFee;
+
+    return { paymentFee, platformFee, netMargin, partnerProfit, ownerProfit, totalReceived };
+  }, [editNominal, nominal, tx]);
+
+  const config = STATUS_CONFIG[tx.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
+  const StatusIcon = config.icon;
+
+  return (
+    <div className="space-y-2.5 p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between -mx-4 -mt-4 mb-0 px-4 py-2.5 pr-12 bg-gradient-to-r from-violet-600 to-fuchsia-500 rounded-t-lg">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/20">
+            <StatusIcon className={cn("w-4 h-4 text-white", tx.status === 'process' && "animate-spin")} />
+          </div>
+          <div>
+            <p className="text-[9px] text-white/70 uppercase">Status</p>
+            <p className="text-sm font-bold text-white capitalize">{tx.status}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[9px] text-white/70">ID</p>
+          <div className="flex items-center justify-end gap-1">
+            <p className="text-[10px] font-mono text-white bg-white/20 px-1.5 py-0.5 rounded truncate max-w-[120px]">{tx.orderId}</p>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(tx.orderId);
+                toast.success('Order ID disalin');
+              }}
+              className="p-1 hover:bg-white/20 rounded transition-colors"
+            >
+              <Copy className="w-3 h-3 text-white/80" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Amount & Profit Row */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg border bg-muted/30 p-2.5">
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="text-[9px] text-muted-foreground">Nominal</p>
+            {canEditNominal ? (
+              <button
+                type="button"
+                onClick={() => setEditNominal(!editNominal)}
+                className={cn("p-1 rounded transition-colors", editNominal ? "bg-violet-100 text-violet-600" : "hover:bg-muted text-muted-foreground")}
+                title={editNominal ? 'Batal edit' : 'Edit nominal'}
+              >
+                <Edit3 className="w-3 h-3" />
+              </button>
+            ) : (
+              <span className="text-[8px] text-muted-foreground/60 flex items-center gap-0.5">
+                <AlertCircle className="w-2.5 h-2.5" />
+                Terkunci
+              </span>
+            )}
+          </div>
+          {editNominal && canEditNominal ? (
+            <Input
+              type="number"
+              value={nominal}
+              onChange={(e) => setNominal(e.target.value)}
+              className="h-7 text-xs font-bold text-violet-600"
+              placeholder="Masukkan nominal"
+            />
+          ) : (
+            <p className="text-base font-bold text-violet-600">{formatCurrency(tx.nominal)}</p>
+          )}
+          {!canEditNominal && (
+            <p className="text-[8px] text-amber-600 mt-0.5 flex items-center gap-0.5">
+              <AlertCircle className="w-2 h-2" />
+              Hanya bisa diubah saat pending/verifikasi
+            </p>
+          )}
+          <div className="text-[9px] text-muted-foreground mt-1 space-y-0.5">
+            <div className="flex justify-between">
+              <span>Fee</span>
+              <span className="text-red-500">-{formatCurrency(previewCalc?.paymentFee ?? tx.paymentFee)}</span>
+            </div>
+            {(previewCalc?.platformFee ?? tx.platformFee) > 0 && (
+              <div className="flex justify-between">
+                <span>Platform</span>
+                <span className="text-red-500">-{formatCurrency(previewCalc?.platformFee ?? tx.platformFee)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="rounded-lg bg-slate-900 p-2.5 text-white">
+          <p className="text-[9px] text-white/70 mb-0.5">Profit Anda</p>
+          <p className="text-base font-bold text-fuchsia-400">+{formatCurrency(previewCalc?.partnerProfit ?? tx.partnerProfit)}</p>
+          {previewCalc && (
+            <p className="text-[8px] text-fuchsia-300 mt-1">*Preview</p>
+          )}
+        </div>
+      </div>
+
+      {/* Customer & Payment Row */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg border bg-muted/30 p-2.5">
+          <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
+            <User className="w-2.5 h-2.5" /> Customer
+          </p>
+          <p className="text-xs font-semibold truncate">{tx.customer?.name}</p>
+          <div className="flex items-center gap-1 mt-0.5">
+            <p className="text-[9px] text-muted-foreground">{tx.customer?.phone}</p>
+            <div className="flex items-center gap-0.5 ml-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(tx.customer?.phone || '');
+                  toast.success('No. WA disalin');
+                }}
+                className="p-1 hover:bg-muted rounded transition-colors"
+              >
+                <Copy className="w-3 h-3 text-muted-foreground" />
+              </button>
+              <a
+                href={`https://wa.me/${tx.customer?.phone?.replace(/^0/, '62')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors"
+              >
+                <MessageSquare className="w-3 h-3 text-green-600" />
+              </a>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-lg border bg-muted/30 p-2.5">
+          <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
+            <CreditCard className="w-2.5 h-2.5" /> Payment
+          </p>
+          <p className="text-xs font-semibold">{tx.paymentType?.name}</p>
+          <p className="text-[9px] text-muted-foreground">{tx.methodTransaction}</p>
+        </div>
+      </div>
+
+      {/* Bank Account */}
+      {tx.customer?.bankName && tx.customer?.bankAccount && (
+        <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20 p-2.5">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] text-muted-foreground">{tx.customer.bankName}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-mono font-bold">{tx.customer.bankAccount}</p>
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full"
-                  onClick={() => setShowPasswords(!showPasswords)}
+                  onClick={() => {
+                    navigator.clipboard.writeText(tx.customer.bankAccount || '');
+                    toast.success('Disalin');
+                  }}
+                  className="p-1 hover:bg-blue-100 dark:hover:bg-blue-800 rounded"
                 >
-                  {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </Button>
+                  <Copy className="w-3 h-3 text-blue-600" />
+                </button>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Password Baru</Label>
-              <Input
-                type={showPasswords ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Min. 6 karakter"
-                className="rounded-xl"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Konfirmasi Password</Label>
-              <Input
-                type={showPasswords ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Ulangi password baru"
-                className="rounded-xl"
-              />
-            </div>
-            <div className="flex gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => setPasswordOpen(false)} 
-                className="flex-1 rounded-xl"
-              >
-                Batal
-              </Button>
-              <Button 
-                className="flex-1 gradient-primary text-white rounded-xl"
-                onClick={handlePasswordChange}
-                disabled={passwordLoading}
-              >
-                {passwordLoading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Simpan
-              </Button>
-            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
-      {/* Avatar Change Dialog */}
-      <Dialog open={avatarOpen} onOpenChange={setAvatarOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ImageIcon className="w-5 h-5 text-primary" />
-              Ganti Avatar
-            </DialogTitle>
-            <DialogDescription>
-              Masukkan URL gambar untuk avatar Anda
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Preview */}
-            <div className="flex justify-center">
-              <div className="w-24 h-24 rounded-2xl overflow-hidden bg-muted flex items-center justify-center">
-                {avatarUrl ? (
-                  <img 
-                    src={avatarUrl} 
-                    alt="Avatar preview" 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '';
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <User className="w-10 h-10 text-muted-foreground" />
-                )}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>URL Gambar</Label>
-              <Input
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://example.com/avatar.jpg"
-                className="rounded-xl"
-              />
-              <p className="text-xs text-muted-foreground">
-                Gunakan URL gambar dari Google Drive, Imgur, atau hosting lainnya
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => setAvatarOpen(false)} 
-                className="flex-1 rounded-xl"
-              >
-                Batal
-              </Button>
-              <Button 
-                className="flex-1 gradient-primary text-white rounded-xl"
-                onClick={handleAvatarChange}
-                disabled={avatarLoading}
-              >
-                {avatarLoading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Simpan
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Notes */}
+      {tx.notes && (
+        <div className="rounded-lg border bg-muted/30 p-2.5">
+          <p className="text-[9px] text-muted-foreground mb-1">Catatan</p>
+          <p className="text-xs">{tx.notes}</p>
+        </div>
+      )}
 
-      {/* Location Change Dialog */}
-      <Dialog open={locationOpen} onOpenChange={setLocationOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-primary" />
-              Ganti Lokasi
-            </DialogTitle>
-            <DialogDescription>
-              Perbarui kota atau lokasi Anda
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Kota / Lokasi</Label>
-              <CitySearch
-                value={city}
-                onChange={(value) => setCity(value)}
-                placeholder="Cari kota..."
-                className="rounded-xl"
-              />
-            </div>
-            <div className="flex gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => setLocationOpen(false)} 
-                className="flex-1 rounded-xl"
-              >
-                Batal
-              </Button>
-              <Button 
-                className="flex-1 gradient-primary text-white rounded-xl"
-                onClick={handleLocationChange}
-                disabled={locationLoading}
-              >
-                {locationLoading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Simpan
-              </Button>
-            </div>
+      {/* Marketplace Info */}
+      {tx.marketplace && (
+        <div className="flex items-center justify-between text-[9px] p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
+          <div className="flex items-center gap-1">
+            <Store className="w-3 h-3 text-orange-600" />
+            <span className="text-orange-700 dark:text-orange-400">{tx.marketplace.name}</span>
           </div>
-        </DialogContent>
-      </Dialog>
+          <span className="text-red-600 font-medium">-{formatCurrency(tx.platformFee)}</span>
+        </div>
+      )}
 
-      {/* Bank Change Dialog */}
-      <Dialog open={bankOpen} onOpenChange={setBankOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-primary" />
-              Info Bank Pencairan
-            </DialogTitle>
-            <DialogDescription>
-              Rekening untuk pencairan komisi
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nama Bank</Label>
-              <Input
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                placeholder="BCA, Mandiri, BNI, dll"
-                className="rounded-xl"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Nomor Rekening</Label>
-              <Input
-                value={bankAccount}
-                onChange={(e) => setBankAccount(e.target.value)}
-                placeholder="1234567890"
-                className="rounded-xl"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Nama Pemilik Rekening</Label>
-              <Input
-                value={bankHolder}
-                onChange={(e) => setBankHolder(e.target.value)}
-                placeholder="Nama sesuai rekening"
-                className="rounded-xl"
-              />
-            </div>
-            <div className="flex gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => setBankOpen(false)} 
-                className="flex-1 rounded-xl"
-              >
-                Batal
-              </Button>
-              <Button 
-                className="flex-1 gradient-primary text-white rounded-xl"
-                onClick={handleBankChange}
-                disabled={bankLoading}
-              >
-                {bankLoading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Simpan
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Info */}
+      <div className="text-center text-[10px] text-muted-foreground pt-2">
+        <p>Transaksi ini dapat diedit oleh Owner</p>
+        <p className="mt-1">Dibuat: {formatDate(tx.createdAt)}</p>
+      </div>
+    </div>
+  );
+}
+
+// Transaction Detail Dialog Wrapper
+function TxDetailDialog({ open, onOpenChange, tx }: { open: boolean; onOpenChange: (v: boolean) => void; tx: Transaction | null }) {
+  if (!tx) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 gap-0">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Detail Transaksi {tx.orderId}</DialogTitle>
+        </DialogHeader>
+        <TxDetailDialogContent key={tx.id} tx={tx} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Loading State
+function LoadingState() {
+  return (
+    <div className="container mx-auto px-3 py-4 space-y-3 pb-20">
+      <Skeleton className="h-8 w-32" />
+      <div className="flex gap-1.5">
+        {[1,2,3,4].map(i => <Skeleton key={i} className="h-7 w-16 rounded-full" />)}
+      </div>
+      <Skeleton className="h-10 rounded-xl" />
+      <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
     </div>
   );
 }

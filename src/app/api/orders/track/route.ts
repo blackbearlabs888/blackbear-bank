@@ -1,6 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toNumber } from '@/lib/db';
 
+/**
+ * Filter out partner-to-owner private messages from notes
+ * Partner messages have format: [timestamp] Partner: message
+ * These should only be visible to owner, not to customers on public track page
+ */
+function filterPublicNotes(notes: string | null): string | null {
+  if (!notes) return null;
+
+  // Split by newlines and filter out lines that match partner message pattern
+  const lines = notes.split('\n');
+  const publicLines = lines.filter(line => {
+    // Pattern: [DD/MM/YYYY, HH:MM:SS] PartnerName: message
+    // This pattern indicates private partner-to-owner communication
+    const isPartnerMessage = /^\[.*?\]\s*.+:\s*.+$/.test(line.trim());
+    return !isPartnerMessage;
+  });
+
+  const filtered = publicLines.join('\n').trim();
+  return filtered || null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -40,7 +61,8 @@ export async function GET(request: NextRequest) {
         paymentFee: toNumber(transaction.paymentFee),
         totalReceived: toNumber(transaction.totalReceived),
         status: transaction.status,
-        notes: transaction.notes || null,
+        // Filter out private partner-to-owner messages for public view
+        notes: filterPublicNotes(transaction.notes),
         customer: {
           name: transaction.customer.name,
           phone: transaction.customer.phone,

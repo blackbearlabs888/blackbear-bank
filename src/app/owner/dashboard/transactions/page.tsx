@@ -85,8 +85,8 @@ interface Transaction {
   transactionLink?: string | null;
   createdAt: string;
   customer: { id: string; name: string; phone: string; city?: string; bankName?: string; bankAccount?: string; bankHolder?: string; };
-  paymentType: { id: string; name: string; };
-  marketplace?: { id: string; name: string; feePercent: number; isActive?: boolean; } | null;
+  paymentType: { id: string; name: string; onlineFeePercent?: number; onlineFeeFlat?: number; codFeePercent?: number; codFeeFlat?: number; threshold?: number; };
+  marketplace?: { id: string; name: string; feePercent: number; feeFlat?: number; isActive?: boolean; } | null;
   partner?: { id: string; name: string; tier: string; commission?: number; } | null;
 }
 
@@ -199,19 +199,31 @@ export default function OwnerTransactionsPage() {
     finally { setAnalyticsLoading(false); }
   };
 
-  const updateStatus = async (id: string, status: string, notes?: string, marketplaceId?: string, transactionLink?: string) => {
+  const updateStatus = async (id: string, status: string, notes?: string, marketplaceId?: string, transactionLink?: string, nominal?: number, recalculate?: boolean) => {
     setUpdatingStatus(true);
     try {
       const res = await fetch(`/api/transactions/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, notes, marketplaceId, transactionLink }),
+        body: JSON.stringify({ status, notes, marketplaceId, transactionLink, nominal, recalculate }),
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Status diubah ke ${status}`);
-        fetchTransactions();
+        if (recalculate) {
+          toast.success('Fee berhasil dihitung ulang');
+        } else if (nominal !== undefined) {
+          toast.success(`Nominal diubah ke ${formatCurrency(nominal)}`);
+        } else {
+          toast.success(`Status diubah ke ${status}`);
+        }
+        // Update transaction locally without full page refresh
+        if (data.data) {
+          setSelectedTransaction(data.data as Transaction);
+          setTransactions(prev => prev.map(t => t.id === id ? (data.data as Transaction) : t));
+        }
+        // Refresh analytics in background
         fetchAnalytics();
+        // Close dialog after save
         setDetailOpen(false);
         setSelectedTransaction(null);
       } else toast.error(data.error || 'Gagal');
@@ -1238,12 +1250,15 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
 }
 
 // Transaction Detail Dialog Content (uses key pattern for reset)
-function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Transaction; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string) => void; onDelete: (id: string) => void; updating: boolean }) {
+function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Transaction; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean) => void; onDelete: (id: string) => void; updating: boolean }) {
   const [notes, setNotes] = useState(tx.notes || '');
   const [transactionLink, setTransactionLink] = useState(tx.transactionLink || '');
   const [status, setStatus] = useState(tx.status);
   const [marketplace, setMarketplace] = useState(tx.marketplace?.id || 'none');
   const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
+  const [editNominal, setEditNominal] = useState(false);
+  const [nominal, setNominal] = useState(tx.nominal.toString());
+  const [needsRecalculate, setNeedsRecalculate] = useState(false);
 
   // Load marketplaces when dialog opens if status is verification
   useEffect(() => {
@@ -1262,6 +1277,68 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
         });
     }
   }, []);
+
+  // Calculate preview when nominal changes or recalculate is needed
+  const calculatedPreview = useMemo(() => {
+    // Show preview when editing nominal OR when needsRecalculate is true
+    if (!editNominal && !needsRecalculate) return null;
+
+    const newNominal = parseFloat(nominal);
+    if (isNaN(newNominal) || newNominal <= 0) return null;
+
+    // Skip if nominal hasn't changed from original (unless needsRecalculate)
+    if (!needsRecalculate && newNominal === tx.nominal) return null;
+
+    // Get fee calculation based on existing payment type
+    const isOnline = tx.methodTransaction === 'Online';
+    let feePercent = isOnline ? (tx.paymentType?.onlineFeePercent || 0) : (tx.paymentType?.codFeePercent || 0);
+    const feeFlat = isOnline ? (tx.paymentType?.onlineFeeFlat || 0) : (tx.paymentType?.codFeeFlat || 0);
+    const threshold = tx.paymentType?.threshold || 1000000;
+
+    // Safety: normalize fee percent if > 100
+    if (feePercent > 100) {
+      feePercent = feePercent / 1000;
+    }
+
+    // Calculate payment fee
+    let paymentFee: number;
+    if (newNominal >= threshold) {
+      paymentFee = newNominal * (feePercent / 100);
+    } else {
+      paymentFee = feeFlat;
+    }
+
+    // Calculate platform fee if marketplace exists
+    let platformFee = 0;
+    if (tx.marketplace) {
+      let mpFeePercent = tx.marketplace.feePercent || 0;
+      const mpFeeFlat = tx.marketplace.feeFlat || 0;
+      if (mpFeePercent > 100) {
+        mpFeePercent = mpFeePercent / 1000;
+      }
+      platformFee = newNominal * (mpFeePercent / 100) + mpFeeFlat;
+    }
+
+    // Calculate margins
+    const netMargin = paymentFee - platformFee;
+    const partnerRate = tx.partner?.commission || 0;
+    const partnerProfit = netMargin * (partnerRate / 100);
+    const ownerProfit = netMargin - partnerProfit;
+    const totalReceived = newNominal - paymentFee;
+
+    // Also include the new nominal for reference
+    return {
+      nominal: newNominal,
+      paymentFee,
+      platformFee,
+      netMargin,
+      partnerProfit,
+      ownerProfit,
+      totalReceived,
+    };
+  }, [editNominal, nominal, tx, needsRecalculate]);
+
+  const previewCalc = calculatedPreview;
 
   // Calculate profit preview when marketplace changes
   const profitPreview = useMemo(() => {
@@ -1321,9 +1398,19 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
     }
   };
 
-  const save = () => { 
+  const save = () => {
+    // Check if nominal changed
+    const nominalChanged = editNominal && parseFloat(nominal) !== tx.nominal;
+    const newNominal = nominalChanged ? parseFloat(nominal) : undefined;
+
     // Send 'none' explicitly so backend knows to clear marketplace
-    onUpdate(tx.id, status, notes, marketplace, transactionLink); 
+    // Include recalculate flag if needed
+    onUpdate(tx.id, status, notes, marketplace, transactionLink, newNominal, needsRecalculate || nominalChanged);
+  };
+
+  const handleRecalculate = () => {
+    // Toggle recalculate preview mode - this only shows preview, doesn't save
+    setNeedsRecalculate(!needsRecalculate);
   };
 
   const config = STATUS_CONFIG[tx.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
@@ -1332,10 +1419,13 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
   // Check if any changes were made
   // For verification status, always allow save (it's a confirmation action)
   const originalMarketplace = tx.marketplace?.id || 'none';
-  const hasChanges = status !== tx.status || 
-    marketplace !== originalMarketplace || 
+  const nominalChanged = editNominal && parseFloat(nominal) !== tx.nominal;
+  const hasChanges = status !== tx.status ||
+    marketplace !== originalMarketplace ||
     notes !== (tx.notes || '') ||
     transactionLink !== (tx.transactionLink || '') ||
+    nominalChanged ||
+    needsRecalculate ||
     status === 'verification'; // Always allow save when status is verification
 
   return (
@@ -1373,31 +1463,108 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
       {/* Amount & Profit Row */}
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-lg border bg-muted/30 p-2.5">
-          <p className="text-[9px] text-muted-foreground mb-0.5">Nominal</p>
-          <p className="text-base font-bold text-violet-600">{formatCurrency(tx.nominal)}</p>
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="text-[9px] text-muted-foreground">Nominal</p>
+            <button
+              type="button"
+              onClick={() => {
+                setEditNominal(!editNominal);
+                if (editNominal) {
+                  // Reset to original when canceling edit
+                  setNominal(tx.nominal.toString());
+                }
+              }}
+              className={cn("p-1 rounded transition-colors", editNominal ? "bg-violet-100 text-violet-600" : "hover:bg-muted text-muted-foreground")}
+              title={editNominal ? 'Batal edit' : 'Edit nominal'}
+            >
+              <Edit3 className="w-3 h-3" />
+            </button>
+          </div>
+          {editNominal ? (
+            <Input
+              type="number"
+              value={nominal}
+              onChange={(e) => setNominal(e.target.value)}
+              className="h-7 text-xs font-bold text-violet-600"
+              placeholder="Masukkan nominal"
+            />
+          ) : (
+            <p className="text-base font-bold text-violet-600">{formatCurrency(tx.nominal)}</p>
+          )}
           <div className="text-[9px] text-muted-foreground mt-1 space-y-0.5">
             <div className="flex justify-between">
               <span>Fee</span>
-              <span className="text-red-500">-{formatCurrency(tx.paymentFee)}</span>
+              <span className="text-red-500">
+                {previewCalc && previewCalc.paymentFee !== tx.paymentFee ? (
+                  <span>
+                    <span className="line-through text-muted-foreground mr-1">{formatCurrency(tx.paymentFee)}</span>
+                    <span>-{formatCurrency(previewCalc.paymentFee)}</span>
+                  </span>
+                ) : (
+                  <span>-{formatCurrency(previewCalc?.paymentFee ?? tx.paymentFee)}</span>
+                )}
+              </span>
             </div>
-            {tx.platformFee > 0 && (
+            {(previewCalc?.platformFee ?? tx.platformFee) > 0 && (
               <div className="flex justify-between">
                 <span>Platform</span>
-                <span className="text-red-500">-{formatCurrency(tx.platformFee)}</span>
+                <span className="text-red-500">
+                  {previewCalc && previewCalc.platformFee !== tx.platformFee ? (
+                    <span>
+                      <span className="line-through text-muted-foreground mr-1">{formatCurrency(tx.platformFee)}</span>
+                      <span>-{formatCurrency(previewCalc.platformFee)}</span>
+                    </span>
+                  ) : (
+                    <span>-{formatCurrency(previewCalc?.platformFee ?? tx.platformFee)}</span>
+                  )}
+                </span>
               </div>
             )}
           </div>
         </div>
         <div className="rounded-lg bg-slate-900 p-2.5 text-white">
           <p className="text-[9px] text-white/70 mb-0.5">Profit Anda</p>
-          <p className="text-base font-bold text-fuchsia-400">+{formatCurrency(tx.ownerProfit)}</p>
+          {previewCalc && previewCalc.ownerProfit !== tx.ownerProfit ? (
+            <div>
+              <p className="text-[9px] text-white/50 line-through">{formatCurrency(tx.ownerProfit)}</p>
+              <p className="text-base font-bold text-fuchsia-400">+{formatCurrency(previewCalc.ownerProfit)}</p>
+              <p className="text-[8px] text-fuchsia-300">*Preview</p>
+            </div>
+          ) : (
+            <p className="text-base font-bold text-fuchsia-400">+{formatCurrency(previewCalc?.ownerProfit ?? tx.ownerProfit)}</p>
+          )}
           {tx.partner && (
             <p className="text-[9px] text-white/60 mt-1">
-              {tx.partner.name}: <span className="text-violet-400">+{formatCurrency(tx.partnerProfit)}</span>
+              {tx.partner.name}: <span className="text-violet-400">
+                {previewCalc && previewCalc.partnerProfit !== tx.partnerProfit ? (
+                  <span>
+                    <span className="line-through text-white/40 mr-1">{formatCurrency(tx.partnerProfit)}</span>
+                    +{formatCurrency(previewCalc.partnerProfit)}
+                  </span>
+                ) : (
+                  <span>+{formatCurrency(previewCalc?.partnerProfit ?? tx.partnerProfit)}</span>
+                )}
+              </span>
             </p>
+          )}
+          {previewCalc && previewCalc.ownerProfit !== tx.ownerProfit && (
+            <p className="text-[8px] text-fuchsia-300 mt-1">*Preview</p>
           )}
         </div>
       </div>
+
+      {/* Recalculate Button */}
+      <Button
+        type="button"
+        variant={needsRecalculate ? "default" : "outline"}
+        size="sm"
+        onClick={handleRecalculate}
+        disabled={updating}
+        className={cn("w-full h-8 text-xs", needsRecalculate ? "border-solid" : "border-dashed")}
+      >
+        <RefreshCw className={cn("w-3.5 h-3.5 mr-1.5", needsRecalculate && "animate-spin")} />
+        {needsRecalculate ? 'Lihat Preview Perubahan Fee' : 'Recalculate Fee'}
+      </Button>
 
       {/* Customer & Payment Row */}
       <div className="grid grid-cols-2 gap-2">
@@ -1662,7 +1829,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
 }
 
 // Transaction Detail Dialog Wrapper
-function TxDetailDialog({ open, onOpenChange, tx, onUpdate, onDelete, updating }: { open: boolean; onOpenChange: (v: boolean) => void; tx: Transaction | null; onUpdate: (id: string, status: string, notes?: string, mp?: string) => void; onDelete: (id: string) => void; updating: boolean }) {
+function TxDetailDialog({ open, onOpenChange, tx, onUpdate, onDelete, updating }: { open: boolean; onOpenChange: (v: boolean) => void; tx: Transaction | null; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean) => void; onDelete: (id: string) => void; updating: boolean }) {
   if (!tx) return null;
 
   return (

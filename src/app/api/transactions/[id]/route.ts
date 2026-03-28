@@ -126,7 +126,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status, notes, marketplaceId, transactionLink } = body;
+    const { status, notes, marketplaceId, transactionLink, nominal, recalculate } = body;
 
     // Get existing transaction
     const existingTransaction = await db.transaction.findUnique({
@@ -134,6 +134,7 @@ export async function PATCH(
       include: {
         paymentType: true,
         partner: true,
+        marketplace: true,
       },
     });
 
@@ -193,9 +194,101 @@ export async function PATCH(
       updateData.transactionLink = transactionLink || null;
     }
 
+    // Handle nominal change with recalculation
+    if (nominal !== undefined || recalculate) {
+      const newNominal = nominal !== undefined ? Number(nominal) : toNumber(existingTransaction.nominal);
+
+      if (isNaN(newNominal) || newNominal <= 0) {
+        return NextResponse.json(
+          { success: false, error: 'Nominal tidak valid' },
+          { status: 400 }
+        );
+      }
+
+      const oldNominal = toNumber(existingTransaction.nominal);
+      const paymentType = existingTransaction.paymentType;
+      const partner = existingTransaction.partner;
+      const marketplace = existingTransaction.marketplace;
+
+      if (!paymentType) {
+        return NextResponse.json(
+          { success: false, error: 'Payment type tidak ditemukan' },
+          { status: 400 }
+        );
+      }
+
+      // Calculate payment fee based on method (Online/COD)
+      const isOnline = existingTransaction.methodTransaction === 'Online';
+      let feePercent = isOnline ? toNumber(paymentType.onlineFeePercent) : toNumber(paymentType.codFeePercent);
+      const feeFlat = isOnline ? toNumber(paymentType.onlineFeeFlat) : toNumber(paymentType.codFeeFlat);
+      const threshold = toNumber(paymentType.threshold);
+
+      // Safety: normalize fee percent if > 100
+      if (feePercent > 100) {
+        feePercent = feePercent / 1000;
+      }
+
+      // Calculate payment fee using threshold logic
+      let paymentFee: number;
+      if (newNominal >= threshold) {
+        paymentFee = newNominal * (feePercent / 100);
+      } else {
+        paymentFee = feeFlat;
+      }
+
+      // Calculate platform fee if marketplace exists
+      let platformFee = 0;
+      if (marketplace) {
+        let mpFeePercent = toNumber(marketplace.feePercent);
+        const mpFeeFlat = toNumber(marketplace.feeFlat);
+        if (mpFeePercent > 100) {
+          mpFeePercent = mpFeePercent / 1000;
+        }
+        platformFee = newNominal * (mpFeePercent / 100) + mpFeeFlat;
+      }
+
+      // Calculate margins and profits
+      const netMargin = paymentFee - platformFee;
+      const partnerRate = partner ? toNumber(partner.commission) : 0;
+      const partnerProfit = netMargin * (partnerRate / 100);
+      const ownerProfit = netMargin - partnerProfit;
+      const totalReceived = newNominal - paymentFee;
+
+      // Update all calculated fields
+      updateData.nominal = newNominal;
+      updateData.paymentFee = paymentFee;
+      updateData.platformFee = platformFee;
+      updateData.netMargin = netMargin;
+      updateData.partnerProfit = partnerProfit;
+      updateData.ownerProfit = ownerProfit;
+      updateData.totalReceived = totalReceived;
+
+      // Update customer total volume if nominal changed
+      if (nominal !== undefined && newNominal !== oldNominal) {
+        const volumeDiff = newNominal - oldNominal;
+        await db.customer.update({
+          where: { id: existingTransaction.customerId },
+          data: {
+            totalVolume: { increment: volumeDiff },
+          },
+        });
+
+        // Update partner total volume if transaction was successful
+        if (existingTransaction.partnerId && existingTransaction.status === 'success') {
+          await db.partner.update({
+            where: { id: existingTransaction.partnerId },
+            data: {
+              totalVolume: { increment: volumeDiff },
+            },
+          });
+        }
+      }
+    }
+
     // Handle marketplace selection during verification
-    // Accept 'none', '', or null as signals to clear marketplace
-    if (marketplaceId !== undefined || body.clearMarketplace) {
+    // This block only runs when we're NOT recalculating due to nominal change
+    // (the nominal/recalculate block above already handles marketplace fee with new nominal)
+    if ((marketplaceId !== undefined || body.clearMarketplace) && !recalculate && nominal === undefined) {
       let platformFee = 0;
       const effectiveMarketplaceId = marketplaceId === 'none' || marketplaceId === '' ? null : marketplaceId;
 
@@ -218,18 +311,62 @@ export async function PATCH(
       } else {
         updateData.marketplaceId = null;
       }
-      
+
       updateData.platformFee = platformFee;
-      
+
       // Recalculate margins with new platform fee
       const netMargin = existingTransaction.paymentFee - platformFee;
       const partnerRate = existingTransaction.partner?.commission || 0;
       const partnerProfit = netMargin * (partnerRate / 100);
       const ownerProfit = netMargin - partnerProfit;
-      
+
       updateData.netMargin = netMargin;
       updateData.partnerProfit = partnerProfit;
       updateData.ownerProfit = ownerProfit;
+    }
+
+    // Handle marketplace change when nominal is also changing
+    // This ensures the new marketplace fee is calculated with the new nominal
+    if ((marketplaceId !== undefined || body.clearMarketplace) && (nominal !== undefined || recalculate)) {
+      const effectiveMarketplaceId = marketplaceId === 'none' || marketplaceId === '' ? null : marketplaceId;
+
+      if (effectiveMarketplaceId) {
+        // Just update the marketplace ID, the fee calculation is already done above
+        updateData.marketplaceId = effectiveMarketplaceId;
+
+        // Re-fetch the marketplace and recalculate platform fee with the new nominal
+        const marketplace = await db.marketplace.findUnique({
+          where: { id: effectiveMarketplaceId },
+        });
+
+        if (marketplace) {
+          let mpFeePercent = toNumber(marketplace.feePercent);
+          const mpFeeFlat = toNumber(marketplace.feeFlat);
+          if (mpFeePercent > 100) {
+            mpFeePercent = mpFeePercent / 1000;
+          }
+          // Use the new nominal that was already set in updateData
+          const nominalToUse = updateData.nominal || toNumber(existingTransaction.nominal);
+          const newPlatformFee = nominalToUse * (mpFeePercent / 100) + mpFeeFlat;
+
+          // Update platform fee and recalculate margins
+          updateData.platformFee = newPlatformFee;
+          const newNetMargin = (updateData.paymentFee || toNumber(existingTransaction.paymentFee)) - newPlatformFee;
+          const partnerRate = existingTransaction.partner ? toNumber(existingTransaction.partner.commission) : 0;
+          updateData.netMargin = newNetMargin;
+          updateData.partnerProfit = newNetMargin * (partnerRate / 100);
+          updateData.ownerProfit = newNetMargin - (updateData.partnerProfit as number);
+        }
+      } else {
+        updateData.marketplaceId = null;
+        // Clear platform fee and recalculate margins
+        updateData.platformFee = 0;
+        const newNetMargin = (updateData.paymentFee || toNumber(existingTransaction.paymentFee)) - 0;
+        const partnerRate = existingTransaction.partner ? toNumber(existingTransaction.partner.commission) : 0;
+        updateData.netMargin = newNetMargin;
+        updateData.partnerProfit = newNetMargin * (partnerRate / 100);
+        updateData.ownerProfit = newNetMargin - (updateData.partnerProfit as number);
+      }
     }
 
     // Update transaction

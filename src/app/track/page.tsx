@@ -55,6 +55,24 @@ interface OrderData {
   updatedAt: string;
 }
 
+// Helper functions to mask sensitive data
+function maskName(name: string): string {
+  if (!name || name.length <= 2) return name;
+  const words = name.split(' ');
+  return words.map(word => {
+    if (word.length <= 2) return word[0] + '*';
+    return word[0] + '*'.repeat(word.length - 1);
+  }).join(' ');
+}
+
+function maskBankAccount(account: string): string {
+  if (!account || account.length <= 4) return account;
+  const visibleStart = account.slice(0, 2);
+  const visibleEnd = account.slice(-3);
+  const masked = '*'.repeat(account.length - 5);
+  return `${visibleStart}${masked}${visibleEnd}`;
+}
+
 const statusConfig = {
   pending: {
     label: 'Menunggu',
@@ -150,9 +168,9 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
   const currentIndex = statuses.indexOf(currentStatus);
   
   return (
-    <div className="relative p-4 rounded-2xl bg-white/30 dark:bg-black/10 backdrop-blur-xl">
+    <div className="relative p-3 rounded-xl bg-white/30 dark:bg-black/10 backdrop-blur-xl">
       {/* Progress Line */}
-      <div className="absolute top-10 left-10 right-10 h-1 bg-muted/50 rounded-full overflow-hidden">
+      <div className="absolute top-7 left-7 right-7 h-0.5 bg-muted/50 rounded-full overflow-hidden">
         <div 
           className="h-full bg-gradient-to-r from-primary via-purple-500 to-green-500 transition-all duration-700 rounded-full"
           style={{ width: `${(currentIndex / (statuses.length - 1)) * 100}%` }}
@@ -170,20 +188,20 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
           return (
             <div key={status} className="flex flex-col items-center relative z-10">
               <div className={cn(
-                "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center border-2 transition-all duration-500",
+                "w-8 h-8 rounded-lg flex items-center justify-center border transition-all duration-500",
                 isCompleted 
-                  ? `bg-gradient-to-br ${config.gradient} border-transparent shadow-lg` 
+                  ? `bg-gradient-to-br ${config.gradient} border-transparent shadow-md` 
                   : "bg-background border-muted",
-                isCurrent && "ring-4 ring-primary/20 scale-110"
+                isCurrent && "ring-2 ring-primary/20"
               )}>
                 <Icon className={cn(
-                  "w-5 h-5 sm:w-6 sm:h-6",
+                  "w-4 h-4",
                   isCompleted ? "text-white" : "text-muted-foreground",
                   status === 'process' && isCurrent && "animate-spin"
                 )} />
               </div>
               <span className={cn(
-                "text-xs mt-2 font-medium text-center",
+                "text-[10px] mt-1 font-medium text-center",
                 isCompleted ? "text-foreground" : "text-muted-foreground"
               )}>
                 {config.label}
@@ -262,44 +280,41 @@ function TrackOrderContent() {
   return (
     <div className="max-w-lg mx-auto space-y-5 sm:space-y-6">
       {/* Search Card */}
-      <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-2xl shadow-primary/10">
-        <div className="h-1.5 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
-        <CardContent className="pt-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 flex items-center justify-center shadow-lg shadow-primary/30">
-                <Search className="w-6 h-6 text-white" />
+      <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-xl shadow-primary/10">
+        <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
+        <CardContent className="pt-4 pb-4 px-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-fuchsia-500 flex items-center justify-center shadow-md shadow-primary/20">
+                <Search className="w-4 h-4 text-white" />
               </div>
               <div>
-                <p className="font-semibold text-lg">Lacak Order</p>
-                <p className="text-sm text-muted-foreground">Masukkan Order ID Anda</p>
+                <p className="font-semibold text-base">Lacak Order</p>
+                <p className="text-xs text-muted-foreground">Masukkan Order ID Anda</p>
               </div>
             </div>
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Package className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Contoh: BB-XXXXXX"
                   value={orderId}
                   onChange={(e) => setOrderId(e.target.value.toUpperCase())}
-                  className="h-14 pl-12 text-lg font-mono tracking-wide rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
+                  className="h-11 pl-10 text-base font-mono tracking-wide rounded-lg bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
                 />
               </div>
               <Button 
                 type="submit" 
-                className="h-14 w-14 rounded-xl bg-gradient-to-r from-primary to-fuchsia-500 hover:from-primary/90 hover:to-fuchsia-500/90 shadow-lg shadow-primary/30"
+                className="h-11 w-11 rounded-lg bg-gradient-to-r from-primary to-fuchsia-500 hover:from-primary/90 hover:to-fuchsia-500/90 shadow-md shadow-primary/20"
                 disabled={loading}
               >
                 {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <Search className="w-5 h-5" />
+                  <Search className="w-4 h-4" />
                 )}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground text-center">
-              Masukkan Order ID yang Anda terima saat membuat order
-            </p>
           </form>
         </CardContent>
       </Card>
@@ -307,14 +322,14 @@ function TrackOrderContent() {
       {/* Error State */}
       {error && (
         <Card className="glass-card border-red-500/30 animate-fade-in overflow-hidden">
-          <CardContent className="py-5">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center shadow-lg shadow-red-500/20">
-                <AlertCircle className="w-7 h-7 text-white" />
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center shadow-md shadow-red-500/20">
+                <AlertCircle className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="font-semibold text-red-600 dark:text-red-400">Order Tidak Ditemukan</p>
-                <p className="text-sm text-muted-foreground">{error}</p>
+                <p className="font-medium text-red-600 dark:text-red-400 text-sm">Order Tidak Ditemukan</p>
+                <p className="text-xs text-muted-foreground">{error}</p>
               </div>
             </div>
           </CardContent>
@@ -323,44 +338,44 @@ function TrackOrderContent() {
 
       {/* Order Found */}
       {order && (
-        <div className="space-y-5 animate-fade-in">
+        <div className="space-y-4 animate-fade-in">
           {/* Status Card */}
-          <Card className="glass-card overflow-hidden border-0 shadow-2xl">
+          <Card className="glass-card overflow-hidden border-0 shadow-xl">
             <CardContent className="p-0">
               {(() => {
                 const config = getStatusConfig(order.status);
                 const Icon = config.icon;
                 return (
                   <div className={cn(
-                    "text-center py-8 sm:py-10 px-4 bg-gradient-to-br",
+                    "text-center py-5 sm:py-6 px-3 bg-gradient-to-br",
                     config.bgGradient
                   )}>
                     {/* Status Icon */}
-                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-5">
+                    <div className="relative w-16 h-16 sm:w-18 sm:h-18 mx-auto mb-3">
                       <div className={cn(
-                        "absolute inset-0 rounded-3xl blur-xl opacity-50",
+                        "absolute inset-0 rounded-2xl blur-lg opacity-50",
                         `bg-gradient-to-br ${config.gradient}`
                       )} />
                       <div className={cn(
-                        "relative w-24 h-24 sm:w-28 sm:h-28 rounded-3xl flex items-center justify-center shadow-2xl",
+                        "relative w-16 h-16 sm:w-18 sm:h-18 rounded-2xl flex items-center justify-center shadow-xl",
                         `bg-gradient-to-br ${config.gradient}`
                       )}>
-                        <Icon className={cn('w-12 h-12 sm:w-14 sm:h-14 text-white', order.status === 'process' && 'animate-spin')} />
+                        <Icon className={cn('w-8 h-8 sm:w-9 sm:h-9 text-white', order.status === 'process' && 'animate-spin')} />
                       </div>
                     </div>
                     
                     {/* Status Badge */}
-                    <Badge className={cn(config.color, 'text-base px-5 py-1.5 rounded-full')}>
+                    <Badge className={cn(config.color, 'text-sm px-4 py-1 rounded-full')}>
                       {config.label}
                     </Badge>
                     
-                    <p className="text-base sm:text-lg text-muted-foreground mt-4 max-w-xs mx-auto">
+                    <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">
                       {config.description}
                     </p>
                     
                     {/* Timeline - Hidden for failed status */}
                     {order.status !== 'failed' && (
-                      <div className="mt-8">
+                      <div className="mt-4">
                         <StatusTimeline currentStatus={order.status} />
                       </div>
                     )}
@@ -371,117 +386,121 @@ function TrackOrderContent() {
           </Card>
 
           {/* Order Details Card */}
-          <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-2xl shadow-primary/5">
-            <div className="h-1.5 bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500" />
-            <CardContent className="p-5 sm:p-6 space-y-5">
+          <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-xl shadow-primary/5">
+            <div className="h-1 bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500" />
+            <CardContent className="p-4 space-y-4">
               {/* Order ID */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-primary/5 to-fuchsia-500/5 border border-primary/10">
-                <span className="text-sm text-muted-foreground">Order ID</span>
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-gradient-to-r from-primary/5 to-fuchsia-500/5 border border-primary/10">
+                <span className="text-xs text-muted-foreground">Order ID</span>
                 <button
                   onClick={handleCopy}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 transition-colors"
                 >
-                  <span className="font-mono font-bold text-primary">{order.orderId}</span>
+                  <span className="font-mono font-bold text-primary text-sm">{order.orderId}</span>
                   {copied ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
                   ) : (
-                    <Package className="w-4 h-4 text-muted-foreground" />
+                    <Package className="w-3.5 h-3.5 text-muted-foreground" />
                   )}
                 </button>
               </div>
 
               {/* Amount Cards */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-4 rounded-xl bg-muted/30 border border-muted/50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CreditCard className="w-4 h-4 text-muted-foreground" />
-                    <p className="text-xs text-muted-foreground">Nominal</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-3 rounded-lg bg-muted/30 border border-muted/50">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
+                    <p className="text-[10px] text-muted-foreground">Nominal</p>
                   </div>
-                  <p className="font-bold text-lg">{formatCurrency(order.nominal)}</p>
+                  <p className="font-bold text-base">{formatCurrency(order.nominal)}</p>
                 </div>
-                <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Wallet className="w-4 h-4 text-red-500" />
-                    <p className="text-xs text-muted-foreground">Biaya</p>
+                <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/20">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Wallet className="w-3.5 h-3.5 text-red-500" />
+                    <p className="text-[10px] text-muted-foreground">Biaya</p>
                   </div>
-                  <p className="font-bold text-lg text-red-500">-{formatCurrency(order.paymentFee)}</p>
+                  <p className="font-bold text-base text-red-500">-{formatCurrency(order.paymentFee)}</p>
                 </div>
               </div>
 
               {/* Total Received */}
-              <div className="p-5 rounded-xl bg-gradient-to-r from-primary/10 via-purple-500/10 to-fuchsia-500/10 border border-primary/20">
+              <div className="p-3 rounded-lg bg-gradient-to-r from-primary/10 via-purple-500/10 to-fuchsia-500/10 border border-primary/20">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Wallet className="w-5 h-5 text-primary" />
-                    <span className="font-semibold">Total Diterima</span>
+                  <div className="flex items-center gap-1.5">
+                    <Wallet className="w-4 h-4 text-primary" />
+                    <span className="font-medium text-sm">Total Diterima</span>
                   </div>
-                  <span className="text-2xl font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
+                  <span className="text-lg font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
                     {formatCurrency(order.totalReceived)}
                   </span>
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="my-3" />
 
-              {/* Customer Info */}
-              <div className="p-4 rounded-xl bg-muted/20 border border-muted/30">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <User className="w-4 h-4 text-primary" />
+              {/* Customer Info - Masked for Security */}
+              <div className="p-3 rounded-lg bg-muted/20 border border-muted/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center">
+                    <User className="w-3 h-3 text-primary" />
                   </div>
-                  <p className="font-medium">Data Penerima</p>
+                  <p className="font-medium text-sm">Data Penerima</p>
+                  <Badge variant="outline" className="text-[8px] ml-auto px-1.5 py-0">
+                    <Shield className="w-2 h-2 mr-0.5" />
+                    Terlindungi
+                  </Badge>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Nama</p>
-                    <p className="font-medium">{order.customer.name}</p>
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Nama</p>
+                    <p className="font-medium text-sm">{maskName(order.customer.name)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Bank</p>
-                    <p className="font-medium">
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Bank</p>
+                    <p className="font-medium text-sm">
                       {order.customer.bankName && order.customer.bankAccount
-                        ? `${order.customer.bankName} - ${order.customer.bankAccount}`
+                        ? `${order.customer.bankName} - ${maskBankAccount(order.customer.bankAccount)}`
                         : '-'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="my-3" />
 
               {/* Payment & Method Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-xl bg-muted/20">
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2.5 rounded-lg bg-muted/20">
+                  <p className="text-[10px] text-muted-foreground flex items-center gap-1 mb-0.5">
                     <CreditCard className="w-3 h-3" />
                     Tipe Pembayaran
                   </p>
-                  <p className="font-medium">{order.paymentType}</p>
+                  <p className="font-medium text-sm">{order.paymentType}</p>
                 </div>
-                <div className="p-3 rounded-xl bg-muted/20">
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                <div className="p-2.5 rounded-lg bg-muted/20">
+                  <p className="text-[10px] text-muted-foreground flex items-center gap-1 mb-0.5">
                     <Truck className="w-3 h-3" />
                     Metode
                   </p>
-                  <p className="font-medium">{order.methodTransaction}</p>
+                  <p className="font-medium text-sm">{order.methodTransaction}</p>
                 </div>
               </div>
 
               {order.partner && (
-                <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
-                  <p className="text-xs text-muted-foreground mb-1">Partner</p>
-                  <p className="font-medium text-primary">{order.partner}</p>
+                <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/10">
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Partner</p>
+                  <p className="font-medium text-primary text-sm">{order.partner}</p>
                 </div>
               )}
 
               {/* Notes from Owner */}
               {order.notes && (
-                <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MessageCircle className="w-4 h-4 text-amber-600" />
-                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Catatan dari Admin</p>
+                <div className="p-3 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <MessageCircle className="w-3.5 h-3.5 text-amber-600" />
+                    <p className="text-xs font-medium text-amber-700 dark:text-amber-400">Catatan dari Admin</p>
                   </div>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{order.notes}</p>
+                  <p className="text-xs text-muted-foreground whitespace-pre-wrap">{order.notes}</p>
                 </div>
               )}
 
@@ -489,14 +508,14 @@ function TrackOrderContent() {
               {(order.partnerPhone || order.ownerWhatsapp) && (
                 <Button
                   asChild
-                  className="w-full h-12 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg shadow-green-500/20"
+                  className="w-full h-10 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-md shadow-green-500/20"
                 >
                   <a
                     href={`https://wa.me/${order.partnerPhone || order.ownerWhatsapp}?text=${encodeURIComponent(`Halo, saya ingin menanyakan status order saya dengan Order ID: ${order.orderId}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <MessageCircle className="w-5 h-5 mr-2" />
+                    <MessageCircle className="w-4 h-4 mr-2" />
                     Follow Up via WhatsApp
                     {order.partner ? ` (${order.partner})` : ' (Owner)'}
                   </a>
@@ -505,46 +524,46 @@ function TrackOrderContent() {
 
               {/* Transaction Link Gestun */}
               {order.transactionLink && (
-                <div className="p-4 rounded-xl bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-violet-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <ExternalLink className="w-4 h-4 text-violet-500" />
-                    <p className="text-sm font-medium text-violet-700 dark:text-violet-400">Link Transaksi Gestun</p>
+                <div className="p-3 rounded-lg bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-violet-500/20">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <ExternalLink className="w-3.5 h-3.5 text-violet-500" />
+                    <p className="text-xs font-medium text-violet-700 dark:text-violet-400">Link Transaksi Gestun</p>
                   </div>
                   <a 
                     href={order.transactionLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-between gap-2 p-3 rounded-lg bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/30 transition-colors group"
+                    className="flex items-center justify-between gap-2 p-2 rounded-md bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/30 transition-colors group"
                   >
-                    <span className="text-sm text-muted-foreground truncate flex-1">{order.transactionLink}</span>
-                    <div className="flex items-center gap-1.5 text-violet-600 dark:text-violet-400">
-                      <span className="text-xs font-medium">Buka</span>
-                      <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                    <span className="text-xs text-muted-foreground truncate flex-1">{order.transactionLink}</span>
+                    <div className="flex items-center gap-1 text-violet-600 dark:text-violet-400">
+                      <span className="text-[10px] font-medium">Buka</span>
+                      <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </a>
                 </div>
               )}
 
-              <Separator />
+              <Separator className="my-3" />
 
               {/* Timestamps */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="flex items-start gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                    <Calendar className="w-4 h-4 text-green-500" />
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-3 h-3 text-green-500" />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Dibuat</p>
+                    <p className="text-muted-foreground text-[10px]">Dibuat</p>
                     <p className="font-medium">{formatDate(order.createdAt)}</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-2 justify-end text-right">
+                <div className="flex items-center gap-2 justify-end text-right">
                   <div>
-                    <p className="text-muted-foreground text-xs">Update Terakhir</p>
+                    <p className="text-muted-foreground text-[10px]">Update Terakhir</p>
                     <p className="font-medium">{formatDate(order.updatedAt)}</p>
                   </div>
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-4 h-4 text-blue-500" />
+                  <div className="w-6 h-6 rounded-md bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-3 h-3 text-blue-500" />
                   </div>
                 </div>
               </div>
@@ -552,11 +571,11 @@ function TrackOrderContent() {
           </Card>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button 
               asChild 
               variant="outline"
-              className="flex-1 h-12 rounded-xl"
+              className="flex-1 h-10 rounded-lg"
             >
               <Link href="/">
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -565,7 +584,7 @@ function TrackOrderContent() {
             </Button>
             <Button 
               asChild 
-              className="flex-1 h-12 rounded-xl bg-gradient-to-r from-primary to-fuchsia-500 hover:from-primary/90 hover:to-fuchsia-500/90 shadow-lg shadow-primary/30"
+              className="flex-1 h-10 rounded-lg bg-gradient-to-r from-primary to-fuchsia-500 hover:from-primary/90 hover:to-fuchsia-500/90 shadow-md shadow-primary/20"
             >
               <Link href="/order">
                 <Package className="w-4 h-4 mr-2" />
@@ -582,13 +601,13 @@ function TrackOrderContent() {
 
 function TrackOrderSkeleton() {
   return (
-    <div className="max-w-lg mx-auto space-y-5 sm:space-y-6">
+    <div className="max-w-lg mx-auto space-y-4">
       <Card className="glass-card border-0 shadow-xl overflow-hidden">
-        <div className="h-1.5 bg-gradient-to-r from-primary to-fuchsia-500" />
-        <CardContent className="pt-6">
+        <div className="h-1 bg-gradient-to-r from-primary to-fuchsia-500" />
+        <CardContent className="pt-4">
           <div className="flex gap-2">
-            <Skeleton className="h-14 flex-1 rounded-xl" />
-            <Skeleton className="h-14 w-14 rounded-xl" />
+            <Skeleton className="h-11 flex-1 rounded-lg" />
+            <Skeleton className="h-11 w-11 rounded-lg" />
           </div>
         </CardContent>
       </Card>
@@ -598,36 +617,36 @@ function TrackOrderSkeleton() {
 
 export default function TrackOrderPage() {
   return (
-    <div className="min-h-screen pb-8">
+    <div className="min-h-screen pb-6">
       <AnimatedBackground />
       
       {/* Header */}
       <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-white/20 dark:border-white/5">
         <div className="container mx-auto px-4">
-          <div className="flex items-center gap-3 h-16 sm:h-20">
+          <div className="flex items-center gap-2.5 h-14">
             <Button 
               variant="ghost" 
               size="icon"
               asChild 
-              className="rounded-xl bg-white/50 dark:bg-black/20"
+              className="rounded-lg bg-white/50 dark:bg-black/20 h-9 w-9"
             >
               <Link href="/">
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" />
               </Link>
             </Button>
             <div className="flex-1">
-              <h1 className="font-bold text-lg sm:text-xl">Track Order</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">Cek status transaksi Anda</p>
+              <h1 className="font-bold text-base">Track Order</h1>
+              <p className="text-[10px] text-muted-foreground">Cek status transaksi Anda</p>
             </div>
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20">
-              <Shield className="w-4 h-4 text-green-500" />
-              <span className="text-sm font-medium">Real-time</span>
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20">
+              <Shield className="w-3 h-3 text-green-500" />
+              <span className="text-xs font-medium">Real-time</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6 sm:py-8">
+      <div className="container mx-auto px-4 py-4">
         <Suspense fallback={<TrackOrderSkeleton />}>
           <TrackOrderContent />
         </Suspense>
