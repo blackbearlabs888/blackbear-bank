@@ -251,8 +251,8 @@ export default function LoginPage() {
       )}>
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
-          <div className="lg:hidden flex flex-col items-center mb-8">
-            <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center shadow-xl shadow-primary/25 mb-4">
+          <div className="lg:hidden flex flex-col items-center mb-4">
+            <div className="w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center shadow-xl shadow-primary/25 mb-4">
               {config.logoUrl && !logoError ? (
                 <img 
                   src={config.logoUrl} 
@@ -261,7 +261,7 @@ export default function LoginPage() {
                   onError={() => setLogoError(true)}
                 />
               ) : (
-                <span className="text-white font-bold text-xl">{getInitials()}</span>
+                <span className="text-white font-bold text-lg">{getInitials()}</span>
               )}
             </div>
             <h1 className="text-xl font-bold">{siteName}</h1>
@@ -287,20 +287,20 @@ export default function LoginPage() {
             {/* Gradient accent line */}
             <div className="h-1.5 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
             
-            <CardContent className="p-6 sm:p-8">
+            <CardContent className="p-4 sm:p-8">
               {/* Header */}
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold mb-2">Selamat Datang!</h2>
-                <p className="text-muted-foreground">Login untuk melanjutkan ke dashboard</p>
+              <div className="text-center mb-5">
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">Selamat Datang!</h2>
+                <p className="text-sm sm:text-muted-foreground">Login untuk melanjutkan ke dashboard</p>
               </div>
 
               {/* Role Selector */}
-              <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="grid grid-cols-2 gap-3 mb-4">
                 <button
                   type="button"
                   onClick={() => setRole('partner')}
                   className={cn(
-                    'relative p-4 rounded-2xl border-2 transition-all duration-300 tap-highlight active-scale overflow-hidden group',
+                    'relative p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 tap-highlight active-scale overflow-hidden group',
                     role === 'partner'
                       ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10'
                       : 'border-border hover:border-primary/30 hover:bg-muted/50'
@@ -311,7 +311,7 @@ export default function LoginPage() {
                   )}
                   <div className="relative">
                     <Building2 className={cn(
-                      'w-7 h-7 mx-auto mb-2 transition-all duration-300',
+                      'w-5 h-5 sm:w-7 sm:h-7 mx-auto mb-1 sm:mb-2 transition-all duration-300',
                       role === 'partner' ? 'text-primary scale-110' : 'text-muted-foreground group-hover:text-primary/70'
                     )} />
                     <p className={cn(
@@ -326,7 +326,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setRole('owner')}
                   className={cn(
-                    'relative p-4 rounded-2xl border-2 transition-all duration-300 tap-highlight active-scale overflow-hidden group',
+                    'relative p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 tap-highlight active-scale overflow-hidden group',
                     role === 'owner'
                       ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10'
                       : 'border-border hover:border-primary/30 hover:bg-muted/50'
@@ -337,7 +337,7 @@ export default function LoginPage() {
                   )}
                   <div className="relative">
                     <User className={cn(
-                      'w-7 h-7 mx-auto mb-2 transition-all duration-300',
+                      'w-5 h-5 sm:w-7 sm:h-7 mx-auto mb-1 sm:mb-2 transition-all duration-300',
                       role === 'owner' ? 'text-primary scale-110' : 'text-muted-foreground group-hover:text-primary/70'
                     )} />
                     <p className={cn(
@@ -355,7 +355,7 @@ export default function LoginPage() {
                 </Alert>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Email Field */}
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
@@ -370,7 +370,7 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pl-4"
+                      className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pl-4"
                       autoComplete="email"
                     />
                   </div>
@@ -391,14 +391,14 @@ export default function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       minLength={6}
-                      className="h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pr-12"
+                      className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pr-12"
                       autoComplete="current-password"
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 hover:bg-muted rounded-lg tap-highlight"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 sm:h-10 sm:w-10 hover:bg-muted rounded-lg tap-highlight"
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? (
@@ -413,7 +413,7 @@ export default function LoginPage() {
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-300"
+                  className="w-full h-11 sm:h-12 rounded-xl text-sm sm:text-base font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-300"
                   disabled={loading}
                 >
                   {loading ? (
@@ -433,7 +433,7 @@ export default function LoginPage() {
 
               {/* Register Link */}
               {role === 'partner' && (
-                <div className="mt-6 text-center">
+                <div className="mt-4 text-center">
                   <p className="text-sm text-muted-foreground">
                     Belum punya akun?{' '}
                     <Link href="/register" className="text-primary font-semibold hover:underline tap-highlight inline-flex items-center gap-1">
@@ -445,7 +445,7 @@ export default function LoginPage() {
               )}
 
               {/* Trust Badge */}
-              <div className="mt-6 pt-6 border-t border-dashed border-border/50">
+              <div className="mt-4 pt-4 border-t border-dashed border-border/50">
                 <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                   <Shield className="w-3.5 h-3.5 text-primary" />
                   <span>Login aman dengan enkripsi SSL</span>
