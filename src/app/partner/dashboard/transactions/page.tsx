@@ -1178,7 +1178,7 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
 
       {/* Info */}
       <div className="text-center text-[10px] text-muted-foreground pt-2">
-        <p>Transaksi ini dapat diedit oleh Owner</p>
+        <p>Profit partner dapat berubah tergantung marketplace yang akan digunakan</p>
         <p className="mt-1">Dibuat: {formatDate(tx.createdAt)}</p>
       </div>
     </div>
