@@ -252,10 +252,10 @@ export async function GET(request: NextRequest) {
         take: 3,
       });
 
-      // Top 3 most active customers by transaction count
+      // Top 5 customers by volume (largest first)
       const topCustomers = await db.customer.findMany({
-        orderBy: { totalTransactions: 'desc' },
-        take: 3,
+        orderBy: { totalVolume: 'desc' },
+        take: 5,
       });
 
       // Recent large transactions (nominal >= 5 million)
