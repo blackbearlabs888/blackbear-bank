@@ -386,7 +386,17 @@ export async function GET(request: NextRequest) {
 
       const promos = [...promoAnnouncements, ...legacyPromos];
 
-      // Partner notifications - recent notes from partner transactions
+      // Partner notifications from Notification table (new partner_message type)
+      const partnerMessageNotifications = await db.notification.findMany({
+        where: {
+          type: 'partner_message',
+          targetType: 'owner',
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      });
+
+      // Legacy partner notifications - recent notes from partner transactions
       const partnerNotifications = await db.transaction.findMany({
         where: {
           notes: { not: null },
@@ -401,9 +411,18 @@ export async function GET(request: NextRequest) {
       });
 
       // Filter transactions that have actual notification messages (containing timestamp pattern)
-      const filteredNotifications = partnerNotifications.filter(tx => 
+      const filteredNotifications = partnerNotifications.filter(tx =>
         tx.notes && tx.notes.includes('[') && tx.notes.includes(']')
       );
+
+      // Count unread partner messages
+      const unreadPartnerMessages = await db.notification.count({
+        where: {
+          type: 'partner_message',
+          targetType: 'owner',
+          isRead: false,
+        },
+      });
 
       return NextResponse.json({
         success: true,
@@ -487,6 +506,16 @@ export async function GET(request: NextRequest) {
             status: tx.status,
             updatedAt: tx.updatedAt,
           })),
+          partnerMessages: partnerMessageNotifications.map(n => ({
+            id: n.id,
+            transactionId: n.transactionId,
+            title: n.title,
+            message: n.message,
+            data: n.data ? JSON.parse(n.data) : null,
+            isRead: n.isRead,
+            createdAt: n.createdAt,
+          })),
+          unreadPartnerMessages,
         },
       });
     } else {

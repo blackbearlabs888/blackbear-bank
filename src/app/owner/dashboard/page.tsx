@@ -74,6 +74,22 @@ interface PartnerNotification {
   updatedAt: string;
 }
 
+interface PartnerMessage {
+  id: string;
+  transactionId: string | null;
+  title: string;
+  message: string;
+  data: {
+    orderId?: string;
+    partnerName?: string;
+    customerName?: string;
+    nominal?: number;
+    message?: string;
+  } | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
 interface Transaction {
   id: string;
   orderId: string;
@@ -160,6 +176,8 @@ interface DashboardData {
   announcements: Array<{ id: string; title: string; description: string }>;
   promos: Array<{ id: string; title: string; link: string }>;
   partnerNotifications: PartnerNotification[];
+  partnerMessages: PartnerMessage[];
+  unreadPartnerMessages: number;
 }
 
 export default function OwnerDashboardPage() {
@@ -318,7 +336,6 @@ export default function OwnerDashboardPage() {
 
   const stats = data?.stats;
   const notifications = (stats?.pendingCount || 0) + (stats?.verificationCount || 0);
-  const partnerNotifications = data?.partnerNotifications || [];
 
   // Time-based greeting
   const getGreeting = () => {
@@ -562,34 +579,123 @@ export default function OwnerDashboardPage() {
       ) : null}
 
       {/* Partner Notifications Section */}
-      <Card className="glass-card animate-slide-up border-violet-200 dark:border-violet-800">
+      <Card className={cn(
+        "glass-card animate-slide-up transition-all",
+        (data?.unreadPartnerMessages || 0) > 0 
+          ? "border-amber-400 dark:border-amber-600 shadow-lg shadow-amber-500/10" 
+          : "border-violet-200 dark:border-violet-800"
+      )}>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-violet-500" />
+              <MessageSquare className={cn(
+                "w-4 h-4",
+                (data?.unreadPartnerMessages || 0) > 0 ? "text-amber-500 animate-pulse" : "text-violet-500"
+              )} />
               Notifikasi Partner
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              {partnerNotifications.length > 0 && (
-                <Badge className="bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-[10px]">
-                  {partnerNotifications.length} baru
+              {(data?.unreadPartnerMessages || 0) > 0 && (
+                <Badge className="bg-amber-500 text-white text-[10px] animate-pulse">
+                  {data?.unreadPartnerMessages} baru
                 </Badge>
               )}
-              <Button variant="ghost" size="sm" asChild className="tap-highlight h-7 sm:h-8 text-[10px] sm:text-xs">
-                <Link href="/owner/dashboard/notifications">
-                  Lihat Semua
-                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-0.5 sm:ml-1" />
-                </Link>
-              </Button>
-            </div>
+            </CardTitle>
+            <Button variant="ghost" size="sm" asChild className="tap-highlight h-7 sm:h-8 text-[10px] sm:text-xs">
+              <Link href="/owner/dashboard/notifications">
+                Lihat Semua
+                <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-0.5 sm:ml-1" />
+              </Link>
+            </Button>
           </div>
           <CardDescription className="text-[10px] sm:text-xs">Pesan dari partner terkait transaksi</CardDescription>
         </CardHeader>
         <CardContent className="px-1 sm:px-6">
-          {partnerNotifications.length > 0 ? (
+          {/* New partner messages */}
+          {(data?.partnerMessages?.length || 0) > 0 ? (
             <ScrollArea className="max-h-48 sm:max-h-64">
               <div className="space-y-1.5 sm:space-y-2 pr-1 sm:pr-2">
-                {partnerNotifications.map((notification) => (
+                {data?.partnerMessages?.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={cn(
+                      "p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors cursor-pointer",
+                      !msg.isRead 
+                        ? "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 hover:bg-amber-100/50 dark:hover:bg-amber-900/30" 
+                        : "bg-muted/30 border border-transparent hover:bg-muted/50"
+                    )}
+                    onClick={() => {
+                      if (msg.transactionId) {
+                        router.push(`/owner/dashboard/transactions?highlight=${msg.transactionId}`);
+                      }
+                    }}
+                  >
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <div className={cn(
+                        "w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                        !msg.isRead 
+                          ? "bg-amber-100 dark:bg-amber-900/30" 
+                          : "bg-muted"
+                      )}>
+                        <MessageSquare className={cn(
+                          "w-4 h-4 sm:w-5 sm:h-5",
+                          !msg.isRead ? "text-amber-600" : "text-muted-foreground"
+                        )} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                          <p className={cn(
+                            "font-medium text-xs sm:text-sm",
+                            !msg.isRead ? "text-amber-700 dark:text-amber-300" : "text-foreground"
+                          )}>
+                            {msg.title}
+                          </p>
+                          {msg.data?.orderId && (
+                            <Badge variant="outline" className="text-[9px] sm:text-[10px]">
+                              {msg.data.orderId}
+                            </Badge>
+                          )}
+                          {!msg.isRead && (
+                            <Badge className="bg-amber-500 text-white text-[8px] px-1">Baru</Badge>
+                          )}
+                        </div>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 line-clamp-2">
+                          {msg.message}
+                        </p>
+                        <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5">
+                          <span className="text-[9px] sm:text-[10px] text-muted-foreground flex items-center gap-0.5 sm:gap-1">
+                            <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                            {formatDateAgo(msg.createdAt)}
+                          </span>
+                          {msg.data?.nominal && (
+                            <span className="text-[9px] sm:text-[10px] text-primary font-medium">
+                              {formatCurrency(msg.data.nominal)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-[10px] gap-1 flex-shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (msg.transactionId) {
+                            router.push(`/owner/dashboard/transactions?highlight=${msg.transactionId}`);
+                          }
+                        }}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Lihat
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          ) : (data?.partnerNotifications?.length || 0) > 0 ? (
+            // Legacy notifications
+            <ScrollArea className="max-h-48 sm:max-h-64">
+              <div className="space-y-1.5 sm:space-y-2 pr-1 sm:pr-2">
+                {data?.partnerNotifications?.map((notification) => (
                   <div
                     key={notification.id}
                     className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-violet-50/50 dark:bg-violet-900/10 border border-violet-100 dark:border-violet-900/30 hover:bg-violet-100/50 dark:hover:bg-violet-900/20 transition-colors"

@@ -117,16 +117,8 @@ export async function PATCH(
       );
     }
 
-    // Only owner can update transaction status
-    if (user.role !== 'owner') {
-      return NextResponse.json(
-        { success: false, error: 'Tidak memiliki akses' },
-        { status: 403 }
-      );
-    }
-
     const body = await request.json();
-    const { status, notes, marketplaceId, transactionLink, nominal, recalculate } = body;
+    const { status, notes, marketplaceId, transactionLink, nominal, recalculate, sendNotification } = body;
 
     // Get existing transaction
     const existingTransaction = await db.transaction.findUnique({
@@ -142,6 +134,43 @@ export async function PATCH(
       return NextResponse.json(
         { success: false, error: 'Transaksi tidak ditemukan' },
         { status: 404 }
+      );
+    }
+
+    // Authorization: Owner can update anything, Partner can only update nominal on their own transactions
+    // and only when status is pending or verification
+    if (user.role === 'partner') {
+      const partner = await db.partner.findUnique({
+        where: { userId: user.id },
+      });
+
+      if (!partner || existingTransaction.partnerId !== partner.id) {
+        return NextResponse.json(
+          { success: false, error: 'Tidak memiliki akses' },
+          { status: 403 }
+        );
+      }
+
+      // Partner can only update nominal and only on pending/verification status
+      const allowedStatuses = ['pending', 'verification'];
+      if (!allowedStatuses.includes(existingTransaction.status)) {
+        return NextResponse.json(
+          { success: false, error: 'Hanya bisa mengubah nominal saat status pending atau verifikasi' },
+          { status: 403 }
+        );
+      }
+
+      // Partner can only change nominal, not status, notes, or other fields
+      if (status !== undefined || notes !== undefined || marketplaceId !== undefined || transactionLink !== undefined) {
+        return NextResponse.json(
+          { success: false, error: 'Partner hanya dapat mengubah nominal' },
+          { status: 403 }
+        );
+      }
+    } else if (user.role !== 'owner') {
+      return NextResponse.json(
+        { success: false, error: 'Tidak memiliki akses' },
+        { status: 403 }
       );
     }
 
@@ -429,6 +458,57 @@ export async function PATCH(
                   'Nominal': formatCurrency(toNumber(transaction.nominal)),
                   'Status': status.toUpperCase(),
                   'Catatan': notes || '-',
+                },
+              }
+            );
+          }
+        }
+      } catch (notifError) {
+        console.error('Failed to create notification:', notifError);
+      }
+    }
+
+    // Create notification for nominal update (by partner)
+    if (sendNotification && nominal !== undefined && nominal !== toNumber(existingTransaction.nominal)) {
+      try {
+        const ownerProfile = await db.ownerProfile.findFirst();
+        if (ownerProfile) {
+          await db.notification.create({
+            data: {
+              type: 'transaction_update',
+              title: 'Update Nominal Transaksi',
+              message: `${transaction.orderId} - ${transaction.customer?.name || 'Customer'} - Nominal diubah oleh Partner`,
+              data: JSON.stringify({
+                orderId: transaction.orderId,
+                customerName: transaction.customer?.name,
+                oldNominal: toNumber(existingTransaction.nominal),
+                newNominal: toNumber(transaction.nominal),
+                partnerName: transaction.partner?.name,
+              }),
+              targetType: 'owner',
+              transactionId: transaction.id,
+              partnerId: transaction.partnerId,
+            },
+          });
+
+          // Send Telegram notification if enabled
+          const notifSettings = await db.notificationSettings.findUnique({
+            where: { ownerProfileId: ownerProfile.id },
+          });
+
+          if (notifSettings?.telegramEnabled && notifSettings.telegramBotToken && notifSettings.telegramChatId && notifSettings.notifyTransactionStatus) {
+            await sendTelegramNotification(
+              notifSettings.telegramBotToken,
+              notifSettings.telegramChatId,
+              {
+                type: 'transaction_update',
+                title: '📝 Update Nominal',
+                message: `Order ID: ${transaction.orderId}`,
+                additionalData: {
+                  'Pelanggan': transaction.customer?.name,
+                  'Nominal Lama': formatCurrency(toNumber(existingTransaction.nominal)),
+                  'Nominal Baru': formatCurrency(toNumber(transaction.nominal)),
+                  'Partner': transaction.partner?.name || '-',
                 },
               }
             );
