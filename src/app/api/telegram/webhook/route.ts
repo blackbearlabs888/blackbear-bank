@@ -125,10 +125,12 @@ async function handleStart(chatId: number) {
     `/info &lt;order_id&gt; — Lihat detail transaksi\n` +
     `/status &lt;order_id&gt; &lt;status&gt; — Ubah status transaksi\n` +
     `/nominal &lt;order_id&gt; &lt;amount&gt; — Ubah nominal\n` +
-    `/mp &lt;order_id&gt; &lt;marketplace&gt; — Ubah marketplace\n` +
     `/catatan &lt;order_id&gt; &lt;text&gt; — Tambah catatan\n` +
     `/link &lt;order_id&gt; &lt;url&gt; — Set link order\n` +
-    `/help — Tampilkan panduan\n\n` +
+    `/mp &lt;order_id&gt; &lt;marketplace&gt; — Ubah marketplace\n\n` +
+    `<b>📊 Laporan:</b>\n` +
+    `/today — Ringkasan transaksi & pendapatan hari ini\n` +
+    `/weekly — Customer & partner baru minggu ini\n\n` +
     `<b>💡 Tips:</b> Reply pesan notifikasi dari bot ini dengan command untuk langsung update transaksi tersebut.`
   );
 }
@@ -143,6 +145,9 @@ async function handleHelp(chatId: number) {
     `<b>/mp ORDER_ID marketplace</b>\nUbah marketplace (ketik "clear" untuk hapus)\n\n` +
     `<b>/catatan ORDER_ID text catatan</b>\nTambah/update catatan\n\n` +
     `<b>/link ORDER_ID https://...</b>\nSet link transaksi\n\n` +
+    `<b>📊 Laporan:</b>\n\n` +
+    `<b>/today</b>\nTransaksi hari ini + pendapatan owner\n\n` +
+    `<b>/weekly</b>\nCustomer baru & partner baru minggu ini\n\n` +
     `<b>💡 Reply notifikasi:</b>\nBalas pesan notifikasi dari bot dengan:\n` +
     `• <code>status success</code>\n` +
     `• <code>nominal 3000000</code>\n` +
@@ -429,6 +434,114 @@ async function handleMarketplace(chatId: number, orderId: string, mpName: string
   );
 }
 
+/** Handle /today - transaksi hari ini + pendapatan owner */
+async function handleToday(chatId: number) {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const [transactions, aggregations] = await Promise.all([
+    db.transaction.findMany({
+      where: { createdAt: { gte: todayStart } },
+      include: { customer: true, partner: true, paymentType: true },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    }),
+    db.transaction.aggregate({
+      where: { createdAt: { gte: todayStart } },
+      _count: true,
+      _sum: { nominal: true, ownerProfit: true, paymentFee: true },
+    }),
+  ]);
+
+  const count = aggregations._count || 0;
+  const volume = toNumber(aggregations._sum.nominal) || 0;
+  const profit = toNumber(aggregations._sum.ownerProfit) || 0;
+  const totalFee = toNumber(aggregations._sum.paymentFee) || 0;
+
+  const successCount = transactions.filter(t => t.status === 'success').length;
+  const pendingCount = transactions.filter(t => t.status === 'pending').length;
+
+  let message =
+    `📊 <b>Ringkasan Hari Ini</b> — ${now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}\n\n` +
+    `💰 Volume: <b>${fmtCurrency(volume)}</b>\n` +
+    `💵 Owner Profit: <b>${fmtCurrency(profit)}</b>\n` +
+    `💸 Total Fee: ${fmtCurrency(totalFee)}\n` +
+    `📦 Total Trx: ${count} (✅${successCount} ⏳${pendingCount})`;
+
+  if (transactions.length > 0) {
+    message += `\n\n<b>📋 Daftar Transaksi:</b>\n`;
+    transactions.forEach((tx, i) => {
+      const emoji = STATUS_EMOJI[tx.status] || '📋';
+      message += `\n${i + 1}. ${emoji} <code>${tx.orderId}</code>`;
+      message += `\n   ${tx.customer.name} • ${fmtCurrency(toNumber(tx.nominal))}`;
+      if (tx.partner) message += ` • ${tx.partner.name}`;
+      message += `\n   ${tx.paymentType.name} • ${tx.status.toUpperCase()}`;
+    });
+    if (count > 20) {
+      message += `\n\n<i>...dan ${count - 20} transaksi lainnya</i>`;
+    }
+  } else {
+    message += `\n\n<i>Belum ada transaksi hari ini</i>`;
+  }
+
+  // Chunk if too long (Telegram limit 4096 chars)
+  if (message.length > 4000) {
+    const firstChunk = message.substring(0, 3900);
+    const rest = message.substring(3900);
+    await reply(chatId, firstChunk);
+    await reply(chatId, rest);
+  } else {
+    await reply(chatId, message);
+  }
+}
+
+/** Handle /weekly - customer baru & partner baru minggu ini */
+async function handleWeekly(chatId: number) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Sunday
+
+  const [newCustomers, newPartners, txAgg] = await Promise.all([
+    db.customer.findMany({
+      where: { createdAt: { gte: startOfWeek } },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    }),
+    db.partner.findMany({
+      where: { joinedAt: { gte: startOfWeek } },
+      orderBy: { joinedAt: 'desc' },
+      take: 10,
+    }),
+    db.transaction.aggregate({
+      where: { createdAt: { gte: startOfWeek }, status: 'success' },
+      _count: true,
+      _sum: { nominal: true, ownerProfit: true },
+    }),
+  ]);
+
+  const weekLabel = `${startOfWeek.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - ${today.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+
+  const message =
+    `📅 <b>Ringkasan Minggu Ini</b>\n${weekLabel}\n\n` +
+    `<b>👥 Customer Baru (${newCustomers.length})</b>\n` +
+    (newCustomers.length > 0
+      ? newCustomers.map((c, i) => `${i + 1}. ${c.name}${c.phone ? ` • ${c.phone}` : ''}${c.label ? ` [${c.label}]` : ''}`).join('\n')
+      : '<i>Belum ada customer baru</i>') +
+    `\n\n` +
+    `<b>🤝 Partner Baru (${newPartners.length})</b>\n` +
+    (newPartners.length > 0
+      ? newPartners.map((p, i) => `${i + 1}. ${p.name} — ${p.tier}${p.city ? ` • ${p.city}` : ''}`).join('\n')
+      : '<i>Belum ada partner baru</i>') +
+    `\n\n` +
+    `<b>📊 Trx Sukses Minggu Ini</b>\n` +
+    `📦 ${txAgg._count} transaksi\n` +
+    `💰 Volume: <b>${fmtCurrency(toNumber(txAgg._sum.nominal))}</b>\n` +
+    `💵 Profit: <b>${fmtCurrency(toNumber(txAgg._sum.ownerProfit))}</b>`;
+
+  await reply(chatId, message);
+}
+
 // ==================== MESSAGE ROUTER ====================
 
 /** Parse and route incoming message */
@@ -518,6 +631,12 @@ async function processMessage(message: TelegramMessage) {
         }
         break;
       }
+      case '/today':
+        await handleToday(chatId);
+        break;
+      case '/weekly':
+        await handleWeekly(chatId);
+        break;
       default:
         await reply(chatId, `❓ Command tidak dikenali. Ketik <code>/help</code> untuk daftar command.`);
     }
