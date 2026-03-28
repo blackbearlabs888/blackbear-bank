@@ -548,7 +548,6 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
-  const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
   const [searchCust, setSearchCust] = useState('');
   const [selectedCust, setSelectedCust] = useState<Customer | null>(null);
   const [isNewCust, setIsNewCust] = useState(false);
@@ -557,7 +556,7 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
   const [form, setForm] = useState({
     customerId: '', customerName: '', customerPhone: '', customerCity: '',
     customerBankName: '', customerBankAccount: '', customerBankHolder: '',
-    nominal: '', paymentTypeId: '', methodTransaction: 'Online', marketplaceId: '',
+    nominal: '', paymentTypeId: '', methodTransaction: 'Online',
   });
 
   // Real-time calculation
@@ -580,41 +579,25 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
     }
 
     let platformFee = 0;
-    let selectedMp: Marketplace | null = null;
-    if (form.marketplaceId && form.marketplaceId !== 'none') {
-      const mp = marketplaces.find(m => m.id === form.marketplaceId);
-      if (mp) {
-        let mpFeePercent = Number(mp.feePercent) || 0;
-        const mpFeeFlat = Number(mp.feeFlat) || 0;
-        if (mpFeePercent > 100) mpFeePercent = mpFeePercent / 1000;
-        platformFee = nominal * (mpFeePercent / 100) + mpFeeFlat;
-        selectedMp = mp;
-      }
-    }
 
     const netMargin = paymentFee - platformFee;
     const partnerProfit = netMargin * commission / 100;
     const ownerProfit = netMargin - partnerProfit;
     const totalReceived = nominal - paymentFee;
 
-    return { paymentFee, platformFee, netMargin, partnerProfit, ownerProfit, totalReceived, feePercent, selectedMp, threshold: pt.threshold };
-  }, [form, paymentTypes, marketplaces, commission]);
+    return { paymentFee, platformFee, netMargin, partnerProfit, ownerProfit, totalReceived, feePercent, threshold: pt.threshold };
+  }, [form, paymentTypes, commission]);
 
-  useEffect(() => { if (open) { fetchPT(); fetchMP(); } }, [open]);
+  useEffect(() => { if (open) { fetchPT(); } }, [open]);
   useEffect(() => { if (searchCust.length >= 2 && !isNewCust) searchC(); }, [searchCust, isNewCust]);
 
   const fetchPT = async () => { const res = await fetch('/api/payment-types?all=true'); const d = await res.json(); if (d.success) setPaymentTypes(d.data.filter((p: PaymentType) => p.isActive)); };
-  const fetchMP = async () => { const res = await fetch('/api/marketplaces?activeOnly=true'); const d = await res.json(); if (d.success) setMarketplaces(d.data); };
   const searchC = async () => { const res = await fetch(`/api/customers?search=${searchCust}`); const d = await res.json(); if (d.success) setCustomers(d.data); };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const normalizedMarketplaceId = (form.marketplaceId && form.marketplaceId !== 'none') 
-        ? form.marketplaceId 
-        : null;
-      
       const bankNameToSubmit = form.customerBankName === 'Lainnya' ? customBankName : form.customerBankName;
       
       const res = await fetch('/api/transactions', {
@@ -624,7 +607,7 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
           ...form, 
           customerBankName: bankNameToSubmit,
           nominal: parseFloat(form.nominal), 
-          marketplaceId: normalizedMarketplaceId, 
+          marketplaceId: null, 
           partnerId: partnerId,
           isNewCustomer: isNewCust 
         }),
@@ -636,7 +619,7 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
         setSelectedCust(null);
         setIsNewCust(false);
         setCustomBankName('');
-        setForm({ customerId: '', customerName: '', customerPhone: '', customerCity: '', customerBankName: '', customerBankAccount: '', customerBankHolder: '', nominal: '', paymentTypeId: '', methodTransaction: 'Online', marketplaceId: '' });
+        setForm({ customerId: '', customerName: '', customerPhone: '', customerCity: '', customerBankName: '', customerBankAccount: '', customerBankHolder: '', nominal: '', paymentTypeId: '', methodTransaction: 'Online' });
         toast.success('Transaksi dibuat (Status: Process)');
       } else toast.error(d.error || 'Gagal');
     } catch (e) { toast.error('Gagal'); }
@@ -750,27 +733,15 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
             <div><Label className="text-[10px]">Payment Type</Label><Select value={form.paymentTypeId} onValueChange={v => setForm(p => ({ ...p, paymentTypeId: v }))}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pilih" /></SelectTrigger><SelectContent>{paymentTypes.map(pt => <SelectItem key={pt.id} value={pt.id} className="text-xs">{pt.name}</SelectItem>)}</SelectContent></Select></div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label className="text-[10px]">Metode</Label><Select value={form.methodTransaction} onValueChange={v => setForm(p => ({ ...p, methodTransaction: v }))}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Online">Online</SelectItem><SelectItem value="COD">COD</SelectItem></SelectContent></Select></div>
-            <div>
-              <Label className="text-[10px]">Marketplace</Label>
-              <Select value={form.marketplaceId} onValueChange={v => setForm(p => ({ ...p, marketplaceId: v }))}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tanpa" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Tanpa</SelectItem>
-                  {marketplaces.map(mp => (
-                    <SelectItem key={mp.id} value={mp.id} className="text-xs">
-                      <div className="flex items-center gap-2">
-                        <span>{mp.name}</span>
-                        <Badge variant="outline" className="text-[9px] h-4">
-                          {mp.feePercent}%{mp.feeFlat ? ` + ${formatCurrency(mp.feeFlat)}` : ''}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label className="text-[10px]">Metode</Label>
+            <Select value={form.methodTransaction} onValueChange={v => setForm(p => ({ ...p, methodTransaction: v }))}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Online">Online</SelectItem>
+                <SelectItem value="COD">COD</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Calculation */}
@@ -791,16 +762,6 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
                     <span className="text-red-600">-{formatCurrency(calc.paymentFee)}</span>
                   </div>
                 </div>
-                
-                {calc.platformFee > 0 && calc.selectedMp && (
-                  <div className="flex items-center justify-between text-[10px] p-1.5 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
-                    <div className="flex items-center gap-1">
-                      <Store className="w-3 h-3 text-orange-600" />
-                      <span className="text-orange-700 dark:text-orange-400">{calc.selectedMp.name}</span>
-                    </div>
-                    <span className="text-red-600 font-medium">-{formatCurrency(calc.platformFee)}</span>
-                  </div>
-                )}
                 
                 <Separator className="my-1" />
                 
