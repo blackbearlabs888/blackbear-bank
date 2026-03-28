@@ -580,7 +580,7 @@ export default function OwnerDashboardPage() {
 
       {/* Partner Notifications Section */}
       <Card className={cn(
-        "glass-card animate-slide-up transition-all",
+        "glass-card animate-slide-up transition-all overflow-hidden",
         (data?.unreadPartnerMessages || 0) > 0 
           ? "border-amber-400 dark:border-amber-600 shadow-lg shadow-amber-500/10" 
           : "border-violet-200 dark:border-violet-800"
