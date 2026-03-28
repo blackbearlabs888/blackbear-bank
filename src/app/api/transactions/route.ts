@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
     // Handle customer - create new or use existing
     let finalCustomerId = customerId;
 
-    if (isNewCustomer && user.role === 'owner') {
+    if (isNewCustomer) {
       // Normalize phone number
       const normalizedPhone = normalizePhone(customerPhone);
       
@@ -276,6 +276,7 @@ export async function POST(request: NextRequest) {
             bankName: customerBankName || undefined,
             bankAccount: customerBankAccount || undefined,
             bankHolder: customerBankHolder || undefined,
+            partnerId: user.role === 'partner' ? actualPartnerId : undefined,
           },
         });
       } else {
@@ -290,6 +291,8 @@ export async function POST(request: NextRequest) {
             bankHolder: customerBankHolder || null,
             totalVolume: 0,
             totalTransactions: 0,
+            addedBy: user.role === 'owner' ? 'owner' : 'partner',
+            partnerId: user.role === 'partner' ? actualPartnerId : null,
           },
         });
         finalCustomerId = newCustomer.id;
