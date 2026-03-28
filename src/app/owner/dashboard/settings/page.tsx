@@ -40,6 +40,9 @@ import {
   Send,
   Check,
   X,
+  Link2,
+  Trash2,
+  RefreshCw,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
@@ -126,6 +129,15 @@ export default function OwnerSettingsPage() {
   const [testingTelegram, setTestingTelegram] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  // Webhook state
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [webhookInfo, setWebhookInfo] = useState<{
+    url: string | null;
+    pendingUpdateCount: number;
+    lastErrorDate?: number;
+    lastErrorMessage?: string;
+  } | null>(null);
+
   // Trigger hydration on mount
   useEffect(() => {
     hydrate();
@@ -148,6 +160,7 @@ export default function OwnerSettingsPage() {
   useEffect(() => {
     if (isAuthenticated && hasHydrated && user?.role === 'owner') {
       fetchProfile();
+      fetchWebhookInfo();
     }
   }, [isAuthenticated, hasHydrated, user]);
 
@@ -290,6 +303,57 @@ export default function OwnerSettingsPage() {
       toast.error('Terjadi kesalahan');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Fetch webhook info
+  const fetchWebhookInfo = async () => {
+    try {
+      const response = await fetch('/api/telegram/set-webhook');
+      const result = await response.json();
+      if (result.success) {
+        setWebhookInfo(result.data);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  // Set webhook
+  const handleSetWebhook = async () => {
+    setWebhookLoading(true);
+    try {
+      const response = await fetch('/api/telegram/set-webhook', { method: 'POST' });
+      const result = await response.json();
+      if (result.success) {
+        toast.success('Webhook berhasil diset!');
+        fetchWebhookInfo();
+      } else {
+        toast.error(result.error || 'Gagal set webhook');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server');
+    } finally {
+      setWebhookLoading(false);
+    }
+  };
+
+  // Delete webhook
+  const handleDeleteWebhook = async () => {
+    setWebhookLoading(true);
+    try {
+      const response = await fetch('/api/telegram/set-webhook', { method: 'DELETE' });
+      const result = await response.json();
+      if (result.success) {
+        toast.success('Webhook berhasil dihapus');
+        setWebhookInfo(null);
+      } else {
+        toast.error(result.error || 'Gagal hapus webhook');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server');
+    } finally {
+      setWebhookLoading(false);
     }
   };
 
@@ -1130,6 +1194,55 @@ export default function OwnerSettingsPage() {
                 <p className="text-xs text-muted-foreground">
                   ID chat atau grup tujuan (gunakan @userinfobot untuk mendapatkan ID)
                 </p>
+              </div>
+
+              {/* Webhook Management */}
+              <div className="space-y-2 p-3 rounded-xl bg-muted/50 border border-dashed">
+                <div className="flex items-center gap-2">
+                  <Link2 className="w-4 h-4 text-primary" />
+                  <p className="text-sm font-medium">Webhook Bot</p>
+                  {webhookInfo?.url ? (
+                    <Badge className="bg-green-100 text-green-700 text-[10px]">Aktif</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px]">Belum diset</Badge>
+                  )}
+                </div>
+                {webhookInfo?.url && (
+                  <p className="text-xs text-muted-foreground break-all">{webhookInfo.url}</p>
+                )}
+                {webhookInfo?.lastErrorMessage && (
+                  <p className="text-xs text-destructive">Error: {webhookInfo.lastErrorMessage}</p>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSetWebhook}
+                    disabled={webhookLoading || !notificationSettings.hasBotToken}
+                    className="flex-1 h-8 text-xs"
+                  >
+                    {webhookLoading ? (
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    ) : webhookInfo?.url ? (
+                      <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                    ) : (
+                      <Link2 className="w-3.5 h-3.5 mr-1.5" />
+                    )}
+                    {webhookInfo?.url ? 'Reset Webhook' : 'Set Webhook'}
+                  </Button>
+                  {webhookInfo?.url && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDeleteWebhook}
+                      disabled={webhookLoading}
+                      className="h-8 text-xs text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                      Hapus
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Test Connection */}
