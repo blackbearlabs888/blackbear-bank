@@ -291,6 +291,14 @@ function StarRating({
   );
 }
 
+// Helper to get initials from name
+function getInitials(name: string): string {
+  if (!name) return '?';
+  const words = name.trim().split(' ').filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return words[0][0].toUpperCase();
+}
+
 // Testimonial Form Component
 function TestimonialForm({
   orderId,
@@ -304,9 +312,9 @@ function TestimonialForm({
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [review, setReview] = useState('');
-  const [name, setName] = useState(customerName);
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
+  const initials = getInitials(customerName);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -314,14 +322,6 @@ function TestimonialForm({
       toast({
         title: 'Rating wajib diisi',
         description: 'Silakan pilih rating 1-5 bintang',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (!name.trim()) {
-      toast({
-        title: 'Nama wajib diisi',
-        description: 'Silakan masukkan nama Anda',
         variant: 'destructive',
       });
       return;
@@ -336,7 +336,7 @@ function TestimonialForm({
           transactionId: orderId,
           rating,
           review: review.trim(),
-          customerName: name.trim(),
+          customerName: customerName.trim(),
         }),
       });
       const data = await response.json();
@@ -388,17 +388,15 @@ function TestimonialForm({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name Input */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
-              Nama Anda
-            </label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Masukkan nama Anda"
-              className="h-10 rounded-lg bg-white/50 dark:bg-black/20"
-            />
+          {/* Customer Identity (readonly) */}
+          <div className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30 border border-muted/40">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm flex-shrink-0">
+              <span className="text-sm font-bold text-white">{initials}</span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground">Menulis sebagai</p>
+              <p className="font-medium text-sm truncate">{customerName}</p>
+            </div>
           </div>
 
           {/* Star Rating */}
