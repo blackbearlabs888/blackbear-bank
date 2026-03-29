@@ -1,4 +1,4 @@
-use client';
+'use client';
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -278,8 +278,8 @@ export default function OwnerBroadcastPage() {
   }).length;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="flex-1 container mx-auto px-3 py-3 sm:py-4 space-y-3">
+    <div className="min-h-screen flex flex-col overflow-hidden">
+      <div className="flex-1 container mx-auto px-3 py-3 sm:py-4 space-y-3 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -336,29 +336,31 @@ export default function OwnerBroadcastPage() {
 
         {/* Tabs - Fully responsive on mobile */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-9 sm:h-10">
-            <TabsTrigger value="promo" className="text-xs sm:text-sm gap-1 min-w-0">
-              <Tag className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline truncate">Promo</span>
-              {promoCount > 0 && (
-                <Badge className="ml-auto h-4 px-1 text-[9px] bg-violet-500 text-white shrink-0">{promoCount}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="broadcast" className="text-xs sm:text-sm gap-1 min-w-0">
-              <Radio className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline truncate">Broadcast</span>
-              {broadcastCount > 0 && (
-                <Badge className="ml-auto h-4 px-1 text-[9px] bg-purple-500 text-white shrink-0">{broadcastCount}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="announcement" className="text-xs sm:text-sm gap-1 min-w-0">
-              <FileText className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline truncate">Info</span>
-              {announcementCount > 0 && (
-                <Badge className="ml-auto h-4 px-1 text-[9px] bg-fuchsia-500 text-white shrink-0">{announcementCount}</Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-1">
+            <TabsList className="inline-flex w-full min-w-0 h-9 sm:h-10">
+              <TabsTrigger value="promo" className="text-xs sm:text-sm gap-1 min-w-0 flex-1 truncate px-2">
+                <Tag className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Promo</span>
+                {promoCount > 0 && (
+                  <Badge className="ml-auto h-4 px-1 text-[9px] bg-violet-500 text-white shrink-0">{promoCount}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="broadcast" className="text-xs sm:text-sm gap-1 min-w-0 flex-1 truncate px-2">
+                <Radio className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Broadcast</span>
+                {broadcastCount > 0 && (
+                  <Badge className="ml-auto h-4 px-1 text-[9px] bg-purple-500 text-white shrink-0">{broadcastCount}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="announcement" className="text-xs sm:text-sm gap-1 min-w-0 flex-1 truncate px-2">
+                <FileText className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Info</span>
+                {announcementCount > 0 && (
+                  <Badge className="ml-auto h-4 px-1 text-[9px] bg-fuchsia-500 text-white shrink-0">{announcementCount}</Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Content per tab */}
           <TabsContent value={activeTab} className="space-y-3 mt-3">
@@ -387,7 +389,7 @@ export default function OwnerBroadcastPage() {
             )}
 
             {/* List */}
-            <div className="divide-y max-h-[50vh] sm:max-h-[calc(100vh-400px)] overflow-y-auto overflow-x-hidden overscroll-contain">
+            <div className="space-y-2 max-h-[50vh] sm:max-h-[calc(100vh-400px)] overflow-y-auto overflow-x-hidden overscroll-contain pr-0.5">
                 {loading ? (
                   [...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
                 ) : filteredAnnouncements.length > 0 ? (
@@ -503,7 +505,7 @@ function AnnouncementCard({
       announcement.isActive && !status.isExpired && !status.isScheduled && "border-violet-300 dark:border-violet-700"
     )}>
       <CardContent className="p-3">
-        <div className="flex items-start gap-2 min-w-0">
+        <div className="flex items-start gap-2 min-w-0 max-w-full">
           <div className={cn(
             "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0",
             announcement.isActive && !status.isExpired 
