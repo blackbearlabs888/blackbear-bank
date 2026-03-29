@@ -41,6 +41,7 @@ import {
   Loader2,
   CreditCard,
   Quote,
+  Globe,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import Link from 'next/link';
@@ -410,6 +411,68 @@ export default function PartnerDashboardPage() {
           </Link>
         </Button>
       </div>
+
+      {/* Share Order Link - Partner Referral */}
+      <Card className="glass-card animate-slide-up overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-cyan-500 via-primary to-violet-500" />
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+            <Globe className="w-4 h-4 text-cyan-500" />
+            Link Order Customer
+          </CardTitle>
+          <CardDescription className="text-[10px] sm:text-xs">
+            Bagikan link ini ke customer untuk order langsung dengan nama Anda
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="px-3 sm:px-6">
+          <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-r from-cyan-500/5 via-primary/5 to-violet-500/5 border border-primary/10">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-primary flex items-center justify-center flex-shrink-0 shadow-lg">
+                <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate">Link Pribadi Anda</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                  {typeof window !== 'undefined' ? `${window.location.origin}/order?partnerId=${currentPartner?.id}` : '/order?partnerId=...'}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 h-10 sm:h-11 rounded-xl bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 text-white shadow-md text-xs sm:text-sm"
+                onClick={() => {
+                  const link = `${window.location.origin}/order?partnerId=${currentPartner?.id}`;
+                  navigator.clipboard.writeText(link);
+                }}
+              >
+                {navigator ? (
+                  <>
+                    {false ? <Check className="w-4 h-4 mr-1.5" /> : <Copy className="w-4 h-4 mr-1.5" />}
+                    Salin Link
+                  </>
+                ) : 'Salin Link'}
+              </Button>
+              <Button
+                variant="outline"
+                className="h-10 sm:h-11 px-3 sm:px-4 rounded-xl text-xs sm:text-sm"
+                onClick={() => {
+                  const link = `${window.location.origin}/order?partnerId=${currentPartner?.id}`;
+                  if (navigator.share) {
+                    navigator.share({ title: 'Order Gestun', url: link });
+                  } else {
+                    navigator.clipboard.writeText(link);
+                  }
+                }}
+              >
+                <ExternalLink className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-2 text-center">
+            💡 Customer yang order lewat link ini otomatis tercatat atas nama Anda
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Smart Alerts Section */}
       <SmartAlertsCard
