@@ -32,8 +32,12 @@ export async function GET(request: NextRequest) {
           id: true,
           title: true,
           slug: true,
+          content: true,
           excerpt: true,
           featuredImage: true,
+          metaTitle: true,
+          metaDescription: true,
+          keywords: true,
           category: true,
           tags: true,
           author: true,
@@ -41,6 +45,7 @@ export async function GET(request: NextRequest) {
           isPublished: true,
           publishedAt: true,
           createdAt: true,
+          updatedAt: true,
         },
       }),
       db.blogPost.count({ where }),
@@ -48,7 +53,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: posts,
+      data: posts.map(post => ({
+        ...post,
+        viewCount: Number(post.viewCount),
+      })),
       pagination: {
         page,
         limit,
@@ -132,7 +140,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: post,
+      data: {
+        ...post,
+        viewCount: Number(post.viewCount),
+      },
       message: 'Blog post berhasil dibuat',
     });
   } catch (error) {
