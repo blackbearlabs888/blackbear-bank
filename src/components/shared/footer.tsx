@@ -1,10 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { MessageCircle, ArrowUp, Heart, ExternalLink, Shield, Zap, Clock } from 'lucide-react';
+import { MessageCircle, ArrowUp, Heart, ExternalLink, Shield, Zap, Clock, BookOpen, ChevronRight } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { cn } from '@/lib/utils';
+
+interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  category: string;
+  publishedAt: string | null;
+}
 
 // Social Icon Components
 function SocialIcon({ href, icon, label, hoverColor }: {
@@ -78,6 +87,7 @@ function YoutubeIcon({ className }: { className?: string }) {
 export function Footer() {
   const { config, getInitials } = useSiteConfig();
   const [logoError, setLogoError] = useState(false);
+  const [latestBlogs, setLatestBlogs] = useState<BlogPost[]>([]);
   
   const siteName = config.websiteTitle || 'Black Bear';
   const whatsapp = config.footerWhatsapp;
@@ -90,6 +100,22 @@ export function Footer() {
   const hasSocials = whatsapp || instagram || facebook || tiktok || youtube || threads;
   const currentYear = new Date().getFullYear();
 
+  // Fetch latest blogs
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      try {
+        const response = await fetch('/api/seo/blog?public=true&limit=3');
+        const result = await response.json();
+        if (result.success && result.data) {
+          setLatestBlogs(result.data.slice(0, 3));
+        }
+      } catch (error) {
+        console.error('Failed to fetch blogs:', error);
+      }
+    };
+    fetchBlogs();
+  }, []);
+
   return (
     <footer className="relative bg-gradient-to-b from-background via-muted/30 to-muted/50 border-t mt-auto">
       {/* Decorative top gradient line */}
@@ -97,9 +123,9 @@ export function Footer() {
       
       <div className="container mx-auto px-4 py-8">
         {/* Main Content */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Section */}
-          <div className="flex flex-col items-center md:items-start gap-3">
+          <div className="flex flex-col gap-3">
             <Link href="/" className="flex items-center gap-3 tap-highlight group">
               {config.logoUrl && !logoError ? (
                 <img 
@@ -130,60 +156,91 @@ export function Footer() {
                 <span>Proses Cepat</span>
               </div>
             </div>
+            
+            {/* Operating hours */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full w-fit mt-2">
+              <Clock className="w-3 h-3" />
+              <span>Senin - Sabtu: 09:00 - 21:00 WIB</span>
+            </div>
           </div>
 
           {/* Quick Links */}
-          <nav className="flex flex-col items-center gap-3">
-            <div className="flex items-center gap-1 flex-wrap justify-center">
+          <nav className="flex flex-col gap-2">
+            <h3 className="font-semibold text-sm mb-2">Menu</h3>
+            <div className="flex flex-col gap-1">
               <Link 
                 href="/order" 
-                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
               >
                 Order
               </Link>
               <Link 
                 href="/track" 
-                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
               >
                 Track
               </Link>
               <Link 
                 href="/register" 
-                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
               >
                 Mitra
               </Link>
               <Link 
-                href="/blog" 
-                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
-              >
-                Blog
-              </Link>
-              <Link 
                 href="/faq" 
-                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
               >
                 FAQ
               </Link>
               <Link 
                 href="/lokasi" 
-                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
               >
                 Lokasi
               </Link>
             </div>
-            
-            {/* Operating hours */}
-            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
-              <Clock className="w-3 h-3" />
-              <span>Senin - Sabtu: 09:00 - 21:00 WIB</span>
-            </div>
           </nav>
 
+          {/* Blog Terbaru */}
+          <div className="flex flex-col gap-2">
+            <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+              <BookOpen className="w-4 h-4" />
+              Blog Terbaru
+            </h3>
+            {latestBlogs.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {latestBlogs.map((blog) => (
+                  <Link
+                    key={blog.id}
+                    href={`/blog/${blog.slug}`}
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors py-1 flex items-start gap-1 group"
+                  >
+                    <ChevronRight className="w-3 h-3 mt-1 flex-shrink-0 text-muted-foreground/50 group-hover:text-primary" />
+                    <span className="line-clamp-2">{blog.title}</span>
+                  </Link>
+                ))}
+                <Link 
+                  href="/blog" 
+                  className="text-xs text-primary hover:underline mt-1"
+                >
+                  Lihat Semua →
+                </Link>
+              </div>
+            ) : (
+              <Link 
+                href="/blog" 
+                className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
+              >
+                Kunjungi Blog
+              </Link>
+            )}
+          </div>
+
           {/* Socials & Contact */}
-          <div className="flex flex-col items-center md:items-end gap-3">
+          <div className="flex flex-col gap-3">
+            <h3 className="font-semibold text-sm mb-2">Hubungi Kami</h3>
             {hasSocials && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <SocialIcon 
                   href={whatsapp ? `https://wa.me/${whatsapp}` : undefined} 
                   icon={<MessageCircle className="w-4.5 h-4.5" />} 
@@ -229,7 +286,7 @@ export function Footer() {
                 href={`https://wa.me/${whatsapp}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-500/10 text-green-700 dark:text-green-400 text-sm font-medium hover:bg-green-500/20 transition-colors border border-green-500/20"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-500/10 text-green-700 dark:text-green-400 text-sm font-medium hover:bg-green-500/20 transition-colors border border-green-500/20 w-fit"
               >
                 <MessageCircle className="w-4 h-4" />
                 Hubungi Kami

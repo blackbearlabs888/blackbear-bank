@@ -429,6 +429,72 @@ export default function LandingPage() {
       {/* Testimonials Section */}
       <TestimonialsSection />
 
+      {/* FAQ Section */}
+      <section className="relative py-20 md:py-28 bg-muted/30 backdrop-blur-sm z-10" aria-labelledby="faq-heading">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
+                <HelpCircle className="w-4 h-4" aria-hidden="true" />
+                <span>FAQ</span>
+              </div>
+              <h2 id="faq-heading" className="text-3xl md:text-4xl font-bold mb-4">
+                Pertanyaan Umum
+              </h2>
+              <p className="text-muted-foreground max-w-xl mx-auto">
+                Temukan jawaban untuk pertanyaan yang sering diajukan
+              </p>
+            </div>
+
+            {faqs.length > 0 ? (
+              <>
+                <Card className="border-border/50">
+                  <CardContent className="p-0">
+                    <Accordion type="single" collapsible className="w-full">
+                      {faqs.map((faq, index) => (
+                        <AccordionItem 
+                          key={faq.id} 
+                          value={faq.id}
+                          className={index === faqs.length - 1 ? 'border-b-0' : ''}
+                        >
+                          <AccordionTrigger className="px-6 hover:no-underline">
+                            <span className="text-left font-medium pr-4">
+                              {faq.question}
+                            </span>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-6 text-muted-foreground leading-relaxed">
+                            {faq.answer}
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                  </CardContent>
+                </Card>
+                <div className="text-center mt-6">
+                  <Button asChild variant="outline">
+                    <Link href="/faq">
+                      Lihat Semua FAQ
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Link>
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground mb-4">
+                  Belum ada FAQ tersedia
+                </p>
+                <Button asChild variant="outline">
+                  <Link href="/faq">
+                    Kunjungi Halaman FAQ
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* Partner Section */}
       <section className="relative py-20 md:py-28 z-10" aria-labelledby="partner-heading">
         <div className="container mx-auto px-4">
@@ -736,4 +802,3 @@ export default function LandingPage() {
     </>
   );
 }
-
