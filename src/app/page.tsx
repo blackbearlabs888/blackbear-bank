@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { OrganizationJsonLd, FAQJsonLd } from '@/components/seo/json-ld';
+import TestimonialsSection from '@/components/testimonials-section';
 
 const features = [
   {
@@ -424,6 +425,9 @@ export default function LandingPage() {
           </ol>
         </div>
       </section>
+
+      {/* Testimonials Section */}
+      <TestimonialsSection />
 
       {/* Partner Section */}
       <section className="relative py-20 md:py-28 z-10" aria-labelledby="partner-heading">
