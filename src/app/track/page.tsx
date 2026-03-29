@@ -395,7 +395,7 @@ function TestimonialForm({
             </div>
             <div className="min-w-0">
               <p className="text-[10px] text-muted-foreground">Menulis sebagai</p>
-              <p className="font-medium text-sm truncate">{customerName}</p>
+              <p className="font-medium text-sm truncate">{maskName(customerName)}</p>
             </div>
           </div>
 
@@ -507,7 +507,7 @@ function TestimonialSubmitted({
         )}
 
         <p className="text-[10px] text-center text-muted-foreground/60">
-          oleh <span className="font-medium">{testimonial.customerName}</span>
+          oleh <span className="font-medium">{maskName(testimonial.customerName)}</span>
         </p>
       </CardContent>
     </Card>
