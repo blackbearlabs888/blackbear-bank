@@ -49,6 +49,8 @@ import {
   FileText,
   Gift,
   Sparkles,
+  Star,
+  Quote,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -192,6 +194,18 @@ export default function OwnerDashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const redirectAttempted = useRef(false);
+
+  // Recent testimonials state
+  const [recentTestimonials, setRecentTestimonials] = useState<Array<{
+    id: string;
+    rating: number;
+    review: string;
+    customerName: string;
+    createdAt: string;
+    isApproved: boolean;
+    transaction: { nominal: number; paymentType: { name: string } } | null;
+  }>>([]);
+  const [testimonialsLoading, setTestimonialsLoading] = useState(true);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -213,6 +227,7 @@ export default function OwnerDashboardPage() {
     if (isAuthenticated && hasHydrated && user?.role === 'owner') {
       fetchDashboard(1);
       fetchUnreadNotifications();
+      fetchRecentTestimonials();
     }
   }, [isAuthenticated, hasHydrated, user]);
 
@@ -237,6 +252,22 @@ export default function OwnerDashboardPage() {
       setUnreadNotifications(totalCount);
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
+    }
+  };
+
+  // Fetch recent testimonials (owner sees all, including pending)
+  const fetchRecentTestimonials = async () => {
+    setTestimonialsLoading(true);
+    try {
+      const response = await fetch('/api/testimonials?limit=10');
+      const result = await response.json();
+      if (result.success && result.data) {
+        setRecentTestimonials(Array.isArray(result.data) ? result.data : []);
+      }
+    } catch {
+      // Non-critical
+    } finally {
+      setTestimonialsLoading(false);
     }
   };
 
@@ -1149,15 +1180,17 @@ export default function OwnerDashboardPage() {
         </Card>
       </div>
 
-      {/* Recent Activity Feed - Modern Design */}
-      <Card className="glass-card animate-slide-up overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-emerald-500 via-primary to-purple-500" />
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              Transaksi Terbaru
-            </CardTitle>
+      {/* Transactions & Testimonials Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+        {/* Recent Activity Feed - Modern Design */}
+        <Card className="glass-card animate-slide-up overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-emerald-500 via-primary to-purple-500" />
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                Transaksi Terbaru
+              </CardTitle>
             <Button variant="ghost" size="sm" asChild className="tap-highlight h-7 sm:h-8 text-[10px] sm:text-xs">
               <Link href="/owner/dashboard/transactions">
                 Lihat Semua
@@ -1332,6 +1365,126 @@ export default function OwnerDashboardPage() {
           )}
         </CardContent>
       </Card>
+
+        {/* Recent Testimonials */}
+        <Card className="glass-card animate-slide-up stagger-1 overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400" />
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-500" />
+                Testimoni Terbaru
+              </CardTitle>
+              <Button variant="ghost" size="sm" asChild className="tap-highlight h-7 sm:h-8 text-[10px] sm:text-xs">
+                <Link href="/owner/dashboard/testimonials">
+                  Kelola
+                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-0.5 sm:ml-1" />
+                </Link>
+              </Button>
+            </div>
+            <CardDescription className="text-[10px] sm:text-xs">
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                {recentTestimonials.length} testimoni
+              </span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-2 sm:px-6">
+            {testimonialsLoading ? (
+              <div className="space-y-2">
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-16 sm:h-20 rounded-xl" />)}
+              </div>
+            ) : recentTestimonials.length > 0 ? (
+              <ScrollArea className="max-h-[380px] sm:max-h-[420px]">
+                <div className="space-y-1.5 pr-1 sm:pr-2">
+                  {recentTestimonials.map((t) => (
+                    <div
+                      key={t.id}
+                      className={cn(
+                        "group relative overflow-hidden rounded-xl p-2.5 sm:p-3 transition-all duration-200 border",
+                        !t.isApproved
+                          ? "bg-amber-50/50 dark:bg-amber-900/10 border-amber-200/50 dark:border-amber-800/30 hover:border-amber-300 dark:hover:border-amber-700"
+                          : "bg-muted/20 hover:bg-muted/40 border-transparent hover:border-primary/20"
+                      )}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        {/* Avatar */}
+                        <div className={cn(
+                          "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg",
+                          !t.isApproved
+                            ? "bg-gradient-to-br from-amber-400 to-orange-500"
+                            : "bg-gradient-to-br from-emerald-400 to-green-500"
+                        )}>
+                          <Star className="w-4 h-4 sm:w-5 sm:h-5 text-white fill-white" />
+                        </div>
+
+                        {/* Content */}
+                        <div className="min-w-0 flex-1">
+                          {/* Top: Name + Rating + Status */}
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <p className="font-semibold text-xs sm:text-sm truncate">{t.customerName}</p>
+                            <div className="flex items-center gap-0.5 flex-shrink-0">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                  key={s}
+                                  className={cn(
+                                    "w-2.5 h-2.5 sm:w-3 sm:h-3",
+                                    s <= t.rating
+                                      ? "text-amber-400 fill-amber-400"
+                                      : "text-muted-foreground/20"
+                                  )}
+                                />
+                              ))}
+                            </div>
+                            {!t.isApproved && (
+                              <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[8px] sm:text-[9px] px-1.5 flex-shrink-0">
+                                Menunggu
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Review */}
+                          {t.review && (
+                            <div className="relative mt-1">
+                              <Quote className="absolute -top-0.5 -left-0.5 w-2.5 h-2.5 text-muted-foreground/15" />
+                              <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed pl-3 line-clamp-2">
+                                {t.review}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Meta */}
+                          <div className="flex items-center gap-1.5 mt-1 text-[9px] sm:text-[10px] text-muted-foreground">
+                            {t.transaction && (
+                              <span className="flex items-center gap-0.5">
+                                <CreditCard className="w-2.5 h-2.5" />
+                                {t.transaction.paymentType.name}
+                              </span>
+                            )}
+                            {t.transaction && (
+                              <>
+                                <span>•</span>
+                                <span className="font-medium text-primary">{formatCurrency(t.transaction.nominal)}</span>
+                              </>
+                            )}
+                            <span>•</span>
+                            <span>{formatDateAgo(t.createdAt)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className="text-center py-8">
+                <Star className="w-10 h-10 mx-auto mb-2 text-muted-foreground opacity-20" />
+                <p className="text-xs sm:text-sm text-muted-foreground">Belum ada testimoni</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Promos */}
       {data?.promos && data.promos.length > 0 && (
