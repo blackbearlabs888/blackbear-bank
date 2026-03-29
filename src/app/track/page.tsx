@@ -318,11 +318,7 @@ function TestimonialForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating === 0) {
-      toast({
-        title: 'Rating wajib diisi',
-        description: 'Silakan pilih rating 1-5 bintang',
-        variant: 'destructive',
-      });
+      toast.error('Silakan pilih rating 1-5 bintang');
       return;
     }
 
@@ -341,26 +337,15 @@ function TestimonialForm({
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        toast({
-          title: 'Gagal mengirim testimoni',
-          description: data.error || 'Terjadi kesalahan',
-          variant: 'destructive',
-        });
+        toast.error(data.error || 'Terjadi kesalahan');
         return;
       }
 
-      toast({
-        title: 'Testimoni berhasil dikirim!',
-        description: 'Terima kasih atas ulasan Anda.',
-      });
+      toast.success('Terima kasih atas ulasan Anda.');
 
       onSubmit(data.data);
     } catch {
-      toast({
-        title: 'Terjadi kesalahan',
-        description: 'Silakan coba lagi',
-        variant: 'destructive',
-      });
+      toast.error('Silakan coba lagi');
     } finally {
       setSubmitting(false);
     }

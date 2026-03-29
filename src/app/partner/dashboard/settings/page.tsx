@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { CitySearch } from '@/components/ui/city-search';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Moon,
   Bell,
@@ -34,6 +35,7 @@ import {
   Loader2,
   Check,
   AlertCircle,
+  ArrowLeft,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { formatCurrency } from '@/lib/utils';
@@ -69,6 +71,13 @@ export default function PartnerSettingsPage() {
   const [bankAccount, setBankAccount] = useState('');
   const [bankHolder, setBankHolder] = useState('');
   const [bankLoading, setBankLoading] = useState(false);
+  const [selectedBank, setSelectedBank] = useState('');
+  const [customBankName, setCustomBankName] = useState('');
+
+  const banks = [
+    'BCA', 'Mandiri', 'BRI', 'BNI', 'CIMB Niaga', 'Permata', 'Danamon',
+    'Panin', 'OCBC NISP', 'Jenius', 'Seabank', 'Bank Jago', 'Lainnya'
+  ];
 
   useEffect(() => {
     if (!hasHydrated) hydrate();
@@ -89,9 +98,24 @@ export default function PartnerSettingsPage() {
     // Initialize form values from partner data
     if (partner) {
       setCity(partner.city || '');
-      setBankName(partner.bankName || '');
       setBankAccount(partner.bankAccount || '');
       setBankHolder(partner.bankHolder || '');
+
+      // Check if partner's bank is in the list
+      const currentBank = partner.bankName || '';
+      if (banks.includes(currentBank)) {
+        setSelectedBank(currentBank);
+        setBankName(currentBank);
+        setCustomBankName('');
+      } else if (currentBank.startsWith('Lainnya:')) {
+        setSelectedBank('Lainnya');
+        setCustomBankName(currentBank.replace('Lainnya: ', ''));
+        setBankName(currentBank);
+      } else {
+        setSelectedBank('Lainnya');
+        setCustomBankName(currentBank);
+        setBankName(currentBank);
+      }
     }
     if (user) {
       setAvatarUrl(user.avatar || '');
@@ -106,29 +130,17 @@ export default function PartnerSettingsPage() {
   // Password change handler
   const handlePasswordChange = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Semua field harus diisi',
-        variant: 'destructive',
-      });
+      toast.error('Semua field harus diisi');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Password baru tidak cocok',
-        variant: 'destructive',
-      });
+      toast.error('Password baru tidak cocok');
       return;
     }
 
     if (newPassword.length < 6) {
-      toast({
-        title: 'Error',
-        description: 'Password minimal 6 karakter',
-        variant: 'destructive',
-      });
+      toast.error('Password minimal 6 karakter');
       return;
     }
 
@@ -145,10 +157,7 @@ export default function PartnerSettingsPage() {
 
       const result = await response.json();
       if (result.success) {
-        toast({
-          title: 'Berhasil!',
-          description: 'Password berhasil diubah',
-        });
+        toast.success('Password berhasil diubah');
         setPasswordOpen(false);
         setCurrentPassword('');
         setNewPassword('');
@@ -157,11 +166,7 @@ export default function PartnerSettingsPage() {
         throw new Error(result.error);
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Gagal mengubah password',
-        variant: 'destructive',
-      });
+      toast.error(error instanceof Error ? error.message : 'Gagal mengubah password');
     } finally {
       setPasswordLoading(false);
     }
@@ -170,11 +175,7 @@ export default function PartnerSettingsPage() {
   // Avatar change handler
   const handleAvatarChange = async () => {
     if (!avatarUrl.trim()) {
-      toast({
-        title: 'Error',
-        description: 'URL avatar tidak boleh kosong',
-        variant: 'destructive',
-      });
+      toast.error('URL avatar tidak boleh kosong');
       return;
     }
 
@@ -182,11 +183,7 @@ export default function PartnerSettingsPage() {
     try {
       new URL(avatarUrl);
     } catch {
-      toast({
-        title: 'Error',
-        description: 'URL tidak valid',
-        variant: 'destructive',
-      });
+      toast.error('URL tidak valid');
       return;
     }
 
@@ -200,21 +197,14 @@ export default function PartnerSettingsPage() {
 
       const result = await response.json();
       if (result.success) {
-        toast({
-          title: 'Berhasil!',
-          description: 'Avatar berhasil diubah',
-        });
+        toast.success('Avatar berhasil diubah');
         setUser({ ...user!, avatar: avatarUrl });
         setAvatarOpen(false);
       } else {
         throw new Error(result.error);
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Gagal mengubah avatar',
-        variant: 'destructive',
-      });
+      toast.error(error instanceof Error ? error.message : 'Gagal mengubah avatar');
     } finally {
       setAvatarLoading(false);
     }
@@ -223,11 +213,7 @@ export default function PartnerSettingsPage() {
   // Location change handler
   const handleLocationChange = async () => {
     if (!city.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Kota tidak boleh kosong',
-        variant: 'destructive',
-      });
+      toast.error('Kota tidak boleh kosong');
       return;
     }
 
@@ -241,21 +227,14 @@ export default function PartnerSettingsPage() {
 
       const result = await response.json();
       if (result.success) {
-        toast({
-          title: 'Berhasil!',
-          description: 'Lokasi berhasil diubah',
-        });
+        toast.success('Lokasi berhasil diubah');
         setPartner({ ...partner!, city });
         setLocationOpen(false);
       } else {
         throw new Error(result.error);
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Gagal mengubah lokasi',
-        variant: 'destructive',
-      });
+      toast.error(error instanceof Error ? error.message : 'Gagal mengubah lokasi');
     } finally {
       setLocationLoading(false);
     }
@@ -263,12 +242,15 @@ export default function PartnerSettingsPage() {
 
   // Bank change handler
   const handleBankChange = async () => {
-    if (!bankName.trim() || !bankAccount.trim() || !bankHolder.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Semua field bank harus diisi',
-        variant: 'destructive',
-      });
+    const finalBankName = selectedBank === 'Lainnya' ? customBankName.trim() : selectedBank;
+
+    if (!finalBankName || !bankAccount.trim() || !bankHolder.trim()) {
+      toast.error('Semua field bank harus diisi');
+      return;
+    }
+
+    if (selectedBank === 'Lainnya' && !customBankName.trim()) {
+      toast.error('Nama bank harus diisi');
       return;
     }
 
@@ -278,7 +260,7 @@ export default function PartnerSettingsPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          bankName,
+          bankName: finalBankName,
           bankAccount,
           bankHolder,
         }),
@@ -286,13 +268,10 @@ export default function PartnerSettingsPage() {
 
       const result = await response.json();
       if (result.success) {
-        toast({
-          title: 'Berhasil!',
-          description: 'Info bank berhasil diubah',
-        });
+        toast.success('Info bank berhasil diubah');
         setPartner({ 
           ...partner!, 
-          bankName, 
+          bankName: finalBankName, 
           bankAccount, 
           bankHolder 
         });
@@ -301,11 +280,7 @@ export default function PartnerSettingsPage() {
         throw new Error(result.error);
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Gagal mengubah info bank',
-        variant: 'destructive',
-      });
+      toast.error(error instanceof Error ? error.message : 'Gagal mengubah info bank');
     } finally {
       setBankLoading(false);
     }
@@ -739,12 +714,49 @@ export default function PartnerSettingsPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Nama Bank</Label>
-              <Input
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                placeholder="BCA, Mandiri, BNI, dll"
-                className="rounded-xl"
-              />
+              {selectedBank === 'Lainnya' ? (
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Input
+                      value={customBankName}
+                      onChange={(e) => setCustomBankName(e.target.value)}
+                      placeholder="Masukkan nama bank"
+                      className="rounded-xl"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10 shrink-0 rounded-xl"
+                    onClick={() => {
+                      setSelectedBank('');
+                      setCustomBankName('');
+                    }}
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Select
+                  value={selectedBank}
+                  onValueChange={(value) => {
+                    setSelectedBank(value);
+                    if (value !== 'Lainnya') {
+                      setCustomBankName('');
+                    }
+                  }}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="Pilih bank" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {banks.map((bank) => (
+                      <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Nomor Rekening</Label>

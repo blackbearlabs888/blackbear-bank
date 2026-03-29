@@ -264,7 +264,6 @@ function TestimonialCard({
 export default function OwnerTestimonialsPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, hasHydrated, hydrate } = useAuthStore();
-  
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -357,7 +356,7 @@ export default function OwnerTestimonialsPage() {
       });
 
       if (!response.ok) {
-        toast({ title: 'Gagal', description: 'Terjadi kesalahan saat mengubah status', variant: 'destructive' });
+        toast.error('Terjadi kesalahan saat mengubah status');
         return;
       }
 
@@ -367,13 +366,10 @@ export default function OwnerTestimonialsPage() {
         setTestimonials((prev) =>
           prev.map((t) => (t.id === testimonial.id ? { ...t, isApproved: !testimonial.isApproved } : t))
         );
-        toast({
-          title: testimonial.isApproved ? 'Testimoni Ditolak' : 'Testimoni Disetujui',
-          description: `Ulasan dari ${testimonial.customer?.name || testimonial.customerName} berhasil diperbarui`,
-        });
+        toast.success(`Ulasan dari ${testimonial.customer?.name || testimonial.customerName} berhasil diperbarui`);
       }
     } catch (err) {
-      toast({ title: 'Gagal', description: 'Terjadi kesalahan koneksi', variant: 'destructive' });
+      toast.error('Terjadi kesalahan koneksi');
     } finally {
       setActionLoading(null);
     }
@@ -389,7 +385,7 @@ export default function OwnerTestimonialsPage() {
       });
 
       if (!response.ok) {
-        toast({ title: 'Gagal', description: 'Terjadi kesalahan saat mengubah status unggulan', variant: 'destructive' });
+        toast.error('Terjadi kesalahan saat mengubah status unggulan');
         return;
       }
 
@@ -398,13 +394,10 @@ export default function OwnerTestimonialsPage() {
         setTestimonials((prev) =>
           prev.map((t) => (t.id === testimonial.id ? { ...t, isFeatured: !testimonial.isFeatured } : t))
         );
-        toast({
-          title: testimonial.isFeatured ? 'Unggulan Dihapus' : 'Ditandai Unggulan',
-          description: `Ulasan dari ${testimonial.customer?.name || testimonial.customerName} berhasil diperbarui`,
-        });
+        toast.success(`Ulasan dari ${testimonial.customer?.name || testimonial.customerName} berhasil diperbarui`);
       }
     } catch (err) {
-      toast({ title: 'Gagal', description: 'Terjadi kesalahan koneksi', variant: 'destructive' });
+      toast.error('Terjadi kesalahan koneksi');
     } finally {
       setActionLoading(null);
     }
@@ -419,20 +412,17 @@ export default function OwnerTestimonialsPage() {
       });
 
       if (!response.ok) {
-        toast({ title: 'Gagal', description: 'Terjadi kesalahan saat menghapus testimoni', variant: 'destructive' });
+        toast.error('Terjadi kesalahan saat menghapus testimoni');
         return;
       }
 
       const result = await response.json();
       if (result.success) {
         setTestimonials((prev) => prev.filter((t) => t.id !== deleteTarget.id));
-        toast({
-          title: 'Testimoni Dihapus',
-          description: 'Testimoni berhasil dihapus secara permanen',
-        });
+        toast.success('Testimoni berhasil dihapus secara permanen');
       }
     } catch (err) {
-      toast({ title: 'Gagal', description: 'Terjadi kesalahan koneksi', variant: 'destructive' });
+      toast.error('Terjadi kesalahan koneksi');
     } finally {
       setActionLoading(null);
       setDeleteTarget(null);
