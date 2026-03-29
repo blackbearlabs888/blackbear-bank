@@ -1,20 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { MessageCircle, ArrowUp, Heart, ExternalLink, Shield, Zap, Clock, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageCircle, ArrowUp, Heart, ExternalLink, Shield, Zap, Clock } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { cn } from '@/lib/utils';
-
-interface BlogPost {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt: string | null;
-  category: string;
-  featuredImage: string | null;
-  publishedAt: string | null;
-}
 
 // Social Icon Components
 function SocialIcon({ href, icon, label, hoverColor }: {
@@ -85,140 +75,9 @@ function YoutubeIcon({ className }: { className?: string }) {
   );
 }
 
-// Blog Carousel Component
-function BlogCarousel({ blogs }: { blogs: BlogPost[] }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-
-  const checkScroll = () => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
-    }
-  };
-
-  useEffect(() => {
-    checkScroll();
-    const ref = scrollRef.current;
-    if (ref) {
-      ref.addEventListener('scroll', checkScroll);
-      return () => ref.removeEventListener('scroll', checkScroll);
-    }
-  }, [blogs]);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const scrollAmount = 200;
-      scrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
-    }
-  };
-
-  if (blogs.length === 0) {
-    return (
-      <Link 
-        href="/blog" 
-        className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
-      >
-        Kunjungi Blog
-      </Link>
-    );
-  }
-
-  return (
-    <div className="relative">
-      <div
-        ref={scrollRef}
-        className="flex gap-2 overflow-x-auto scrollbar-hide pb-1"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {blogs.map((blog) => (
-          <Link
-            key={blog.id}
-            href={`/blog/${blog.slug}`}
-            className="flex-shrink-0 w-[160px] group"
-          >
-            <div className="rounded-lg border border-border/50 bg-muted/30 overflow-hidden hover:border-primary/30 transition-all">
-              {/* Image */}
-              {blog.featuredImage ? (
-                <div className="h-16 bg-muted overflow-hidden">
-                  <img
-                    src={blog.featuredImage}
-                    alt={blog.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-              ) : (
-                <div className="h-16 bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-primary/50" />
-                </div>
-              )}
-              {/* Content */}
-              <div className="p-2">
-                <p className="text-[10px] font-medium line-clamp-2 group-hover:text-primary transition-colors">
-                  {blog.title}
-                </p>
-                {blog.category && (
-                  <span className="text-[8px] text-muted-foreground mt-1 block capitalize">
-                    {blog.category}
-                  </span>
-                )}
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-      
-      {/* Navigation Arrows */}
-      {blogs.length > 2 && (
-        <div className="flex gap-1 mt-2 justify-end">
-          <button
-            type="button"
-            onClick={() => scroll('left')}
-            disabled={!canScrollLeft}
-            className={cn(
-              "w-6 h-6 rounded-md flex items-center justify-center transition-all",
-              canScrollLeft 
-                ? "bg-muted hover:bg-muted/80 text-foreground" 
-                : "bg-muted/30 text-muted-foreground cursor-not-allowed"
-            )}
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scroll('right')}
-            disabled={!canScrollRight}
-            className={cn(
-              "w-6 h-6 rounded-md flex items-center justify-center transition-all",
-              canScrollRight 
-                ? "bg-muted hover:bg-muted/80 text-foreground" 
-                : "bg-muted/30 text-muted-foreground cursor-not-allowed"
-            )}
-          >
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-      
-      <Link 
-        href="/blog" 
-        className="text-[10px] text-primary hover:underline mt-1.5 block"
-      >
-        Lihat Semua →
-      </Link>
-    </div>
-  );
-}
-
 export function Footer() {
   const { config, getInitials } = useSiteConfig();
   const [logoError, setLogoError] = useState(false);
-  const [latestBlogs, setLatestBlogs] = useState<BlogPost[]>([]);
   
   const siteName = config.websiteTitle || 'Black Bear';
   const whatsapp = config.footerWhatsapp;
@@ -231,22 +90,6 @@ export function Footer() {
   const hasSocials = whatsapp || instagram || facebook || tiktok || youtube || threads;
   const currentYear = new Date().getFullYear();
 
-  // Fetch latest blogs
-  useEffect(() => {
-    const fetchBlogs = async () => {
-      try {
-        const response = await fetch('/api/seo/blog?public=true&limit=5');
-        const result = await response.json();
-        if (result.success && result.data) {
-          setLatestBlogs(result.data.slice(0, 5));
-        }
-      } catch (error) {
-        console.error('Failed to fetch blogs:', error);
-      }
-    };
-    fetchBlogs();
-  }, []);
-
   return (
     <footer className="relative bg-gradient-to-b from-background via-muted/30 to-muted/50 border-t mt-auto">
       {/* Decorative top gradient line */}
@@ -254,9 +97,9 @@ export function Footer() {
       
       <div className="container mx-auto px-4 py-8">
         {/* Main Content */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
           {/* Brand Section */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col items-center md:items-start gap-3">
             <Link href="/" className="flex items-center gap-3 tap-highlight group">
               {config.logoUrl && !logoError ? (
                 <img 
@@ -280,72 +123,67 @@ export function Footer() {
             <div className="flex items-center gap-4 mt-2">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Shield className="w-3.5 h-3.5 text-green-600" />
-                <span>Aman</span>
+                <span>Aman & Terpercaya</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Zap className="w-3.5 h-3.5 text-amber-600" />
-                <span>Cepat</span>
+                <span>Proses Cepat</span>
               </div>
-            </div>
-            
-            {/* Operating hours */}
-            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full w-fit mt-2">
-              <Clock className="w-3 h-3" />
-              <span>09:00 - 21:00 WIB</span>
             </div>
           </div>
 
           {/* Quick Links */}
-          <nav className="flex flex-col gap-2">
-            <h3 className="font-semibold text-sm mb-2">Menu</h3>
-            <div className="flex flex-col gap-1">
+          <nav className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-1 flex-wrap justify-center">
               <Link 
                 href="/order" 
-                className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
+                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
               >
                 Order
               </Link>
               <Link 
                 href="/track" 
-                className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
+                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
               >
                 Track
               </Link>
               <Link 
                 href="/register" 
-                className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
+                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
               >
                 Mitra
               </Link>
               <Link 
+                href="/blog" 
+                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
+              >
+                Blog
+              </Link>
+              <Link 
                 href="/faq" 
-                className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
+                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
               >
                 FAQ
               </Link>
               <Link 
                 href="/lokasi" 
-                className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
+                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
               >
                 Lokasi
               </Link>
             </div>
+            
+            {/* Operating hours */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
+              <Clock className="w-3 h-3" />
+              <span>Senin - Sabtu: 09:00 - 21:00 WIB</span>
+            </div>
           </nav>
 
-          {/* Blog Terbaru - Mini Carousel */}
-          <div className="flex flex-col gap-2">
-            <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-              <BookOpen className="w-4 h-4" />
-              Blog Terbaru
-            </h3>
-            <BlogCarousel blogs={latestBlogs} />
-          </div>
-
           {/* Socials & Contact */}
-          <div className="flex flex-col gap-3">
-            <h3 className="font-semibold text-sm mb-2">Hubungi Kami</h3>
+          <div className="flex flex-col items-center md:items-end gap-3">
             {hasSocials && (
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
                 <SocialIcon 
                   href={whatsapp ? `https://wa.me/${whatsapp}` : undefined} 
                   icon={<MessageCircle className="w-4.5 h-4.5" />} 
@@ -391,7 +229,7 @@ export function Footer() {
                 href={`https://wa.me/${whatsapp}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-500/10 text-green-700 dark:text-green-400 text-sm font-medium hover:bg-green-500/20 transition-colors border border-green-500/20 w-fit"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-500/10 text-green-700 dark:text-green-400 text-sm font-medium hover:bg-green-500/20 transition-colors border border-green-500/20"
               >
                 <MessageCircle className="w-4 h-4" />
                 Hubungi Kami
