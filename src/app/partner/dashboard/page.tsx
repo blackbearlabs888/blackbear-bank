@@ -38,6 +38,9 @@ import {
   Tag,
   FileText,
   Calendar,
+  Loader2,
+  CreditCard,
+  Quote,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import Link from 'next/link';
@@ -63,6 +66,29 @@ export default function PartnerDashboardPage() {
   const [selectedPromo, setSelectedPromo] = useState<Announcement | null>(null);
   const redirectAttempted = useRef(false);
 
+  // Recent transactions & testimonials state
+  const [recentTransactions, setRecentTransactions] = useState<Array<{
+    id: string;
+    orderId: string;
+    nominal: number;
+    status: string;
+    createdAt: string;
+    customer: { name: string };
+    paymentType: { name: string };
+  }>>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
+  const [partnerTestimonials, setPartnerTestimonials] = useState<Array<{
+    id: string;
+    rating: number;
+    review: string;
+    customerName: string;
+    isApproved: boolean;
+    isFeatured: boolean;
+    createdAt: string;
+    transaction: { orderId: string; nominal: number; paymentType: { name: string } } | null;
+  }>>([]);
+  const [testimonialsLoading, setTestimonialsLoading] = useState(true);
+
   useEffect(() => {
     if (!hasHydrated) {
       hydrate();
@@ -83,14 +109,50 @@ export default function PartnerDashboardPage() {
   useEffect(() => {
     if (isAuthenticated && hasHydrated && user?.role === 'partner') {
       fetchDashboard();
+      fetchRecentTransactions();
+      fetchPartnerTestimonials();
     }
   }, [isAuthenticated, hasHydrated, user]);
+
+  // Fetch recent partner transactions
+  const fetchRecentTransactions = async () => {
+    setTransactionsLoading(true);
+    try {
+      const response = await fetch('/api/transactions?limit=5&status=success');
+      const result = await response.json();
+      if (result.success && result.data) {
+        setRecentTransactions(result.data);
+      }
+    } catch {
+      // Non-critical
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+
+  // Fetch partner testimonials
+  const fetchPartnerTestimonials = async () => {
+    setTestimonialsLoading(true);
+    try {
+      const response = await fetch('/api/testimonials/partner');
+      const result = await response.json();
+      if (result.success && result.data) {
+        setPartnerTestimonials(result.data);
+      }
+    } catch {
+      // Non-critical
+    } finally {
+      setTestimonialsLoading(false);
+    }
+  };
 
   // Window focus revalidation for real-time data
   useEffect(() => {
     const handleFocus = () => {
       if (isAuthenticated && hasHydrated && user?.role === 'partner') {
         fetchDashboard();
+        fetchRecentTransactions();
+        fetchPartnerTestimonials();
       }
     };
     window.addEventListener('focus', handleFocus);
@@ -504,6 +566,172 @@ export default function PartnerDashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Recent Transactions & Testimonials Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+        {/* Recent Transactions */}
+        <Card className="glass-card animate-slide-up overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-emerald-500 via-primary to-purple-500" />
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-500" />
+                Transaksi Terakhir
+              </CardTitle>
+              <Button variant="ghost" size="sm" asChild className="tap-highlight h-7 sm:h-8 text-[10px] sm:text-xs">
+                <Link href="/partner/dashboard/transactions">
+                  Semua
+                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-0.5 sm:ml-1" />
+                </Link>
+              </Button>
+            </div>
+            <CardDescription className="text-[10px] sm:text-xs">
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Transaksi berhasil
+              </span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-2 sm:px-6">
+            {transactionsLoading ? (
+              <div className="space-y-2">
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-14 sm:h-16 rounded-xl" />)}
+              </div>
+            ) : recentTransactions.length > 0 ? (
+              <div className="space-y-1.5">
+                {recentTransactions.map((tx) => (
+                  <div key={tx.id} className="flex items-center gap-2.5 sm:gap-3 p-2 sm:p-2.5 rounded-xl bg-muted/20 hover:bg-muted/40 transition-all border border-transparent hover:border-emerald-500/20">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+                      <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="font-semibold text-xs sm:text-sm truncate">{tx.customer.name}</p>
+                      </div>
+                      <p className="text-sm sm:text-base font-bold text-primary">{formatCurrency(tx.nominal)}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-[9px] sm:text-[10px] text-muted-foreground">
+                        <span className="truncate">{tx.paymentType.name}</span>
+                        <span>•</span>
+                        <span>{formatDate(tx.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <CheckCircle className="w-10 h-10 mx-auto mb-2 text-muted-foreground opacity-20" />
+                <p className="text-xs sm:text-sm text-muted-foreground">Belum ada transaksi berhasil</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Partner Testimonials */}
+        <Card className="glass-card animate-slide-up stagger-1 overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400" />
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-500" />
+                Testimoni Customer
+              </CardTitle>
+              <Badge className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px]">
+                {partnerTestimonials.length}
+              </Badge>
+            </div>
+            <CardDescription className="text-[10px] sm:text-xs">
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                Dari transaksi Anda
+              </span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-2 sm:px-6">
+            {testimonialsLoading ? (
+              <div className="space-y-2">
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-16 sm:h-20 rounded-xl" />)}
+              </div>
+            ) : partnerTestimonials.length > 0 ? (
+              <div className="space-y-1.5 max-h-[380px] sm:max-h-[420px] overflow-y-auto pr-1">
+                {partnerTestimonials.map((t) => (
+                  <div
+                    key={t.id}
+                    className={cn(
+                      "rounded-xl p-2.5 sm:p-3 transition-all duration-200 border",
+                      !t.isApproved
+                        ? "bg-amber-50/50 dark:bg-amber-900/10 border-amber-200/50 dark:border-amber-800/30"
+                        : "bg-muted/20 border-transparent hover:border-primary/20"
+                    )}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className={cn(
+                        "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg",
+                        !t.isApproved
+                          ? "bg-gradient-to-br from-amber-400 to-orange-500"
+                          : "bg-gradient-to-br from-emerald-400 to-green-500"
+                      )}>
+                        <Star className="w-4 h-4 sm:w-5 sm:h-5 text-white fill-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="font-semibold text-xs sm:text-sm truncate">{t.customerName}</p>
+                          <div className="flex items-center gap-0.5 flex-shrink-0">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star
+                                key={s}
+                                className={cn(
+                                  "w-2.5 h-2.5 sm:w-3 sm:h-3",
+                                  s <= t.rating
+                                    ? "text-amber-400 fill-amber-400"
+                                    : "text-muted-foreground/20"
+                                )}
+                              />
+                            ))}
+                          </div>
+                          {t.isFeatured && (
+                            <Trophy className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                          )}
+                        </div>
+                        {t.review && (
+                          <div className="relative mt-1">
+                            <Quote className="absolute -top-0.5 -left-0.5 w-2.5 h-2.5 text-muted-foreground/15" />
+                            <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed pl-3 line-clamp-2">
+                              {t.review}
+                            </p>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1.5 mt-1 text-[9px] sm:text-[10px] text-muted-foreground">
+                          {t.transaction && (
+                            <span className="flex items-center gap-0.5">
+                              <CreditCard className="w-2.5 h-2.5" />
+                              {t.transaction.paymentType.name}
+                            </span>
+                          )}
+                          {t.transaction && (
+                            <>
+                              <span>•</span>
+                              <span className="font-medium text-primary">{formatCurrency(t.transaction.nominal)}</span>
+                            </>
+                          )}
+                          <span>•</span>
+                          <span>{formatDate(t.createdAt)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Star className="w-10 h-10 mx-auto mb-2 text-muted-foreground opacity-20" />
+                <p className="text-xs sm:text-sm text-muted-foreground">Belum ada testimoni</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1">Testimoni akan muncul setelah customer memberi rating</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Broadcast Detail Dialog - Modern Design */}
       <Dialog open={!!selectedBroadcast} onOpenChange={() => setSelectedBroadcast(null)}>
