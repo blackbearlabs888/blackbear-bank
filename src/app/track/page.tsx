@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -29,9 +30,14 @@ import {
   XCircle,
   ExternalLink,
   MessageCircle,
+  Star,
+  Send,
+  ThumbsUp,
+  Quote,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface OrderData {
   orderId: string;
@@ -42,6 +48,7 @@ interface OrderData {
   notes: string | null;
   customer: {
     name: string;
+    phone: string;
     bankName: string | null;
     bankAccount: string | null;
   };
@@ -53,6 +60,14 @@ interface OrderData {
   transactionLink?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+interface TestimonialData {
+  id: string;
+  rating: number;
+  review: string;
+  customerName: string;
+  createdAt: string;
 }
 
 // Helper functions to mask sensitive data
@@ -120,6 +135,8 @@ const statusConfig = {
     bgGradient: 'from-red-500/10 to-rose-500/10',
   },
 };
+
+const ratingLabels = ['', 'Sangat Buruk', 'Buruk', 'Biasa', 'Bagus', 'Sangat Bagus'];
 
 // Animated Background Component
 function AnimatedBackground() {
@@ -214,6 +231,291 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
   );
 }
 
+// Star Rating Component
+function StarRating({
+  rating,
+  hoverRating,
+  onHover,
+  onLeave,
+  onRate,
+  size = 'md',
+  readonly = false,
+}: {
+  rating: number;
+  hoverRating: number;
+  onHover?: (rating: number) => void;
+  onLeave?: () => void;
+  onRate?: (rating: number) => void;
+  size?: 'sm' | 'md' | 'lg';
+  readonly?: boolean;
+}) {
+  const sizeClasses = {
+    sm: 'w-5 h-5',
+    md: 'w-8 h-8',
+    lg: 'w-10 h-10',
+  };
+  const displayRating = hoverRating || rating;
+
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          disabled={readonly}
+          className={cn(
+            "relative transition-all duration-200",
+            readonly ? "cursor-default" : "cursor-pointer hover:scale-110 active:scale-95"
+          )}
+          onMouseEnter={() => !readonly && onHover?.(star)}
+          onMouseLeave={() => !readonly && onLeave?.()}
+          onClick={() => !readonly && onRate?.(star)}
+        >
+          <Star
+            className={cn(
+              sizeClasses[size],
+              "transition-all duration-200",
+              star <= displayRating
+                ? "text-amber-400 fill-amber-400 drop-shadow-sm"
+                : "text-muted-foreground/30"
+            )}
+          />
+          {star <= displayRating && !readonly && (
+            <div className="absolute inset-0 animate-ping opacity-20">
+              <Star className={cn(sizeClasses[size], "text-amber-400 fill-amber-400")} />
+            </div>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Testimonial Form Component
+function TestimonialForm({
+  orderId,
+  customerName,
+  onSubmit,
+}: {
+  orderId: string;
+  customerName: string;
+  onSubmit: (testimonial: TestimonialData) => void;
+}) {
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [review, setReview] = useState('');
+  const [name, setName] = useState(customerName);
+  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (rating === 0) {
+      toast({
+        title: 'Rating wajib diisi',
+        description: 'Silakan pilih rating 1-5 bintang',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!name.trim()) {
+      toast({
+        title: 'Nama wajib diisi',
+        description: 'Silakan masukkan nama Anda',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await fetch('/api/testimonials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transactionId: orderId,
+          rating,
+          review: review.trim(),
+          customerName: name.trim(),
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        toast({
+          title: 'Gagal mengirim testimoni',
+          description: data.error || 'Terjadi kesalahan',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Testimoni berhasil dikirim!',
+        description: 'Terima kasih atas ulasan Anda.',
+      });
+
+      onSubmit(data.data);
+    } catch {
+      toast({
+        title: 'Terjadi kesalahan',
+        description: 'Silakan coba lagi',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Card className="glass-card overflow-hidden border-0 shadow-xl animate-slide-up">
+      <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400" />
+      <CardContent className="p-4 space-y-4">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <div className="relative w-12 h-12 mx-auto">
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 blur-md opacity-40" />
+            <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+              <Star className="w-6 h-6 text-white fill-white" />
+            </div>
+          </div>
+          <div>
+            <h3 className="font-bold text-base">Bagaimana Pengalaman Anda?</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Transaksi berhasil! Berikan testimoni untuk membantu kami meningkatkan layanan
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Name Input */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              Nama Anda
+            </label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Masukkan nama Anda"
+              className="h-10 rounded-lg bg-white/50 dark:bg-black/20"
+            />
+          </div>
+
+          {/* Star Rating */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">
+              Rating
+            </label>
+            <div className="flex flex-col items-center gap-2 py-2">
+              <StarRating
+                rating={rating}
+                hoverRating={hoverRating}
+                onHover={setHoverRating}
+                onLeave={() => setHoverRating(0)}
+                onRate={setRating}
+                size="lg"
+              />
+              {(rating > 0 || hoverRating > 0) && (
+                <p className="text-xs font-medium text-amber-600 dark:text-amber-400 transition-all">
+                  {ratingLabels[hoverRating || rating]}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Review Text */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              Ulasan <span className="text-muted-foreground/60">(opsional)</span>
+            </label>
+            <Textarea
+              value={review}
+              onChange={(e) => setReview(e.target.value)}
+              placeholder="Tulis pengalaman Anda tentang layanan kami..."
+              className="min-h-[80px] rounded-lg bg-white/50 dark:bg-black/20 resize-none text-sm"
+              maxLength={500}
+            />
+            <p className="text-[10px] text-muted-foreground text-right">
+              {review.length}/500
+            </p>
+          </div>
+
+          {/* Submit Button */}
+          <Button
+            type="submit"
+            disabled={submitting || rating === 0}
+            className="w-full h-11 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-md shadow-amber-500/20 disabled:opacity-50"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Mengirim...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                Kirim Testimoni
+              </>
+            )}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Testimonial Already Submitted Component
+function TestimonialSubmitted({
+  testimonial,
+}: {
+  testimonial: TestimonialData;
+}) {
+  return (
+    <Card className="glass-card overflow-hidden border-0 shadow-xl animate-fade-in">
+      <div className="h-1 bg-gradient-to-r from-green-400 to-emerald-500" />
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-md flex-shrink-0">
+            <CheckCircle2 className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-sm">Testimoni Terkirim</h3>
+            <p className="text-[10px] text-muted-foreground">
+              {formatDate(testimonial.createdAt)}
+            </p>
+          </div>
+          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-[10px] px-2 py-0.5 rounded-full">
+            <ThumbsUp className="w-3 h-3 mr-1" />
+            Terima kasih
+          </Badge>
+        </div>
+
+        {/* Stars */}
+        <div className="flex items-center gap-2 px-1">
+          <StarRating rating={testimonial.rating} hoverRating={0} size="sm" readonly />
+          <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+            {ratingLabels[testimonial.rating]}
+          </span>
+        </div>
+
+        {/* Review Text */}
+        {testimonial.review && (
+          <div className="relative px-3 py-2.5 rounded-lg bg-gradient-to-r from-amber-50/50 to-orange-50/50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-500/10">
+            <Quote className="absolute top-2 left-1.5 w-3 h-3 text-amber-400/40" />
+            <p className="text-sm text-muted-foreground italic pl-3">
+              {testimonial.review}
+            </p>
+          </div>
+        )}
+
+        <p className="text-[10px] text-center text-muted-foreground/60">
+          oleh <span className="font-medium">{testimonial.customerName}</span>
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 function TrackOrderContent() {
   const searchParams = useSearchParams();
   const [orderId, setOrderId] = useState('');
@@ -221,6 +523,11 @@ function TrackOrderContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+
+  // Testimonial state
+  const [testimonial, setTestimonial] = useState<TestimonialData | null>(null);
+  const [checkingTestimonial, setCheckingTestimonial] = useState(false);
+  const [showTestimonialForm, setShowTestimonialForm] = useState(false);
 
   // Auto-fill from URL param
   useEffect(() => {
@@ -230,6 +537,31 @@ function TrackOrderContent() {
       handleSearch(id);
     }
   }, [searchParams]);
+
+  // Check for existing testimonial when order is found and status is success
+  useEffect(() => {
+    if (order && order.status === 'success') {
+      checkTestimonial(order.orderId);
+    } else {
+      setTestimonial(null);
+      setShowTestimonialForm(false);
+    }
+  }, [order]);
+
+  const checkTestimonial = async (id: string) => {
+    setCheckingTestimonial(true);
+    try {
+      const response = await fetch(`/api/testimonials?orderId=${id}`);
+      const data = await response.json();
+      if (data.success && data.data) {
+        setTestimonial(data.data);
+      }
+    } catch {
+      // Silently fail - testimonial check is non-critical
+    } finally {
+      setCheckingTestimonial(false);
+    }
+  };
 
   const handleSearch = async (id?: string) => {
     const searchId = id || orderId;
@@ -241,6 +573,8 @@ function TrackOrderContent() {
     setError('');
     setLoading(true);
     setOrder(null);
+    setTestimonial(null);
+    setShowTestimonialForm(false);
 
     try {
       const response = await fetch(`/api/orders/track?orderId=${searchId}`);
@@ -271,6 +605,11 @@ function TrackOrderContent() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const handleTestimonialSubmit = (newTestimonial: TestimonialData) => {
+    setTestimonial(newTestimonial);
+    setShowTestimonialForm(false);
   };
 
   const getStatusConfig = (status: string) => {
@@ -569,6 +908,70 @@ function TrackOrderContent() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Testimonial Section - Only for SUCCESS status */}
+          {order.status === 'success' && (
+            <>
+              {/* Loading testimonial check */}
+              {checkingTestimonial && (
+                <Card className="glass-card overflow-hidden border-0 shadow-xl">
+                  <CardContent className="p-6 flex items-center justify-center">
+                    <div className="flex items-center gap-3 text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Memuat...</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* No testimonial yet - show CTA */}
+              {!checkingTestimonial && !testimonial && !showTestimonialForm && (
+                <Card className="glass-card overflow-hidden border-0 shadow-xl animate-slide-up cursor-pointer group hover:shadow-2xl transition-all duration-300"
+                  onClick={() => setShowTestimonialForm(true)}
+                >
+                  <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400" />
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20 flex-shrink-0 group-hover:scale-105 transition-transform">
+                        <Star className="w-6 h-6 text-white fill-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-sm">Beri Testimoni</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Bagikan pengalaman Anda tentang layanan kami
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-center gap-0.5 text-amber-400">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="mt-3 text-center">
+                      <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 text-xs px-3 py-1 rounded-full group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        Ketuk untuk menulis testimoni
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Testimonial Form */}
+              {!checkingTestimonial && !testimonial && showTestimonialForm && (
+                <TestimonialForm
+                  orderId={order.orderId}
+                  customerName={order.customer.name}
+                  onSubmit={handleTestimonialSubmit}
+                />
+              )}
+
+              {/* Testimonial Already Submitted */}
+              {!checkingTestimonial && testimonial && (
+                <TestimonialSubmitted testimonial={testimonial} />
+              )}
+            </>
+          )}
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-2">
