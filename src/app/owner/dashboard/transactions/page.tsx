@@ -119,6 +119,8 @@ export default function OwnerTransactionsPage() {
   const [newTxOpen, setNewTxOpen] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -232,17 +234,33 @@ export default function OwnerTransactionsPage() {
   };
 
   const deleteTx = async (id: string) => {
-    if (!confirm('Yakin hapus transaksi ini?')) return;
+    // Find the transaction to delete
+    const tx = transactions.find(t => t.id === id);
+    if (!tx) return;
+    
+    // Show confirmation dialog
+    setDeletingTx(tx);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingTx) return;
+    
     try {
-      const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/transactions/${deletingTx.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
-        toast.success('Terhapus');
+        toast.success('Transaksi berhasil dihapus');
         fetchTransactions();
         fetchAnalytics();
         setDetailOpen(false);
-      } else toast.error(data.error || 'Gagal');
-    } catch (e) { toast.error('Gagal'); }
+        setDeleteConfirmOpen(false);
+        setDeletingTx(null);
+      } else toast.error(data.error || 'Gagal menghapus');
+    } catch (e) { 
+      console.error('Delete error:', e);
+      toast.error('Gagal menghapus transaksi'); 
+    }
   };
 
   const filtered = useMemo(() => transactions.filter(tx => {
@@ -415,6 +433,46 @@ export default function OwnerTransactionsPage() {
         onDelete={deleteTx}
         updating={updatingStatus}
       />
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-4 h-4" />
+              Hapus Transaksi
+            </DialogTitle>
+            <DialogDescription>
+              Yakin ingin menghapus transaksi ini?
+            </DialogDescription>
+          </DialogHeader>
+          {deletingTx && (
+            <div className="p-3 bg-muted/50 rounded-lg space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Order ID:</span>
+                <span className="font-mono font-medium">{deletingTx.orderId}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Customer:</span>
+                <span className="font-medium">{deletingTx.customer?.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Nominal:</span>
+                <span className="font-bold text-red-600">{formatCurrency(deletingTx.nominal)}</span>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setDeleteConfirmOpen(false); setDeletingTx(null); }}>
+              Batal
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              <Trash2 className="w-3.5 h-3.5 mr-1" />
+              Hapus
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
