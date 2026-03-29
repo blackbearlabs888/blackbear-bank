@@ -3,7 +3,8 @@ Allow: /
 Disallow: /api/
 Disallow: /owner/
 Disallow: /partner/
-Disallow: /login
 Disallow: /register
+Disallow: /dashboard/
+Disallow: /maintenance
 
 Sitemap: https://www.blackbear.cc/sitemap.xml
