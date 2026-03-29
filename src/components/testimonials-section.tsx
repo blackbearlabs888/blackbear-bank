@@ -29,15 +29,15 @@ const fallbackTestimonials: PublicTestimonial[] = [
 
 function TestimonialCard({ t }: { t: PublicTestimonial }) {
   return (
-    <Card className="flex-shrink-0 w-[280px] sm:w-[320px] border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 bg-gradient-to-br from-white to-white/80 dark:from-gray-900 dark:to-gray-900/80">
-      <CardContent className="p-5 space-y-3">
+    <Card className="flex-shrink-0 w-[200px] sm:w-[240px] md:w-[260px] border-0 shadow-md hover:shadow-lg transition-shadow duration-300 bg-gradient-to-br from-white to-white/80 dark:from-gray-900 dark:to-gray-900/80">
+      <CardContent className="p-3 sm:p-3.5 space-y-2">
         {/* Header: Stars + Amount */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-px">
             {[1, 2, 3, 4, 5].map((s) => (
               <Star
                 key={s}
-                className={`w-3.5 h-3.5 ${
+                className={`w-3 h-3 ${
                   s <= t.rating
                     ? 'text-amber-400 fill-amber-400'
                     : 'text-muted-foreground/20'
@@ -47,7 +47,7 @@ function TestimonialCard({ t }: { t: PublicTestimonial }) {
           </div>
           <Badge
             variant="secondary"
-            className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium"
+            className="text-[9px] px-1.5 py-0 rounded-full bg-primary/10 text-primary font-medium leading-tight"
           >
             {formatCompactCurrency(t.nominal)}
           </Badge>
@@ -55,26 +55,26 @@ function TestimonialCard({ t }: { t: PublicTestimonial }) {
 
         {/* Review */}
         <div className="relative">
-          <Quote className="absolute -top-1 -left-0.5 w-3.5 h-3.5 text-primary/15" />
-          <p className="text-sm text-muted-foreground leading-relaxed pl-4 line-clamp-3">
+          <Quote className="absolute -top-0.5 -left-0 w-3 h-3 text-primary/15" />
+          <p className="text-xs text-muted-foreground leading-relaxed pl-3.5 line-clamp-2">
             {t.review}
           </p>
         </div>
 
         {/* Footer: Name + Meta */}
-        <div className="flex items-center justify-between pt-1 border-t border-muted/50">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center flex-shrink-0">
-              <span className="text-[10px] font-bold text-white">
+        <div className="flex items-center justify-between pt-1.5 border-t border-muted/50">
+          <div className="flex items-center gap-1.5">
+            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center flex-shrink-0">
+              <span className="text-[8px] font-bold text-white">
                 {t.customerName.charAt(0)}
               </span>
             </div>
-            <div>
-              <p className="text-xs font-semibold">{t.customerName}</p>
-              <p className="text-[10px] text-muted-foreground">{t.paymentType}</p>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold truncate">{t.customerName}</p>
+              <p className="text-[9px] text-muted-foreground">{t.paymentType}</p>
             </div>
           </div>
-          <p className="text-[10px] text-muted-foreground/60">
+          <p className="text-[9px] text-muted-foreground/60 flex-shrink-0">
             {formatDateAgo(t.createdAt)}
           </p>
         </div>
@@ -96,15 +96,15 @@ function ScrollingRow({
   const items = [...testimonials, ...testimonials];
 
   return (
-    <div className="relative overflow-hidden py-2 group/carousel">
+    <div className="relative overflow-hidden py-1 group/carousel">
       {/* Fade edges */}
-      <div className="absolute left-0 top-0 bottom-0 w-12 md:w-20 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 w-12 md:w-20 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+      <div className="absolute left-0 top-0 bottom-0 w-8 md:w-16 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-8 md:w-16 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
 
       {/* Scrolling container */}
-      <div className="flex gap-4 w-max group-hover/carousel:[animation-play-state:paused]">
+      <div className="flex gap-2.5 w-max group-hover/carousel:[animation-play-state:paused]">
         <div
-          className="flex gap-4"
+          className="flex gap-2.5"
           style={{
             animation: reverse
               ? `scroll-right ${speed}s linear infinite`
@@ -162,23 +162,23 @@ export default function TestimonialsSection() {
   };
 
   return (
-    <section className="relative py-20 md:py-28 bg-muted/30 backdrop-blur-sm z-10" aria-labelledby="testimonials-heading">
-      <div className="container mx-auto px-4 mb-10">
+    <section className="relative py-12 md:py-16 bg-muted/30 backdrop-blur-sm z-10" aria-labelledby="testimonials-heading">
+      <div className="container mx-auto px-4 mb-6">
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-sm font-medium mb-4">
-            <MessageCircle className="w-4 h-4" aria-hidden="true" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-medium mb-3">
+            <MessageCircle className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Testimoni</span>
           </div>
-          <h2 id="testimonials-heading" className="text-3xl md:text-4xl font-bold mb-4">
+          <h2 id="testimonials-heading" className="text-2xl md:text-3xl font-bold mb-2">
             Apa Kata Pelanggan Kami
           </h2>
-          <p className="text-muted-foreground max-w-xl mx-auto">
-            Ribuan pelanggan puas dengan layanan kami. Berikut pengalaman mereka.
+          <p className="text-muted-foreground text-sm max-w-md mx-auto">
+            Ribuan pelanggan puas dengan layanan kami.
           </p>
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-2">
         <ScrollingRow testimonials={ensureMin(row1)} speed={45} />
         <ScrollingRow testimonials={ensureMin(row2)} reverse speed={50} />
       </div>
