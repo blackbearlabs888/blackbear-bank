@@ -201,18 +201,18 @@ export default function OwnerTransactionsPage() {
     finally { setAnalyticsLoading(false); }
   };
 
-  const updateStatus = async (id: string, status: string, notes?: string, marketplaceId?: string, transactionLink?: string, nominal?: number, recalculate?: boolean) => {
+  const updateStatus = async (id: string, status: string, notes?: string, marketplaceId?: string, transactionLink?: string, nominal?: number, recalculate?: boolean, partnerId?: string) => {
     setUpdatingStatus(true);
     try {
       const res = await fetch(`/api/transactions/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, notes, marketplaceId, transactionLink, nominal, recalculate }),
+        body: JSON.stringify({ status, notes, marketplaceId, transactionLink, nominal, recalculate, partnerId }),
       });
       const data = await res.json();
       if (data.success) {
-        if (recalculate) {
-          toast.success('Fee berhasil dihitung ulang');
+        if (partnerId !== undefined) {
+          toast.success(partnerId === 'none' ? 'Partner dihapus' : 'Partner berhasil diubah');
         } else if (nominal !== undefined) {
           toast.success(`Nominal diubah ke ${formatCurrency(nominal)}`);
         } else {
@@ -1308,7 +1308,7 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
 }
 
 // Transaction Detail Dialog Content (uses key pattern for reset)
-function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Transaction; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean) => void; onDelete: (id: string) => void; updating: boolean }) {
+function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Transaction; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean, partnerId?: string) => void; onDelete: (id: string) => void; updating: boolean }) {
   const [notes, setNotes] = useState(tx.notes || '');
   const [transactionLink, setTransactionLink] = useState(tx.transactionLink || '');
   const [status, setStatus] = useState(tx.status);
@@ -1316,16 +1316,23 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
   const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
   const [editNominal, setEditNominal] = useState(false);
   const [nominal, setNominal] = useState(tx.nominal.toString());
-  const [needsRecalculate, setNeedsRecalculate] = useState(false);
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [selectedPartnerId, setSelectedPartnerId] = useState(tx.partner?.id || 'none');
+  const [searchPartner, setSearchPartner] = useState('');
+  const [partnerChanged, setPartnerChanged] = useState(false);
 
-  // Load marketplaces when dialog opens if status is verification
+  // Load partners always, marketplaces when verification
   useEffect(() => {
+    fetch('/api/partners')
+      .then(res => res.json())
+      .then(d => {
+        if (d.success) setPartners((d.data || []).filter((p: Partner) => p.status === 'active'));
+      });
     if (status === 'verification') {
       fetch('/api/marketplaces?activeOnly=true')
         .then(res => res.json())
         .then(d => {
           if (d.success) {
-            // Include current transaction's marketplace if it exists and is not already in the list
             if (tx.marketplace && !d.data.find((mp: Marketplace) => mp.id === tx.marketplace?.id)) {
               setMarketplaces([...d.data, tx.marketplace as Marketplace]);
             } else {
@@ -1336,16 +1343,14 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
     }
   }, []);
 
-  // Calculate preview when nominal changes or recalculate is needed
+  // Calculate preview when nominal changes
   const calculatedPreview = useMemo(() => {
-    // Show preview when editing nominal OR when needsRecalculate is true
-    if (!editNominal && !needsRecalculate) return null;
+    if (!editNominal) return null;
 
     const newNominal = parseFloat(nominal);
     if (isNaN(newNominal) || newNominal <= 0) return null;
 
-    // Skip if nominal hasn't changed from original (unless needsRecalculate)
-    if (!needsRecalculate && newNominal === tx.nominal) return null;
+    if (newNominal === tx.nominal) return null;
 
     // Get fee calculation based on existing payment type
     const isOnline = tx.methodTransaction === 'Online';
@@ -1394,7 +1399,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
       ownerProfit,
       totalReceived,
     };
-  }, [editNominal, nominal, tx, needsRecalculate]);
+  }, [editNominal, nominal, tx]);
 
   const previewCalc = calculatedPreview;
 
@@ -1462,13 +1467,8 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
     const newNominal = nominalChanged ? parseFloat(nominal) : undefined;
 
     // Send 'none' explicitly so backend knows to clear marketplace
-    // Include recalculate flag if needed
-    onUpdate(tx.id, status, notes, marketplace, transactionLink, newNominal, needsRecalculate || nominalChanged);
-  };
-
-  const handleRecalculate = () => {
-    // Toggle recalculate preview mode - this only shows preview, doesn't save
-    setNeedsRecalculate(!needsRecalculate);
+    const effectivePartnerId = partnerChanged ? selectedPartnerId : undefined;
+    onUpdate(tx.id, status, notes, marketplace, transactionLink, newNominal, nominalChanged, effectivePartnerId);
   };
 
   const config = STATUS_CONFIG[tx.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
@@ -1483,7 +1483,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
     notes !== (tx.notes || '') ||
     transactionLink !== (tx.transactionLink || '') ||
     nominalChanged ||
-    needsRecalculate ||
+    partnerChanged ||
     status === 'verification'; // Always allow save when status is verification
 
   return (
@@ -1611,18 +1611,52 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
         </div>
       </div>
 
-      {/* Recalculate Button */}
-      <Button
-        type="button"
-        variant={needsRecalculate ? "default" : "outline"}
-        size="sm"
-        onClick={handleRecalculate}
-        disabled={updating}
-        className={cn("w-full h-8 text-xs", needsRecalculate ? "border-solid" : "border-dashed")}
-      >
-        <RefreshCw className={cn("w-3.5 h-3.5 mr-1.5", needsRecalculate && "animate-spin")} />
-        {needsRecalculate ? 'Lihat Preview Perubahan Fee' : 'Recalculate Fee'}
-      </Button>
+      {/* Partner Selector */}
+      <div className="rounded-lg border bg-muted/30 p-2.5">
+        <div className="flex items-center justify-between mb-1.5">
+          <p className="text-[9px] text-muted-foreground flex items-center gap-1">
+            <Users className="w-2.5 h-2.5" /> Partner
+          </p>
+          {selectedPartnerId !== 'none' && (
+            <Button type="button" variant="ghost" size="sm" className="h-5 text-[9px] text-red-500 px-1.5" onClick={() => { setSelectedPartnerId('none'); setPartnerChanged(true); }}>
+              <X className="w-2.5 h-2.5" />
+            </Button>
+          )}
+        </div>
+        {selectedPartnerId !== 'none' ? (
+          (() => {
+            const p = partners.find(x => x.id === selectedPartnerId) || tx.partner;
+            return p ? (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold">{p.name}</p>
+                  <p className="text-[9px] text-muted-foreground">{p.tier} &middot; Komisi {p.commission}%</p>
+                </div>
+                <Button type="button" variant="ghost" size="sm" className="h-5 text-[9px] px-1.5" onClick={() => { setSelectedPartnerId('none'); setPartnerChanged(true); }}>Ganti</Button>
+              </div>
+            ) : <p className="text-[9px] text-muted-foreground">Partner tidak ditemukan</p>;
+          })()
+        ) : (
+          <div className="space-y-1.5">
+            <Input placeholder="Cari partner..." value={searchPartner} onChange={e => setSearchPartner(e.target.value)} className="h-7 text-[10px]" />
+            {searchPartner.length >= 1 ? (
+              <div className="max-h-24 overflow-y-auto space-y-0.5">
+                {partners.filter(p => p.name.toLowerCase().includes(searchPartner.toLowerCase())).slice(0, 5).map(p => (
+                  <button key={p.id} type="button" onClick={() => { setSelectedPartnerId(p.id); setPartnerChanged(true); setSearchPartner(''); }} className="w-full text-left flex items-center justify-between px-2 py-1 rounded hover:bg-muted/50 transition-colors">
+                    <div>
+                      <p className="text-[10px] font-medium">{p.name}</p>
+                      <p className="text-[8px] text-muted-foreground">{p.tier} &middot; {p.commission}%</p>
+                    </div>
+                    <Check className="w-3 h-3 text-muted-foreground" />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[9px] text-muted-foreground text-center py-1">Ketik nama partner untuk mencari...</p>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Customer & Payment Row */}
       <div className="grid grid-cols-2 gap-2">
@@ -1887,7 +1921,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
 }
 
 // Transaction Detail Dialog Wrapper
-function TxDetailDialog({ open, onOpenChange, tx, onUpdate, onDelete, updating }: { open: boolean; onOpenChange: (v: boolean) => void; tx: Transaction | null; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean) => void; onDelete: (id: string) => void; updating: boolean }) {
+function TxDetailDialog({ open, onOpenChange, tx, onUpdate, onDelete, updating }: { open: boolean; onOpenChange: (v: boolean) => void; tx: Transaction | null; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean, partnerId?: string) => void; onDelete: (id: string) => void; updating: boolean }) {
   if (!tx) return null;
 
   return (
