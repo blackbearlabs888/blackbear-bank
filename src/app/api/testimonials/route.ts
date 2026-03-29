@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toNumber } from '@/lib/db';
+import { sendTelegramMessage, formatCurrency } from '@/lib/telegram';
 
 // GET /api/testimonials - Fetch testimonials (with optional filters)
 export async function GET(request: NextRequest) {
@@ -153,6 +154,47 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // --- Create owner notification ---
+    const stars = '⭐'.repeat(Math.round(rating));
+    const reviewSnippet = review ? `\n📝 "${review.length > 100 ? review.substring(0, 100) + '...' : review}"` : '';
+
+    await db.notification.create({
+      data: {
+        type: 'new_testimonial',
+        title: 'Testimoni Baru',
+        message: `${stars} dari ${customerName}`,
+        data: JSON.stringify({
+          orderId: transaction.orderId,
+          customerName,
+          rating: Math.round(rating),
+          review: review || null,
+          nominal: toNumber(transaction.nominal),
+        }),
+        targetType: 'owner',
+        transactionId: transaction.id,
+      },
+    });
+
+    // --- Push Telegram notification ---
+    try {
+      const notifSettings = await db.notificationSettings.findFirst();
+      if (notifSettings?.telegramEnabled && notifSettings.telegramBotToken && notifSettings.telegramChatId) {
+        const tgMessage =
+          `${stars} <b>Testimoni Baru!</b>\n\n` +
+          `📦 Order: <code>${transaction.orderId}</code>\n` +
+          `👤 ${customerName}\n` +
+          `💰 ${formatCurrency(toNumber(transaction.nominal))}\n` +
+          `${reviewSnippet}`;
+
+        await sendTelegramMessage(notifSettings.telegramBotToken, notifSettings.telegramChatId, {
+          text: tgMessage,
+        });
+      }
+    } catch (tgError) {
+      console.error('[Testimonial] Failed to send Telegram notification:', tgError);
+      // Don't fail the request
+    }
 
     return NextResponse.json({
       success: true,
