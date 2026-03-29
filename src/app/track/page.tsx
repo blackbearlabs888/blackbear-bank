@@ -313,7 +313,6 @@ function TestimonialForm({
   const [hoverRating, setHoverRating] = useState(0);
   const [review, setReview] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const { toast } = useToast();
   const initials = getInitials(customerName);
 
   const handleSubmit = async (e: React.FormEvent) => {

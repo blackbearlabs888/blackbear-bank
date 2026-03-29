@@ -264,8 +264,7 @@ function TestimonialCard({
 export default function OwnerTestimonialsPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, hasHydrated, hydrate } = useAuthStore();
-  const { toast } = useToast();
-
+  
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [loading, setLoading] = useState(true);

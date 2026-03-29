@@ -43,7 +43,6 @@ export default function PartnerSettingsPage() {
   const router = useRouter();
   const { user, partner, isAuthenticated, isLoading, hasHydrated, hydrate, logout, setPartner, setUser } = useAuthStore();
   const { theme, setTheme } = useTheme();
-  const { toast } = useToast();
   const redirectAttempted = useRef(false);
 
   // Password change state
