@@ -1,9 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import {
   CreditCard,
   Wallet,
@@ -18,6 +24,7 @@ import {
   TrendingUp,
   MessageCircle,
   Wifi,
+  HelpCircle as HelpCircleIcon,
 } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { OrganizationJsonLd, FAQJsonLd } from '@/components/seo/json-ld';
@@ -70,6 +77,13 @@ const partnerBenefits = [
   { icon: Zap, text: 'Target bulanan dengan bonus' },
   { icon: Users, text: 'Support tim profesional' },
 ];
+
+interface FAQ {
+  id: string;
+  question: string;
+  answer: string;
+  category: string;
+}
 
 // Credit Card Visual Component
 function CreditCardVisual({ siteName, getInitials, logoUrl, logoError, setLogoError }: { 
@@ -266,8 +280,25 @@ function AnimatedBackground() {
 export default function LandingPage() {
   const { config, getInitials } = useSiteConfig();
   const [logoError, setLogoError] = useState(false);
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
   
   const siteName = config.websiteTitle || 'Black Bear';
+
+  // Fetch FAQs
+  useEffect(() => {
+    const fetchFAQs = async () => {
+      try {
+        const response = await fetch('/api/seo/faq?public=true&limit=5');
+        const result = await response.json();
+        if (result.success && result.data) {
+          setFaqs(result.data.slice(0, 5));
+        }
+      } catch (error) {
+        console.error('Failed to fetch FAQs:', error);
+      }
+    };
+    fetchFAQs();
+  }, []);
 
   return (
     <>
@@ -435,7 +466,7 @@ export default function LandingPage() {
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-                <HelpCircle className="w-4 h-4" aria-hidden="true" />
+                <HelpCircleIcon className="w-4 h-4" aria-hidden="true" />
                 <span>FAQ</span>
               </div>
               <h2 id="faq-heading" className="text-3xl md:text-4xl font-bold mb-4">
@@ -802,3 +833,4 @@ export default function LandingPage() {
     </>
   );
 }
+
