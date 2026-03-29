@@ -17,9 +17,9 @@ import { Progress } from '@/components/ui/progress';
 import {
   Wallet, ArrowRightLeft, Search, RefreshCw,
   Loader2, AlertCircle, CheckCircle, XCircle, User, CreditCard, Store,
-  MessageSquare, Copy, Edit3, Clock, ArrowUp, ArrowDown, Plus,
+  MessageSquare, MessageCircle, Copy, Edit3, Clock, ArrowUp, ArrowDown, Plus,
   Sparkles, Calculator, Building2, Save, Send, TrendingUp, Activity,
-  DollarSign, ShoppingBag, BarChart3, PieChart,
+  DollarSign, ShoppingBag, BarChart3, PieChart, Share2,
 } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -974,6 +974,83 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
             >
               <Copy className="w-3 h-3 text-white/80" />
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Share Track Link Button */}
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="flex-1 h-8 text-[10px] gap-1.5 rounded-lg border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-900/20"
+          onClick={() => {
+            const trackUrl = `${window.location.origin}/track?orderId=${tx.orderId}`;
+            navigator.clipboard.writeText(trackUrl);
+            toast.success('Link track disalin!');
+          }}
+        >
+          <Copy className="w-3.5 h-3.5" />
+          Salin Link Track
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          className="flex-1 h-8 text-[10px] gap-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white"
+          onClick={() => {
+            const trackUrl = `${window.location.origin}/track?orderId=${tx.orderId}`;
+            const message = `Halo ${tx.customer?.name || 'Kakak'}, berikut link untuk melacak status transaksi Anda:\n\n${trackUrl}\n\nTerima kasih telah menggunakan layanan kami! 🙏`;
+            const waUrl = `https://wa.me/${tx.customer?.phone?.replace(/^0/, '62')}?text=${encodeURIComponent(message)}`;
+            window.open(waUrl, '_blank');
+          }}
+        >
+          <MessageSquare className="w-3.5 h-3.5" />
+          Share ke WA
+        </Button>
+      </div>
+
+      {/* Share ke Customer */}
+      <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/20 p-2.5">
+        <p className="text-[9px] font-medium text-green-700 dark:text-green-400 mb-2 flex items-center gap-1">
+          <Share2 className="w-3 h-3" /> Share ke Customer
+        </p>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-white dark:bg-slate-900 rounded-md px-2 py-1.5 border border-green-200 dark:border-green-800">
+              <p className="text-[10px] text-muted-foreground truncate">https://blackbear.cc/track?orderId={tx.orderId}</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="flex-1 h-8 text-[10px] gap-1.5 rounded-lg border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-900/20"
+              onClick={() => {
+                const trackUrl = `https://blackbear.cc/track?orderId=${tx.orderId}`;
+                navigator.clipboard.writeText(trackUrl);
+                toast.success('Link disalin');
+              }}
+            >
+              <Copy className="w-3.5 h-3.5" />
+              Salin Link
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="flex-1 h-8 text-[10px] gap-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white"
+              onClick={() => {
+                const trackUrl = `https://blackbear.cc/track?orderId=${tx.orderId}`;
+                const message = `Halo! Ini link untuk melacak status order Anda: ${trackUrl}`;
+                const cleanPhone = (tx.customer?.phone || '').replace(/[^0-9]/g, '');
+                const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+                window.open(waUrl, '_blank');
+              }}
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              WhatsApp
+            </Button>
           </div>
         </div>
       </div>
