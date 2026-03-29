@@ -20,6 +20,7 @@ import {
   FileText,
   HelpCircle,
   MapPin,
+  Star,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
@@ -34,6 +35,7 @@ const ownerMoreItems = [
   // Transaksi group
   { href: '/owner/dashboard/notifications', label: 'Notifikasi', icon: Bell, group: 'Transaksi' },
   // Pengaturan group
+  { href: '/owner/dashboard/testimonials', label: 'Testimoni', icon: Star, group: 'Transaksi' },
   { href: '/owner/dashboard/fees', label: 'Pengaturan Fee', icon: Percent, group: 'Pengaturan' },
   { href: '/owner/dashboard/broadcast', label: 'Broadcast', icon: Megaphone, group: 'Pengaturan' },
   { href: '/owner/dashboard/seo/blog', label: 'Blog', icon: FileText, group: 'SEO' },

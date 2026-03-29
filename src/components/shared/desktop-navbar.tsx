@@ -34,6 +34,7 @@ import {
   MapPin,
   Percent,
   Bell,
+  Star,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -62,6 +63,7 @@ const ownerMenuGroups = {
     items: [
       { href: '/owner/dashboard/transactions', label: 'Semua Transaksi', icon: Wallet },
       { href: '/owner/dashboard/notifications', label: 'Notifikasi', icon: Bell },
+      { href: '/owner/dashboard/testimonials', label: 'Testimoni', icon: Star },
     ],
   },
   pengaturan: {
