@@ -45,6 +45,9 @@ import {
   User,
   Tag,
   Globe,
+  ScanEye,
+  X,
+  Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -124,8 +127,10 @@ export default function BlogManagementPage() {
   // Dialog states
   const [showDialog, setShowDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [deletingPost, setDeletingPost] = useState<BlogPost | null>(null);
+  const [previewPost, setPreviewPost] = useState<BlogPost | null>(null);
   const [formData, setFormData] = useState(emptyForm);
 
   // Trigger hydration on mount
@@ -463,7 +468,21 @@ export default function BlogManagementPage() {
                   key={post.id}
                   className="p-4 hover:bg-muted/50 transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    {/* Featured Image Thumbnail */}
+                    <div className="hidden sm:block w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                      {post.featuredImage ? (
+                        <img
+                          src={post.featuredImage}
+                          alt={post.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-purple-500/10">
+                          <FileText className="w-6 h-6 text-muted-foreground/40" />
+                        </div>
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-medium truncate">{post.title}</h3>
@@ -482,7 +501,7 @@ export default function BlogManagementPage() {
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">/{post.slug}</p>
                       {post.excerpt && (
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{post.excerpt}</p>
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{post.excerpt}</p>
                       )}
                       <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                         {post.author && (
@@ -501,7 +520,19 @@ export default function BlogManagementPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setPreviewPost(post);
+                          setShowPreviewDialog(true);
+                        }}
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        title="Preview"
+                      >
+                        <ScanEye className="w-4 h-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -706,6 +737,16 @@ export default function BlogManagementPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Blog Preview Dialog */}
+      <BlogPreviewDialog
+        post={previewPost}
+        open={showPreviewDialog}
+        onOpenChange={(open) => {
+          setShowPreviewDialog(open);
+          if (!open) setPreviewPost(null);
+        }}
+      />
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
@@ -743,5 +784,220 @@ function BlogSkeleton() {
       <Skeleton className="h-16" />
       <Skeleton className="h-64" />
     </div>
+  );
+}
+
+// Blog Preview Dialog Component
+function BlogPreviewDialog({
+  post,
+  open,
+  onOpenChange,
+}: {
+  post: BlogPost | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!post) return null;
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.blackbear.cc';
+  const postUrl = `${siteUrl}/blog/${post.slug}`;
+  const tags = post.tags ? post.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+  const categoryColors: Record<string, string> = {
+    artikel: 'bg-blue-500/10 text-blue-600',
+    tips: 'bg-green-500/10 text-green-600',
+    tutorial: 'bg-purple-500/10 text-purple-600',
+    berita: 'bg-orange-500/10 text-orange-600',
+  };
+
+  const formatDate = (date: string | null) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[92vh] overflow-hidden p-0 flex flex-col">
+        {/* Preview Header Bar */}
+        <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <ScanEye className="w-4 h-4 text-primary" />
+            <DialogTitle className="text-sm font-medium">Preview Artikel</DialogTitle>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant={post.isPublished ? 'default' : 'secondary'}
+              className={cn(
+                "text-[10px]",
+                post.isPublished && "bg-green-500/10 text-green-600"
+              )}
+            >
+              {post.isPublished ? 'Published' : 'Draft'}
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-[10px] gap-1"
+              asChild
+            >
+              <a href={postUrl} target="_blank" rel="noopener noreferrer">
+                <Globe className="w-3 h-3" />
+                Buka di Browser
+              </a>
+            </Button>
+          </div>
+        </div>
+
+        {/* Preview Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Hero Section */}
+          <div className="relative py-8 md:py-12 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-purple-500/5" />
+            <div className="container mx-auto px-4 relative z-10">
+              <div className="max-w-3xl mx-auto">
+                {/* Category Badge */}
+                <Badge className={cn("mb-3", categoryColors[post.category] || '')}>
+                  {CATEGORY_OPTIONS.find(c => c.value === post.category)?.label || post.category}
+                </Badge>
+
+                {/* Title */}
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 leading-tight">
+                  {post.title}
+                </h1>
+
+                {/* Meta Info */}
+                <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                  {post.author && (
+                    <div className="flex items-center gap-1">
+                      <User className="w-3.5 h-3.5" />
+                      <span>{post.author}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>
+                      {post.publishedAt
+                        ? formatDate(post.publishedAt)
+                        : formatDate(post.createdAt)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>{post.viewCount} views</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Featured Image */}
+          {post.featuredImage && (
+            <div className="px-4 pb-6">
+              <div className="max-w-3xl mx-auto">
+                <div className="relative rounded-xl overflow-hidden bg-muted">
+                  <img
+                    src={post.featuredImage}
+                    alt={post.title}
+                    className="w-full h-auto max-h-[350px] object-cover"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Excerpt */}
+          {post.excerpt && (
+            <div className="px-4 pb-4">
+              <div className="max-w-3xl mx-auto">
+                <div className="bg-muted/50 rounded-lg p-4 border">
+                  <p className="text-sm italic text-muted-foreground leading-relaxed">
+                    {post.excerpt}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Article Content */}
+          <div className="px-4 py-6">
+            <div className="max-w-3xl mx-auto">
+              <div
+                className="prose prose-sm sm:prose dark:prose-invert max-w-none
+                  prose-headings:font-bold prose-headings:tracking-tight
+                  prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3
+                  prose-h3:text-lg prose-h3:mt-5 prose-h3:mb-2
+                  prose-p:text-muted-foreground prose-p:leading-relaxed
+                  prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                  prose-strong:text-foreground
+                  prose-ul:my-3 prose-ol:my-3
+                  prose-li:text-muted-foreground
+                  prose-blockquote:border-l-primary prose-blockquote:bg-muted/50 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:rounded-r-lg
+                  prose-code:text-primary prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded text-sm
+                  prose-pre:bg-muted prose-pre:border prose-pre:text-sm
+                  prose-img:rounded-xl prose-img:shadow-lg
+                "
+                dangerouslySetInnerHTML={{ __html: post.content.replace(/\n/g, '<br />') }}
+              />
+            </div>
+          </div>
+
+          {/* Tags */}
+          {tags.length > 0 && (
+            <div className="px-4 pb-6">
+              <div className="max-w-3xl mx-auto">
+                <div className="border-t pt-6">
+                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Tags</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        <Tag className="w-2.5 h-2.5 mr-1" />
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SEO Info */}
+          <div className="px-4 pb-6">
+            <div className="max-w-3xl mx-auto">
+              <div className="border-t pt-6">
+                <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider flex items-center gap-1.5">
+                  <Globe className="w-3 h-3" />
+                  SEO Preview
+                </p>
+                <div className="bg-muted/50 rounded-lg p-4 border space-y-1.5">
+                  {/* Google Search Preview */}
+                  <div className="space-y-1">
+                    <p className="text-base text-blue-700 dark:text-blue-400 truncate leading-snug hover:underline cursor-pointer">
+                      {post.metaTitle || post.title}
+                    </p>
+                    <p className="text-xs text-green-700 dark:text-green-500 truncate">
+                      {siteUrl}/blog/{post.slug}
+                    </p>
+                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                      {post.metaDescription || post.excerpt || post.content.substring(0, 160)}
+                    </p>
+                  </div>
+                  {/* Keywords */}
+                  {post.keywords && (
+                    <div className="flex items-center gap-1.5 pt-2 border-t mt-2">
+                      <span className="text-[10px] text-muted-foreground">Keywords:</span>
+                      <span className="text-[10px] text-muted-foreground font-mono">{post.keywords}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
