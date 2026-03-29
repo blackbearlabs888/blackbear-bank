@@ -117,6 +117,7 @@ model Customer {
   // Relations
   partner         Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
   transactions    Transaction[]
+  testimonials    Testimonial[]
   
   @@index([phone])
   @@index([city])
@@ -156,6 +157,7 @@ model Transaction {
   partner         Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
   paymentType     PaymentType @relation(fields: [paymentTypeId], references: [id])
   marketplace     Marketplace? @relation(fields: [marketplaceId], references: [id], onDelete: SetNull)
+  testimonial     Testimonial?
   
   @@index([customerId])
   @@index([partnerId])
@@ -368,6 +370,31 @@ model FAQ {
   @@index([category])
   @@index([order])
   @@map("faqs")
+}
+
+// ==================== TESTIMONIALS ====================
+
+model Testimonial {
+  id              String    @id @default(cuid())
+  transactionId   String    @unique // one testimonial per transaction
+  customerId      String
+  customerName    String    // denormalized for easy display
+  rating          Int       // 1-5 stars
+  review          String    @default("") // testimonial text
+  isApproved      Boolean   @default(true) // owner can moderate
+  isFeatured      Boolean   @default(false) // owner can feature on homepage
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  customer        Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  @@index([customerId])
+  @@index([isApproved])
+  @@index([isFeatured])
+  @@index([rating])
+  @@map("testimonials")
 }
 
 model Location {
