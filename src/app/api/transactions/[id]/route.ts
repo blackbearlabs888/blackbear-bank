@@ -118,7 +118,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status, notes, marketplaceId, transactionLink, nominal, recalculate, sendNotification } = body;
+    const { status, notes, marketplaceId, transactionLink, nominal, recalculate, sendNotification, partnerId } = body;
 
     // Get existing transaction
     const existingTransaction = await db.transaction.findUnique({
@@ -221,6 +221,51 @@ export async function PATCH(
     
     if (transactionLink !== undefined) {
       updateData.transactionLink = transactionLink || null;
+    }
+
+    // Handle partner change
+    if (partnerId !== undefined) {
+      const effectivePartnerId = partnerId === 'none' || partnerId === '' ? null : partnerId;
+      if (effectivePartnerId) {
+        const partner = await db.partner.findUnique({ where: { id: effectivePartnerId } });
+        if (!partner || partner.status !== 'active') {
+          return NextResponse.json({ success: false, error: 'Partner tidak valid atau tidak aktif' }, { status: 400 });
+        }
+        // Reverse old partner stats if different and was successful
+        if (existingTransaction.partnerId && existingTransaction.partnerId !== effectivePartnerId && existingTransaction.status === 'success') {
+          await db.partner.update({
+            where: { id: existingTransaction.partnerId },
+            data: { totalProfit: { decrement: existingTransaction.partnerProfit }, totalVolume: { decrement: existingTransaction.nominal } },
+          });
+        }
+        // Calculate new partner profit
+        const partnerRate = toNumber(partner.commission) || 0;
+        const currentNetMargin = toNumber(existingTransaction.netMargin);
+        const newPartnerProfit = currentNetMargin * (partnerRate / 100);
+        const newOwnerProfit = currentNetMargin - newPartnerProfit;
+        updateData.partnerId = effectivePartnerId;
+        updateData.partnerProfit = newPartnerProfit;
+        updateData.ownerProfit = newOwnerProfit;
+        // Apply new partner stats if was successful
+        if (existingTransaction.status === 'success') {
+          await db.partner.update({
+            where: { id: effectivePartnerId },
+            data: { totalProfit: { increment: newPartnerProfit }, totalVolume: { increment: existingTransaction.nominal } },
+          });
+        }
+      } else {
+        // Remove partner - reverse old partner stats if was successful
+        if (existingTransaction.partnerId && existingTransaction.status === 'success') {
+          await db.partner.update({
+            where: { id: existingTransaction.partnerId },
+            data: { totalProfit: { decrement: existingTransaction.partnerProfit }, totalVolume: { decrement: existingTransaction.nominal } },
+          });
+        }
+        const currentNetMargin = toNumber(existingTransaction.netMargin);
+        updateData.partnerId = null;
+        updateData.partnerProfit = 0;
+        updateData.ownerProfit = currentNetMargin;
+      }
     }
 
     // Handle nominal change with recalculation
