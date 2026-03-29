@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
       paymentTypeId,
       methodTransaction,
       city,
+      partnerId,
     } = body;
 
     // Validation
@@ -101,6 +102,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Validate partner if provided
+    let partnerData = null;
+    let partnerRate = 0;
+    if (partnerId) {
+      partnerData = await db.partner.findUnique({
+        where: { id: partnerId },
+      });
+      if (partnerData && partnerData.status === 'active') {
+        partnerRate = Number(partnerData.commission) || 0;
+      }
+    }
+
+    // Calculate partner profit if partner is assigned
+    const partnerProfitAmount = partnerData && partnerRate > 0 ? paymentFee * (partnerRate / 100) : 0;
+    const ownerProfitAmount = paymentFee - partnerProfitAmount;
+
     // Generate order ID
     const orderId = generateOrderId();
 
@@ -113,16 +130,18 @@ export async function POST(request: NextRequest) {
         paymentFee,
         platformFee: 0,
         netMargin: paymentFee,
-        partnerProfit: 0,
-        ownerProfit: paymentFee,
+        partnerProfit: partnerProfitAmount,
+        ownerProfit: ownerProfitAmount,
         totalReceived,
         paymentTypeId,
         methodTransaction,
         status: 'pending',
+        partnerId: partnerData?.id || null,
       },
       include: {
         customer: true,
         paymentType: true,
+        partner: true,
       },
     });
 
@@ -167,7 +186,8 @@ export async function POST(request: NextRequest) {
                 'Nominal': formatCurrency(toNumber(nominal)),
                 'Fee': formatCurrency(paymentFee),
                 'Tipe': paymentType.name,
-                'Metode': methodTransaction,
+            'Metode': methodTransaction,
+            ...(partnerData ? { 'Partner': partnerData.name } : {}),
               },
             }
           );
