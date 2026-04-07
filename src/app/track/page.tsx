@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
   Search,
   Package,
@@ -511,6 +519,11 @@ function TrackOrderContent() {
   const [checkingTestimonial, setCheckingTestimonial] = useState(false);
   const [showTestimonialForm, setShowTestimonialForm] = useState(false);
 
+  // Modal state
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState<'waiting' | 'payment' | null>(null);
+  const modalShownRef = useRef<string | null>(null);
+
   // Auto-fill from URL param
   useEffect(() => {
     const id = searchParams.get('orderId');
@@ -527,6 +540,28 @@ function TrackOrderContent() {
     } else {
       setTestimonial(null);
       setShowTestimonialForm(false);
+    }
+  }, [order]);
+
+  // Auto-show modal based on order status (only once per order load)
+  useEffect(() => {
+    if (!order) return;
+
+    const modalKey = `${order.orderId}-${order.status}-${order.transactionLink}`;
+    if (modalShownRef.current === modalKey) return;
+    modalShownRef.current = modalKey;
+
+    if (order.status === 'pending' && !order.transactionLink) {
+      // Case A: pending + no link => waiting modal
+      setModalType('waiting');
+      setShowModal(true);
+    } else if (order.status === 'verification' && order.transactionLink) {
+      // Case B: verification + has link => payment modal
+      setModalType('payment');
+      setShowModal(true);
+    } else if (order.status === 'process') {
+      // Case C: process => toast notification
+      toast.info('Transaksi Anda sedang diproses. Mohon tunggu...');
     }
   }, [order]);
 
@@ -557,6 +592,9 @@ function TrackOrderContent() {
     setOrder(null);
     setTestimonial(null);
     setShowTestimonialForm(false);
+    setShowModal(false);
+    setModalType(null);
+    modalShownRef.current = null;
 
     try {
       const response = await fetch(`/api/orders/track?orderId=${searchId}`);
@@ -845,16 +883,32 @@ function TrackOrderContent() {
 
               {/* Transaction Link Gestun */}
               {order.transactionLink && (
-                <div className="p-3 rounded-lg bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-violet-500/20">
+                <div className={cn(
+                  "p-3 rounded-lg bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border transition-all",
+                  order.status === 'verification' 
+                    ? "border-violet-500/50 shadow-lg shadow-violet-500/10 animate-pulse" 
+                    : "border-violet-500/20"
+                )}>
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <ExternalLink className="w-3.5 h-3.5 text-violet-500" />
                     <p className="text-xs font-medium text-violet-700 dark:text-violet-400">Link Transaksi Gestun</p>
+                    {order.status === 'verification' && (
+                      <Badge className="ml-auto bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-[10px] px-2 py-0 rounded-full">
+                        <Zap className="w-2.5 h-2.5 mr-0.5" />
+                        Siap Bayar
+                      </Badge>
+                    )}
                   </div>
                   <a 
                     href={order.transactionLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-between gap-2 p-2 rounded-md bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/30 transition-colors group"
+                    className={cn(
+                      "flex items-center justify-between gap-2 p-2 rounded-md transition-colors group",
+                      order.status === 'verification'
+                        ? "bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/20"
+                        : "bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/30"
+                    )}
                   >
                     <span className="text-xs text-muted-foreground truncate flex-1">{order.transactionLink}</span>
                     <div className="flex items-center gap-1 text-violet-600 dark:text-violet-400">
@@ -979,6 +1033,180 @@ function TrackOrderContent() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* ===== Auto-showing Modal Dialogs ===== */}
+
+      {/* Case A: Waiting Modal — pending + no transactionLink */}
+      {order && showModal && modalType === 'waiting' && (
+        <Dialog open={showModal} onOpenChange={(open) => { if (!open) setShowModal(false); }}>
+          <DialogContent
+            className="glass-card sm:max-w-md border-0 shadow-2xl p-0 overflow-hidden"
+            modal={true}
+            onPointerDownOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => e.preventDefault()}
+          >
+            {/* Gradient header */}
+            <div className="bg-gradient-to-br from-amber-400 to-orange-500 px-6 pt-6 pb-4">
+              <DialogHeader className="text-left">
+                {/* Animated pulsing clock icon */}
+                <div className="relative w-14 h-14 mb-3">
+                  <div className="absolute inset-0 rounded-2xl bg-white/20 blur-md animate-pulse" />
+                  <div className="relative w-14 h-14 rounded-2xl bg-white/30 backdrop-blur-sm flex items-center justify-center">
+                    <Clock className="w-8 h-8 text-white animate-pulse" />
+                  </div>
+                </div>
+                <DialogTitle className="text-xl font-bold text-white">
+                  ⏳ Tunggu Link Transaksi
+                </DialogTitle>
+                <DialogDescription className="text-amber-100 text-sm mt-1">
+                  Order sedang dalam proses verifikasi
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {/* Status badge */}
+              <div className="flex justify-center">
+                <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 text-sm px-4 py-1.5 rounded-full font-semibold animate-pulse">
+                  <Clock className="w-3.5 h-3.5 mr-1.5" />
+                  Menunggu Verifikasi
+                </Badge>
+              </div>
+
+              {/* Content */}
+              <div className="space-y-3">
+                <div className="flex gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30">
+                  <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400">1</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Order Anda sedang menunggu verifikasi dari tim kami.
+                  </p>
+                </div>
+                <div className="flex gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30">
+                  <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400">2</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Setelah order diverifikasi, admin akan memberikan link pembayaran untuk melanjutkan proses gestun.
+                  </p>
+                </div>
+                <div className="flex gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30">
+                  <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400">3</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Anda bisa mengecek kembali status order ini secara berkala melalui halaman ini.
+                  </p>
+                </div>
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button
+                  onClick={() => setShowModal(false)}
+                  className="w-full h-11 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-md shadow-amber-500/20"
+                >
+                  Tutup
+                </Button>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Case B: Payment Modal — verification + has transactionLink */}
+      {order && showModal && modalType === 'payment' && (
+        <Dialog open={showModal} onOpenChange={(open) => { if (!open) setShowModal(false); }}>
+          <DialogContent className="glass-card sm:max-w-md border-0 shadow-2xl p-0 overflow-hidden">
+            {/* Gradient header */}
+            <div className="bg-gradient-to-br from-green-400 to-emerald-500 px-6 pt-6 pb-4">
+              <DialogHeader className="text-left">
+                {/* Check circle icon */}
+                <div className="relative w-14 h-14 mb-3">
+                  <div className="absolute inset-0 rounded-2xl bg-white/20 blur-md opacity-60" />
+                  <div className="relative w-14 h-14 rounded-2xl bg-white/30 backdrop-blur-sm flex items-center justify-center">
+                    <CheckCircle2 className="w-8 h-8 text-white" />
+                  </div>
+                </div>
+                <DialogTitle className="text-xl font-bold text-white">
+                  ✅ Link Pembayaran Tersedia!
+                </DialogTitle>
+                <DialogDescription className="text-green-100 text-sm mt-1">
+                  Lanjutkan pembayaran untuk proses gestun
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {/* Payment type badge */}
+              <div className="flex flex-wrap justify-center gap-2">
+                <Badge className="bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400 text-xs px-3 py-1 rounded-full font-medium">
+                  <CreditCard className="w-3 h-3 mr-1" />
+                  {order.paymentType}
+                </Badge>
+                <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs px-3 py-1 rounded-full font-medium">
+                  <Wallet className="w-3 h-3 mr-1" />
+                  {formatCurrency(order.nominal)}
+                </Badge>
+              </div>
+
+              {/* Content */}
+              <div className="space-y-3">
+                <div className="flex gap-3 p-3 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-200/50 dark:border-green-800/30">
+                  <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-muted-foreground">
+                    Order Anda telah diverifikasi dan link pembayaran sudah tersedia.
+                  </p>
+                </div>
+                <div className="flex gap-3 p-3 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-200/50 dark:border-green-800/30">
+                  <CreditCard className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-muted-foreground">
+                    Lanjutkan proses gestun dengan melakukan pembayaran menggunakan{' '}
+                    <span className="font-semibold text-foreground">{order.paymentType}</span> yang Anda pilih.
+                  </p>
+                </div>
+                <div className="flex gap-3 p-3 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-200/50 dark:border-green-800/30">
+                  <Wallet className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-muted-foreground">
+                    Setelah pembayaran berhasil, dana akan langsung ditransfer ke rekening Anda.
+                  </p>
+                </div>
+              </div>
+
+              {/* COD note */}
+              {order.methodTransaction === 'COD' && (
+                <div className="flex gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30">
+                  <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    Ini adalah transaksi COD. Pastikan koordinasi dengan admin untuk pengiriman barang.
+                  </p>
+                </div>
+              )}
+
+              <DialogFooter className="flex-col gap-2 pt-2 sm:flex-col">
+                <Button
+                  onClick={() => {
+                    if (order.transactionLink) {
+                      window.open(order.transactionLink, '_blank', 'noopener,noreferrer');
+                    }
+                  }}
+                  className="w-full h-11 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-md shadow-green-500/20"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Lanjutkan Pembayaran
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowModal(false)}
+                  className="w-full h-10 rounded-lg"
+                >
+                  Nanti Saja
+                </Button>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

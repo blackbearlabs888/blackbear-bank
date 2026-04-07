@@ -10,10 +10,64 @@ import {
 } from '@/lib/auth';
 import { sendTelegramNotification } from '@/lib/telegram';
 import { normalizePhone, getPhoneVariations } from '@/lib/customer-utils';
+import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
+import { 
+  sanitizeName, 
+  sanitizeEmail, 
+  sanitizePhone as sanitizePhoneInput, 
+  sanitizeBankAccount, 
+  sanitizeCity,
+  sanitizeString,
+  validateLength, 
+  isHoneypotTriggered,
+  isValidEmail,
+  FIELD_LIMITS
+} from '@/lib/sanitize';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // ── Rate Limiting ──
+    const clientIp = getClientIp(request);
+    const rateLimitResult = checkRateLimit(clientIp, RATE_LIMITS.PARTNER_REGISTER);
+    
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Terlalu banyak percobaan registrasi. Coba lagi dalam ${rateLimitResult.retryAfter} detik.` 
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter),
+            'X-RateLimit-Remaining': '0',
+          }
+        }
+      );
+    }
+
+    // ── Request Body Validation ──
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Format request tidak valid' },
+        { status: 400 }
+      );
+    }
+
+    // ── Honeypot Check (anti-bot) ──
+    if (isHoneypotTriggered(body.website, body.honeypot, body.company_url, body.contact_preference)) {
+      // Silently reject bots
+      return NextResponse.json({
+        success: true,
+        user: { id: 'pending', name: 'Pending', email: 'pending@pending.com', role: 'partner' },
+        partner: { id: 'pending', status: 'pending' },
+        message: 'Registrasi diterima, sedang diverifikasi',
+      });
+    }
+
     const { 
       name, 
       email, 
@@ -26,62 +80,113 @@ export async function POST(request: NextRequest) {
       city 
     } = body;
 
-    // Validation
-    const missingFields = [];
-    if (!name) missingFields.push('nama');
-    if (!email) missingFields.push('email');
-    if (!phone) missingFields.push('phone');
-    if (!password) missingFields.push('password');
-    if (!confirmPassword) missingFields.push('confirmPassword');
-    if (!bankName) missingFields.push('bankName');
-    if (!bankAccount) missingFields.push('bankAccount');
-    if (!bankHolder) missingFields.push('bankHolder');
-    if (!city) missingFields.push('city');
+    // ── Input Sanitization ──
+    const sanitizedName = sanitizeName(name);
+    const sanitizedEmail = sanitizeEmail(email);
+    const sanitizedPhone = sanitizePhoneInput(phone);
+    const sanitizedPassword = typeof password === 'string' ? password : '';
+    const sanitizedConfirmPassword = typeof confirmPassword === 'string' ? confirmPassword : '';
+    const sanitizedBankName = typeof bankName === 'string' ? sanitizeString(bankName) : '';
+    const sanitizedBankAccount = sanitizeBankAccount(bankAccount);
+    const sanitizedBankHolder = sanitizeName(bankHolder);
+    const sanitizedCity = sanitizeCity(city);
+
+    // ── Required Field Validation ──
+    const missingFields: string[] = [];
+    if (!sanitizedName) missingFields.push('nama');
+    if (!sanitizedEmail) missingFields.push('email');
+    if (!sanitizedPhone) missingFields.push('phone');
+    if (!sanitizedPassword) missingFields.push('password');
+    if (!sanitizedConfirmPassword) missingFields.push('confirmPassword');
+    if (!sanitizedBankName) missingFields.push('bankName');
+    if (!sanitizedBankAccount) missingFields.push('bankAccount');
+    if (!sanitizedBankHolder) missingFields.push('bankHolder');
+    if (!sanitizedCity) missingFields.push('city');
 
     if (missingFields.length > 0) {
-      console.log('Missing fields:', missingFields);
-      console.log('Request body:', body);
       return NextResponse.json(
         { success: false, error: `Field berikut harus diisi: ${missingFields.join(', ')}` },
         { status: 400 }
       );
     }
 
-    if (!validateEmail(email)) {
+    // ── Field Length Validation ──
+    const nameCheck = validateLength(sanitizedName, FIELD_LIMITS.NAME_MIN, FIELD_LIMITS.NAME_MAX);
+    if (!nameCheck.valid) {
+      return NextResponse.json({ success: false, error: `Nama: ${nameCheck.error}` }, { status: 400 });
+    }
+
+    const emailCheck = validateLength(sanitizedEmail, 5, FIELD_LIMITS.EMAIL_MAX);
+    if (!emailCheck.valid) {
+      return NextResponse.json({ success: false, error: `Email: ${emailCheck.error}` }, { status: 400 });
+    }
+
+    const phoneCheck = validateLength(sanitizedPhone, FIELD_LIMITS.PHONE_MIN, FIELD_LIMITS.PHONE_MAX);
+    if (!phoneCheck.valid) {
+      return NextResponse.json({ success: false, error: `No WhatsApp: ${phoneCheck.error}` }, { status: 400 });
+    }
+
+    const bankNameCheck = validateLength(sanitizedBankName, 2, FIELD_LIMITS.BANK_NAME_MAX);
+    if (!bankNameCheck.valid) {
+      return NextResponse.json({ success: false, error: `Nama Bank: ${bankNameCheck.error}` }, { status: 400 });
+    }
+
+    const bankAcctCheck = validateLength(sanitizedBankAccount, FIELD_LIMITS.BANK_ACCOUNT_MIN, FIELD_LIMITS.BANK_ACCOUNT_MAX);
+    if (!bankAcctCheck.valid) {
+      return NextResponse.json({ success: false, error: `No Rekening: ${bankAcctCheck.error}` }, { status: 400 });
+    }
+
+    const bankHolderCheck = validateLength(sanitizedBankHolder, FIELD_LIMITS.NAME_MIN, FIELD_LIMITS.BANK_HOLDER_MAX);
+    if (!bankHolderCheck.valid) {
+      return NextResponse.json({ success: false, error: `Nama Pemilik Rekening: ${bankHolderCheck.error}` }, { status: 400 });
+    }
+
+    const cityCheck = validateLength(sanitizedCity, 2, FIELD_LIMITS.CITY_MAX);
+    if (!cityCheck.valid) {
+      return NextResponse.json({ success: false, error: `Kota: ${cityCheck.error}` }, { status: 400 });
+    }
+
+    const passwordCheck = validateLength(sanitizedPassword, FIELD_LIMITS.PASSWORD_MIN, FIELD_LIMITS.PASSWORD_MAX);
+    if (!passwordCheck.valid) {
+      return NextResponse.json({ success: false, error: `Password: ${passwordCheck.error}` }, { status: 400 });
+    }
+
+    // ── Format Validation ──
+    if (!isValidEmail(sanitizedEmail)) {
       return NextResponse.json(
         { success: false, error: 'Format email tidak valid' },
         { status: 400 }
       );
     }
 
-    if (!validatePassword(password)) {
+    if (!validatePassword(sanitizedPassword)) {
       return NextResponse.json(
         { success: false, error: 'Password minimal 6 karakter' },
         { status: 400 }
       );
     }
 
-    if (password !== confirmPassword) {
+    if (sanitizedPassword !== sanitizedConfirmPassword) {
       return NextResponse.json(
         { success: false, error: 'Konfirmasi password tidak cocok' },
         { status: 400 }
       );
     }
 
-    if (!validatePhone(phone)) {
+    if (!validatePhone(sanitizedPhone)) {
       return NextResponse.json(
         { success: false, error: 'Format nomor WhatsApp tidak valid (contoh: 08xxx)' },
         { status: 400 }
       );
     }
 
-    // Normalize phone number
-    const normalizedPhone = normalizePhone(phone);
-    const phoneVariations = getPhoneVariations(phone);
+    // ── Normalize phone number ──
+    const normalizedPhone = normalizePhone(sanitizedPhone);
+    const phoneVariations = getPhoneVariations(sanitizedPhone);
 
-    // Check if user exists
+    // ── Check if user exists ──
     const existingUser = await db.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: sanitizedEmail.toLowerCase() },
     });
 
     if (existingUser) {
@@ -91,7 +196,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if partner with phone exists (check all variations)
+    // ── Check if partner with phone exists ──
     const existingPartner = await db.partner.findFirst({
       where: {
         OR: phoneVariations.map(p => ({ phone: p })),
@@ -105,25 +210,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash password
-    const hashedPassword = await hashPassword(password);
+    // ── Hash password ──
+    const hashedPassword = await hashPassword(sanitizedPassword);
 
-    // Create user and partner
+    // ── Create user and partner ──
     const user = await db.user.create({
       data: {
-        email: email.toLowerCase(),
-        name,
+        email: sanitizedEmail.toLowerCase(),
+        name: sanitizedName,
         password: hashedPassword,
         role: 'partner',
         partner: {
           create: {
-            name,
-            email: email.toLowerCase(),
+            name: sanitizedName,
+            email: sanitizedEmail.toLowerCase(),
             phone: normalizedPhone,
-            bankName,
-            bankAccount,
-            bankHolder,
-            city,
+            bankName: sanitizedBankName,
+            bankAccount: sanitizedBankAccount,
+            bankHolder: sanitizedBankHolder,
+            city: sanitizedCity,
             commission: 30,
             target: 5000000,
             tier: 'Bronze',
@@ -135,30 +240,29 @@ export async function POST(request: NextRequest) {
       include: { partner: true },
     });
 
-    // Create session
+    // ── Create session ──
     const sessionId = await createSession(user.id);
     await setSessionCookie(sessionId);
 
-    // Create notification for owner about new partner registration
+    // ── Notification ──
     try {
       await db.notification.create({
         data: {
           type: 'new_partner',
           title: 'Partner Baru Mendaftar',
-          message: `${name} (${email}) baru saja mendaftar sebagai partner dari ${city}`,
+          message: `${sanitizedName} (${sanitizedEmail}) baru saja mendaftar sebagai partner dari ${sanitizedCity}`,
           data: JSON.stringify({
             partnerId: user.partner?.id,
-            partnerName: name,
-            partnerEmail: email,
-            partnerPhone: phone,
-            partnerCity: city,
+            partnerName: sanitizedName,
+            partnerEmail: sanitizedEmail,
+            partnerPhone: sanitizedPhone,
+            partnerCity: sanitizedCity,
           }),
           targetType: 'owner',
           partnerId: user.partner?.id,
         },
       });
 
-      // Send Telegram notification to owner
       const ownerProfile = await db.ownerProfile.findFirst();
       if (ownerProfile) {
         const notifSettings = await db.notificationSettings.findUnique({
@@ -172,12 +276,12 @@ export async function POST(request: NextRequest) {
             {
               type: 'new_partner',
               title: '🤝 Partner Baru Bergabung',
-              message: `${name} baru saja mendaftar sebagai partner`,
+              message: `${sanitizedName} baru saja mendaftar sebagai partner`,
               additionalData: {
-                'Nama': name,
-                'Email': email,
-                'Telepon': phone,
-                'Kota': city,
+                'Nama': sanitizedName,
+                'Email': sanitizedEmail,
+                'Telepon': sanitizedPhone,
+                'Kota': sanitizedCity,
               },
             }
           );
@@ -185,18 +289,24 @@ export async function POST(request: NextRequest) {
       }
     } catch (notifError) {
       console.error('Failed to create notification:', notifError);
-      // Don't throw - notification failure shouldn't break registration
     }
 
-    // Return user data
+    // ── Return user data ──
     const { password: _, ...userWithoutPassword } = user;
 
-    return NextResponse.json({
-      success: true,
-      user: userWithoutPassword,
-      partner: user.partner,
-      message: 'Registrasi berhasil',
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        user: userWithoutPassword,
+        partner: user.partner,
+        message: 'Registrasi berhasil',
+      },
+      {
+        headers: {
+          'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        },
+      }
+    );
   } catch (error) {
     console.error('Register error:', error);
     return NextResponse.json(

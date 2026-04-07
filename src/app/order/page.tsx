@@ -38,6 +38,15 @@ import {
   Search,
   Package,
   RefreshCw,
+  Info,
+  Lightbulb,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  ClipboardList,
+  Link2,
+  Send,
+  Banknote,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -152,6 +161,132 @@ function StepIndicator({ currentStep, steps }: { currentStep: number; steps: str
   );
 }
 
+// Panduan Gestun (Expandable Guide)
+function GestunGuide() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const gestunSteps = [
+    {
+      icon: <User className="w-4 h-4" />,
+      title: 'Isi data penerima',
+      desc: 'Nama, no HP, dan rekening bank tujuan',
+    },
+    {
+      icon: <CreditCard className="w-4 h-4" />,
+      title: 'Pilih nominal & tipe',
+      desc: 'Pilih nominal gestun dan tipe pembayaran',
+    },
+    {
+      icon: <ClipboardList className="w-4 h-4" />,
+      title: 'Submit order',
+      desc: 'Tunggu admin memverifikasi order Anda',
+    },
+    {
+      icon: <Link2 className="w-4 h-4" />,
+      title: 'Link pembayaran',
+      desc: 'Admin akan memberikan link pembayaran',
+    },
+    {
+      icon: <Wallet className="w-4 h-4" />,
+      title: 'Lakukan pembayaran',
+      desc: 'Bayar via link menggunakan kartu kredit/paylater',
+    },
+    {
+      icon: <Send className="w-4 h-4" />,
+      title: 'Dana dikirim',
+      desc: 'Dana ditransfer ke rekening Anda',
+    },
+  ];
+
+  return (
+    <div className="rounded-2xl overflow-hidden border border-primary/20 bg-gradient-to-r from-primary/5 via-purple-500/5 to-fuchsia-500/5 backdrop-blur-xl animate-fade-in">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center gap-3 p-4 text-left hover:bg-primary/5 transition-colors"
+      >
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 flex items-center justify-center shadow-lg shadow-primary/30 flex-shrink-0">
+          <Info className="w-5 h-5 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm">Panduan Gestun</p>
+          <p className="text-xs text-muted-foreground">Apa itu gestun & cara kerjanya</p>
+        </div>
+        <div className="w-8 h-8 rounded-lg bg-white/50 dark:bg-black/20 flex items-center justify-center flex-shrink-0">
+          {isOpen ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          )}
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="px-4 pb-4 space-y-4 animate-fade-in">
+          {/* Apa itu Gestun */}
+          <div className="p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-primary/10">
+            <div className="flex items-center gap-2 mb-2">
+              <Lightbulb className="w-4 h-4 text-amber-500" />
+              <p className="text-sm font-semibold">Apa itu Gestun?</p>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              <span className="font-medium text-foreground">Gestun (Gesek Tunai)</span> adalah layanan tarik tunai dari kartu kredit atau paylater. Anda melakukan pembayaran via link yang diberikan admin, kemudian dana dikirim ke rekening Anda.
+            </p>
+          </div>
+
+          {/* Cara Kerja Gestun */}
+          <div className="p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-primary/10">
+            <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              Cara Kerja Gestun
+            </p>
+            <div className="space-y-0">
+              {gestunSteps.map((step, index) => (
+                <div key={index} className="flex items-start gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary/20 to-fuchsia-500/20 flex items-center justify-center text-primary text-xs font-bold flex-shrink-0">
+                      {index + 1}
+                    </div>
+                    {index < gestunSteps.length - 1 && (
+                      <div className="w-px h-full min-h-[24px] bg-gradient-to-b from-primary/30 to-transparent" />
+                    )}
+                  </div>
+                  <div className="pb-4">
+                    <p className="text-sm font-medium">{step.title}</p>
+                    <p className="text-xs text-muted-foreground">{step.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Catatan Penting */}
+          <div className="p-3 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">Catatan Penting</p>
+            </div>
+            <ul className="text-xs text-muted-foreground space-y-1.5 list-none">
+              <li className="flex items-start gap-2">
+                <div className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                Pastikan data rekening bank yang Anda masukkan sudah benar
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                Proses gestun menggunakan metode pembayaran kartu kredit atau paylater yang Anda pilih
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                Biaya layanan akan dipotong dari nominal gestun
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Step 1: Recipient Data
 function StepRecipient({ 
   formData, 
@@ -229,6 +364,19 @@ function StepRecipient({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Step Tip */}
+        <div className="flex items-start gap-3 p-3 rounded-xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20 animate-fade-in">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20 flex-shrink-0">
+            <Lightbulb className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-0.5">Tips Langkah 1</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Pastikan nomor WhatsApp aktif untuk menerima notifikasi dan data rekening bank valid untuk menerima dana.
+            </p>
+          </div>
+        </div>
+
         {/* Returning Customer Section */}
         <div className="p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20">
           <div className="flex items-center gap-2 mb-3">
@@ -289,8 +437,9 @@ function StepRecipient({
             <Input
               placeholder="Nama lengkap"
               value={formData.name}
-              onChange={(e) => onChange('name', e.target.value)}
+              onChange={(e) => onChange('name', e.target.value.slice(0, 100))}
               className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
+              maxLength={100}
             />
           </div>
           <div className="space-y-2">
@@ -302,8 +451,9 @@ function StepRecipient({
               type="tel"
               placeholder="08xxxxxxxxxx"
               value={formData.phone}
-              onChange={(e) => onChange('phone', e.target.value)}
+              onChange={(e) => onChange('phone', e.target.value.replace(/[^0-9]/g, '').slice(0, 15))}
               className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
+              maxLength={15}
             />
           </div>
         </div>
@@ -360,9 +510,10 @@ function StepRecipient({
             <Input
               placeholder="Nomor rekening"
               value={formData.bankAccount}
-              onChange={(e) => onChange('bankAccount', e.target.value)}
+              onChange={(e) => onChange('bankAccount', e.target.value.replace(/[^0-9]/g, '').slice(0, 20))}
               className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
               inputMode="numeric"
+              maxLength={20}
             />
           </div>
         </div>
@@ -373,8 +524,9 @@ function StepRecipient({
             <Input
               placeholder="Nama pemilik rekening"
               value={formData.bankHolder}
-              onChange={(e) => onChange('bankHolder', e.target.value)}
+              onChange={(e) => onChange('bankHolder', e.target.value.slice(0, 100))}
               className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
+              maxLength={100}
             />
           </div>
           <div className="space-y-2">
@@ -433,6 +585,19 @@ function StepTransaction({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Step Tip */}
+        <div className="flex items-start gap-3 p-3 rounded-xl bg-gradient-to-r from-fuchsia-500/10 to-pink-500/10 border border-fuchsia-500/20 animate-fade-in">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center shadow-lg shadow-fuchsia-500/20 flex-shrink-0">
+            <Lightbulb className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-fuchsia-700 dark:text-fuchsia-400 mb-0.5">Tips Langkah 2</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Pilih tipe pembayaran sesuai kartu yang Anda miliki (kartu kredit/paylater). Fee akan otomatis dihitung berdasarkan nominal.
+            </p>
+          </div>
+        </div>
+
         {/* Nominal */}
         <div className="space-y-2">
           <Label className="text-sm font-medium flex items-center gap-2">
@@ -586,7 +751,8 @@ function StepCalculation({
   loading,
   partnerInfo,
   onBack,
-  onSubmit 
+  onSubmit,
+  submitCooldown
 }: { 
   formData: Record<string, string>;
   paymentTypes: PaymentType[];
@@ -595,6 +761,7 @@ function StepCalculation({
   partnerInfo: { id: string; name: string; tier: string } | null;
   onBack: () => void;
   onSubmit: () => void;
+  submitCooldown: number;
 }) {
   const paymentType = paymentTypes.find((p) => p.id === formData.paymentTypeId);
   const nominal = parseFloat(formData.nominal) || 0;
@@ -604,6 +771,19 @@ function StepCalculation({
 
   return (
     <div className="space-y-4">
+      {/* Step Tip */}
+      <div className="flex items-start gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-violet-500/10 border border-purple-500/20 animate-fade-in">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-violet-500 flex items-center justify-center shadow-lg shadow-purple-500/20 flex-shrink-0">
+          <Lightbulb className="w-4 h-4 text-white" />
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 mb-0.5">Tips Langkah 3</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Periksa kembali nominal dan biaya layanan. Setelah order dibuat, tim kami akan segera memproses dan mengirimkan link pembayaran.
+          </p>
+        </div>
+      </div>
+
       {/* Calculation Card */}
       <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-2xl shadow-primary/10">
         <div className="h-1.5 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
@@ -699,13 +879,18 @@ function StepCalculation({
         <Button
           type="button"
           onClick={onSubmit}
-          disabled={loading}
+          disabled={loading || submitCooldown > 0}
           className="flex-1 h-12 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg shadow-green-500/30 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
         >
           {loading ? (
             <>
               <Loader2 className="w-5 h-5 mr-2 animate-spin" />
               Memproses...
+            </>
+          ) : submitCooldown > 0 ? (
+            <>
+              <Clock className="w-5 h-5 mr-2" />
+              Tunggu {submitCooldown}s
             </>
           ) : (
             <>
@@ -771,6 +956,40 @@ function SuccessScreen({ orderId }: { orderId: string }) {
             </div>
           </div>
           
+          {/* Next Steps */}
+          <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-cyan-500/5 border border-emerald-500/20 animate-fade-in">
+            <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <ClipboardList className="w-4 h-4 text-emerald-500" />
+              Langkah Selanjutnya:
+            </p>
+            <div className="space-y-2.5">
+              <div className="flex items-start gap-2.5">
+                <div className="w-5 h-5 rounded-md bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-[10px] font-bold text-white">1</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Tim kami akan memverifikasi order Anda</p>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div className="w-5 h-5 rounded-md bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-[10px] font-bold text-white">2</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Link pembayaran akan dikirim melalui halaman track order</p>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div className="w-5 h-5 rounded-md bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-[10px] font-bold text-white">3</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Lakukan pembayaran menggunakan kartu kredit/paylater yang Anda pilih</p>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div className="w-5 h-5 rounded-md bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-[10px] font-bold text-white">4</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Dana akan dikirim ke rekening Anda setelah pembayaran dikonfirmasi</p>
+              </div>
+            </div>
+          </div>
+
           <div className="flex flex-col gap-3 mt-6">
             <Button asChild className="h-12 rounded-xl bg-gradient-to-r from-primary to-fuchsia-500 hover:from-primary/90 hover:to-fuchsia-500/90 text-white shadow-lg shadow-primary/30">
               <Link href={`/track?orderId=${orderId}`}>
@@ -808,6 +1027,11 @@ function OrderPage() {
   const [success, setSuccess] = useState(false);
   const [orderId, setOrderId] = useState('');
 
+  // Security: Honeypot & Cooldown
+  const [honeypotValue, setHoneypotValue] = useState('');
+  const [submitCooldown, setSubmitCooldown] = useState(0);
+  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Partner referral from URL
   const [partnerInfo, setPartnerInfo] = useState<{ id: string; name: string; tier: string } | null>(null);
   const [partnerWarning, setPartnerWarning] = useState<string | null>(null);
@@ -829,6 +1053,13 @@ function OrderPage() {
     methodTransaction: 'Online' as 'Online' | 'COD',
     city: '',
   });
+
+  // Cleanup cooldown timer on unmount
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+    };
+  }, []);
 
   // Fetch payment types + partner info
   useEffect(() => {
@@ -899,10 +1130,51 @@ function OrderPage() {
 
   const handleSubmit = async () => {
     setError('');
-    setLoading(true);
+
+    // Security: Cooldown check
+    if (submitCooldown > 0) {
+      setError(`Tunggu ${submitCooldown} detik sebelum submit ulang`);
+      return;
+    }
+
+    // Security: Enhanced client-side validation
+    if (!formData.name || formData.name.trim().length < 2) {
+      setError('Nama minimal 2 karakter');
+      setCurrentStep(0);
+      return;
+    }
+    if (formData.name.length > 100) {
+      setError('Nama maksimal 100 karakter');
+      setCurrentStep(0);
+      return;
+    }
+    if (!formData.phone || !/^08[0-9]{8,12}$/.test(formData.phone)) {
+      setError('Format nomor WhatsApp tidak valid (contoh: 08xxx)');
+      setCurrentStep(0);
+      return;
+    }
+    if (formData.bankAccount && (formData.bankAccount.length < 5 || formData.bankAccount.length > 20)) {
+      setError('Nomor rekening harus 5-20 digit');
+      setCurrentStep(0);
+      return;
+    }
+
+    const nominal = parseFloat(formData.nominal);
+    if (isNaN(nominal) || nominal < 10000) {
+      setError('Minimal nominal Rp 10.000');
+      setCurrentStep(1);
+      return;
+    }
+    if (nominal > 100000000) {
+      setError('Maksimal nominal Rp 100.000.000');
+      setCurrentStep(1);
+      return;
+    }
 
     // Determine the actual bank value
     const actualBank = formData.bank === 'Lainnya' ? formData.bankCustom : formData.bank;
+
+    setLoading(true);
 
     try {
       const response = await fetch('/api/orders', {
@@ -911,12 +1183,21 @@ function OrderPage() {
         body: JSON.stringify({
           ...formData,
           bank: actualBank,
-          nominal: parseFloat(formData.nominal),
+          nominal,
           partnerId: partnerInfo?.id || undefined,
+          // Honeypot field - bots will fill this
+          website: honeypotValue,
         }),
       });
 
       const data = await response.json();
+
+      // Handle rate limit (429)
+      if (response.status === 429) {
+        setError(data.error || 'Terlalu banyak request. Tunggu beberapa saat.');
+        setLoading(false);
+        return;
+      }
 
       if (!response.ok || !data.success) {
         setError(data.error || 'Gagal membuat order');
@@ -926,6 +1207,18 @@ function OrderPage() {
 
       setOrderId(data.data.orderId);
       setSuccess(true);
+
+      // Start cooldown timer (30 seconds)
+      setSubmitCooldown(30);
+      cooldownTimerRef.current = setInterval(() => {
+        setSubmitCooldown(prev => {
+          if (prev <= 1) {
+            if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     } catch {
       setError('Terjadi kesalahan. Silakan coba lagi.');
       setLoading(false);
@@ -973,6 +1266,9 @@ function OrderPage() {
         <div className="max-w-lg mx-auto space-y-5">
           {/* Step Indicator */}
           <StepIndicator currentStep={currentStep} steps={steps} />
+
+          {/* Panduan Gestun */}
+          <GestunGuide />
 
           {/* Quick Info */}
           <div className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-primary/5 via-purple-500/5 to-fuchsia-500/5 border border-primary/10 backdrop-blur-xl animate-fade-in">
@@ -1051,8 +1347,28 @@ function OrderPage() {
               partnerInfo={partnerInfo}
               onBack={() => setCurrentStep(1)}
               onSubmit={handleSubmit}
+              submitCooldown={submitCooldown}
             />
           )}
+
+          {/* Honeypot field - hidden from real users, bots will fill it */}
+          <div
+            aria-hidden="true"
+            style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, height: 0, overflow: 'hidden' }}
+            tabIndex={-1}
+            autoComplete="off"
+          >
+            <label htmlFor="website">Jangan isi field ini</label>
+            <input
+              type="text"
+              id="website"
+              name="website"
+              value={honeypotValue}
+              onChange={(e) => setHoneypotValue(e.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -25,8 +25,13 @@ import {
   MessageCircle,
   Wifi,
   HelpCircle as HelpCircleIcon,
+  CheckCircle2,
+  Globe,
+  Store,
+  Banknote,
 } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
+import { formatCurrency } from '@/lib/utils';
 import { OrganizationJsonLd, FAQJsonLd } from '@/components/seo/json-ld';
 import TestimonialsSection from '@/components/testimonials-section';
 
@@ -83,6 +88,17 @@ interface FAQ {
   question: string;
   answer: string;
   category: string;
+}
+
+interface PaymentType {
+  id: string;
+  name: string;
+  onlineFeePercent: number;
+  onlineFeeFlat: number;
+  codFeePercent: number;
+  codFeeFlat: number;
+  threshold: number;
+  isActive: boolean;
 }
 
 // Credit Card Visual Component - More Compact
@@ -228,6 +244,8 @@ export default function LandingPage() {
   const { config, getInitials } = useSiteConfig();
   const [logoError, setLogoError] = useState(false);
   const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
+  const [paymentTypesLoading, setPaymentTypesLoading] = useState(true);
   
   const siteName = config.websiteTitle || 'Black Bear';
 
@@ -245,6 +263,24 @@ export default function LandingPage() {
       }
     };
     fetchFAQs();
+  }, []);
+
+  // Fetch active payment types
+  useEffect(() => {
+    const fetchPaymentTypes = async () => {
+      try {
+        const response = await fetch('/api/payment-types?activeOnly=true');
+        const result = await response.json();
+        if (result.success && result.data) {
+          setPaymentTypes(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch payment types:', error);
+      } finally {
+        setPaymentTypesLoading(false);
+      }
+    };
+    fetchPaymentTypes();
   }, []);
 
   return (
@@ -382,8 +418,108 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Payment Types Section - Tipe Gestun Tersedia */}
+      <section className="relative py-10 sm:py-12 lg:py-16 bg-muted/30 backdrop-blur-sm z-10" aria-labelledby="payment-types-heading">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-3">
+              <CreditCard className="w-3 h-3" aria-hidden="true" />
+              <span>Gestun Tersedia</span>
+            </div>
+            <h2 id="payment-types-heading" className="text-xl sm:text-2xl font-bold mb-2">Tipe Gestun Tersedia</h2>
+            <p className="text-muted-foreground text-xs sm:text-sm max-w-md mx-auto">
+              Pilih metode gestun sesuai kebutuhan Anda
+            </p>
+          </div>
+
+          {paymentTypesLoading ? (
+            <div className="max-w-4xl mx-auto">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="rounded-lg border border-border/50 bg-card p-3 sm:p-4 animate-pulse">
+                    <div className="w-10 h-10 rounded-lg bg-muted mb-3" />
+                    <div className="h-4 bg-muted rounded w-3/4 mb-2" />
+                    <div className="flex gap-2 mb-2">
+                      <div className="h-5 bg-muted rounded-full w-16" />
+                      <div className="h-5 bg-muted rounded-full w-16" />
+                    </div>
+                    <div className="h-5 bg-muted rounded-full w-16" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : paymentTypes.length > 0 ? (
+            <div className="max-w-4xl mx-auto">
+              {/* Total count indicator */}
+              <div className="flex items-center justify-center gap-2 mb-5">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>{paymentTypes.length} tipe gestun tersedia</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4" role="list">
+                {paymentTypes.map((pt) => {
+                  const isKartuKredit = pt.name.toLowerCase().includes('kartu') || pt.name.toLowerCase().includes('credit');
+                  const isPaylater = pt.name.toLowerCase().includes('paylater') || pt.name.toLowerCase().includes('akulaku');
+                  const CardIcon = isPaylater ? Wallet : isKartuKredit ? CreditCard : Banknote;
+
+                  return (
+                    <li key={pt.id} role="listitem">
+                      <Card className="border-border/50 hover:border-primary/30 hover:shadow-md transition-all duration-300 group h-full">
+                        <CardContent className="p-3 sm:p-4">
+                          {/* Icon & Available Badge */}
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                              <CardIcon className="w-5 h-5 text-primary" aria-hidden="true" />
+                            </div>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold">
+                              <CheckCircle2 className="w-3 h-3" aria-hidden="true" />
+                              Tersedia
+                            </span>
+                          </div>
+
+                          {/* Name */}
+                          <h3 className="font-semibold text-sm sm:text-base mb-3 leading-tight">{pt.name}</h3>
+
+                          {/* Fee Badges */}
+                          <div className="flex flex-wrap gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-medium">
+                              <Globe className="w-3 h-3" aria-hidden="true" />
+                              Online {pt.onlineFeePercent}%
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-medium">
+                              <Store className="w-3 h-3" aria-hidden="true" />
+                              COD {pt.codFeePercent}%
+                            </span>
+                          </div>
+
+                          {/* Threshold info */}
+                          {pt.threshold > 0 && (
+                            <p className="text-[10px] text-muted-foreground mt-2">
+                              Min. {formatCurrency(pt.threshold)}
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </li>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="max-w-4xl mx-auto text-center py-8">
+              <div className="w-14 h-14 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                <CreditCard className="w-7 h-7 text-muted-foreground" aria-hidden="true" />
+              </div>
+              <p className="text-muted-foreground text-sm">Belum ada tipe gestun tersedia</p>
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* How It Works Section - Compact */}
-      <section className="relative py-10 sm:py-12 lg:py-16 bg-muted/30 backdrop-blur-sm z-10" aria-labelledby="how-it-works-heading">
+      <section className="relative py-10 sm:py-12 lg:py-16 z-10" aria-labelledby="how-it-works-heading">
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
             <h2 id="how-it-works-heading" className="text-xl sm:text-2xl font-bold mb-2">Cara Kerja</h2>

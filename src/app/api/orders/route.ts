@@ -3,10 +3,64 @@ import { db, toNumber } from '@/lib/db';
 import { generateOrderId, calculatePaymentFee } from '@/lib/auth';
 import { sendTelegramNotification, formatCurrency } from '@/lib/telegram';
 import { checkCustomerDuplicate, normalizePhone } from '@/lib/customer-utils';
+import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
+import { 
+  sanitizeName, 
+  sanitizePhone, 
+  sanitizeBankAccount, 
+  sanitizeCity,
+  sanitizeString,
+  validateLength, 
+  validateNominal, 
+  isValidUuid, 
+  isValidMethodTransaction,
+  isHoneypotTriggered,
+  FIELD_LIMITS
+} from '@/lib/sanitize';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // ── Rate Limiting ──
+    const clientIp = getClientIp(request);
+    const rateLimitResult = checkRateLimit(clientIp, RATE_LIMITS.ORDER_CREATE);
+    
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Terlalu banyak request. Coba lagi dalam ${rateLimitResult.retryAfter} detik.` 
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter),
+            'X-RateLimit-Remaining': '0',
+          }
+        }
+      );
+    }
+
+    // ── Request Body Validation ──
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Format request tidak valid' },
+        { status: 400 }
+      );
+    }
+
+    // ── Honeypot Check (anti-bot) ──
+    if (isHoneypotTriggered(body.website, body.honeypot, body.url)) {
+      // Silently reject bots - return success to not reveal the trap
+      return NextResponse.json({
+        success: true,
+        data: { orderId: 'BB-PENDING', status: 'pending' },
+        message: 'Order diterima, sedang diproses',
+      });
+    }
+
     const {
       name,
       phone,
@@ -20,24 +74,99 @@ export async function POST(request: NextRequest) {
       partnerId,
     } = body;
 
-    // Validation
-    if (!name || !phone || !nominal || !paymentTypeId || !methodTransaction) {
+    // ── Input Sanitization ──
+    const sanitizedName = sanitizeName(name);
+    const sanitizedPhone = sanitizePhone(phone);
+    const sanitizedBank = typeof bank === 'string' ? sanitizeString(bank) : '';
+    const sanitizedBankAccount = sanitizeBankAccount(bankAccount);
+    const sanitizedBankHolder = sanitizeName(bankHolder);
+    const sanitizedCity = sanitizeCity(city);
+    const sanitizedPartnerId = typeof partnerId === 'string' ? partnerId.trim() : '';
+
+    // ── Required Field Validation ──
+    if (!sanitizedName || !sanitizedPhone || !nominal || !paymentTypeId || !methodTransaction) {
       return NextResponse.json(
-        { success: false, error: 'Field wajib harus diisi' },
+        { success: false, error: 'Field wajib harus diisi: nama, no HP, nominal, tipe pembayaran, metode transaksi' },
         { status: 400 }
       );
     }
 
-    if (nominal <= 0) {
+    // ── Field Length Validation ──
+    const nameCheck = validateLength(sanitizedName, FIELD_LIMITS.NAME_MIN, FIELD_LIMITS.NAME_MAX);
+    if (!nameCheck.valid) {
+      return NextResponse.json({ success: false, error: `Nama: ${nameCheck.error}` }, { status: 400 });
+    }
+
+    const phoneCheck = validateLength(sanitizedPhone, FIELD_LIMITS.PHONE_MIN, FIELD_LIMITS.PHONE_MAX);
+    if (!phoneCheck.valid) {
+      return NextResponse.json({ success: false, error: `No HP: ${phoneCheck.error}` }, { status: 400 });
+    }
+
+    if (sanitizedBank) {
+      const bankCheck = validateLength(sanitizedBank, 1, FIELD_LIMITS.BANK_NAME_MAX);
+      if (!bankCheck.valid) {
+        return NextResponse.json({ success: false, error: `Bank: ${bankCheck.error}` }, { status: 400 });
+      }
+    }
+
+    if (sanitizedBankAccount) {
+      const bankAcctCheck = validateLength(sanitizedBankAccount, FIELD_LIMITS.BANK_ACCOUNT_MIN, FIELD_LIMITS.BANK_ACCOUNT_MAX);
+      if (!bankAcctCheck.valid) {
+        return NextResponse.json({ success: false, error: `No Rekening: ${bankAcctCheck.error}` }, { status: 400 });
+      }
+    }
+
+    if (sanitizedBankHolder) {
+      const bankHolderCheck = validateLength(sanitizedBankHolder, FIELD_LIMITS.NAME_MIN, FIELD_LIMITS.BANK_HOLDER_MAX);
+      if (!bankHolderCheck.valid) {
+        return NextResponse.json({ success: false, error: `Nama Rekening: ${bankHolderCheck.error}` }, { status: 400 });
+      }
+    }
+
+    if (sanitizedCity) {
+      const cityCheck = validateLength(sanitizedCity, 2, FIELD_LIMITS.CITY_MAX);
+      if (!cityCheck.valid) {
+        return NextResponse.json({ success: false, error: `Kota: ${cityCheck.error}` }, { status: 400 });
+      }
+    }
+
+    // ── Nominal Validation ──
+    const nominalResult = validateNominal(nominal);
+    if (!nominalResult.valid || !nominalResult.value) {
       return NextResponse.json(
-        { success: false, error: 'Nominal harus lebih dari 0' },
+        { success: false, error: nominalResult.error || 'Nominal tidak valid' },
+        { status: 400 }
+      );
+    }
+    const safeNominal = nominalResult.value;
+
+    // ── Payment Type ID Validation ──
+    if (!isValidUuid(String(paymentTypeId))) {
+      return NextResponse.json(
+        { success: false, error: 'Tipe pembayaran tidak valid' },
         { status: 400 }
       );
     }
 
-    // Get payment type
+    // ── Method Transaction Validation ──
+    if (!isValidMethodTransaction(String(methodTransaction))) {
+      return NextResponse.json(
+        { success: false, error: 'Metode transaksi tidak valid' },
+        { status: 400 }
+      );
+    }
+
+    // ── Partner ID Validation (optional) ──
+    if (sanitizedPartnerId && !isValidUuid(sanitizedPartnerId)) {
+      return NextResponse.json(
+        { success: false, error: 'ID partner tidak valid' },
+        { status: 400 }
+      );
+    }
+
+    // ── Get payment type ──
     const paymentType = await db.paymentType.findUnique({
-      where: { id: paymentTypeId },
+      where: { id: String(paymentTypeId) },
     });
 
     if (!paymentType) {
@@ -47,10 +176,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate payment fee
-    // Convert Decimal values to numbers for PostgreSQL compatibility
+    // ── Calculate payment fee ──
     const paymentFee = calculatePaymentFee(
-      toNumber(nominal),
+      safeNominal,
       {
         onlineFeePercent: toNumber(paymentType.onlineFeePercent),
         onlineFeeFlat: toNumber(paymentType.onlineFeeFlat),
@@ -58,83 +186,80 @@ export async function POST(request: NextRequest) {
         codFeeFlat: toNumber(paymentType.codFeeFlat),
         threshold: toNumber(paymentType.threshold),
       },
-      methodTransaction
+      String(methodTransaction) as 'Online' | 'COD'
     );
-    const totalReceived = toNumber(nominal) - paymentFee;
+    const totalReceived = safeNominal - paymentFee;
 
-    // Normalize phone and check for existing customer
-    const normalizedPhone = normalizePhone(phone);
-    const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, name);
+    // ── Normalize phone and check for existing customer ──
+    const normalizedPhone = normalizePhone(sanitizedPhone);
+    const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, sanitizedName);
     
     let customer;
     
     if (duplicateCheck.isDuplicate && duplicateCheck.existingCustomer) {
-      // Update existing customer with new info
       customer = await db.customer.update({
         where: { id: duplicateCheck.existingCustomer.id },
         data: {
-          name, // Update name
+          name: sanitizedName,
           phone: normalizedPhone,
-          bankName: bank || duplicateCheck.existingCustomer.bankName,
-          bankAccount: bankAccount || duplicateCheck.existingCustomer.bankAccount,
-          bankHolder: bankHolder || duplicateCheck.existingCustomer.bankHolder,
-          city: city || duplicateCheck.existingCustomer.city,
-          // Increment customer stats for new transaction
-          totalVolume: { increment: nominal },
+          bankName: sanitizedBank || duplicateCheck.existingCustomer.bankName,
+          bankAccount: sanitizedBankAccount || duplicateCheck.existingCustomer.bankAccount,
+          bankHolder: sanitizedBankHolder || duplicateCheck.existingCustomer.bankHolder,
+          city: sanitizedCity || duplicateCheck.existingCustomer.city,
+          totalVolume: { increment: safeNominal },
           totalTransactions: { increment: 1 },
         },
       });
     } else {
-      // Create new customer
       customer = await db.customer.create({
         data: {
-          name,
+          name: sanitizedName,
           phone: normalizedPhone,
-          bankName: bank || null,
-          bankAccount: bankAccount || null,
-          bankHolder: bankHolder || null,
-          city: city || null,
+          bankName: sanitizedBank || null,
+          bankAccount: sanitizedBankAccount || null,
+          bankHolder: sanitizedBankHolder || null,
+          city: sanitizedCity || null,
           label: 'New',
           addedBy: 'public',
-          totalVolume: nominal,
+          totalVolume: safeNominal,
           totalTransactions: 1,
         },
       });
     }
 
-    // Validate partner if provided
+    // ── Validate partner if provided ──
     let partnerData = null;
     let partnerRate = 0;
-    if (partnerId) {
+    if (sanitizedPartnerId) {
       partnerData = await db.partner.findUnique({
-        where: { id: partnerId },
+        where: { id: sanitizedPartnerId },
       });
       if (partnerData && partnerData.status === 'active') {
         partnerRate = Number(partnerData.commission) || 0;
       }
     }
 
-    // Calculate partner profit if partner is assigned
+    // ── Calculate partner profit ──
     const partnerProfitAmount = partnerData && partnerRate > 0 ? paymentFee * (partnerRate / 100) : 0;
     const ownerProfitAmount = paymentFee - partnerProfitAmount;
 
-    // Generate order ID
+    // ── Generate order ID ──
     const orderId = generateOrderId();
 
-    // Create transaction
+    // ── Create transaction ──
     const transaction = await db.transaction.create({
       data: {
         orderId,
         customerId: customer.id,
-        nominal,
+        nominal: safeNominal,
         paymentFee,
         platformFee: 0,
         netMargin: paymentFee,
         partnerProfit: partnerProfitAmount,
         ownerProfit: ownerProfitAmount,
         totalReceived,
-        paymentTypeId,
-        methodTransaction,
+        paymentTypeId: String(paymentTypeId),
+        methodTransaction: String(methodTransaction),
         status: 'pending',
         partnerId: partnerData?.id || null,
       },
@@ -145,18 +270,18 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Create notification for owner about new public order
+    // ── Notification ──
     try {
       await db.notification.create({
         data: {
           type: 'new_order',
           title: 'Order Baru dari Public',
-          message: `Order ${orderId} dari ${name} - ${formatCurrency(toNumber(nominal))}`,
+          message: `Order ${orderId} dari ${sanitizedName} - ${formatCurrency(toNumber(safeNominal))}`,
           data: JSON.stringify({
             orderId,
-            customerName: name,
+            customerName: sanitizedName,
             customerPhone: normalizedPhone,
-            nominal,
+            nominal: safeNominal,
             paymentType: paymentType.name,
             methodTransaction,
           }),
@@ -165,7 +290,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Send Telegram notification to owner
       const ownerProfile = await db.ownerProfile.findFirst();
       if (ownerProfile) {
         const notifSettings = await db.notificationSettings.findUnique({
@@ -181,13 +305,13 @@ export async function POST(request: NextRequest) {
               title: '💳 Order Baru dari Public',
               message: `Order ID: ${orderId}`,
               additionalData: {
-                'Pelanggan': name,
+                'Pelanggan': sanitizedName,
                 'Telepon': normalizedPhone,
-                'Nominal': formatCurrency(toNumber(nominal)),
+                'Nominal': formatCurrency(toNumber(safeNominal)),
                 'Fee': formatCurrency(paymentFee),
                 'Tipe': paymentType.name,
-            'Metode': methodTransaction,
-            ...(partnerData ? { 'Partner': partnerData.name } : {}),
+                'Metode': String(methodTransaction),
+                ...(partnerData ? { 'Partner': partnerData.name } : {}),
               },
             }
           );
@@ -195,24 +319,30 @@ export async function POST(request: NextRequest) {
       }
     } catch (notifError) {
       console.error('Failed to create notification:', notifError);
-      // Don't throw - notification failure shouldn't break order creation
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        orderId: transaction.orderId,
-        nominal: transaction.nominal,
-        paymentFee: transaction.paymentFee,
-        totalReceived: transaction.totalReceived,
-        status: transaction.status,
-        customer: transaction.customer,
-        paymentType: transaction.paymentType.name,
-        methodTransaction: transaction.methodTransaction,
-        createdAt: transaction.createdAt,
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          orderId: transaction.orderId,
+          nominal: transaction.nominal,
+          paymentFee: transaction.paymentFee,
+          totalReceived: transaction.totalReceived,
+          status: transaction.status,
+          customer: transaction.customer,
+          paymentType: transaction.paymentType.name,
+          methodTransaction: transaction.methodTransaction,
+          createdAt: transaction.createdAt,
+        },
+        message: 'Order berhasil dibuat',
       },
-      message: 'Order berhasil dibuat',
-    });
+      {
+        headers: {
+          'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        },
+      }
+    );
   } catch (error) {
     console.error('Create order error:', error);
     return NextResponse.json(

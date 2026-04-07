@@ -42,6 +42,13 @@ import {
   CreditCard,
   Quote,
   Globe,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  Lightbulb,
+  Shield,
+  MessageCircle,
+  Wallet,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import Link from 'next/link';
@@ -65,6 +72,8 @@ export default function PartnerDashboardPage() {
   const [error, setError] = useState('');
   const [selectedBroadcast, setSelectedBroadcast] = useState<Announcement | null>(null);
   const [selectedPromo, setSelectedPromo] = useState<Announcement | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [insightOpen, setInsightOpen] = useState(false);
   const redirectAttempted = useRef(false);
 
   // Recent transactions & testimonials state
@@ -396,6 +405,216 @@ export default function PartnerDashboardPage() {
         />
       </div>
 
+      {/* Panduan Partner - Quick Guide Card */}
+      <Card className="glass-card animate-slide-up overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-teal-500 via-emerald-500 to-green-500" />
+        <button
+          className="w-full text-left"
+          onClick={() => setGuideOpen(!guideOpen)}
+        >
+          <CardHeader className="pb-2 cursor-pointer">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-teal-500" />
+                Panduan Partner
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Badge className="bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 text-[10px]">
+                  {guideOpen ? 'Tutup' : 'Buka'}
+                </Badge>
+                {guideOpen ? (
+                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                )}
+              </div>
+            </div>
+            <CardDescription className="text-[10px] sm:text-xs">
+              Apa itu Tugas Partner?
+            </CardDescription>
+          </CardHeader>
+        </button>
+        {guideOpen && (
+          <CardContent className="px-3 sm:px-6 pb-4 pt-0">
+            <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-900/10 dark:to-emerald-900/10 border border-teal-200/50 dark:border-teal-800/30">
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-3">
+                Sebagai partner, tugas Anda adalah membantu customer melakukan{' '}
+                <strong className="text-foreground">gestun (tarik tunai dari kartu kredit/paylater)</strong>.{' '}
+                Setiap transaksi yang berhasil akan memberikan Anda komisi.
+              </p>
+
+              <div className="space-y-2.5">
+                <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-md bg-teal-500 text-white flex items-center justify-center text-[10px] font-bold">1</span>
+                  Langkah Kerja Partner
+                </p>
+                <div className="space-y-2 ml-1">
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <span className="mt-0.5">🔍</span>
+                    <span>Cari customer yang butuh dana cepat (teman, keluarga, kenalan)</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <span className="mt-0.5">💬</span>
+                    <span>Jelaskan layanan gestun dan tawarkan bantuan Anda</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <span className="mt-0.5">📋</span>
+                    <span>Bantu customer buat order melalui link pribadi Anda</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <span className="mt-0.5">⏳</span>
+                    <span>Tunggu admin memverifikasi dan mengirimkan link pembayaran</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <span className="mt-0.5">💸</span>
+                    <span>Customer bayar via link menggunakan kartu kredit/paylater</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <span className="mt-0.5">✅</span>
+                    <span>Dana dikirim ke rekening customer, Anda dapat komisi!</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 pt-3 border-t border-teal-200/50 dark:border-teal-800/30">
+                <p className="text-[10px] font-semibold text-foreground flex items-center gap-1.5 mb-2">
+                  <Lightbulb className="w-3 h-3 text-amber-500" />
+                  Tips Penting
+                </p>
+                <ul className="space-y-1.5 ml-1">
+                  <li className="flex items-start gap-2 text-[10px] sm:text-xs text-muted-foreground">
+                    <span className="mt-0.5 text-teal-500">•</span>
+                    Pastikan customer punya kartu kredit atau akun paylater aktif
+                  </li>
+                  <li className="flex items-start gap-2 text-[10px] sm:text-xs text-muted-foreground">
+                    <span className="mt-0.5 text-teal-500">•</span>
+                    Jelaskan biaya layanan dengan transparansi sebelum order
+                  </li>
+                  <li className="flex items-start gap-2 text-[10px] sm:text-xs text-muted-foreground">
+                    <span className="mt-0.5 text-teal-500">•</span>
+                    Gunakan link pribadi Anda agar transaksi otomatis tercatat atas nama Anda
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Insight Cerdas - Smart Selling Tips */}
+      <Card className="glass-card animate-slide-up stagger-1 overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500" />
+        <button
+          className="w-full text-left"
+          onClick={() => setInsightOpen(!insightOpen)}
+        >
+          <CardHeader className="pb-2 cursor-pointer">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <Lightbulb className="w-4 h-4 text-amber-500" />
+                Insight Cerdas
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Badge className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[10px]">
+                  {insightOpen ? 'Tutup' : '6 Tips'}
+                </Badge>
+                {insightOpen ? (
+                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                )}
+              </div>
+            </div>
+            <CardDescription className="text-[10px] sm:text-xs">
+              Cara Menawarkan Gestun ke Customer
+            </CardDescription>
+          </CardHeader>
+        </button>
+        {insightOpen && (
+          <CardContent className="px-3 sm:px-6 pb-4 pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+              {/* Tip 1 */}
+              <div className="p-3 rounded-xl bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-900/10 dark:to-orange-900/10 border border-rose-200/50 dark:border-rose-800/30">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-md">
+                    <Target className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <p className="text-[11px] sm:text-xs font-semibold leading-tight">Targetkan Saat Butuh Dana Darurat</p>
+                </div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
+                  Orang paling butuh gestun saat: kebutuhan mendesak, bayar kuliah, modal usaha, biaya medis, dll. Tawarkan solusi cepat!
+                </p>
+              </div>
+
+              {/* Tip 2 */}
+              <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/10 dark:to-teal-900/10 border border-emerald-200/50 dark:border-emerald-800/30">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0 shadow-md">
+                    <Shield className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <p className="text-[11px] sm:text-xs font-semibold leading-tight">Gestun vs Pinjol</p>
+                </div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
+                  Gestun lebih menguntungkan: tanpa bunga cicilan, tanpa BI checking, proses cepat, langsung cair ke rekening. Beda dengan pinjol yang bunganya tinggi!
+                </p>
+              </div>
+
+              {/* Tip 3 */}
+              <div className="p-3 rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10 border border-amber-200/50 dark:border-amber-800/30">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center flex-shrink-0 shadow-md">
+                    <Star className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <p className="text-[11px] sm:text-xs font-semibold leading-tight">Manfaatkan Testimoni & Rating</p>
+                </div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
+                  Bagikan testimoni customer puas Anda untuk bangun kepercayaan. Rating tinggi = lebih banyak customer percaya!
+                </p>
+              </div>
+
+              {/* Tip 4 */}
+              <div className="p-3 rounded-xl bg-gradient-to-br from-sky-50 to-cyan-50 dark:from-sky-900/10 dark:to-cyan-900/10 border border-sky-200/50 dark:border-sky-800/30">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-400 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-md">
+                    <Wallet className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <p className="text-[11px] sm:text-xs font-semibold leading-tight">Tawarkan COD untuk Customer Baru</p>
+                </div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
+                  Untuk customer yang ragu, tawarkan metode COD. Lebih aman karena barang sampai baru bayar.
+                </p>
+              </div>
+
+              {/* Tip 5 */}
+              <div className="p-3 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/10 dark:to-purple-900/10 border border-violet-200/50 dark:border-violet-800/30">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center flex-shrink-0 shadow-md">
+                    <Clock className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <p className="text-[11px] sm:text-xs font-semibold leading-tight">Follow Up Transaksi Pending</p>
+                </div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
+                  Cek dashboard secara rutin. Segera follow up customer yang statusnya pending agar proses cepat selesai dan komisi cepat didapat!
+                </p>
+              </div>
+
+              {/* Tip 6 */}
+              <div className="p-3 rounded-xl bg-gradient-to-br from-pink-50 to-fuchsia-50 dark:from-pink-900/10 dark:to-fuchsia-900/10 border border-pink-200/50 dark:border-pink-800/30">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-pink-400 to-fuchsia-500 flex items-center justify-center flex-shrink-0 shadow-md">
+                    <Megaphone className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <p className="text-[11px] sm:text-xs font-semibold leading-tight">Promosikan di Media Sosial</p>
+                </div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
+                  Share link order Anda ke status WA, story IG, dll. Semakin banyak yang tahu, semakin besar peluang earning!
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
       {/* Quick Actions - Mobile */}
       <div className="grid grid-cols-2 gap-2 sm:hidden">
         <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5 tap-highlight active-scale glass-card">
@@ -466,6 +685,15 @@ export default function PartnerDashboardPage() {
               >
                 <ExternalLink className="w-4 h-4" />
               </Button>
+            </div>
+          </div>
+          {/* Instruction Box */}
+          <div className="mt-3 p-3 rounded-xl bg-gradient-to-r from-cyan-50 via-primary/5 to-violet-50 dark:from-cyan-900/10 dark:via-primary/5 dark:to-violet-900/10 border border-primary/10">
+            <div className="flex items-start gap-2">
+              <MessageCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+              <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
+                <strong className="text-foreground">Cara pakai link:</strong> Kirim link ini ke customer via WhatsApp. Customer akan otomatis tercatat atas nama Anda. Semakin banyak customer yang order lewat link Anda, semakin besar komisi yang Anda dapatkan!
+              </p>
             </div>
           </div>
           <p className="text-[10px] text-muted-foreground mt-2 text-center">

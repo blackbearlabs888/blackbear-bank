@@ -141,6 +141,11 @@ export default function RegisterPage() {
   const [logoError, setLogoError] = useState(false);
   const [customBankName, setCustomBankName] = useState('');
 
+  // Security: Honeypot & Cooldown
+  const [honeypotValue, setHoneypotValue] = useState('');
+  const [submitCooldown, setSubmitCooldown] = useState(0);
+  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const siteName = config.websiteTitle || 'Black Bear';
 
   // Run hydration on mount
@@ -166,22 +171,45 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
 
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      setError('Konfirmasi password tidak cocok');
+    // Security: Cooldown check
+    if (submitCooldown > 0) {
+      setError(`Tunggu ${submitCooldown} detik sebelum submit ulang`);
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Password minimal 6 karakter');
+    // Security: Enhanced client-side validation
+    if (formData.name.trim().length < 2 || formData.name.length > 100) {
+      setError('Nama harus 2-100 karakter');
       return;
     }
-
+    if (!/^[a-zA-Z\s\-'.]+$/.test(formData.name.trim())) {
+      setError('Nama hanya boleh mengandung huruf, spasi, tanda hubung, dan titik');
+      return;
+    }
+    if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(formData.email)) {
+      setError('Format email tidak valid');
+      return;
+    }
     if (!/^08[0-9]{8,12}$/.test(formData.phone)) {
       setError('Format nomor WhatsApp tidak valid (contoh: 08xxx)');
       return;
     }
-
+    if (formData.password.length < 6) {
+      setError('Password minimal 6 karakter');
+      return;
+    }
+    if (formData.password.length > 128) {
+      setError('Password maksimal 128 karakter');
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError('Konfirmasi password tidak cocok');
+      return;
+    }
+    if (formData.bankAccount.length < 5 || formData.bankAccount.length > 20) {
+      setError('Nomor rekening harus 5-20 digit');
+      return;
+    }
     if (formData.bankName === 'Lainnya' && !customBankName.trim()) {
       setError('Nama bank harus diisi');
       return;
@@ -193,10 +221,23 @@ export default function RegisterPage() {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          // Honeypot fields - bots will fill these
+          website: honeypotValue,
+          company_url: '',
+          contact_preference: '',
+        }),
       });
 
       const data = await response.json();
+
+      // Handle rate limit (429)
+      if (response.status === 429) {
+        setError(data.error || 'Terlalu banyak percobaan. Tunggu beberapa saat.');
+        setLoading(false);
+        return;
+      }
 
       if (!response.ok || !data.success) {
         setError(data.error || 'Registrasi gagal');
@@ -381,7 +422,7 @@ export default function RegisterPage() {
                 </Alert>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 relative">
                 {/* Personal Info Section */}
                 <div className="space-y-4">
                   <StepIndicator 
@@ -401,10 +442,11 @@ export default function RegisterPage() {
                         id="name"
                         placeholder="Nama lengkap Anda"
                         value={formData.name}
-                        onChange={(e) => handleChange('name', e.target.value)}
+                        onChange={(e) => handleChange('name', e.target.value.slice(0, 100))}
                         required
                         className="h-11 sm:h-12 rounded-xl border-2 focus:border-primary transition-colors"
                         autoComplete="name"
+                        maxLength={100}
                       />
                     </div>
 
@@ -419,10 +461,11 @@ export default function RegisterPage() {
                           type="email"
                           placeholder="email@contoh.com"
                           value={formData.email}
-                          onChange={(e) => handleChange('email', e.target.value)}
+                          onChange={(e) => handleChange('email', e.target.value.slice(0, 255))}
                           required
                           className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
                           autoComplete="email"
+                          maxLength={255}
                         />
                       </div>
                       
@@ -436,10 +479,11 @@ export default function RegisterPage() {
                           type="tel"
                           placeholder="08xxxxxxxxxx"
                           value={formData.phone}
-                          onChange={(e) => handleChange('phone', e.target.value)}
+                          onChange={(e) => handleChange('phone', e.target.value.replace(/[^0-9]/g, '').slice(0, 15))}
                           required
                           className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
                           autoComplete="tel"
+                          maxLength={15}
                         />
                       </div>
                     </div>
@@ -457,11 +501,12 @@ export default function RegisterPage() {
                             type={showPassword ? 'text' : 'password'}
                             placeholder="Min. 6 karakter"
                             value={formData.password}
-                            onChange={(e) => handleChange('password', e.target.value)}
+                            onChange={(e) => handleChange('password', e.target.value.slice(0, 128))}
                             required
                             minLength={6}
                             className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pr-12"
                             autoComplete="new-password"
+                            maxLength={128}
                           />
                           <Button
                             type="button"
@@ -490,11 +535,12 @@ export default function RegisterPage() {
                             type={showConfirmPassword ? 'text' : 'password'}
                             placeholder="Ulangi password"
                             value={formData.confirmPassword}
-                            onChange={(e) => handleChange('confirmPassword', e.target.value)}
+                            onChange={(e) => handleChange('confirmPassword', e.target.value.slice(0, 128))}
                             required
                             minLength={6}
                             className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pr-12"
                             autoComplete="new-password"
+                            maxLength={128}
                           />
                           <Button
                             type="button"
@@ -579,10 +625,11 @@ export default function RegisterPage() {
                         <Input
                           placeholder="Nomor rekening"
                           value={formData.bankAccount}
-                          onChange={(e) => handleChange('bankAccount', e.target.value)}
+                          onChange={(e) => handleChange('bankAccount', e.target.value.replace(/[^0-9]/g, '').slice(0, 20))}
                           required
                           className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
                           inputMode="numeric"
+                          maxLength={20}
                         />
                       </div>
                       
@@ -591,9 +638,10 @@ export default function RegisterPage() {
                         <Input
                           placeholder="Nama di rekening"
                           value={formData.bankHolder}
-                          onChange={(e) => handleChange('bankHolder', e.target.value)}
+                          onChange={(e) => handleChange('bankHolder', e.target.value.slice(0, 100))}
                           required
                           className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
+                          maxLength={100}
                         />
                       </div>
                     </div>
@@ -616,12 +664,17 @@ export default function RegisterPage() {
                 <Button
                   type="submit"
                   className="w-full h-11 sm:h-12 rounded-xl text-sm sm:text-base font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-300"
-                  disabled={loading}
+                  disabled={loading || submitCooldown > 0}
                 >
                   {loading ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                       Memproses...
+                    </>
+                  ) : submitCooldown > 0 ? (
+                    <>
+                      <Clock className="w-4 h-4 mr-2" />
+                      Tunggu {submitCooldown}s
                     </>
                   ) : (
                     <>
@@ -631,6 +684,27 @@ export default function RegisterPage() {
                     </>
                   )}
                 </Button>
+
+                {/* Honeypot fields - hidden from real users, bots will fill these */}
+                <div
+                  aria-hidden="true"
+                  style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, height: 0, overflow: 'hidden' }}
+                  tabIndex={-1}
+                  autoComplete="off"
+                >
+                  <label htmlFor="website">Jangan isi field ini</label>
+                  <input
+                    type="text"
+                    id="website"
+                    name="website"
+                    value={honeypotValue}
+                    onChange={(e) => setHoneypotValue(e.target.value)}
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                  <input type="text" name="company_url" tabIndex={-1} autoComplete="off" defaultValue="" />
+                  <input type="text" name="contact_preference" tabIndex={-1} autoComplete="off" defaultValue="" />
+                </div>
               </form>
 
               {/* Login Link */}
