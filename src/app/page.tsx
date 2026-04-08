@@ -25,9 +25,6 @@ import {
   MessageCircle,
   Wifi,
   HelpCircle as HelpCircleIcon,
-  CheckCircle2,
-  Globe,
-  Store,
   Banknote,
 } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
@@ -418,101 +415,79 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Payment Types Section - Tipe Gestun Tersedia */}
-      <section className="relative py-10 sm:py-12 lg:py-16 bg-muted/30 backdrop-blur-sm z-10" aria-labelledby="payment-types-heading">
+      {/* Payment Types Section - Gestun Tersedia */}
+      <section className="relative py-10 sm:py-12 lg:py-14 z-10" aria-labelledby="payment-types-heading">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-3">
-              <CreditCard className="w-3 h-3" aria-hidden="true" />
-              <span>Gestun Tersedia</span>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 id="payment-types-heading" className="text-lg sm:text-xl font-bold">Tipe Gestun</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {paymentTypesLoading ? 'Memuat...' : paymentTypes.length > 0 ? `${paymentTypes.length} metode tersedia` : 'Belum tersedia'}
+              </p>
             </div>
-            <h2 id="payment-types-heading" className="text-xl sm:text-2xl font-bold mb-2">Tipe Gestun Tersedia</h2>
-            <p className="text-muted-foreground text-xs sm:text-sm max-w-md mx-auto">
-              Pilih metode gestun sesuai kebutuhan Anda
-            </p>
+            <Button asChild variant="ghost" size="sm" className="h-8 px-3 text-xs text-muted-foreground hover:text-primary">
+              <Link href="/order">
+                Order Sekarang <ArrowRight className="w-3 h-3 ml-1" />
+              </Link>
+            </Button>
           </div>
 
+          {/* Content */}
           {paymentTypesLoading ? (
-            <div className="max-w-4xl mx-auto">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="rounded-lg border border-border/50 bg-card p-3 sm:p-4 animate-pulse">
-                    <div className="w-10 h-10 rounded-lg bg-muted mb-3" />
-                    <div className="h-4 bg-muted rounded w-3/4 mb-2" />
-                    <div className="flex gap-2 mb-2">
-                      <div className="h-5 bg-muted rounded-full w-16" />
-                      <div className="h-5 bg-muted rounded-full w-16" />
-                    </div>
-                    <div className="h-5 bg-muted rounded-full w-16" />
-                  </div>
-                ))}
-              </div>
+            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="flex-shrink-0 w-[160px] sm:w-[180px] rounded-xl bg-card border border-border/50 p-4 animate-pulse">
+                  <div className="w-9 h-9 rounded-lg bg-muted mb-3" />
+                  <div className="h-3.5 bg-muted rounded w-20 mb-2" />
+                  <div className="h-3 bg-muted rounded w-28 mb-3" />
+                  <div className="h-2.5 bg-muted rounded w-16" />
+                </div>
+              ))}
             </div>
           ) : paymentTypes.length > 0 ? (
-            <div className="max-w-4xl mx-auto">
-              {/* Total count indicator */}
-              <div className="flex items-center justify-center gap-2 mb-5">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
-                  <span>{paymentTypes.length} tipe gestun tersedia</span>
-                </div>
-              </div>
+            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+              {paymentTypes.map((pt, index) => {
+                const isKartuKredit = pt.name.toLowerCase().includes('kartu') || pt.name.toLowerCase().includes('credit');
+                const isPaylater = pt.name.toLowerCase().includes('paylater') || pt.name.toLowerCase().includes('akulaku');
+                const Icon = isPaylater ? Wallet : isKartuKredit ? CreditCard : Banknote;
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4" role="list">
-                {paymentTypes.map((pt) => {
-                  const isKartuKredit = pt.name.toLowerCase().includes('kartu') || pt.name.toLowerCase().includes('credit');
-                  const isPaylater = pt.name.toLowerCase().includes('paylater') || pt.name.toLowerCase().includes('akulaku');
-                  const CardIcon = isPaylater ? Wallet : isKartuKredit ? CreditCard : Banknote;
+                return (
+                  <div
+                    key={pt.id}
+                    className="flex-shrink-0 w-[160px] sm:w-[180px] sm:flex-shrink rounded-xl bg-card border border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 p-4 group active-scale animate-fade-in cursor-default"
+                    style={{ animationDelay: `${index * 50}ms`, opacity: 0 }}
+                  >
+                    {/* Icon */}
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center mb-3 group-hover:from-primary/25 group-hover:to-primary/10 transition-all duration-300">
+                      <Icon className="w-4.5 h-4.5 text-primary" aria-hidden="true" />
+                    </div>
 
-                  return (
-                    <li key={pt.id} role="listitem">
-                      <Card className="border-border/50 hover:border-primary/30 hover:shadow-md transition-all duration-300 group h-full">
-                        <CardContent className="p-3 sm:p-4">
-                          {/* Icon & Available Badge */}
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                              <CardIcon className="w-5 h-5 text-primary" aria-hidden="true" />
-                            </div>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold">
-                              <CheckCircle2 className="w-3 h-3" aria-hidden="true" />
-                              Tersedia
-                            </span>
-                          </div>
+                    {/* Name */}
+                    <h3 className="font-semibold text-sm leading-tight mb-1.5 truncate">{pt.name}</h3>
 
-                          {/* Name */}
-                          <h3 className="font-semibold text-sm sm:text-base mb-3 leading-tight">{pt.name}</h3>
+                    {/* Fee - single line */}
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span className="text-blue-500 dark:text-blue-400 font-medium">{pt.onlineFeePercent}%</span>
+                      <span className="text-border">·</span>
+                      <span className="text-amber-500 dark:text-amber-400 font-medium">{pt.codFeePercent}%</span>
+                      <span className="text-muted-foreground/60">fee</span>
+                    </div>
 
-                          {/* Fee Badges */}
-                          <div className="flex flex-wrap gap-1.5">
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-medium">
-                              <Globe className="w-3 h-3" aria-hidden="true" />
-                              Online {pt.onlineFeePercent}%
-                            </span>
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-medium">
-                              <Store className="w-3 h-3" aria-hidden="true" />
-                              COD {pt.codFeePercent}%
-                            </span>
-                          </div>
-
-                          {/* Threshold info */}
-                          {pt.threshold > 0 && (
-                            <p className="text-[10px] text-muted-foreground mt-2">
-                              Min. {formatCurrency(pt.threshold)}
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </li>
-                  );
-                })}
-              </div>
+                    {/* Threshold */}
+                    {pt.threshold > 0 && (
+                      <p className="text-[10px] text-muted-foreground/70 mt-2">
+                        min. {formatCurrency(pt.threshold)}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
-            <div className="max-w-4xl mx-auto text-center py-8">
-              <div className="w-14 h-14 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
-                <CreditCard className="w-7 h-7 text-muted-foreground" aria-hidden="true" />
-              </div>
-              <p className="text-muted-foreground text-sm">Belum ada tipe gestun tersedia</p>
+            <div className="rounded-xl bg-muted/30 border border-dashed border-border/50 p-8 text-center">
+              <CreditCard className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" aria-hidden="true" />
+              <p className="text-sm text-muted-foreground">Belum ada tipe gestun tersedia</p>
             </div>
           )}
         </div>
