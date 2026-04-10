@@ -1243,7 +1243,7 @@ export default function OwnerDashboardPage() {
           ═══════════════════════════════════════════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 sm:gap-3">
         {/* Transaksi Terbaru */}
-        <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
+        <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up overflow-hidden">
           <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
@@ -1259,10 +1259,10 @@ export default function OwnerDashboardPage() {
             {dataLoading ? (
               <div className="space-y-1.5">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
             ) : data?.recentTransactions?.length ? (
-              <ScrollArea className="max-h-[320px]">
+              <ScrollArea className="max-h-[200px] sm:max-h-[320px]">
                 <div className="space-y-0.5">
-                  {data.recentTransactions.slice(0, 8).map((tx) => (
-                    <div key={tx.id} className="group flex items-center gap-3 p-2 sm:p-2.5 rounded-xl hover:bg-muted/40 transition-colors">
+                  {data.recentTransactions.slice(0, 5).map((tx) => (
+                    <div key={tx.id} className="group flex items-center gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-xl hover:bg-muted/40 transition-colors">
                       <div className={cn('w-1 h-8 sm:h-10 rounded-full flex-shrink-0',
                         tx.status === 'success' ? 'bg-emerald-500' : tx.status === 'pending' ? 'bg-orange-500' : tx.status === 'verification' ? 'bg-yellow-500' : tx.status === 'process' ? 'bg-blue-500' : 'bg-red-500'
                       )} />
@@ -1281,7 +1281,7 @@ export default function OwnerDashboardPage() {
                         <p className="text-[9px] text-muted-foreground">{formatDateAgo(tx.createdAt)}</p>
                       </div>
                       {tx.status !== 'success' && tx.status !== 'failed' && (
-                        <div className="flex items-center gap-1 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <div className="hidden sm:flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                           {tx.status === 'pending' && (
                             <button onClick={() => updateTransactionStatus(tx.id, 'process')} disabled={updatingStatus === tx.id}
                               className="w-7 h-7 rounded-lg bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center transition-colors disabled:opacity-50">
@@ -1318,7 +1318,7 @@ export default function OwnerDashboardPage() {
 
         {/* Pesan Partner + Notifications */}
         <div className="flex flex-col gap-4">
-          <Card className={cn('rounded-2xl border border-border/50 shadow-sm animate-slide-up', (data?.unreadPartnerMessages || 0) > 0 ? 'border-amber-300/50 dark:border-amber-700/50' : '')}>
+          <Card className={cn('rounded-2xl border border-border/50 shadow-sm animate-slide-up overflow-hidden', (data?.unreadPartnerMessages || 0) > 0 ? 'border-amber-300/50 dark:border-amber-700/50' : '')}>
             <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1335,8 +1335,8 @@ export default function OwnerDashboardPage() {
               {dataLoading ? (
                 <div className="space-y-2">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
               ) : (data?.partnerMessages?.length || 0) > 0 ? (
-                <ScrollArea className="max-h-40">
-                  <div className="space-y-1.5 pr-1">
+                <ScrollArea className="max-h-[130px] sm:max-h-40">
+                  <div className="space-y-1 pr-1">
                     {data.partnerMessages.slice(0, 4).map((msg) => (
                       <div key={msg.id} className={cn('p-2 sm:p-2.5 rounded-xl transition-colors cursor-pointer',
                         !msg.isRead ? 'bg-amber-50/60 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30' : 'bg-muted/30 border border-transparent hover:bg-muted/40'
@@ -1359,10 +1359,10 @@ export default function OwnerDashboardPage() {
                   </div>
                 </ScrollArea>
               ) : (data?.partnerNotifications?.length || 0) > 0 ? (
-                <ScrollArea className="max-h-40">
-                  <div className="space-y-1.5 pr-1">
+                <ScrollArea className="max-h-[130px] sm:max-h-40">
+                  <div className="space-y-1 pr-1">
                     {data.partnerNotifications.slice(0, 4).map((notif) => (
-                      <div key={notif.id} className="p-2 sm:p-2.5 rounded-xl bg-muted/30 border border-transparent">
+                      <div key={notif.id} className="p-2 rounded-xl bg-muted/30 border border-transparent">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-medium truncate">{notif.partnerName || 'Partner'}</p>
