@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Eye, EyeOff, Loader2, CheckCircle2, ArrowLeft, User, CreditCard, 
   MapPin, Shield, Sparkles, Zap, Star, TrendingUp, Wallet, Lock,
-  Mail, Phone, Building2, ChevronRight
+  Mail, Phone, Building2, ChevronRight, Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSiteConfig } from '@/hooks/use-site-config';

@@ -112,7 +112,7 @@ export function validatePassword(password: string): boolean {
 }
 
 export function validatePhone(phone: string): boolean {
-  const phoneRegex = /^08[0-9]{8,12}$/;
+  const phoneRegex = /^(62|08)[0-9]{8,12}$/;
   return phoneRegex.test(phone);
 }
 

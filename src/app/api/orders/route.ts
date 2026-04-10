@@ -52,7 +52,8 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Honeypot Check (anti-bot) ──
-    if (isHoneypotTriggered(body.website, body.honeypot, body.url)) {
+    // Check each honeypot field individually - any filled field triggers bot detection
+    if (isHoneypotTriggered(body.website) || isHoneypotTriggered(body.honeypot) || isHoneypotTriggered(body.url)) {
       // Silently reject bots - return success to not reveal the trap
       return NextResponse.json({
         success: true,
@@ -164,9 +165,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Get payment type ──
-    const paymentType = await db.paymentType.findUnique({
-      where: { id: String(paymentTypeId) },
+    // ── Get payment type (must be active) ──
+    const paymentType = await db.paymentType.findFirst({
+      where: { id: String(paymentTypeId), isActive: true },
     });
 
     if (!paymentType) {

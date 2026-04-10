@@ -113,14 +113,14 @@ function AnimatedBackground() {
 // Step Indicator Component
 function StepIndicator({ currentStep, steps }: { currentStep: number; steps: string[] }) {
   return (
-    <div className="relative p-4 rounded-2xl bg-white/50 dark:bg-black/20 backdrop-blur-xl border border-white/50 dark:border-white/10">
+    <div className="relative p-3 sm:p-4 rounded-2xl bg-white/50 dark:bg-black/20 backdrop-blur-xl border border-white/50 dark:border-white/10">
       <div className="flex items-center justify-center gap-2">
         {steps.map((step, index) => (
           <div key={step} className="flex items-center gap-2">
             <div className="flex flex-col items-center gap-1">
               <div 
                 className={cn(
-                  "relative flex items-center justify-center w-10 h-10 rounded-xl font-semibold text-sm transition-all duration-500",
+                  "relative flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-xl font-semibold text-sm transition-all duration-500",
                   currentStep > index 
                     ? "bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-lg shadow-green-500/30" 
                     : currentStep === index 
@@ -203,10 +203,10 @@ function GestunGuide() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-3 p-4 text-left hover:bg-primary/5 transition-colors"
+        className="w-full flex items-center gap-3 p-3 sm:p-4 text-left hover:bg-primary/5 transition-colors"
       >
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 flex items-center justify-center shadow-lg shadow-primary/30 flex-shrink-0">
-          <Info className="w-5 h-5 text-white" />
+        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 flex items-center justify-center shadow-lg shadow-primary/30 flex-shrink-0">
+          <Info className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm">Panduan Gestun</p>
@@ -354,8 +354,8 @@ function StepRecipient({
       <div className="h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
       <CardHeader className="pb-3">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-            <User className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+            <User className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
           <div>
             <CardTitle className="text-lg">Data Penerima</CardTitle>
@@ -365,7 +365,7 @@ function StepRecipient({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Step Tip */}
-        <div className="flex items-start gap-3 p-3 rounded-xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20 animate-fade-in">
+        <div className="flex items-start gap-3 p-2.5 sm:p-3 rounded-xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20 animate-fade-in">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20 flex-shrink-0">
             <Lightbulb className="w-4 h-4 text-white" />
           </div>
@@ -378,7 +378,7 @@ function StepRecipient({
         </div>
 
         {/* Returning Customer Section */}
-        <div className="p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20">
+        <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20">
           <div className="flex items-center gap-2 mb-3">
             <RefreshCw className="w-4 h-4 text-blue-500" />
             <p className="text-sm font-medium text-blue-700 dark:text-blue-400">Sudah Pernah Order?</p>
@@ -389,7 +389,7 @@ function StepRecipient({
           <div className="flex gap-2">
             <Input
               type="tel"
-              placeholder="08xxxxxxxxxx"
+              placeholder="08xxx atau 628xxx"
               value={searchPhone}
               onChange={(e) => setSearchPhone(e.target.value)}
               className="h-10 flex-1 text-sm rounded-lg bg-white/50 dark:bg-black/20 border-2 focus:border-blue-500"
@@ -438,7 +438,7 @@ function StepRecipient({
               placeholder="Nama lengkap"
               value={formData.name}
               onChange={(e) => onChange('name', e.target.value.slice(0, 100))}
-              className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
+              className="h-10 sm:h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
               maxLength={100}
             />
           </div>
@@ -449,10 +449,10 @@ function StepRecipient({
             </Label>
             <Input
               type="tel"
-              placeholder="08xxxxxxxxxx"
+              placeholder="08xxx atau 628xxx"
               value={formData.phone}
               onChange={(e) => onChange('phone', e.target.value.replace(/[^0-9]/g, '').slice(0, 15))}
-              className="h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
+              className="h-10 sm:h-12 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
               maxLength={15}
             />
           </div>
@@ -575,8 +575,8 @@ function StepTransaction({
       <div className="h-1.5 bg-gradient-to-r from-fuchsia-500 via-pink-500 to-rose-500" />
       <CardHeader className="pb-3">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center shadow-lg shadow-fuchsia-500/30">
-            <CreditCard className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center shadow-lg shadow-fuchsia-500/30">
+            <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
           <div>
             <CardTitle className="text-lg">Detail Transaksi</CardTitle>
@@ -612,7 +612,7 @@ function StepTransaction({
               value={formData.nominal}
               onChange={(e) => onChange('nominal', e.target.value)}
               min={10000}
-              className="h-16 pl-14 pr-4 text-xl font-bold rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
+              className="h-12 sm:h-16 pl-14 pr-4 text-xl font-bold rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
               inputMode="numeric"
             />
           </div>
@@ -682,14 +682,14 @@ function StepTransaction({
               <Label
                 htmlFor="online"
                 className={cn(
-                  "flex flex-col items-center justify-center rounded-xl border-2 p-5 cursor-pointer transition-all",
+                  "flex flex-col items-center justify-center rounded-xl border-2 p-3 sm:p-5 cursor-pointer transition-all",
                   formData.methodTransaction === 'Online'
                     ? "border-primary bg-primary/5 shadow-lg shadow-primary/20"
                     : "border-muted bg-white/30 dark:bg-black/10 hover:border-primary/50"
                 )}
               >
                 <Globe className={cn(
-                  "w-8 h-8 mb-2",
+                  "w-6 h-6 sm:w-8 sm:h-8 mb-2",
                   formData.methodTransaction === 'Online' ? "text-primary" : "text-muted-foreground"
                 )} />
                 <span className="font-semibold">Online</span>
@@ -701,14 +701,14 @@ function StepTransaction({
               <Label
                 htmlFor="cod"
                 className={cn(
-                  "flex flex-col items-center justify-center rounded-xl border-2 p-5 cursor-pointer transition-all",
+                  "flex flex-col items-center justify-center rounded-xl border-2 p-3 sm:p-5 cursor-pointer transition-all",
                   formData.methodTransaction === 'COD'
                     ? "border-amber-500 bg-amber-500/5 shadow-lg shadow-amber-500/20"
                     : "border-muted bg-white/30 dark:bg-black/10 hover:border-amber-500/50"
                 )}
               >
                 <Truck className={cn(
-                  "w-8 h-8 mb-2",
+                  "w-6 h-6 sm:w-8 sm:h-8 mb-2",
                   formData.methodTransaction === 'COD' ? "text-amber-500" : "text-muted-foreground"
                 )} />
                 <span className="font-semibold">COD</span>
@@ -772,7 +772,7 @@ function StepCalculation({
   return (
     <div className="space-y-4">
       {/* Step Tip */}
-      <div className="flex items-start gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-violet-500/10 border border-purple-500/20 animate-fade-in">
+      <div className="flex items-start gap-3 p-2.5 sm:p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-violet-500/10 border border-purple-500/20 animate-fade-in">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-violet-500 flex items-center justify-center shadow-lg shadow-purple-500/20 flex-shrink-0">
           <Lightbulb className="w-4 h-4 text-white" />
         </div>
@@ -787,10 +787,10 @@ function StepCalculation({
       {/* Calculation Card */}
       <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-2xl shadow-primary/10">
         <div className="h-1.5 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
-        <CardContent className="pt-6">
+        <CardContent className="pt-4 sm:pt-6">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 flex items-center justify-center shadow-lg shadow-primary/30">
-              <Calculator className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-primary to-fuchsia-500 flex items-center justify-center shadow-lg shadow-primary/30">
+              <Calculator className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div className="flex-1">
               <p className="font-semibold text-lg">Kalkulasi</p>
@@ -806,22 +806,22 @@ function StepCalculation({
           <div className="space-y-3">
             <div className="flex justify-between items-center py-3">
               <span className="text-muted-foreground">Nominal</span>
-              <span className="font-bold text-xl">{formatCurrency(nominal)}</span>
+              <span className="font-bold text-lg sm:text-xl">{formatCurrency(nominal)}</span>
             </div>
-            <div className="flex justify-between items-center py-3 px-4 bg-gradient-to-r from-red-500/10 to-rose-500/10 rounded-xl border border-red-500/20">
+            <div className="flex justify-between items-center py-2 px-3 sm:py-3 sm:px-4 bg-gradient-to-r from-red-500/10 to-rose-500/10 rounded-xl border border-red-500/20">
               <div className="flex items-center gap-2">
-                <TrendingDown className="w-5 h-5 text-red-500" />
+                <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
                 <span className="text-muted-foreground">Biaya Layanan</span>
               </div>
-              <span className="font-bold text-red-500 text-lg">- {formatCurrency(calculation.paymentFee)}</span>
+              <span className="font-bold text-red-500 text-base sm:text-lg">- {formatCurrency(calculation.paymentFee)}</span>
             </div>
             <Separator />
-            <div className="flex justify-between items-center py-4 px-4 bg-gradient-to-r from-primary/10 via-purple-500/10 to-fuchsia-500/10 rounded-xl border border-primary/20">
+            <div className="flex justify-between items-center py-3 px-3 sm:py-4 sm:px-4 bg-gradient-to-r from-primary/10 via-purple-500/10 to-fuchsia-500/10 rounded-xl border border-primary/20">
               <div className="flex items-center gap-2">
                 <Wallet className="w-5 h-5 text-primary" />
                 <span className="font-semibold">Total Diterima</span>
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
+              <span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
                 {formatCurrency(calculation.totalReceived)}
               </span>
             </div>
@@ -1148,8 +1148,8 @@ function OrderPage() {
       setCurrentStep(0);
       return;
     }
-    if (!formData.phone || !/^08[0-9]{8,12}$/.test(formData.phone)) {
-      setError('Format nomor WhatsApp tidak valid (contoh: 08xxx)');
+    if (!formData.phone || !/^(62|08)[0-9]{8,13}$/.test(formData.phone)) {
+      setError('Format nomor WhatsApp tidak valid (contoh: 08xxx atau 628xxx)');
       setCurrentStep(0);
       return;
     }
@@ -1262,8 +1262,8 @@ function OrderPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6 sm:py-8">
-        <div className="max-w-lg mx-auto space-y-5">
+      <div className="container mx-auto px-4 py-4 sm:py-8">
+        <div className="max-w-lg mx-auto space-y-4 sm:space-y-5">
           {/* Step Indicator */}
           <StepIndicator currentStep={currentStep} steps={steps} />
 
