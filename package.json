@@ -15,7 +15,6 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
-    "db:seed": "npx tsx prisma/seed.ts",
     "db:use:sqlite": "cp prisma/schema.sqlite.prisma prisma/schema.prisma && prisma generate",
     "db:use:postgres": "cp prisma/schema.postgres.prisma prisma/schema.prisma && prisma generate",
     "db:push:prod": "cp prisma/schema.postgres.prisma prisma/schema.prisma && prisma generate && prisma db push"
