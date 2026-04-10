@@ -5,7 +5,6 @@ import {
   createSession, 
   setSessionCookie,
   validateEmail,
-  validatePassword
 } from '@/lib/auth';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
 import { sanitizeEmail, sanitizeString, validateLength, FIELD_LIMITS } from '@/lib/sanitize';
@@ -77,12 +76,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!validatePassword(sanitizedPassword)) {
-      return NextResponse.json(
-        { success: false, error: 'Password minimal 6 karakter' },
-        { status: 400 }
-      );
-    }
+    // Note: Password format validation (uppercase, lowercase, number, min 8)
+    // is only enforced at registration/password-change, NOT at login.
+    // Login only verifies the password matches the stored hash.
 
     if (!['owner', 'partner'].includes(sanitizedRole)) {
       return NextResponse.json(
