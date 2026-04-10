@@ -15,7 +15,6 @@ import {
   TrendingUp,
   TrendingDown,
   Trophy,
-  Clock,
   Bell,
   CheckCircle,
   XCircle,
@@ -39,31 +38,24 @@ import {
   Zap,
   Shield,
   PieChart,
-  Timer,
   Gauge,
-  Megaphone,
   Calculator,
   Layers,
   Eye,
   CircleDot,
-  ArrowRight,
   AlertTriangle,
   ShoppingBag,
   Filter,
   Crown,
-  TrendingDownIcon,
 } from 'lucide-react';
 import {
   AreaChart,
   Area,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from 'recharts';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
@@ -239,11 +231,10 @@ interface AnalyticsData {
     totalVolume: number;
     totalFee: number;
   }>;
-  statusDetails: Array<{
-    status: string;
+  statusDetails: Record<string, {
     count: number;
-    totalVolume: number;
-    totalProfit: number;
+    volume: number;
+    profit: number;
   }>;
 }
 
@@ -326,7 +317,7 @@ function ProgressBar({ value, max, color = 'bg-violet-500', className = '', barS
 
 function DashboardSkeleton() {
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-6 pb-24 md:pb-6">
+    <div className="max-w-7xl mx-auto px-2.5 sm:px-4 lg:px-6 py-3 sm:py-6 space-y-6 pb-24 md:pb-6">
       <div className="flex items-center justify-between">
         <div className="space-y-1.5"><Skeleton className="h-6 w-40" /><Skeleton className="h-3 w-56" /></div>
         <div className="flex gap-2"><Skeleton className="h-9 w-9 rounded-xl" /><Skeleton className="h-9 w-9 rounded-xl" /></div>
@@ -507,14 +498,20 @@ export default function OwnerDashboardPage() {
   const chartData = data?.last7DaysData || [];
   const chartTotalVolume = chartData.reduce((s, d) => s + d.volume, 0);
 
-  // Status breakdown data
-  const statusDetails = analytics?.statusDetails || [];
+  // Status breakdown data — convert object to array
+  const statusDetailsRaw = analytics?.statusDetails || {};
+  const statusDetails = Object.entries(statusDetailsRaw).map(([status, d]) => ({
+    status,
+    count: d.count,
+    totalVolume: d.volume,
+    totalProfit: d.profit,
+  }));
   const statusTotalVolume = statusDetails.reduce((s, d) => s + d.totalVolume, 0);
 
   // ─── Render ─────────────────────────────────────────
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-6 pb-24 md:pb-6">
+    <div className="max-w-7xl mx-auto px-2.5 sm:px-4 lg:px-6 py-3 sm:py-6 space-y-4 sm:space-y-6 pb-24 md:pb-6">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between animate-fade-in">
@@ -544,20 +541,20 @@ export default function OwnerDashboardPage() {
       {/* ═══════════════════════════════════════════════════
           SECTION 1: KPI HERO STRIP (5 cards)
           ═══════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3">
         {dataLoading ? (
           [...Array(5)].map((_, i) => <Skeleton key={i} className="h-[92px] rounded-2xl" />)
         ) : (
           <>
             {/* Profit Hari Ini — subtle emerald gradient */}
-            <Card className="rounded-2xl border-0 shadow-sm bg-gradient-to-br from-emerald-500/90 to-emerald-600/90 text-white shadow-emerald-900/10 animate-slide-up overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-white/[0.06] rounded-full -translate-y-1/2 translate-x-1/2" />
-              <CardContent className="p-4 sm:p-5 relative z-10">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <DollarSign className="w-3.5 h-3.5 text-emerald-100" />
-                  <p className="text-[10px] text-emerald-100 font-medium">Hari Ini</p>
+            <Card className="rounded-2xl border-0 shadow-sm bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-emerald-900/10 animate-slide-up overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-16 h-16 sm:w-20 sm:h-20 bg-white/[0.06] rounded-full -translate-y-1/2 translate-x-1/2" />
+              <CardContent className="p-3 sm:p-4 relative z-10">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <DollarSign className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-100" />
+                  <p className="text-[9px] sm:text-[10px] text-emerald-100 font-medium">Hari Ini</p>
                 </div>
-                <p className="text-lg sm:text-xl font-semibold tracking-tight">{formatCurrency(stats?.todayProfit || 0)}</p>
+                <p className="text-base sm:text-xl font-semibold tabular-nums tracking-tight">{formatCurrency(stats?.todayProfit || 0)}</p>
                 <div className="flex items-center gap-1.5 mt-1.5">
                   <span className={cn('inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full',
                     todayProfitChange >= 0 ? 'bg-white/15 text-white' : 'bg-red-400/25 text-red-100')}>
@@ -571,43 +568,43 @@ export default function OwnerDashboardPage() {
 
             {/* Profit Bulan Ini — clean with left border accent */}
             <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up overflow-hidden border-l-[3px] border-l-violet-500">
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-[10px] text-muted-foreground font-medium">Profit Bulan Ini</p>
-                  <div className="w-8 h-8 rounded-xl bg-violet-50 dark:bg-violet-950/30 flex items-center justify-center">
-                    <TrendingUp className="w-3.5 h-3.5 text-violet-500" />
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Profit Bulan Ini</p>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-violet-50 dark:bg-violet-950/30 flex items-center justify-center">
+                    <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-violet-500" />
                   </div>
                 </div>
-                <p className="text-lg sm:text-xl font-semibold tracking-tight">{formatCurrency(stats?.thisMonthProfit || 0)}</p>
+                <p className="text-base sm:text-xl font-semibold tabular-nums tracking-tight">{formatCurrency(stats?.thisMonthProfit || 0)}</p>
                 <ChangeIndicator value={stats?.profitChange || 0} />
               </CardContent>
             </Card>
 
             {/* Volume Bulan Ini */}
             <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up overflow-hidden border-l-[3px] border-l-cyan-500">
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-[10px] text-muted-foreground font-medium">Volume Bulan Ini</p>
-                  <div className="w-8 h-8 rounded-xl bg-cyan-50 dark:bg-cyan-950/30 flex items-center justify-center">
-                    <BarChart3 className="w-3.5 h-3.5 text-cyan-500" />
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Volume Bulan Ini</p>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-cyan-50 dark:bg-cyan-950/30 flex items-center justify-center">
+                    <BarChart3 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-500" />
                   </div>
                 </div>
-                <p className="text-lg sm:text-xl font-semibold tracking-tight">{formatCompactCurrency(stats?.thisMonthVolume || 0)}</p>
+                <p className="text-base sm:text-xl font-semibold tabular-nums tracking-tight">{formatCompactCurrency(stats?.thisMonthVolume || 0)}</p>
                 <ChangeIndicator value={stats?.volumeChange || 0} />
               </CardContent>
             </Card>
 
             {/* Total Transaksi */}
             <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up overflow-hidden border-l-[3px] border-l-amber-500">
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-[10px] text-muted-foreground font-medium">Total Transaksi</p>
-                  <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center">
-                    <CreditCard className="w-3.5 h-3.5 text-amber-500" />
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Total Transaksi</p>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center">
+                    <CreditCard className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500" />
                   </div>
                 </div>
                 <div className="flex items-baseline gap-1.5">
-                  <p className="text-lg sm:text-xl font-semibold tracking-tight">{stats?.totalTransactions?.toLocaleString('id-ID') || 0}</p>
+                  <p className="text-base sm:text-xl font-semibold tabular-nums tracking-tight">{stats?.totalTransactions?.toLocaleString('id-ID') || 0}</p>
                   {(stats?.todayCount || 0) > 0 && <Badge className="bg-amber-100/80 text-amber-700 dark:bg-amber-900/20 text-amber-400 text-[8px] px-1">+{stats?.todayCount}</Badge>}
                 </div>
                 <p className="text-[9px] text-muted-foreground mt-0.5">{successRate.toFixed(1)}% success rate</p>
@@ -616,15 +613,15 @@ export default function OwnerDashboardPage() {
 
             {/* Customer */}
             <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up overflow-hidden border-l-[3px] border-l-pink-500 col-span-2 lg:col-span-1">
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-[10px] text-muted-foreground font-medium">Total Pelanggan</p>
-                  <div className="w-8 h-8 rounded-xl bg-pink-50 dark:bg-pink-950/30 flex items-center justify-center">
-                    <Users className="w-3.5 h-3.5 text-pink-500" />
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Total Pelanggan</p>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-pink-50 dark:bg-pink-950/30 flex items-center justify-center">
+                    <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-pink-500" />
                   </div>
                 </div>
                 <div className="flex items-baseline gap-1.5">
-                  <p className="text-lg sm:text-xl font-semibold tracking-tight">{stats?.totalCustomers?.toLocaleString('id-ID') || 0}</p>
+                  <p className="text-base sm:text-xl font-semibold tabular-nums tracking-tight">{stats?.totalCustomers?.toLocaleString('id-ID') || 0}</p>
                   {(stats?.newCustomersThisMonth || 0) > 0 && <Badge className="bg-pink-100/80 text-pink-700 dark:bg-pink-900/20 text-pink-400 text-[8px] px-1">+{stats?.newCustomersThisMonth} baru</Badge>}
                 </div>
                 <p className="text-[9px] text-muted-foreground mt-0.5">{stats?.activePartners || 0} partner aktif</p>
@@ -637,10 +634,10 @@ export default function OwnerDashboardPage() {
       {/* ═══════════════════════════════════════════════════
           SECTION 2: CHART + CMO QUICK METRICS
           ═══════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5 sm:gap-3">
         {/* Revenue Chart — soft glass feel */}
         <Card className="lg:col-span-2 rounded-2xl border border-border/50 shadow-sm overflow-hidden animate-slide-up backdrop-blur-sm bg-white/70 dark:bg-card/70">
-          <CardHeader className="pb-1 px-5 pt-4">
+          <CardHeader className="pb-1 px-3.5 sm:px-5 pt-3 sm:pt-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
                 <Activity className="w-4 h-4 text-muted-foreground" />
@@ -653,7 +650,7 @@ export default function OwnerDashboardPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="px-2 sm:px-5 pb-4">
+          <CardContent className="px-2 sm:px-5 pb-3 sm:pb-4">
             {dataLoading ? (
               <Skeleton className="h-40 sm:h-48 w-full rounded-xl" />
             ) : chartData.length > 0 && chartData.some(d => d.volume > 0) ? (
@@ -694,13 +691,13 @@ export default function OwnerDashboardPage() {
         <div className="flex flex-col gap-4">
           {/* Conversion Rate */}
           <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up flex-1">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center flex-shrink-0">
+            <CardContent className="p-3 sm:p-4 flex items-center gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center flex-shrink-0">
                 <Target className="w-4 h-4 text-indigo-500" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Conversion Rate</p>
-                <p className="text-2xl font-semibold tracking-tight">{(stats?.conversionRate || 0).toFixed(1)}%</p>
+                <p className="text-xl sm:text-2xl font-semibold tracking-tight">{(stats?.conversionRate || 0).toFixed(1)}%</p>
                 <ProgressBar value={stats?.conversionRate || 0} max={100} color="bg-indigo-500" className="mt-2" />
               </div>
             </CardContent>
@@ -708,13 +705,13 @@ export default function OwnerDashboardPage() {
 
           {/* Avg Transaction */}
           <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up flex-1">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-fuchsia-50 dark:bg-fuchsia-950/30 flex items-center justify-center flex-shrink-0">
+            <CardContent className="p-3 sm:p-4 flex items-center gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-fuchsia-50 dark:bg-fuchsia-950/30 flex items-center justify-center flex-shrink-0">
                 <Calculator className="w-4 h-4 text-fuchsia-500" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Avg Transaction</p>
-                <p className="text-2xl font-semibold tracking-tight">{formatCompactCurrency(stats?.avgTransactionValue || 0)}</p>
+                <p className="text-xl sm:text-2xl font-semibold tracking-tight">{formatCompactCurrency(stats?.avgTransactionValue || 0)}</p>
               </div>
             </CardContent>
           </Card>
@@ -726,7 +723,7 @@ export default function OwnerDashboardPage() {
           ═══════════════════════════════════════════════════ */}
       {activePipeline + (stats?.successCount || 0) + (stats?.failedCount || 0) > 0 && (
         <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardContent className="p-5">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5" /> Pipeline Transaksi
@@ -738,7 +735,7 @@ export default function OwnerDashboardPage() {
                 return (
                   <Link key={stage.label} href={stage.href} className="flex-shrink-0">
                     <div className={cn(
-                      'flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer min-w-[85px] shadow-sm',
+                      'flex items-center gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-2xl text-xs font-medium transition-all cursor-pointer min-w-[85px] shadow-sm',
                       stage.count === 0
                         ? 'bg-muted/30 text-muted-foreground/30 cursor-default'
                         : `${stage.color} text-white hover:shadow-md hover:brightness-110`
@@ -757,10 +754,10 @@ export default function OwnerDashboardPage() {
       {/* ═══════════════════════════════════════════════════
           SECTION 4: CMO INSIGHTS — Payment Distribution + Partner Leaderboard
           ═══════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 sm:gap-3">
         {/* CMO: Payment Type Distribution */}
         <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-5 pt-4">
+          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
                 <PieChart className="w-4 h-4 text-muted-foreground" />
@@ -770,7 +767,7 @@ export default function OwnerDashboardPage() {
               <Badge variant="outline" className="text-[9px] text-muted-foreground">30 hari</Badge>
             </div>
           </CardHeader>
-          <CardContent className="px-5 pb-5">
+          <CardContent className="px-3.5 sm:px-5 pb-4">
             {dataLoading ? (
               <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-8 rounded-lg" />)}</div>
             ) : analytics?.paymentTypes && analytics.paymentTypes.length > 0 ? (
@@ -802,7 +799,7 @@ export default function OwnerDashboardPage() {
 
         {/* CMO: Partner Performance Leaderboard */}
         <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-5 pt-4">
+          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
                 <Trophy className="w-4 h-4 text-amber-500" />
@@ -813,7 +810,7 @@ export default function OwnerDashboardPage() {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="px-5 pb-5">
+          <CardContent className="px-3.5 sm:px-5 pb-4">
             {dataLoading ? (
               <div className="space-y-2">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
             ) : data?.topPartnersThisMonth?.length ? (
@@ -826,7 +823,7 @@ export default function OwnerDashboardPage() {
                   ];
                   const maxProfit = Math.max(...data.topPartnersThisMonth.slice(0, 5).map(p => p.profit || 0), 1);
                   return (
-                    <div key={partner.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted/40 transition-colors">
+                    <div key={partner.id} className="flex items-center gap-3 p-2 sm:p-2.5 rounded-xl hover:bg-muted/40 transition-colors">
                       <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-semibold flex-shrink-0', medals[index] || 'bg-muted text-muted-foreground')}>
                         {index + 1}
                       </div>
@@ -852,10 +849,10 @@ export default function OwnerDashboardPage() {
       {/* ═══════════════════════════════════════════════════
           SECTION 4.5: CMO WIDGETS — Customer Acquisition + Top Customers
           ═══════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 sm:gap-3">
         {/* CMO: Customer Acquisition Funnel */}
         <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-5 pt-4">
+          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
                 <Filter className="w-4 h-4 text-muted-foreground" />
@@ -864,7 +861,7 @@ export default function OwnerDashboardPage() {
               </CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="px-5 pb-5">
+          <CardContent className="px-3.5 sm:px-5 pb-4">
             {dataLoading ? (
               <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}</div>
             ) : stats ? (
@@ -918,7 +915,7 @@ export default function OwnerDashboardPage() {
 
         {/* CMO: Top Customers */}
         <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-5 pt-4">
+          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
                 <Crown className="w-4 h-4 text-amber-500" />
@@ -929,7 +926,7 @@ export default function OwnerDashboardPage() {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="px-5 pb-5">
+          <CardContent className="px-3.5 sm:px-5 pb-4">
             {dataLoading ? (
               <div className="space-y-2">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
             ) : data?.topCustomersThisMonth?.length ? (
@@ -942,7 +939,7 @@ export default function OwnerDashboardPage() {
                     'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
                   ];
                   return (
-                    <div key={customer.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted/40 transition-colors">
+                    <div key={customer.id} className="flex items-center gap-3 p-2 sm:p-2.5 rounded-xl hover:bg-muted/40 transition-colors">
                       <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-semibold flex-shrink-0', medals[index] || 'bg-muted text-muted-foreground')}>
                         {index + 1}
                       </div>
@@ -971,17 +968,17 @@ export default function OwnerDashboardPage() {
       {/* ═══════════════════════════════════════════════════
           SECTION 5: CTO INSIGHTS — Forecast + Fee + Error Rate + Status + Marketplace + Peak Hours
           ═══════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
         {/* CTO: Revenue Forecast */}
         <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-5 pt-4">
+          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
             <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
               <Gauge className="w-4 h-4 text-muted-foreground" />
               <span className="text-muted-foreground font-medium text-[10px] uppercase tracking-wider">CTO</span>
               Forecast Bulan Ini
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-5 pb-5">
+          <CardContent className="px-3.5 sm:px-5 pb-4">
             {dataLoading ? (
               <div className="space-y-3"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-1/2" /></div>
             ) : fc ? (
@@ -1014,13 +1011,13 @@ export default function OwnerDashboardPage() {
 
         {/* CTO: Fee & Margin Analysis */}
         <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-5 pt-4">
+          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
             <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
               <Percent className="w-4 h-4 text-muted-foreground" />
               Analisa Fee & Margin
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-5 pb-5">
+          <CardContent className="px-3.5 sm:px-5 pb-4">
             {dataLoading ? (
               <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-6 rounded" />)}</div>
             ) : fee ? (
@@ -1051,13 +1048,13 @@ export default function OwnerDashboardPage() {
 
         {/* CTO: Error Rate Tracker */}
         <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-5 pt-4">
+          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
             <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
               <AlertTriangle className="w-4 h-4 text-muted-foreground" />
               Error Rate Tracker
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-5 pb-5">
+          <CardContent className="px-3.5 sm:px-5 pb-4">
             {dataLoading ? (
               <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-6 rounded" />)}</div>
             ) : stats?.totalTransactions ? (
@@ -1109,13 +1106,13 @@ export default function OwnerDashboardPage() {
 
         {/* CTO: Status Breakdown — Stacked Bar */}
         <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-5 pt-4">
+          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
             <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
               <Layers className="w-4 h-4 text-muted-foreground" />
               Status Breakdown
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-5 pb-5">
+          <CardContent className="px-3.5 sm:px-5 pb-4">
             {dataLoading ? (
               <div className="space-y-3"><Skeleton className="h-3 rounded-full" /><Skeleton className="h-4 w-full" /></div>
             ) : statusDetails.length > 0 ? (
@@ -1161,7 +1158,7 @@ export default function OwnerDashboardPage() {
 
         {/* CTO: Marketplace Performance */}
         <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-5 pt-4">
+          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
                 <ShoppingBag className="w-4 h-4 text-muted-foreground" />
@@ -1170,7 +1167,7 @@ export default function OwnerDashboardPage() {
               <Badge variant="outline" className="text-[9px] text-muted-foreground">30 hari</Badge>
             </div>
           </CardHeader>
-          <CardContent className="px-5 pb-5">
+          <CardContent className="px-3.5 sm:px-5 pb-4">
             {dataLoading ? (
               <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-8 rounded-lg" />)}</div>
             ) : analytics?.marketplaceAnalysis && analytics.marketplaceAnalysis.length > 0 ? (
@@ -1201,13 +1198,13 @@ export default function OwnerDashboardPage() {
 
         {/* CTO: Peak Hours & System Health */}
         <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-5 pt-4">
+          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
             <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
               <Zap className="w-4 h-4 text-muted-foreground" />
               Peak Hours & Health
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-5 pb-5">
+          <CardContent className="px-3.5 sm:px-5 pb-4">
             {dataLoading ? (
               <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-6 rounded" />)}</div>
             ) : analytics?.peakHours && analytics.peakHours.length > 0 ? (
@@ -1244,10 +1241,10 @@ export default function OwnerDashboardPage() {
       {/* ═══════════════════════════════════════════════════
           SECTION 6: TRANSACTIONS + MESSAGES
           ═══════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 sm:gap-3">
         {/* Transaksi Terbaru */}
         <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-5 pt-4">
+          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
                 <CircleDot className="w-4 h-4 text-muted-foreground" />
@@ -1258,20 +1255,20 @@ export default function OwnerDashboardPage() {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="px-4 sm:px-5 pb-4">
+          <CardContent className="px-3.5 sm:px-5 pb-4">
             {dataLoading ? (
               <div className="space-y-1.5">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
             ) : data?.recentTransactions?.length ? (
               <ScrollArea className="max-h-[320px]">
                 <div className="space-y-0.5">
                   {data.recentTransactions.slice(0, 8).map((tx) => (
-                    <div key={tx.id} className="group flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted/40 transition-colors">
-                      <div className={cn('w-1 h-10 rounded-full flex-shrink-0',
+                    <div key={tx.id} className="group flex items-center gap-3 p-2 sm:p-2.5 rounded-xl hover:bg-muted/40 transition-colors">
+                      <div className={cn('w-1 h-8 sm:h-10 rounded-full flex-shrink-0',
                         tx.status === 'success' ? 'bg-emerald-500' : tx.status === 'pending' ? 'bg-orange-500' : tx.status === 'verification' ? 'bg-yellow-500' : tx.status === 'process' ? 'bg-blue-500' : 'bg-red-500'
                       )} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-mono text-muted-foreground">{tx.orderId}</span>
+                          <span className="text-[9px] sm:text-[10px] font-mono text-muted-foreground">{tx.orderId}</span>
                           <StatusBadge status={tx.status} />
                         </div>
                         <div className="flex items-center gap-1.5 mt-0.5">
@@ -1322,7 +1319,7 @@ export default function OwnerDashboardPage() {
         {/* Pesan Partner + Notifications */}
         <div className="flex flex-col gap-4">
           <Card className={cn('rounded-2xl border border-border/50 shadow-sm animate-slide-up', (data?.unreadPartnerMessages || 0) > 0 ? 'border-amber-300/50 dark:border-amber-700/50' : '')}>
-            <CardHeader className="pb-2 px-5 pt-4">
+            <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <MessageSquare className={cn('w-4 h-4', (data?.unreadPartnerMessages || 0) > 0 ? 'text-amber-500' : 'text-muted-foreground')} />
@@ -1334,14 +1331,14 @@ export default function OwnerDashboardPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="px-4 sm:px-5 pb-4">
+            <CardContent className="px-3.5 sm:px-5 pb-4">
               {dataLoading ? (
                 <div className="space-y-2">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
               ) : (data?.partnerMessages?.length || 0) > 0 ? (
                 <ScrollArea className="max-h-40">
                   <div className="space-y-1.5 pr-1">
                     {data.partnerMessages.slice(0, 4).map((msg) => (
-                      <div key={msg.id} className={cn('p-2.5 rounded-xl transition-colors cursor-pointer',
+                      <div key={msg.id} className={cn('p-2 sm:p-2.5 rounded-xl transition-colors cursor-pointer',
                         !msg.isRead ? 'bg-amber-50/60 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30' : 'bg-muted/30 border border-transparent hover:bg-muted/40'
                       )} onClick={() => { if (msg.transactionId) router.push(`/owner/dashboard/transactions?highlight=${msg.transactionId}`); }}>
                         <div className="flex items-center justify-between gap-2">
@@ -1365,7 +1362,7 @@ export default function OwnerDashboardPage() {
                 <ScrollArea className="max-h-40">
                   <div className="space-y-1.5 pr-1">
                     {data.partnerNotifications.slice(0, 4).map((notif) => (
-                      <div key={notif.id} className="p-2.5 rounded-xl bg-muted/30 border border-transparent">
+                      <div key={notif.id} className="p-2 sm:p-2.5 rounded-xl bg-muted/30 border border-transparent">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-medium truncate">{notif.partnerName || 'Partner'}</p>
@@ -1388,21 +1385,21 @@ export default function OwnerDashboardPage() {
 
           {/* Week Summary */}
           <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up bg-muted/20">
-            <CardContent className="p-5">
+            <CardContent className="p-3 sm:p-4">
               <p className="text-[10px] text-muted-foreground font-medium mb-3 uppercase tracking-wider flex items-center gap-1.5">
                 <Eye className="w-3 h-3" /> Minggu Ini
               </p>
               <div className="grid grid-cols-3 gap-3">
                 <div className="text-center">
-                  <p className="text-sm font-semibold">{formatCompactCurrency(stats?.weekProfit || 0)}</p>
+                  <p className="text-xs sm:text-sm font-semibold">{formatCompactCurrency(stats?.weekProfit || 0)}</p>
                   <p className="text-[9px] text-muted-foreground">Profit</p>
                 </div>
                 <div className="text-center border-x border-border/40">
-                  <p className="text-sm font-semibold">{formatCompactCurrency(stats?.weekVolume || 0)}</p>
+                  <p className="text-xs sm:text-sm font-semibold">{formatCompactCurrency(stats?.weekVolume || 0)}</p>
                   <p className="text-[9px] text-muted-foreground">Volume</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-semibold">{stats?.weekCount || 0}</p>
+                  <p className="text-xs sm:text-sm font-semibold">{stats?.weekCount || 0}</p>
                   <p className="text-[9px] text-muted-foreground">Transaksi</p>
                 </div>
               </div>
@@ -1425,11 +1422,11 @@ export default function OwnerDashboardPage() {
         ].map((action) => (
           <Link key={action.label} href={action.href}>
             <Card className="rounded-2xl border border-border/50 shadow-sm hover:bg-muted/50 transition-colors cursor-pointer group h-full">
-              <CardContent className="p-2.5 sm:p-3 flex flex-col items-center gap-1.5 justify-center">
-                <div className={cn('w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105', action.bg)}>
-                  <action.icon className={cn('w-4 h-4 sm:w-5 sm:h-5', action.color)} />
+              <CardContent className="p-2 sm:p-3 flex flex-col items-center gap-1.5 justify-center">
+                <div className={cn('w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105', action.bg)}>
+                  <action.icon className={cn('w-3.5 h-3.5 sm:w-4.5 sm:h-4.5', action.color)} />
                 </div>
-                <span className="text-[10px] sm:text-xs font-medium text-center">{action.label}</span>
+                <span className="text-[9px] sm:text-[10px] font-medium text-center">{action.label}</span>
               </CardContent>
             </Card>
           </Link>
