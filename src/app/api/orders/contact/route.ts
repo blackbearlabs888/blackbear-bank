@@ -1,7 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { normalizePhone } from '@/lib/customer-utils';
+
+/**
+ * Normalize phone to 62xxx format (inline to avoid cross-module import issues)
+ */
+function safeNormalizePhone(raw: unknown): string {
+  if (!raw) return '';
+  const phone = String(raw).trim();
+  if (!phone) return '';
+  let cleaned = phone.replace(/[^0-9]/g, '');
+  if (cleaned.startsWith('0')) {
+    cleaned = '62' + cleaned.substring(1);
+  } else if (cleaned.startsWith('+62')) {
+    cleaned = cleaned.substring(1);
+  } else if (!cleaned.startsWith('62')) {
+    cleaned = '62' + cleaned;
+  }
+  return cleaned;
+}
 
 /**
  * WhatsApp Contact Proxy API
@@ -70,7 +87,7 @@ export async function GET(request: NextRequest) {
               id: true,
               name: true,
               phone: true,
-              active: true,
+              status: true,
             },
           },
         },
@@ -90,19 +107,19 @@ export async function GET(request: NextRequest) {
 
     // Determine target: partner (if exists and active) or owner (fallback)
     const target = contactType === 'owner' ? 'owner' :
-      transaction.partner && transaction.partner.active ? 'partner' : 'owner';
+      transaction.partner && transaction.partner.status === 'active' ? 'partner' : 'owner';
 
     let waPhone: string | null = null;
     let contactName: string | null = null;
 
     if (target === 'partner' && transaction.partner) {
-      waPhone = normalizePhone(transaction.partner.phone);
-      contactName = transaction.partner.name;
+      waPhone = safeNormalizePhone(transaction.partner.phone);
+      contactName = transaction.partner.name || 'Partner';
     }
 
     // Fallback to owner WhatsApp
     if (!waPhone && ownerProfile?.footerWhatsapp) {
-      waPhone = normalizePhone(ownerProfile.footerWhatsapp);
+      waPhone = safeNormalizePhone(ownerProfile.footerWhatsapp);
       contactName = 'Owner';
     }
 
@@ -127,7 +144,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Contact proxy error:', error);
+    console.error('Contact proxy error:', error instanceof Error ? { message: error.message, stack: error.stack } : error);
     return NextResponse.json(
       { success: false, error: 'Terjadi kesalahan server' },
       { status: 500 }
