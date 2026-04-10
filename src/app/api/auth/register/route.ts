@@ -59,13 +59,11 @@ export async function POST(request: NextRequest) {
 
     // ── Honeypot Check (anti-bot) ──
     if (isHoneypotTriggered(body.website, body.honeypot, body.company_url, body.contact_preference)) {
-      // Silently reject bots
-      return NextResponse.json({
-        success: true,
-        user: { id: 'pending', name: 'Pending', email: 'pending@pending.com', role: 'partner' },
-        partner: { id: 'pending', status: 'pending' },
-        message: 'Registrasi diterima, sedang diverifikasi',
-      });
+      // Silently reject bots with a failure response
+      return NextResponse.json(
+        { success: false, error: 'Invalid request' },
+        { status: 400 }
+      );
     }
 
     const { 
@@ -161,7 +159,7 @@ export async function POST(request: NextRequest) {
 
     if (!validatePassword(sanitizedPassword)) {
       return NextResponse.json(
-        { success: false, error: 'Password minimal 6 karakter' },
+        { success: false, error: 'Password minimal 8 karakter, harus mengandung huruf besar, huruf kecil, dan angka' },
         { status: 400 }
       );
     }

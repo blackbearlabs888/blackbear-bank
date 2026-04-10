@@ -139,8 +139,11 @@ export default function PartnerSettingsPage() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error('Password minimal 6 karakter');
+    if (newPassword.length < 8 ||
+        !/[A-Z]/.test(newPassword) ||
+        !/[a-z]/.test(newPassword) ||
+        !/[0-9]/.test(newPassword)) {
+      toast.error('Password minimal 8 karakter, harus mengandung huruf besar, huruf kecil, dan angka');
       return;
     }
 

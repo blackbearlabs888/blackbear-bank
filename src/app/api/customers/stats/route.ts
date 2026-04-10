@@ -20,7 +20,10 @@ export async function GET() {
       const partner = await db.partner.findUnique({
         where: { userId: user.id },
       });
-      where.partnerId = partner?.id;
+      if (!partner) {
+        return NextResponse.json({ success: true, data: { total: 0, labels: {} } });
+      }
+      where.partnerId = partner.id;
     }
 
     // Get counts by label

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser, hashPassword } from '@/lib/auth';
+import { getCurrentUser, hashPassword, validatePassword } from '@/lib/auth';
 import { db } from '@/lib/db';
 
 // PATCH change partner password
@@ -24,9 +24,9 @@ export async function PATCH(
     // Trim and validate password
     const trimmedPassword = typeof newPassword === 'string' ? newPassword.trim() : '';
 
-    if (!trimmedPassword || trimmedPassword.length < 6) {
+    if (!trimmedPassword || !validatePassword(trimmedPassword)) {
       return NextResponse.json(
-        { success: false, error: 'Password minimal 6 karakter' },
+        { success: false, error: 'Password minimal 8 karakter, harus mengandung huruf besar, huruf kecil, dan angka' },
         { status: 400 }
       );
     }

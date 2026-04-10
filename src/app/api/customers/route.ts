@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { db, toNumber } from '@/lib/db';
 import { checkCustomerDuplicate, normalizePhone } from '@/lib/customer-utils';
+import { sanitizeName, sanitizePhone, sanitizeBankAccount, sanitizeCity, sanitizeString, validateLength, FIELD_LIMITS } from '@/lib/sanitize';
 
 // GET customers with pagination
 export async function GET(request: NextRequest) {
@@ -120,19 +121,37 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, phone, bankName, bankAccount, bankHolder, city, label, updateExisting } = body;
 
+    // ── Input Sanitization ──
+    const sanitizedName = sanitizeName(name);
+    const sanitizedPhone = sanitizePhone(phone);
+    const sanitizedBankName = bankName ? sanitizeString(bankName) : '';
+    const sanitizedBankAccount = bankAccount ? sanitizeBankAccount(bankAccount) : '';
+    const sanitizedBankHolder = bankHolder ? sanitizeName(bankHolder) : '';
+    const sanitizedCity = city ? sanitizeCity(city) : '';
+
     // Validation
-    if (!name || !phone) {
+    if (!sanitizedName || !sanitizedPhone) {
       return NextResponse.json(
         { success: false, error: 'Nama dan No. WA wajib diisi' },
         { status: 400 }
       );
     }
 
+    // ── Field Length Validation ──
+    const nameCheck = validateLength(sanitizedName, FIELD_LIMITS.NAME_MIN, FIELD_LIMITS.NAME_MAX);
+    if (!nameCheck.valid) {
+      return NextResponse.json({ success: false, error: `Nama: ${nameCheck.error}` }, { status: 400 });
+    }
+    const phoneCheck = validateLength(sanitizedPhone, FIELD_LIMITS.PHONE_MIN, FIELD_LIMITS.PHONE_MAX);
+    if (!phoneCheck.valid) {
+      return NextResponse.json({ success: false, error: `No WhatsApp: ${phoneCheck.error}` }, { status: 400 });
+    }
+
     // Normalize phone number
-    const normalizedPhone = normalizePhone(phone);
+    const normalizedPhone = normalizePhone(sanitizedPhone);
 
     // Check for duplicate customer (by phone OR name)
-    const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, name);
+    const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, sanitizedName);
     
     // If duplicate found, return existing customer (for auto-fill)
     // Don't create duplicate - just return the existing one
@@ -142,12 +161,12 @@ export async function POST(request: NextRequest) {
         const updatedCustomer = await db.customer.update({
           where: { id: duplicateCheck.existingCustomer.id },
           data: {
-            name,
+            name: sanitizedName,
             phone: normalizedPhone,
-            bankName: bankName || duplicateCheck.existingCustomer.bankName,
-            bankAccount: bankAccount || duplicateCheck.existingCustomer.bankAccount,
-            bankHolder: bankHolder || duplicateCheck.existingCustomer.bankHolder,
-            city: city || duplicateCheck.existingCustomer.city,
+            bankName: sanitizedBankName || duplicateCheck.existingCustomer.bankName,
+            bankAccount: sanitizedBankAccount || duplicateCheck.existingCustomer.bankAccount,
+            bankHolder: sanitizedBankHolder || duplicateCheck.existingCustomer.bankHolder,
+            city: sanitizedCity || duplicateCheck.existingCustomer.city,
             label: label || duplicateCheck.existingCustomer.label,
           },
         });
@@ -186,12 +205,12 @@ export async function POST(request: NextRequest) {
     // Create new customer (no duplicate found)
     const customer = await db.customer.create({
       data: {
-        name,
+        name: sanitizedName,
         phone: normalizedPhone,
-        bankName: bankName || null,
-        bankAccount: bankAccount || null,
-        bankHolder: bankHolder || null,
-        city: city || null,
+        bankName: sanitizedBankName || null,
+        bankAccount: sanitizedBankAccount || null,
+        bankHolder: sanitizedBankHolder || null,
+        city: sanitizedCity || null,
         label: label || 'New',
         partnerId,
         addedBy,

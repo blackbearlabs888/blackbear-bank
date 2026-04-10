@@ -194,8 +194,11 @@ export default function RegisterPage() {
       setError('Format nomor WhatsApp tidak valid (contoh: 08xxx)');
       return;
     }
-    if (formData.password.length < 6) {
-      setError('Password minimal 6 karakter');
+    if (formData.password.length < 8 ||
+        !/[A-Z]/.test(formData.password) ||
+        !/[a-z]/.test(formData.password) ||
+        !/[0-9]/.test(formData.password)) {
+      setError('Password minimal 8 karakter, harus mengandung huruf besar, huruf kecil, dan angka');
       return;
     }
     if (formData.password.length > 128) {
@@ -499,11 +502,11 @@ export default function RegisterPage() {
                           <Input
                             id="password"
                             type={showPassword ? 'text' : 'password'}
-                            placeholder="Min. 6 karakter"
+                            placeholder="Min. 8 karakter, A-Z, a-z, 0-9"
                             value={formData.password}
                             onChange={(e) => handleChange('password', e.target.value.slice(0, 128))}
                             required
-                            minLength={6}
+                            minLength={8}
                             className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pr-12"
                             autoComplete="new-password"
                             maxLength={128}
@@ -537,7 +540,7 @@ export default function RegisterPage() {
                             value={formData.confirmPassword}
                             onChange={(e) => handleChange('confirmPassword', e.target.value.slice(0, 128))}
                             required
-                            minLength={6}
+                            minLength={8}
                             className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pr-12"
                             autoComplete="new-password"
                             maxLength={128}

@@ -99,11 +99,12 @@ export function validateNominal(value: unknown): { valid: boolean; value?: numbe
 }
 
 /**
- * Validate UUID format
+ * Validate CUID format (Prisma default @id)
+ * CUID: starts with lowercase letter, 25 chars, lowercase alphanumeric
  */
-export function isValidUuid(value: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(value);
+export function isValidCuid(value: string): boolean {
+  const cuidRegex = /^[a-z][a-z0-9]{24}$/;
+  return cuidRegex.test(value);
 }
 
 /**
@@ -177,7 +178,7 @@ export const FIELD_LIMITS = {
   EMAIL_MAX: 255,
   PHONE_MIN: 10,
   PHONE_MAX: 15,
-  PASSWORD_MIN: 6,
+  PASSWORD_MIN: 8,
   PASSWORD_MAX: 128,
   BANK_NAME_MAX: 50,
   BANK_ACCOUNT_MIN: 5,

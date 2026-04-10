@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { db, toNumber } from '@/lib/db';
 import { hashPassword } from '@/lib/auth';
+import { randomBytes } from 'crypto';
 
 // Helper to serialize partner data
 function serializePartner(partner: Record<string, unknown>) {
@@ -92,7 +93,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user with random password
-    const hashedPassword = await hashPassword('partner123');
+    const generatedPassword = randomBytes(4).toString('hex'); // 8 char random password
+    const hashedPassword = await hashPassword(generatedPassword);
 
     const newUser = await db.user.create({
       data: {

@@ -1,5 +1,6 @@
 'use client';
 
+import DOMPurify from 'dompurify';
 import { useEffect, useState, useRef, useSyncExternalStore, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
@@ -940,7 +941,7 @@ function BlogPreviewDialog({
                   prose-pre:bg-muted prose-pre:border prose-pre:text-sm
                   prose-img:rounded-xl prose-img:shadow-lg
                 "
-                dangerouslySetInnerHTML={{ __html: post.content.replace(/\n/g, '<br />') }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content, { ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'code', 'pre', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td'], ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'id', 'style'] }) }}
               />
             </div>
           </div>

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { hashPassword, verifyPassword } from '@/lib/auth';
+import { getCurrentUser, hashPassword, verifyPassword, validatePassword } from '@/lib/auth';
 import { db, toNumber } from '@/lib/db';
 
 // Helper to serialize partner data
@@ -87,6 +86,14 @@ export async function PATCH(request: NextRequest) {
 
     // Handle password change
     if (currentPassword && newPassword) {
+      // Validate new password meets security requirements
+      if (!validatePassword(newPassword)) {
+        return NextResponse.json(
+          { success: false, error: 'Password baru minimal 8 karakter, harus mengandung huruf besar, huruf kecil, dan angka' },
+          { status: 400 }
+        );
+      }
+
       const userWithPassword = await db.user.findUnique({
         where: { id: user.id },
         select: { password: true },

@@ -1,5 +1,6 @@
 'use client';
 
+import DOMPurify from 'dompurify';
 import { useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -55,6 +56,10 @@ function formatDate(date: Date | string): string {
 
 interface BlogDetailClientProps {
   post: BlogPost;
+}
+
+function sanitizeHtml(html: string): string {
+  return DOMPurify.sanitize(html, { ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'code', 'pre', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td'], ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'id', 'style'] });
 }
 
 export default function BlogDetailClient({ post }: BlogDetailClientProps) {
@@ -284,7 +289,7 @@ export default function BlogDetailClient({ post }: BlogDetailClientProps) {
                 prose-pre:bg-muted prose-pre:border
                 prose-img:rounded-xl prose-img:shadow-lg
               "
-              dangerouslySetInnerHTML={{ __html: post.content.replace(/\n/g, '<br />') }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
             />
 
             {/* Tags */}

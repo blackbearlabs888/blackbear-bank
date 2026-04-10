@@ -713,8 +713,23 @@ async function processCallbackQuery(callbackQuery: TelegramCallbackQuery) {
 
 // ==================== MAIN HANDLER ====================
 
+/** Verify the request is from Telegram using the secret token */
+function verifyTelegramSecret(request: NextRequest): boolean {
+  const authHeader = request.headers.get('x-telegram-bot-api-secret-token');
+  const settingsToken = process.env.TELEGRAM_WEBHOOK_SECRET;
+  // If no secret is configured, skip verification (backward compatibility)
+  if (!settingsToken) return true;
+  return authHeader === settingsToken;
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Verify webhook secret to prevent forged requests
+    if (!verifyTelegramSecret(request)) {
+      console.warn('[Telegram Webhook] Unauthorized: invalid or missing secret token');
+      return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body: TelegramUpdate = await request.json();
 
     // Process callback queries first

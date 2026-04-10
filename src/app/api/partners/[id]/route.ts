@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser, hashPassword } from '@/lib/auth';
+import { getCurrentUser, hashPassword, validatePassword } from '@/lib/auth';
 import { db, toNumber } from '@/lib/db';
 import { randomBytes } from 'crypto';
 
@@ -165,7 +165,14 @@ export async function PATCH(
       newPassword = generateRandomPassword(10);
       userData.password = await hashPassword(newPassword);
     } else if (password) {
-      userData.password = await hashPassword(password);
+      // Validate password meets security requirements
+      if (!validatePassword(String(password))) {
+        return NextResponse.json(
+          { success: false, error: 'Password minimal 8 karakter, harus mengandung huruf besar, huruf kecil, dan angka' },
+          { status: 400 }
+        );
+      }
+      userData.password = await hashPassword(String(password));
     }
 
     // Handle other fields

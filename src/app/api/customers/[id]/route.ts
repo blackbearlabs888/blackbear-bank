@@ -17,6 +17,15 @@ export async function PATCH(
     }
 
     const { id } = await params;
+
+    // IDOR protection for partner role
+    if (user.role === 'partner') {
+      const customer = await db.customer.findUnique({ where: { id } });
+      if (!customer || customer.partnerId !== user.partner?.id) {
+        return NextResponse.json({ success: false, error: 'Tidak memiliki akses' }, { status: 403 });
+      }
+    }
+
     const body = await request.json();
     const { name, phone, bankName, bankAccount, bankHolder, city, label, notes } = body;
 
@@ -78,6 +87,14 @@ export async function DELETE(
 
     const { id } = await params;
 
+    // IDOR protection for partner role
+    if (user.role === 'partner') {
+      const customer = await db.customer.findUnique({ where: { id } });
+      if (!customer || customer.partnerId !== user.partner?.id) {
+        return NextResponse.json({ success: false, error: 'Tidak memiliki akses' }, { status: 403 });
+      }
+    }
+
     // Check if customer has transactions
     const transactionsCount = await db.transaction.count({
       where: { customerId: id },
@@ -122,6 +139,14 @@ export async function GET(
     }
 
     const { id } = await params;
+
+    // IDOR protection for partner role
+    if (user.role === 'partner') {
+      const existingCustomer = await db.customer.findUnique({ where: { id } });
+      if (!existingCustomer || existingCustomer.partnerId !== user.partner?.id) {
+        return NextResponse.json({ success: false, error: 'Tidak memiliki akses' }, { status: 403 });
+      }
+    }
 
     const customer = await db.customer.findUnique({
       where: { id },

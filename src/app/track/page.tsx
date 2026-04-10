@@ -63,8 +63,7 @@ interface OrderData {
   paymentType: string;
   methodTransaction: string;
   partner: string | null;
-  partnerPhone: string | null;
-  ownerWhatsapp: string | null;
+  canContact: boolean; // Whether a WA contact is available (proxy-based, phone hidden)
   transactionLink?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -513,6 +512,7 @@ function TrackOrderContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [contactLoading, setContactLoading] = useState(false);
 
   // Testimonial state
   const [testimonial, setTestimonial] = useState<TestimonialData | null>(null);
@@ -863,21 +863,35 @@ function TrackOrderContent() {
                 </div>
               )}
 
-              {/* Follow Up Button */}
-              {(order.partnerPhone || order.ownerWhatsapp) && (
+              {/* Follow Up Button - WhatsApp Proxy (phone numbers never exposed to client) */}
+              {order.canContact && (
                 <Button
-                  asChild
                   className="w-full h-10 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-md shadow-green-500/20"
+                  onClick={async () => {
+                    try {
+                      setContactLoading(true);
+                      const res = await fetch(`/api/orders/contact?orderId=${order.orderId}`);
+                      const data = await res.json();
+                      if (data.success && data.data?.redirectUrl) {
+                        window.open(data.data.redirectUrl, '_blank', 'noopener,noreferrer');
+                      } else {
+                        toast.error(data.error || 'Gagal menghubungi kontak');
+                      }
+                    } catch {
+                      toast.error('Terjadi kesalahan saat menghubungi kontak');
+                    } finally {
+                      setContactLoading(false);
+                    }
+                  }}
+                  disabled={contactLoading}
                 >
-                  <a
-                    href={`https://wa.me/${order.partnerPhone || order.ownerWhatsapp}?text=${encodeURIComponent(`Halo, saya ingin menanyakan status order saya dengan Order ID: ${order.orderId}`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  {contactLoading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
                     <MessageCircle className="w-4 h-4 mr-2" />
-                    Follow Up via WhatsApp
-                    {order.partner ? ` (${order.partner})` : ' (Owner)'}
-                  </a>
+                  )}
+                  Follow Up via WhatsApp
+                  {order.partner ? ` (${order.partner})` : ' (Owner)'}
                 </Button>
               )}
 

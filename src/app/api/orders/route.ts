@@ -12,7 +12,7 @@ import {
   sanitizeString,
   validateLength, 
   validateNominal, 
-  isValidUuid, 
+  isValidCuid,
   isValidMethodTransaction,
   isHoneypotTriggered,
   FIELD_LIMITS
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
     const safeNominal = nominalResult.value;
 
     // ── Payment Type ID Validation ──
-    if (!isValidUuid(String(paymentTypeId))) {
+    if (!isValidCuid(String(paymentTypeId))) {
       return NextResponse.json(
         { success: false, error: 'Tipe pembayaran tidak valid' },
         { status: 400 }
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Partner ID Validation (optional) ──
-    if (sanitizedPartnerId && !isValidUuid(sanitizedPartnerId)) {
+    if (sanitizedPartnerId && !isValidCuid(sanitizedPartnerId)) {
       return NextResponse.json(
         { success: false, error: 'ID partner tidak valid' },
         { status: 400 }

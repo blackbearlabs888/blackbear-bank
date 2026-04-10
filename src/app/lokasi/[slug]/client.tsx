@@ -1,5 +1,6 @@
 'use client';
 
+import DOMPurify from 'dompurify';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,10 @@ const benefits = [
   { icon: Clock, text: 'Proses Cepat' },
   { icon: CheckCircle, text: 'Transparan' },
 ];
+
+function sanitizeHtml(html: string): string {
+  return DOMPurify.sanitize(html, { ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'code', 'pre', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td'], ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'id', 'style'] });
+}
 
 export default function LocationDetailClient({ location }: LocationDetailClientProps) {
   const { config } = useSiteConfig();
@@ -300,7 +305,7 @@ export default function LocationDetailClient({ location }: LocationDetailClientP
                       prose-ul:my-4 prose-ol:my-4
                       prose-li:text-muted-foreground
                     "
-                    dangerouslySetInnerHTML={{ __html: location.content.replace(/\n/g, '<br />') }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(location.content) }}
                   />
                 </CardContent>
               </Card>

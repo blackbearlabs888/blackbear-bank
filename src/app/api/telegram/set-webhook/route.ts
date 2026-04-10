@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 
 /**
  * Set or remove Telegram webhook
@@ -10,6 +11,11 @@ import { db } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'owner') {
+      return NextResponse.json({ success: false, error: 'Tidak memiliki akses' }, { status: 403 });
+    }
+
     const settings = await db.notificationSettings.findFirst();
     const botToken = settings?.telegramBotToken;
 
@@ -28,6 +34,9 @@ export async function POST(request: NextRequest) {
 
     const webhookUrl = `${domain}/api/telegram/webhook`;
 
+    // Generate or use existing secret token for webhook verification
+    const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || crypto.randomUUID().replace(/-/g, '');
+
     // Set webhook on Telegram
     const telegramRes = await fetch(
       `https://api.telegram.org/bot${botToken}/setWebhook`,
@@ -38,11 +47,18 @@ export async function POST(request: NextRequest) {
           url: webhookUrl,
           allowed_updates: ['message', 'callback_query'],
           drop_pending_updates: true,
+          secret_token: webhookSecret,
         }),
       }
     );
 
     const result = await telegramRes.json();
+
+    // Store the secret in env for verification (runtime only)
+    if (result.ok && !process.env.TELEGRAM_WEBHOOK_SECRET) {
+      process.env.TELEGRAM_WEBHOOK_SECRET = webhookSecret;
+      console.log('[Set Webhook] Webhook secret token configured. Add TELEGRAM_WEBHOOK_SECRET to .env for persistence.');
+    }
 
     if (!result.ok) {
       return NextResponse.json({
@@ -73,6 +89,11 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'owner') {
+      return NextResponse.json({ success: false, error: 'Tidak memiliki akses' }, { status: 403 });
+    }
+
     const settings = await db.notificationSettings.findFirst();
     const botToken = settings?.telegramBotToken;
 
@@ -111,6 +132,11 @@ export async function DELETE() {
 
 export async function GET() {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'owner') {
+      return NextResponse.json({ success: false, error: 'Tidak memiliki akses' }, { status: 403 });
+    }
+
     const settings = await db.notificationSettings.findFirst();
     const botToken = settings?.telegramBotToken;
 

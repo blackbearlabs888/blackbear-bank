@@ -4,6 +4,7 @@ import { db, toNumber } from '@/lib/db';
 import { generateOrderId, calculatePaymentFee, calculateMarginBreakdown } from '@/lib/auth';
 import { sendTelegramNotification, formatCurrency } from '@/lib/telegram';
 import { checkCustomerDuplicate, normalizePhone } from '@/lib/customer-utils';
+import { sanitizeName, sanitizePhone, sanitizeBankAccount, sanitizeCity, sanitizeString, validateLength, isValidCuid, isValidMethodTransaction, FIELD_LIMITS } from '@/lib/sanitize';
 
 // Helper to serialize transaction with Decimal fields
 function serializeTransaction(tx: Record<string, unknown>) {
@@ -153,6 +154,14 @@ export async function POST(request: NextRequest) {
       partnerId,
     } = body;
 
+    // ── Input Sanitization ──
+    const sanitizedName = customerName ? sanitizeName(customerName) : '';
+    const sanitizedPhone = customerPhone ? sanitizePhone(customerPhone) : '';
+    const sanitizedCity = customerCity ? sanitizeCity(customerCity) : '';
+    const sanitizedBankName = customerBankName ? sanitizeString(customerBankName) : '';
+    const sanitizedBankAccount = customerBankAccount ? sanitizeBankAccount(customerBankAccount) : '';
+    const sanitizedBankHolder = customerBankHolder ? sanitizeName(customerBankHolder) : '';
+
     // Validation
     if (!nominal || !paymentTypeId || !methodTransaction) {
       return NextResponse.json(
@@ -170,7 +179,7 @@ export async function POST(request: NextRequest) {
     }
 
     // For new customer, name and phone are required
-    if (isNewCustomer && (!customerName || !customerPhone)) {
+    if (isNewCustomer && (!sanitizedName || !sanitizedPhone)) {
       return NextResponse.json(
         { success: false, error: 'Nama dan nomor customer harus diisi' },
         { status: 400 }
@@ -257,10 +266,10 @@ export async function POST(request: NextRequest) {
 
     if (isNewCustomer) {
       // Normalize phone number
-      const normalizedPhone = normalizePhone(customerPhone);
+      const normalizedPhone = normalizePhone(sanitizedPhone);
       
       // Check for duplicate customer (by phone OR name)
-      const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, customerName);
+      const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, sanitizedName);
 
       if (duplicateCheck.isDuplicate && duplicateCheck.existingCustomer) {
         // Use existing customer - update with new info if provided
@@ -270,12 +279,12 @@ export async function POST(request: NextRequest) {
         await db.customer.update({
           where: { id: finalCustomerId },
           data: {
-            name: customerName,
+            name: sanitizedName,
             phone: normalizedPhone,
-            city: customerCity || undefined,
-            bankName: customerBankName || undefined,
-            bankAccount: customerBankAccount || undefined,
-            bankHolder: customerBankHolder || undefined,
+            city: sanitizedCity || undefined,
+            bankName: sanitizedBankName || undefined,
+            bankAccount: sanitizedBankAccount || undefined,
+            bankHolder: sanitizedBankHolder || undefined,
             partnerId: user.role === 'partner' ? actualPartnerId : undefined,
           },
         });
@@ -283,12 +292,12 @@ export async function POST(request: NextRequest) {
         // Create new customer with bank details
         const newCustomer = await db.customer.create({
           data: {
-            name: customerName,
+            name: sanitizedName,
             phone: normalizedPhone,
-            city: customerCity || null,
-            bankName: customerBankName || null,
-            bankAccount: customerBankAccount || null,
-            bankHolder: customerBankHolder || null,
+            city: sanitizedCity || null,
+            bankName: sanitizedBankName || null,
+            bankAccount: sanitizedBankAccount || null,
+            bankHolder: sanitizedBankHolder || null,
             totalVolume: 0,
             totalTransactions: 0,
             addedBy: user.role === 'owner' ? 'owner' : 'partner',
