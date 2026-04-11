@@ -1,57 +1,133 @@
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import type { SiteConfig } from "@/types";
 
-// GET - Fetch public site configuration (no authentication required)
+// Define update data type
+interface SiteConfigUpdateData {
+  ownerName?: string;
+  ownerEmail?: string;
+  ownerAvatar?: string | null;
+  brandName?: string;
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  siteTitle?: string;
+  metaDescription?: string | null;
+  metaKeywords?: string | null;
+  contactPhone?: string | null;
+  contactWhatsapp?: string | null;
+  contactEmail?: string | null;
+  socialInstagram?: string | null;
+  socialFacebook?: string | null;
+  socialTiktok?: string | null;
+  maintenanceMode?: boolean;
+  maintenanceMessage?: string | null;
+}
+
 export async function GET() {
   try {
-    // Get owner profile for site config
-    const profile = await db.ownerProfile.findFirst();
+    // Get the first (and only) site config
+    let siteConfig = await db.siteConfig.findFirst();
 
-    if (!profile) {
-      // Return default config if no profile exists
-      return NextResponse.json({
-        success: true,
+    // Create default site config if not exists
+    if (!siteConfig) {
+      siteConfig = await db.siteConfig.create({
         data: {
-          websiteTitle: 'Black Bear',
-          logoUrl: null,
-          faviconUrl: null,
-          metaTitle: 'Black Bear - Layanan Tarik Tunai Terpercaya',
-          metaDescription: 'Layanan tarik tunai profesional untuk Kartu Kredit & Paylater dengan proses cepat dan aman.',
-          footerEmail: null,
-          footerWhatsapp: null,
-          footerInstagram: null,
-          footerFacebook: null,
-          footerTiktok: null,
-          footerYoutube: null,
-          footerThreads: null,
-          maintenanceMode: false,
+          ownerName: "Black Bear Admin",
+          ownerEmail: "admin@blackbear.com",
+          brandName: "Black Bear",
+          siteTitle: "Black Bear - Gestun Service",
+          metaDescription: "Layanan Gestun Terpercaya dengan harga kompetitif dan proses cepat",
+          metaKeywords: "gestun, jual beli voucher, cashback, shopee, tokopedia, lazada",
+          contactWhatsapp: "+6281234567890",
+          contactEmail: "admin@blackbear.com",
+          socialInstagram: "@blackbear.gestun",
         },
       });
     }
 
-    // Return only public fields
     return NextResponse.json({
       success: true,
-      data: {
-        websiteTitle: profile.websiteTitle,
-        logoUrl: profile.logoUrl,
-        faviconUrl: profile.faviconUrl,
-        metaTitle: profile.metaTitle,
-        metaDescription: profile.metaDescription,
-        footerEmail: profile.footerEmail,
-        footerWhatsapp: profile.footerWhatsapp,
-        footerInstagram: profile.footerInstagram,
-        footerFacebook: profile.footerFacebook,
-        footerTiktok: profile.footerTiktok,
-        footerYoutube: profile.footerYoutube,
-        footerThreads: profile.footerThreads,
-        maintenanceMode: profile.maintenanceMode,
-      },
+      data: siteConfig,
     });
   } catch (error) {
-    console.error('Get site config error:', error);
+    console.error("Error fetching site config:", error);
     return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
+      {
+        success: false,
+        error: "Failed to fetch site config",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    
+    // Get existing site config
+    let siteConfig = await db.siteConfig.findFirst();
+    
+    // Create default if not exists
+    if (!siteConfig) {
+      siteConfig = await db.siteConfig.create({
+        data: {
+          ownerName: "Black Bear Admin",
+          ownerEmail: "admin@blackbear.com",
+          brandName: "Black Bear",
+          siteTitle: "Black Bear - Gestun Service",
+        },
+      });
+    }
+
+    // Build update data
+    const updateData: SiteConfigUpdateData = {};
+    
+    // Profile fields
+    if (body.ownerName !== undefined) updateData.ownerName = body.ownerName;
+    if (body.ownerEmail !== undefined) updateData.ownerEmail = body.ownerEmail;
+    if (body.ownerAvatar !== undefined) updateData.ownerAvatar = body.ownerAvatar;
+    
+    // Brand Identity fields
+    if (body.brandName !== undefined) updateData.brandName = body.brandName;
+    if (body.logoUrl !== undefined) updateData.logoUrl = body.logoUrl;
+    if (body.faviconUrl !== undefined) updateData.faviconUrl = body.faviconUrl;
+    
+    // SEO fields
+    if (body.siteTitle !== undefined) updateData.siteTitle = body.siteTitle;
+    if (body.metaDescription !== undefined) updateData.metaDescription = body.metaDescription;
+    if (body.metaKeywords !== undefined) updateData.metaKeywords = body.metaKeywords;
+    
+    // Contact fields
+    if (body.contactPhone !== undefined) updateData.contactPhone = body.contactPhone;
+    if (body.contactWhatsapp !== undefined) updateData.contactWhatsapp = body.contactWhatsapp;
+    if (body.contactEmail !== undefined) updateData.contactEmail = body.contactEmail;
+    if (body.socialInstagram !== undefined) updateData.socialInstagram = body.socialInstagram;
+    if (body.socialFacebook !== undefined) updateData.socialFacebook = body.socialFacebook;
+    if (body.socialTiktok !== undefined) updateData.socialTiktok = body.socialTiktok;
+    
+    // Maintenance fields
+    if (body.maintenanceMode !== undefined) updateData.maintenanceMode = body.maintenanceMode;
+    if (body.maintenanceMessage !== undefined) updateData.maintenanceMessage = body.maintenanceMessage;
+
+    // Update site config
+    const updatedSiteConfig = await db.siteConfig.update({
+      where: { id: siteConfig.id },
+      data: updateData,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: updatedSiteConfig,
+      message: "Site configuration updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating site config:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to update site config",
+      },
       { status: 500 }
     );
   }

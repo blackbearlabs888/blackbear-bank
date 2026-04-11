@@ -1,232 +1,354 @@
-// Black Bear WebApp - Type Definitions
+// ==================== USER & AUTH ====================
 
-export type UserRole = 'owner' | 'partner';
+export type UserRole = 'OWNER' | 'PARTNER'
 
-export type CustomerLabel = 'VIP' | 'Regular' | 'New' | 'Blacklist';
-
-export type TransactionStatus = 'pending' | 'verification' | 'process' | 'success' | 'failed';
-
-export type MethodTransaction = 'Online' | 'COD';
-
-export type PartnerTier = 'Bronze' | 'Silver' | 'Gold' | 'Platinum';
-
-export type PartnerBadge = 'Newbie' | 'Rising Star' | 'Champion' | 'Legend';
-
-export type PartnerStatus = 'active' | 'suspended';
-
-// User types
 export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  avatar?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  email: string
+  name: string
+  role: UserRole
+  avatar: string | null
+  createdAt: string
+  updatedAt: string
 }
 
-// Session types
-export interface Session {
-  id: string;
-  userId: string;
-  expiresAt: Date;
-  createdAt: Date;
-}
+// ==================== PARTNER ====================
 
-// Partner types
+export type PartnerTier = 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond'
+export type PartnerStatus = 'ACTIVE' | 'SUSPENDED'
+export type PartnerBadge = 'Champion' | 'Top Performer' | 'Rising Star' | 'Veteran' | null
+
 export interface Partner {
-  id: string;
-  userId: string;
-  name: string;
-  email: string;
-  phone: string;
-  bankName: string;
-  bankAccount: string;
-  bankHolder: string;
-  city: string;
-  commission: number;
-  target: number;
-  tier: PartnerTier;
-  badge: PartnerBadge;
-  status: PartnerStatus;
-  totalProfit: number;
-  totalVolume: number;
-  totalTransactions: number;
-  joinedAt: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  userId: string
+  user?: User
+  bankName: string
+  accountNumber: string
+  accountHolder: string
+  city: string
+  whatsapp: string
+  tier: PartnerTier
+  badge: PartnerBadge
+  commissionRate: number
+  targetAmount: number
+  kpiTarget: number
+  status: PartnerStatus
+  totalProfit: number
+  totalVolume: number
+  totalTransactions: number
+  createdAt: string
+  updatedAt: string
 }
 
-// Customer types
+// ==================== CUSTOMER ====================
+
+export type CustomerLabel = 'VIP' | 'REGULAR' | 'NEW' | 'BLACKLIST'
+
 export interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  bankName?: string;
-  bankAccount?: string;
-  bankHolder?: string;
-  city?: string;
-  label: CustomerLabel;
-  totalVolume: number;
-  totalTransactions: number;
-  partnerId?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  partnerId: string | null
+  partner?: Partner
+  name: string
+  whatsapp: string
+  bank: string | null
+  accountNumber: string | null
+  accountHolder: string | null
+  city: string | null
+  label: CustomerLabel
+  totalContribution: number
+  totalTransactions: number
+  totalVolume: number
+  createdAt: string
+  updatedAt: string
 }
 
-// Transaction types
+// ==================== TRANSACTION ====================
+
+export type TransactionStatus = 'PENDING' | 'VERIFIED' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED'
+export type TransactionMethod = 'ONLINE' | 'COD'
+
 export interface Transaction {
-  id: string;
-  orderId: string;
-  customerId: string;
-  partnerId?: string;
-  nominal: number;
-  paymentFee: number;
-  platformFee: number;
-  netMargin: number;
-  partnerProfit: number;
-  ownerProfit: number;
-  totalReceived: number;
-  paymentTypeId: string;
-  methodTransaction: MethodTransaction;
-  marketplaceId?: string;
-  status: TransactionStatus;
-  notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
-  customer?: Customer;
-  partner?: Partner;
-  paymentType?: PaymentType;
-  marketplace?: Marketplace;
+  id: string
+  orderId: string
+  customerId: string
+  customer?: Customer
+  partnerId: string | null
+  partner?: Partner
+  nominal: number
+  paymentTypeId: string
+  paymentType?: PaymentType
+  marketplaceId: string | null
+  marketplace?: Marketplace
+  method: TransactionMethod
+  paymentFee: number
+  platformFee: number
+  netMargin: number
+  partnerProfit: number
+  ownerProfit: number
+  totalServiceFee: number
+  receivedAmount: number
+  status: TransactionStatus
+  createdAt: string
+  updatedAt: string
 }
 
-// Payment Type
+// ==================== PAYMENT TYPE ====================
+
+export type PaymentTypeCategory = 'CC' | 'PAYLATER'
+export type PaymentTypeStatus = 'ACTIVE' | 'INACTIVE'
+
 export interface PaymentType {
-  id: string;
-  name: string;
-  onlineFeePercent: number;
-  onlineFeeFlat: number;
-  codFeePercent: number;
-  codFeeFlat: number;
-  threshold: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  name: string
+  type: PaymentTypeCategory
+  threshold: number
+  onlineFeePercent: number
+  onlineFeeFixed: number
+  codFeePercent: number
+  codFeeFixed: number
+  status: PaymentTypeStatus
+  createdAt: string
+  updatedAt: string
 }
 
-// Marketplace
+// ==================== MARKETPLACE ====================
+
+export type MarketplaceStatus = 'ACTIVE' | 'INACTIVE'
+
 export interface Marketplace {
-  id: string;
-  name: string;
-  feePercent: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  name: string
+  feePercent: number
+  logo: string | null
+  status: MarketplaceStatus
+  createdAt: string
+  updatedAt: string
 }
 
-// Announcement
+// ==================== ANNOUNCEMENT ====================
+
+export type AnnouncementType = 'INFO' | 'PROMO'
+export type AnnouncementStatus = 'ACTIVE' | 'INACTIVE'
+
 export interface Announcement {
-  id: string;
-  title: string;
-  description: string;
-  isActive: boolean;
-  startDate: Date;
-  expireDate: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  createdBy: string
+  user?: User
+  title: string
+  description: string
+  type: AnnouncementType
+  link: string | null
+  status: AnnouncementStatus
+  startDate: string
+  endDate: string
+  createdAt: string
+  updatedAt: string
+  isRead?: boolean
 }
 
-// Promo
-export interface Promo {
-  id: string;
-  title: string;
-  link: string;
-  isActive: boolean;
-  startDate: Date;
-  expireDate: Date;
-  createdAt: Date;
-  updatedAt: Date;
+// ==================== ANNOUNCEMENT READ ====================
+
+export interface AnnouncementRead {
+  id: string
+  announcementId: string
+  partnerId: string
+  readAt: string
 }
 
-// Site Config
+// ==================== MONTHLY RANKING ====================
+
+export interface MonthlyRanking {
+  id: string
+  partnerId: string
+  partner?: Partner
+  year: number
+  month: number
+  profit: number
+  volume: number
+  transactions: number
+  rank: number
+  badge: PartnerBadge
+  createdAt: string
+}
+
+// ==================== SITE CONFIG ====================
+
 export interface SiteConfig {
-  id: string;
-  key: string;
-  value: string;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  ownerName: string
+  ownerEmail: string
+  ownerAvatar: string | null
+  brandName: string
+  logoUrl: string | null
+  faviconUrl: string | null
+  siteTitle: string
+  metaDescription: string | null
+  metaKeywords: string | null
+  contactPhone: string | null
+  contactWhatsapp: string | null
+  contactEmail: string | null
+  socialInstagram: string | null
+  socialFacebook: string | null
+  socialTiktok: string | null
+  maintenanceMode: boolean
+  maintenanceMessage: string | null
+  updatedAt: string
 }
 
-// Owner Profile
-export interface OwnerProfile {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  websiteTitle: string;
-  logoUrl?: string;
-  faviconUrl?: string;
-  metaTitle?: string;
-  metaDescription?: string;
-  footerWhatsapp?: string;
-  footerInstagram?: string;
-  footerFacebook?: string;
-  maintenanceMode: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// ==================== API RESPONSES ====================
 
-// API Response types
 export interface ApiResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
+  success: boolean
+  data?: T
+  error?: string
+  message?: string
 }
 
-// Auth types
-export interface LoginCredentials {
-  email: string;
-  password: string;
-  role: UserRole;
+export interface PaginatedResponse<T> {
+  success: boolean
+  data: T[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
 }
 
-export interface RegisterData {
-  name: string;
-  email: string;
-  phone: string;
-  password: string;
-  confirmPassword: string;
-  bankName: string;
-  bankAccount: string;
-  bankHolder: string;
-  city: string;
+// ==================== FORM DATA ====================
+
+export interface LoginFormData {
+  email: string
+  password: string
+  role: UserRole
 }
 
-// Order types
-export interface OrderInput {
-  name: string;
-  phone: string;
-  bank?: string;
-  bankAccount?: string;
-  bankHolder?: string;
-  nominal: number;
-  paymentTypeId: string;
-  methodTransaction: MethodTransaction;
-  city?: string;
+export interface RegisterPartnerFormData {
+  name: string
+  email: string
+  whatsapp: string
+  password: string
+  confirmPassword: string
+  bankName: string
+  accountNumber: string
+  accountHolder: string
+  city: string
 }
 
-// Stats types
+export interface OrderFormData {
+  name: string
+  whatsapp: string
+  bank: string
+  accountNumber: string
+  accountHolder: string
+  nominal: number
+  paymentTypeId: string
+  method: TransactionMethod
+  city: string
+}
+
+export interface TransactionFormData {
+  customerId?: string
+  newCustomer?: {
+    name: string
+    whatsapp: string
+    bank?: string
+    accountNumber?: string
+    accountHolder?: string
+    city?: string
+    label: CustomerLabel
+  }
+  nominal: number
+  marketplaceId?: string
+  paymentTypeId: string
+  method: TransactionMethod
+  partnerId?: string | null
+}
+
+// ==================== STATS ====================
+
 export interface DashboardStats {
-  totalProfit: number;
-  totalTransactions: number;
-  totalVolume: number;
-  activePartners: number;
+  totalProfit: number
+  totalTransactions: number
+  totalVolume: number
+  activePartners: number
+  pendingOrders: number
+  completedOrders: number
 }
 
-export interface MarginHealth {
-  paymentType: string;
-  avgMargin: number;
-  totalVolume: number;
-  transactionCount: number;
+export interface PartnerStats {
+  profit: number
+  transactions: number
+  volume: number
+  pending: number
+  tierProgress: number
+  gapToNextRank: number
+}
+
+// ==================== PARTNER KPI ====================
+
+export interface PartnerKPI {
+  id: string
+  partnerId: string
+  year: number
+  month: number
+  totalProfit: number
+  totalVolume: number
+  totalTrans: number
+  newCustomers: number
+  avgTransaction: number
+  targetProgress: number
+  targetAchieved: boolean
+  createdAt: string
+}
+
+export interface PartnerKPIWithTrend extends PartnerKPI {
+  previousMonth?: PartnerKPI
+  profitTrend: number
+  volumeTrend: number
+  transTrend: number
+}
+
+export interface PartnerKPISummary {
+  currentMonth: PartnerKPIWithTrend
+  monthlyData: PartnerKPI[]
+  achievementHistory: Array<{
+    year: number
+    month: number
+    achieved: boolean
+    progress: number
+  }>
+  totalAchievements: number
+  avgProgress: number
+}
+
+// ==================== CUSTOMER CONTRIBUTION ====================
+
+export interface CustomerContribution {
+  id: string
+  name: string
+  whatsapp: string
+  city: string | null
+  label: CustomerLabel
+  totalContribution: number
+  totalTransactions: number
+  totalVolume: number
+  contributionPercent: number
+  rank: number
+  partnerBreakdown: Array<{
+    partnerId: string
+    partnerName: string
+    contribution: number
+    transactions: number
+  }>
+}
+
+// ==================== CALCULATOR ====================
+
+export interface FeeCalculation {
+  paymentFee: number
+  platformFee: number
+  netMargin: number
+  partnerProfit: number
+  ownerProfit: number
+  totalServiceFee: number
+  receivedAmount: number
 }

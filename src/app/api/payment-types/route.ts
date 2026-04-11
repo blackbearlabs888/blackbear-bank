@@ -1,84 +1,109 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { db, toNumber } from '@/lib/db';
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
-// GET payment types
-export async function GET(request: NextRequest) {
+// GET - List all payment types (optionally filter by status)
+export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const activeOnly = searchParams.get('activeOnly');
-
-    const where: Record<string, unknown> = {};
-    if (activeOnly === 'true') {
-      where.isActive = true;
-    }
+    const includeInactive = searchParams.get("all") === "true";
 
     const paymentTypes = await db.paymentType.findMany({
-      where,
-      orderBy: { name: 'asc' },
+      where: includeInactive ? {} : { status: "ACTIVE" },
+      orderBy: {
+        name: "asc",
+      },
     });
-
-    // Convert Decimal values to numbers for frontend compatibility
-    const serializedPaymentTypes = paymentTypes.map(pt => ({
-      ...pt,
-      onlineFeePercent: toNumber(pt.onlineFeePercent),
-      onlineFeeFlat: toNumber(pt.onlineFeeFlat),
-      codFeePercent: toNumber(pt.codFeePercent),
-      codFeeFlat: toNumber(pt.codFeeFlat),
-      threshold: toNumber(pt.threshold),
-    }));
 
     return NextResponse.json({
       success: true,
-      data: serializedPaymentTypes,
+      data: paymentTypes,
     });
   } catch (error) {
-    console.error('Get payment types error:', error);
+    console.error("Error fetching payment types:", error);
     return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
+      {
+        success: false,
+        error: "Failed to fetch payment types",
+      },
       { status: 500 }
     );
   }
 }
 
-// POST create payment type
-export async function POST(request: NextRequest) {
+// POST - Create new payment type
+export async function POST(request: Request) {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== 'owner') {
-      return NextResponse.json(
-        { success: false, error: 'Tidak memiliki akses' },
-        { status: 403 }
-      );
-    }
-
     const body = await request.json();
     const {
       name,
-      onlineFeePercent,
-      onlineFeeFlat,
-      codFeePercent,
-      codFeeFlat,
+      type,
       threshold,
-      isActive,
+      onlineFeePercent,
+      onlineFeeFixed,
+      codFeePercent,
+      codFeeFixed,
+      status,
     } = body;
 
-    if (!name) {
+    // Validation
+    if (!name || !type) {
       return NextResponse.json(
-        { success: false, error: 'Nama tipe pembayaran wajib diisi' },
+        { success: false, error: "Name and type are required" },
         { status: 400 }
       );
     }
 
-    // Check if name already exists
-    const existing = await db.paymentType.findUnique({
+    if (!["CC", "PAYLATER"].includes(type)) {
+      return NextResponse.json(
+        { success: false, error: "Type must be CC or PAYLATER" },
+        { status: 400 }
+      );
+    }
+
+    // Validate fee percentages (0-100)
+    const onlinePercent = Number(onlineFeePercent) || 0;
+    const codPercent = Number(codFeePercent) || 0;
+
+    if (onlinePercent < 0 || onlinePercent > 100) {
+      return NextResponse.json(
+        { success: false, error: "Online fee percent must be between 0-100" },
+        { status: 400 }
+      );
+    }
+
+    if (codPercent < 0 || codPercent > 100) {
+      return NextResponse.json(
+        { success: false, error: "COD fee percent must be between 0-100" },
+        { status: 400 }
+      );
+    }
+
+    // Validate fixed fees (positive number)
+    const onlineFixed = Number(onlineFeeFixed) || 0;
+    const codFixed = Number(codFeeFixed) || 0;
+
+    if (onlineFixed < 0) {
+      return NextResponse.json(
+        { success: false, error: "Online fixed fee must be a positive number" },
+        { status: 400 }
+      );
+    }
+
+    if (codFixed < 0) {
+      return NextResponse.json(
+        { success: false, error: "COD fixed fee must be a positive number" },
+        { status: 400 }
+      );
+    }
+
+    // Check for duplicate name
+    const existing = await db.paymentType.findFirst({
       where: { name },
     });
 
     if (existing) {
       return NextResponse.json(
-        { success: false, error: 'Nama tipe pembayaran sudah ada' },
+        { success: false, error: "Payment type with this name already exists" },
         { status: 400 }
       );
     }
@@ -86,24 +111,28 @@ export async function POST(request: NextRequest) {
     const paymentType = await db.paymentType.create({
       data: {
         name,
-        onlineFeePercent: parseFloat(onlineFeePercent) || 0,
-        onlineFeeFlat: parseFloat(onlineFeeFlat) || 0,
-        codFeePercent: parseFloat(codFeePercent) || 0,
-        codFeeFlat: parseFloat(codFeeFlat) || 0,
-        threshold: parseFloat(threshold) || 1000000,
-        isActive: isActive ?? true,
+        type,
+        threshold: Number(threshold) || 1000000,
+        onlineFeePercent: onlinePercent / 100, // Store as decimal
+        onlineFeeFixed: onlineFixed,
+        codFeePercent: codPercent / 100, // Store as decimal
+        codFeeFixed: codFixed,
+        status: status || "ACTIVE",
       },
     });
 
     return NextResponse.json({
       success: true,
       data: paymentType,
-      message: 'Tipe pembayaran berhasil dibuat',
+      message: "Payment type created successfully",
     });
   } catch (error) {
-    console.error('Create payment type error:', error);
+    console.error("Error creating payment type:", error);
     return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
+      {
+        success: false,
+        error: "Failed to create payment type",
+      },
       { status: 500 }
     );
   }

@@ -1,79 +1,56 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser, hashPassword, validatePassword } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import bcrypt from 'bcrypt'
 
-// PATCH change partner password
+// PATCH /api/partners/[id]/password - Change partner password
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-    const { id } = await params;
+    const { id } = await params
+    const body = await request.json()
+    const { password } = body
 
-    if (!user || user.role !== 'owner') {
+    // Validate password
+    if (!password || password.length < 6) {
       return NextResponse.json(
-        { success: false, error: 'Tidak memiliki akses' },
-        { status: 403 }
-      );
-    }
-
-    const body = await request.json();
-    const { newPassword } = body;
-
-    // Trim and validate password
-    const trimmedPassword = typeof newPassword === 'string' ? newPassword.trim() : '';
-
-    if (!trimmedPassword || !validatePassword(trimmedPassword)) {
-      return NextResponse.json(
-        { success: false, error: 'Password minimal 8 karakter, harus mengandung huruf besar, huruf kecil, dan angka' },
+        { success: false, error: 'Password minimal 6 karakter' },
         { status: 400 }
-      );
+      )
     }
 
-    // Get partner with user
-    const partner = await db.partner.findUnique({
+    // Check if partner exists
+    const existingPartner = await db.partner.findUnique({
       where: { id },
       include: { user: true },
-    });
+    })
 
-    if (!partner) {
+    if (!existingPartner) {
       return NextResponse.json(
         { success: false, error: 'Partner tidak ditemukan' },
         { status: 404 }
-      );
-    }
-
-    if (!partner.userId || !partner.user) {
-      return NextResponse.json(
-        { success: false, error: 'User partner tidak ditemukan' },
-        { status: 404 }
-      );
+      )
     }
 
     // Hash new password
-    const hashedPassword = await hashPassword(trimmedPassword);
+    const hashedPassword = await bcrypt.hash(password, 10)
 
     // Update user password
     await db.user.update({
-      where: { id: partner.userId },
+      where: { id: existingPartner.userId },
       data: { password: hashedPassword },
-    });
-
-    // Delete all existing sessions for this partner to force re-login
-    await db.session.deleteMany({
-      where: { userId: partner.userId },
-    });
+    })
 
     return NextResponse.json({
       success: true,
-      message: 'Password berhasil diubah. Partner perlu login ulang dengan password baru.',
-    });
+      message: 'Password berhasil diperbarui',
+    })
   } catch (error) {
-    console.error('Change partner password error:', error);
+    console.error('Error changing partner password:', error)
     return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
+      { success: false, error: 'Gagal mengubah password' },
       { status: 500 }
-    );
+    )
   }
 }

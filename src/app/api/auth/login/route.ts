@@ -1,147 +1,118 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { 
-  verifyPassword, 
-  createSession, 
-  setSessionCookie,
-  validateEmail,
-} from '@/lib/auth';
-import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
-import { sanitizeEmail, sanitizeString, validateLength, FIELD_LIMITS } from '@/lib/sanitize';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import bcrypt from 'bcrypt'
+import { ApiResponse, User, Partner } from '@/types'
+
+interface LoginRequestBody {
+  email: string
+  password: string
+}
 
 export async function POST(request: NextRequest) {
   try {
-    // ── Rate Limiting (anti brute force) ──
-    const clientIp = getClientIp(request);
-    const rateLimitResult = checkRateLimit(clientIp, RATE_LIMITS.LOGIN);
+    const body: LoginRequestBody = await request.json()
     
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: `Terlalu banyak percobaan login. Coba lagi dalam ${rateLimitResult.retryAfter} detik.` 
-        },
-        { 
-          status: 429,
-          headers: {
-            'Retry-After': String(rateLimitResult.retryAfter),
-            'X-RateLimit-Remaining': '0',
-          }
-        }
-      );
+    const { email, password } = body
+
+    // Validate required fields
+    if (!email || !password) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: 'Email and password are required'
+      }, { status: 400 })
     }
 
-    // ── Request Body Validation ──
-    let body: Record<string, unknown>;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json(
-        { success: false, error: 'Format request tidak valid' },
-        { status: 400 }
-      );
-    }
-
-    const { email, password, role } = body;
-
-    // ── Input Sanitization ──
-    const sanitizedEmail = sanitizeEmail(email);
-    const sanitizedPassword = typeof password === 'string' ? password : '';
-    const sanitizedRole = typeof role === 'string' ? sanitizeString(role).trim() : '';
-
-    // ── Required Field Validation ──
-    if (!sanitizedEmail || !sanitizedPassword || !sanitizedRole) {
-      return NextResponse.json(
-        { success: false, error: 'Semua field harus diisi' },
-        { status: 400 }
-      );
-    }
-
-    // ── Field Length Validation ──
-    const emailCheck = validateLength(sanitizedEmail, 5, FIELD_LIMITS.EMAIL_MAX);
-    if (!emailCheck.valid) {
-      return NextResponse.json({ success: false, error: `Email: ${emailCheck.error}` }, { status: 400 });
-    }
-
-    const passwordCheck = validateLength(sanitizedPassword, FIELD_LIMITS.PASSWORD_MIN, FIELD_LIMITS.PASSWORD_MAX);
-    if (!passwordCheck.valid) {
-      return NextResponse.json({ success: false, error: `Password: ${passwordCheck.error}` }, { status: 400 });
-    }
-
-    // ── Format Validation ──
-    if (!validateEmail(sanitizedEmail)) {
-      return NextResponse.json(
-        { success: false, error: 'Format email tidak valid' },
-        { status: 400 }
-      );
-    }
-
-    // Note: Password format validation (uppercase, lowercase, number, min 8)
-    // is only enforced at registration/password-change, NOT at login.
-    // Login only verifies the password matches the stored hash.
-
-    if (!['owner', 'partner'].includes(sanitizedRole)) {
-      return NextResponse.json(
-        { success: false, error: 'Role tidak valid' },
-        { status: 400 }
-      );
-    }
-
-    // ── Find user ──
+    // Find user by email
     const user = await db.user.findUnique({
-      where: { email: sanitizedEmail.toLowerCase() },
-      include: { partner: true },
-    });
+      where: { email: email.toLowerCase() },
+      include: {
+        partner: true
+      }
+    })
 
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Email atau password salah' },
-        { status: 401 }
-      );
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: 'Invalid email or password'
+      }, { status: 401 })
     }
 
-    // ── Verify password ──
-    const isValid = await verifyPassword(sanitizedPassword, user.password);
-    if (!isValid) {
-      return NextResponse.json(
-        { success: false, error: 'Email atau password salah' },
-        { status: 401 }
-      );
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password)
+
+    if (!isValidPassword) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: 'Invalid email or password'
+      }, { status: 401 })
     }
 
-    // ── Verify role ──
-    if (user.role !== sanitizedRole) {
-      return NextResponse.json(
-        { success: false, error: 'Role tidak sesuai dengan akun' },
-        { status: 401 }
-      );
+    // Generate token with timestamp for expiry validation
+    const token = Buffer.from(`${user.id}:${Date.now()}`).toString('base64')
+
+    // Prepare response data (exclude password)
+    const userData: User = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role as 'OWNER' | 'PARTNER',
+      avatar: user.avatar,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString()
     }
 
-    // ── Create session ──
-    const sessionId = await createSession(user.id);
-    await setSessionCookie(sessionId);
+    let partnerData: Partner | null = null
 
-    // ── Return user data ──
-    const { password: _, ...userWithoutPassword } = user;
-
-    return NextResponse.json(
-      {
-        success: true,
-        user: userWithoutPassword,
-        partner: user.partner,
-        message: 'Login berhasil',
-      },
-      {
-        headers: {
-          'X-RateLimit-Remaining': String(rateLimitResult.remaining),
-        },
+    // Include partner data if user is a partner
+    if (user.partner) {
+      partnerData = {
+        id: user.partner.id,
+        userId: user.partner.userId,
+        bankName: user.partner.bankName,
+        accountNumber: user.partner.accountNumber,
+        accountHolder: user.partner.accountHolder,
+        city: user.partner.city,
+        whatsapp: user.partner.whatsapp,
+        tier: user.partner.tier as 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond',
+        badge: user.partner.badge as 'Champion' | 'Top Performer' | 'Rising Star' | 'Veteran' | null,
+        commissionRate: user.partner.commissionRate,
+        targetAmount: user.partner.targetAmount,
+        status: user.partner.status as 'ACTIVE' | 'SUSPENDED',
+        totalProfit: user.partner.totalProfit,
+        totalVolume: user.partner.totalVolume,
+        totalTransactions: user.partner.totalTransactions,
+        createdAt: user.partner.createdAt.toISOString(),
+        updatedAt: user.partner.updatedAt.toISOString()
       }
-    );
+    }
+
+    // Build response and set token cookie directly on it
+    const response = NextResponse.json<ApiResponse<{ user: User; partner: Partner | null; token: string }>>({
+      success: true,
+      data: {
+        user: userData,
+        partner: partnerData,
+        token
+      },
+      message: 'Login successful'
+    }, { status: 200 })
+
+    // Set token as httpOnly cookie so middleware & API routes can read it
+    response.cookies.set('token', token, {
+      httpOnly: false, // Client also needs to read it for fetch headers
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: '/',
+    })
+
+    return response
+
   } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
-      { status: 500 }
-    );
+    console.error('Login error:', error)
+    return NextResponse.json<ApiResponse>({
+      success: false,
+      error: 'Internal server error'
+    }, { status: 500 })
   }
 }

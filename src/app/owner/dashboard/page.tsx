@@ -1,1444 +1,1729 @@
-'use client';
+'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth-store';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useEffect, useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import {
-  ChevronRight,
-  DollarSign,
   TrendingUp,
   TrendingDown,
-  Trophy,
-  Bell,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Loader2,
-  MessageSquare,
-  Activity,
-  RefreshCw,
-  CreditCard,
+  DollarSign,
+  ShoppingBag,
   Users,
-  UserPlus,
   BarChart3,
-  Settings,
+  AlertTriangle,
+  AlertCircle,
+  Trophy,
+  ArrowRight,
+  CreditCard,
   Wallet,
-  Radio,
-  Percent,
   ArrowUpRight,
   ArrowDownRight,
-  Tag,
-  Target,
+  Minus,
+  Activity,
+  Sparkles,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  RefreshCw,
   Zap,
-  Shield,
-  PieChart,
-  Gauge,
-  Calculator,
-  Layers,
-  Eye,
-  CircleDot,
-  AlertTriangle,
-  ShoppingBag,
-  Filter,
+  Target,
+  ChevronDown,
+  ChevronUp,
   Crown,
-} from 'lucide-react';
+  Medal,
+  Award
+} from 'lucide-react'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { LoadingSpinner } from '@/components/shared/loading'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
-  AreaChart,
-  Area,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig
+} from '@/components/ui/chart'
+import {
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
-} from 'recharts';
-import { formatCurrency } from '@/lib/utils';
-import Link from 'next/link';
-import { cn } from '@/lib/utils';
+  BarChart,
+  Bar,
+  Legend,
+  Cell
+} from 'recharts'
+import { formatCurrency, formatRelativeTime, formatNumber } from '@/lib/calculations'
+import { useAuthStore, useIsOwner } from '@/store/auth'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { cn } from '@/lib/utils'
 
-// ─── Interfaces ───────────────────────────────────────────
-
-interface PartnerNotification {
-  id: string;
-  orderId: string;
-  partnerName?: string;
-  customerName: string;
-  notes: string;
-  nominal: number;
-  status: string;
-  updatedAt: string;
-}
-
-interface PartnerMessage {
-  id: string;
-  transactionId: string | null;
-  title: string;
-  message: string;
-  data: {
-    orderId?: string;
-    partnerName?: string;
-    customerName?: string;
-    nominal?: number;
-    message?: string;
-  } | null;
-  isRead: boolean;
-  createdAt: string;
-}
-
-interface Transaction {
-  id: string;
-  orderId: string;
-  nominal: number;
-  status: string;
-  createdAt: string;
-  customer: { name: string };
-  paymentType: { name: string };
-  partner?: { name: string } | null;
-}
-
-interface DashboardData {
-  stats: {
-    totalTransactions: number;
-    totalVolume: number;
-    totalProfit: number;
-    activePartners: number;
-    totalCustomers: number;
-    thisMonthProfit: number;
-    lastMonthProfit: number;
-    profitChange: number;
-    thisMonthVolume: number;
-    lastMonthVolume: number;
-    volumeChange: number;
-    newCustomersThisMonth: number;
-    newPartnersThisMonth: number;
-    pendingCount: number;
-    verificationCount: number;
-    processCount: number;
-    successCount: number;
-    failedCount: number;
-    conversionRate?: number;
-    avgTransactionValue?: number;
-    dailyGrowth?: number;
-    todayProfit?: number;
-    todayVolume?: number;
-    todayCount?: number;
-    yesterdayProfit?: number;
-    yesterdayVolume?: number;
-    yesterdayCount?: number;
-    weekProfit?: number;
-    weekVolume?: number;
-    weekCount?: number;
-    lastWeekProfit?: number;
-    lastWeekVolume?: number;
-    lastWeekCount?: number;
-  };
-  recentTransactions: Transaction[];
-  topPartnersThisMonth: Array<{
-    id: string;
-    name: string;
-    tier: string;
-    profit?: number;
-    volume?: number;
-  }>;
-  last7DaysData: Array<{
-    date: string;
-    dayName: string;
-    volume: number;
-    count: number;
-  }>;
-  partnerNotifications: PartnerNotification[];
-  partnerMessages: PartnerMessage[];
-  unreadPartnerMessages: number;
-  topCustomersThisMonth: Array<{
-    id: string;
-    name: string;
-    label?: string;
-    volume: number;
-    transactions: number;
-  }>;
-  partnersCloseToTarget: Array<{
-    id: string;
-    name: string;
-    tier: string;
-    achievement: number;
-    profit: number;
-    target: number;
-  }>;
-  newPartners: Array<{
-    id: string;
-    name: string;
-    createdAt: string;
-  }>;
-}
-
-interface AnalyticsData {
+interface OwnerStats {
+  totalProfit: number
+  totalTransactions: number
+  activePartners: number
+  totalVolume: number
+  pendingOrders: number
+  completedOrders: number
+  lowMarginAlerts: Array<{
+    orderId: string
+    nominal: number
+    netMargin: number
+    marginPercent: number
+    status: string
+    createdAt: string
+  }>
+  highRiskTransactions: Array<{
+    orderId: string
+    nominal: number
+    customerName: string
+    paymentType: string
+    createdAt: string
+  }>
+  topPartners: Array<{
+    partnerId: string
+    name: string
+    profit: number
+    volume: number
+    transactions: number
+    tier: string
+  }>
+  topPartnersByVolume30Days: Array<{
+    partnerId: string
+    name: string
+    tier: string
+    totalVolume: number
+    transactions: number
+  }>
+  partnersNearTarget: Array<{
+    partnerId: string
+    name: string
+    tier: string
+    totalProfit: number
+    targetAmount: number
+    progress: number
+    gap: number
+    commissionRate: number
+  }>
+  marginHealth: {
+    cc: {
+      avgMarginPercent: number
+      totalVolume: number
+      totalProfit: number
+      count: number
+    }
+    paylater: {
+      avgMarginPercent: number
+      totalVolume: number
+      totalProfit: number
+      count: number
+    }
+  }
+  marginTrend: Array<{
+    date: string
+    ccMargin: number
+    paylaterMargin: number
+  }>
   forecast: {
-    currentMonthProfit: number;
-    currentMonthVolume: number;
-    avgDailyProfit: number;
-    avgDailyVolume: number;
-    projectedProfit: number;
-    projectedVolume: number;
-    daysRemaining: number;
-    lastMonthProfit: number;
-    lastMonthVolume: number;
-    profitChange: number;
-    volumeChange: number;
-    daysPassed: number;
-    daysInMonth: number;
-  };
-  feeAnalysis: {
-    avgPaymentFee: number;
-    avgPlatformFee: number;
-    avgNetMargin: number;
-    totalPaymentFee: number;
-    totalPlatformFee: number;
-    totalNetMargin: number;
-    totalOwnerProfit: number;
-    avgPaymentFeePercent: number;
-    avgPlatformFeePercent: number;
-    avgMarginPercent: number;
-    totalTransactions: number;
-    totalVolume: number;
-  };
-  paymentTypes: Array<{
-    id: string;
-    name: string;
-    transactionCount: number;
-    totalVolume: number;
-    totalProfit: number;
-    totalFee: number;
-    successRate: number;
-  }>;
-  peakHours: Array<{ hour: number; count: number }>;
-  partnerStats: Array<{
-    id: string;
-    name: string;
-    tier: string;
-    last30DaysVolume: number;
-    last30DaysTransactions: number;
-    last30DaysSuccessCount: number;
-  }>;
-  marketplaceAnalysis: Array<{
-    name: string;
-    feePercent: number;
-    transactionCount: number;
-    totalVolume: number;
-    totalFee: number;
-  }>;
-  statusDetails: Record<string, {
-    count: number;
-    volume: number;
-    profit: number;
-  }>;
+    predicted30DaysVolume: number
+    predicted30DaysProfit: number
+    dailyData: Array<{
+      date: string
+      predictedVolume: number
+      predictedProfit: number
+    }>
+    monthlyTrend: Array<{
+      date: string
+      volume: number
+      profit: number
+    }>
+  }
+  recentTransactions: Array<{
+    orderId: string
+    nominal: number
+    status: string
+    paymentType: string
+    customerName: string
+    createdAt: string
+  }>
 }
 
-// ─── Helpers ──────────────────────────────────────────────
+const chartConfig = {
+  ccMargin: {
+    label: 'CC Margin',
+    color: 'hsl(var(--chart-1))'
+  },
+  paylaterMargin: {
+    label: 'Paylater Margin',
+    color: 'hsl(var(--chart-2))'
+  },
+  volume: {
+    label: 'Volume',
+    color: 'hsl(262 83% 58%)'
+  },
+  profit: {
+    label: 'Profit',
+    color: 'hsl(142 76% 36%)'
+  }
+} satisfies ChartConfig
 
-function formatTimeAgo(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return 'Baru saja';
-  if (diffMins < 60) return `${diffMins}m lalu`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}j lalu`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays}h lalu`;
-  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+const tierColors: Record<string, string> = {
+  Bronze: 'bg-amber-600',
+  Silver: 'bg-slate-400',
+  Gold: 'bg-yellow-500',
+  Platinum: 'bg-cyan-500',
+  Diamond: 'bg-purple-500'
 }
 
-function formatDateAgo(dateString: string): string {
-  try { return formatTimeAgo(new Date(dateString)); } catch { return dateString; }
+const tierBgColors: Record<string, string> = {
+  Bronze: 'bg-amber-500/10 border-amber-500/30',
+  Silver: 'bg-slate-400/10 border-slate-400/30',
+  Gold: 'bg-yellow-500/10 border-yellow-500/30',
+  Platinum: 'bg-cyan-500/10 border-cyan-500/30',
+  Diamond: 'bg-purple-500/10 border-purple-500/30'
 }
 
-function formatCompactCurrency(value: number): string {
-  if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}M`;
-  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}jt`;
-  if (value >= 1000) return `${(value / 1000).toFixed(0)}rb`;
-  if (value > 0) return value.toLocaleString('id-ID');
-  return '0';
+// Status badge configuration
+const statusConfig: Record<string, { bg: string; text: string; icon: typeof CheckCircle2 }> = {
+  COMPLETED: { bg: 'bg-emerald-500', text: 'text-white', icon: CheckCircle2 },
+  PENDING: { bg: 'bg-amber-500', text: 'text-white', icon: Clock },
+  VERIFIED: { bg: 'bg-blue-500', text: 'text-white', icon: CheckCircle2 },
+  PROCESSING: { bg: 'bg-purple-500', text: 'text-white', icon: Loader2 },
+  CANCELLED: { bg: 'bg-red-500', text: 'text-white', icon: XCircle }
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, string> = {
-    pending: 'bg-orange-100/80 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400',
-    verification: 'bg-yellow-100/80 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400',
-    process: 'bg-blue-100/80 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400',
-    success: 'bg-emerald-100/80 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400',
-    failed: 'bg-red-100/80 text-red-700 dark:bg-red-900/20 dark:text-red-400',
-  };
-  return (
-    <Badge className={cn('text-[8px] sm:text-[9px] px-1.5 sm:px-2 capitalize', config[status] || config.pending)}>
-      {status}
-    </Badge>
-  );
-}
-
-function ChangeIndicator({ value, suffix = '%' }: { value: number; suffix?: string }) {
-  const isPositive = value >= 0;
-  return (
-    <span className={cn(
-      'inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full',
-      isPositive
-        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'
-        : 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
-    )}>
-      {isPositive ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
-      {Math.abs(value).toFixed(1)}{suffix}
-    </span>
-  );
-}
-
-function ProgressBar({ value, max, color = 'bg-violet-500', className = '', barStyle }: {
-  value: number;
-  max: number;
-  color?: string;
-  className?: string;
-  barStyle?: React.CSSProperties;
+// Collapsible Section Component
+function CollapsibleSection({
+  title,
+  icon: Icon,
+  iconColor,
+  defaultOpen = true,
+  children,
+  rightElement,
+  className
+}: {
+  title: string
+  icon: typeof TrendingUp
+  iconColor: string
+  defaultOpen?: boolean
+  children: React.ReactNode
+  rightElement?: React.ReactNode
+  className?: string
 }) {
-  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+  const [isOpen, setIsOpen] = useState(defaultOpen)
+
   return (
-    <div className={cn('h-1.5 bg-muted/80 rounded-full overflow-hidden', className)}>
+    <div className={cn('rounded-xl border bg-card shadow-sm overflow-hidden', className)}>
       <div
-        className={cn('h-full rounded-full transition-all duration-700 ease-out', color)}
-        style={{ width: `${pct}%`, ...barStyle }}
-      />
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-2">
+          <div className={cn('p-1.5 rounded-lg', iconColor)}>
+            <Icon className="h-4 w-4" />
+          </div>
+          <h2 className="text-base font-semibold">{title}</h2>
+        </div>
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          {rightElement}
+          {isOpen ? (
+            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+          )}
+        </div>
+      </div>
+      {isOpen && (
+        <div className="border-t">
+          {children}
+        </div>
+      )}
     </div>
-  );
+  )
 }
-
-// ─── Skeleton ────────────────────────────────────────────
-
-function DashboardSkeleton() {
-  return (
-    <div className="max-w-7xl mx-auto px-2.5 sm:px-4 lg:px-6 py-3 sm:py-6 space-y-6 pb-24 md:pb-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1.5"><Skeleton className="h-6 w-40" /><Skeleton className="h-3 w-56" /></div>
-        <div className="flex gap-2"><Skeleton className="h-9 w-9 rounded-xl" /><Skeleton className="h-9 w-9 rounded-xl" /></div>
-      </div>
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-[92px] rounded-2xl" />)}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Skeleton className="h-64 rounded-2xl lg:col-span-2" />
-        <div className="space-y-4"><Skeleton className="h-32 rounded-2xl" /><Skeleton className="h-28 rounded-2xl" /></div>
-      </div>
-      <Skeleton className="h-14 rounded-2xl" />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Skeleton className="h-72 rounded-2xl" />
-        <Skeleton className="h-72 rounded-2xl" />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Skeleton className="h-56 rounded-2xl" />
-        <Skeleton className="h-56 rounded-2xl" />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Skeleton className="h-56 rounded-2xl" />
-        <Skeleton className="h-56 rounded-2xl" />
-        <Skeleton className="h-56 rounded-2xl" />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Skeleton className="h-64 rounded-2xl" />
-        <Skeleton className="h-64 rounded-2xl" />
-      </div>
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-        {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[76px] rounded-2xl" />)}
-      </div>
-    </div>
-  );
-}
-
-// ─── Status Colors Map ──────────────────────────────────
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: '#f97316',
-  verification: '#eab308',
-  process: '#3b82f6',
-  success: '#10b981',
-  failed: '#ef4444',
-};
-
-const PAYMENT_COLORS = ['#7c3aed', '#0891b2', '#d97706', '#dc2626', '#059669', '#ea580c', '#db2777', '#4f46e5'];
-
-// ─── Main Component ───────────────────────────────────────
 
 export default function OwnerDashboardPage() {
-  const router = useRouter();
-  const { user, isAuthenticated, isLoading, hasHydrated, hydrate } = useAuthStore();
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const redirectAttempted = useRef(false);
-  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const router = useRouter()
+  const isOwner = useIsOwner()
+  const isMobile = useIsMobile()
+  const [stats, setStats] = useState<OwnerStats | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => { if (!hasHydrated) hydrate(); }, [hasHydrated, hydrate]);
+  // Pull to refresh state
+  const [pullDistance, setPullDistance] = useState(0)
+  const [startY, setStartY] = useState(0)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (hasHydrated && !isLoading && !redirectAttempted.current) {
-      redirectAttempted.current = true;
-      if (!isAuthenticated) router.replace('/login');
-      else if (user?.role !== 'owner') router.replace('/partner/dashboard');
+  const fetchStats = async (showRefreshLoader = false) => {
+    if (showRefreshLoader) {
+      setIsRefreshing(true)
     }
-  }, [hasHydrated, isLoading, isAuthenticated, user, router]);
-
-  useEffect(() => {
-    if (isAuthenticated && hasHydrated && user?.role === 'owner') {
-      fetchDashboard();
-      fetchAnalytics();
-      fetchUnreadNotifications();
+    try {
+      const token = useAuthStore.getState().token
+      const headers: Record<string, string> = {}
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      const response = await fetch('/api/stats/owner', { headers })
+      if (response.status === 401) {
+        // Session expired — logout
+        useAuthStore.getState().logout()
+        return
+      }
+      if (!response.ok) {
+        setError('Failed to fetch stats')
+        return
+      }
+      const data = await response.json()
+      if (data.success) {
+        setStats(data.data)
+        setError(null)
+      } else {
+        setError(data.error || 'Failed to fetch stats')
+      }
+    } catch (err) {
+      setError('Failed to load dashboard data')
+      console.error(err)
+    } finally {
+      setIsLoading(false)
+      setIsRefreshing(false)
     }
-  }, [isAuthenticated, hasHydrated, user]);
+  }
 
   useEffect(() => {
-    if (isAuthenticated && hasHydrated && user?.role === 'owner') {
-      refreshIntervalRef.current = setInterval(() => { fetchDashboard(true); fetchAnalytics(); }, 60000);
+    if (!isOwner) {
+      router.push('/login')
+      return
     }
-    return () => { if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current); };
-  }, [isAuthenticated, hasHydrated, user]);
+    // Hydrate auth state on mount, then fetch data
+    useAuthStore.getState().hydrate().then(() => {
+      if (useAuthStore.getState().isAuthenticated) {
+        fetchStats()
+      }
+    })
+  }, [isOwner, router])
 
-  useEffect(() => {
-    const handleFocus = () => {
-      if (isAuthenticated && hasHydrated && user?.role === 'owner') { fetchDashboard(); fetchAnalytics(); fetchUnreadNotifications(); }
-    };
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [isAuthenticated, hasHydrated, user]);
+  // Pull to refresh handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (containerRef.current?.scrollTop === 0) {
+      setStartY(e.touches[0].clientY)
+    }
+  }
 
-  useEffect(() => {
-    const handleNotifUpdate = () => { if (isAuthenticated && hasHydrated && user?.role === 'owner') fetchUnreadNotifications(); };
-    window.addEventListener('notification-count-update', handleNotifUpdate);
-    return () => window.removeEventListener('notification-count-update', handleNotifUpdate);
-  }, [isAuthenticated, hasHydrated, user]);
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (startY === 0 || isRefreshing) return
+    
+    const currentY = e.touches[0].clientY
+    const diff = currentY - startY
+    
+    if (diff > 0 && containerRef.current?.scrollTop === 0) {
+      setPullDistance(Math.min(80, diff * 0.5))
+    }
+  }
 
-  // ─── Data Fetchers ──────────────────────────────────
+  const handleTouchEnd = async () => {
+    if (pullDistance > 60 && !isRefreshing) {
+      await fetchStats(true)
+    }
+    setPullDistance(0)
+    setStartY(0)
+  }
 
-  const fetchUnreadNotifications = async () => {
-    try {
-      const res = await fetch('/api/notifications?limit=1');
-      if (!res.ok) return;
-      const result = await res.json();
-      if (result.success) setUnreadNotifications(result.data.unreadCount || 0);
-    } catch {}
-  };
-
-  const fetchDashboard = async (isAutoRefresh = false) => {
-    if (isAutoRefresh) setIsRefreshing(true); else setDataLoading(true);
-    try {
-      const res = await fetch('/api/dashboard');
-      const result = await res.json();
-      if (result.success) { setData(result.data); setLastUpdated(new Date()); }
-      else setError(result.error || 'Gagal memuat data');
-    } catch { setError('Terjadi kesalahan'); }
-    finally { setDataLoading(false); setIsRefreshing(false); }
-  };
-
-  const fetchAnalytics = async () => {
-    try {
-      const res = await fetch('/api/transactions/analytics');
-      const result = await res.json();
-      if (result.success) setAnalytics(result.data);
-    } catch {}
-  };
-
-  const updateTransactionStatus = useCallback(async (transactionId: string, newStatus: string) => {
-    setUpdatingStatus(transactionId);
-    try {
-      const res = await fetch(`/api/transactions/${transactionId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
-      const result = await res.json();
-      if (result.success) fetchDashboard();
-      else setError(result.error || 'Gagal memperbarui status');
-    } catch { setError('Terjadi kesalahan'); }
-    finally { setUpdatingStatus(null); }
-  }, []);
-
-  // ─── Guards ─────────────────────────────────────────
-
-  if (isLoading || !hasHydrated) return <DashboardSkeleton />;
-  if (!isAuthenticated || user?.role !== 'owner') return null;
-
-  const stats = data?.stats;
-  const fc = analytics?.forecast;
-  const fee = analytics?.feeAnalysis;
-
-  // ─── Computed Values ────────────────────────────────
-
-  const todayProfitChange = (() => {
-    if (!stats?.yesterdayProfit || stats.yesterdayProfit === 0) return stats?.todayProfit && stats.todayProfit > 0 ? 100 : 0;
-    return ((stats.todayProfit - stats.yesterdayProfit) / stats.yesterdayProfit) * 100;
-  })();
-
-  const weekProfitChange = (() => {
-    if (!stats?.lastWeekProfit || stats.lastWeekProfit === 0) return stats?.weekProfit && stats.weekProfit > 0 ? 100 : 0;
-    return ((stats.weekProfit - stats.lastWeekProfit) / stats.lastWeekProfit) * 100;
-  })();
-
-  const successRate = stats?.totalTransactions ? ((stats.successCount / stats.totalTransactions) * 100) : 0;
-  const failedRate = stats?.totalTransactions ? ((stats.failedCount / stats.totalTransactions) * 100) : 0;
-  const activePipeline = (stats?.pendingCount || 0) + (stats?.verificationCount || 0) + (stats?.processCount || 0);
-
-  const pipelineStages = [
-    { label: 'Pending', count: stats?.pendingCount || 0, color: 'bg-orange-500', href: '/owner/dashboard/transactions?status=pending' },
-    { label: 'Verifikasi', count: stats?.verificationCount || 0, color: 'bg-yellow-500', href: '/owner/dashboard/transactions?status=verification' },
-    { label: 'Proses', count: stats?.processCount || 0, color: 'bg-blue-500', href: '/owner/dashboard/transactions?status=process' },
-    { label: 'Sukses', count: stats?.successCount || 0, color: 'bg-emerald-500', href: '/owner/dashboard/transactions?status=success' },
-    { label: 'Gagal', count: stats?.failedCount || 0, color: 'bg-red-400', href: '/owner/dashboard/transactions?status=failed' },
-  ];
-
-  const chartData = data?.last7DaysData || [];
-  const chartTotalVolume = chartData.reduce((s, d) => s + d.volume, 0);
-
-  // Status breakdown data — convert object to array
-  const statusDetailsRaw = analytics?.statusDetails || {};
-  const statusDetails = Object.entries(statusDetailsRaw).map(([status, d]) => ({
-    status,
-    count: d.count,
-    totalVolume: d.volume,
-    totalProfit: d.profit,
-  }));
-  const statusTotalVolume = statusDetails.reduce((s, d) => s + d.totalVolume, 0);
-
-  // ─── Render ─────────────────────────────────────────
-
-  return (
-    <div className="max-w-7xl mx-auto px-2.5 sm:px-4 lg:px-6 py-3 sm:py-6 space-y-4 sm:space-y-6 pb-24 md:pb-6">
-
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between animate-fade-in">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            {lastUpdated && <span className="ml-2 opacity-50">· {lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>}
-          </p>
+  // Loading State
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-4 p-4">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-8 w-20" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-24 rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-40 rounded-xl" />
+          <Skeleton className="h-60 rounded-xl" />
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => { fetchDashboard(); fetchAnalytics(); }} disabled={isRefreshing}
-            className="w-9 h-9 rounded-xl border border-border/50 bg-card hover:bg-muted/50 flex items-center justify-center transition-colors disabled:opacity-50" title="Refresh">
-            <RefreshCw className={cn('w-4 h-4 text-muted-foreground', isRefreshing && 'animate-spin')} />
-          </button>
-          <Link href="/owner/dashboard/notifications" className="relative w-9 h-9 rounded-xl border border-border/50 bg-card hover:bg-muted/50 flex items-center justify-center transition-colors">
-            <Bell className="w-4 h-4 text-muted-foreground" />
-            {unreadNotifications > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-[9px] font-semibold text-white flex items-center justify-center">{unreadNotifications}</span>
-            )}
-          </Link>
+      </DashboardLayout>
+    )
+  }
+
+  // Error State
+  if (error || !stats) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-4">
+          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+            <AlertCircle className="h-8 w-8 text-destructive" />
+          </div>
+          <div className="text-center">
+            <h3 className="text-lg font-semibold">Failed to Load Data</h3>
+            <p className="text-muted-foreground">{error || 'Something went wrong'}</p>
+          </div>
+          <Button onClick={() => fetchStats()} className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </Button>
         </div>
-      </div>
+      </DashboardLayout>
+    )
+  }
 
-      {error && <Alert variant="destructive" className="text-xs sm:text-sm animate-fade-in"><AlertDescription>{error}</AlertDescription></Alert>}
+  // Format dates for chart
+  const formatDateLabel = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+  }
 
-      {/* ═══════════════════════════════════════════════════
-          SECTION 1: KPI HERO STRIP (5 cards)
-          ═══════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3">
-        {dataLoading ? (
-          [...Array(5)].map((_, i) => <Skeleton key={i} className="h-[92px] rounded-2xl" />)
-        ) : (
-          <>
-            {/* Profit Hari Ini — subtle emerald gradient */}
-            <Card className="rounded-2xl border-0 shadow-sm bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-emerald-900/10 animate-slide-up overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-16 h-16 sm:w-20 sm:h-20 bg-white/[0.06] rounded-full -translate-y-1/2 translate-x-1/2" />
-              <CardContent className="p-3 sm:p-4 relative z-10">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <DollarSign className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-100" />
-                  <p className="text-[9px] sm:text-[10px] text-emerald-100 font-medium">Hari Ini</p>
-                </div>
-                <p className="text-base sm:text-xl font-semibold tabular-nums tracking-tight">{formatCurrency(stats?.todayProfit || 0)}</p>
-                <div className="flex items-center gap-1.5 mt-1.5">
-                  <span className={cn('inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full',
-                    todayProfitChange >= 0 ? 'bg-white/15 text-white' : 'bg-red-400/25 text-red-100')}>
-                    {todayProfitChange >= 0 ? <ArrowUpRight className="w-2 h-2" /> : <ArrowDownRight className="w-2 h-2" />}
-                    {Math.abs(todayProfitChange).toFixed(1)}%
-                  </span>
-                  <span className="text-[9px] text-emerald-100/60">vs kemarin</span>
-                </div>
-              </CardContent>
-            </Card>
+  // Filter margin trend data to show only days with data for cleaner chart
+  const filteredMarginTrend = stats.marginTrend.filter(d => d.ccMargin > 0 || d.paylaterMargin > 0)
 
-            {/* Profit Bulan Ini — clean with left border accent */}
-            <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up overflow-hidden border-l-[3px] border-l-violet-500">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Profit Bulan Ini</p>
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-violet-50 dark:bg-violet-950/30 flex items-center justify-center">
-                    <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-violet-500" />
-                  </div>
-                </div>
-                <p className="text-base sm:text-xl font-semibold tabular-nums tracking-tight">{formatCurrency(stats?.thisMonthProfit || 0)}</p>
-                <ChangeIndicator value={stats?.profitChange || 0} />
-              </CardContent>
-            </Card>
+  // Calculate health score color
+  const getHealthColor = (margin: number) => {
+    if (margin >= 8) return 'text-emerald-500'
+    if (margin >= 5) return 'text-amber-500'
+    return 'text-red-500'
+  }
 
-            {/* Volume Bulan Ini */}
-            <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up overflow-hidden border-l-[3px] border-l-cyan-500">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Volume Bulan Ini</p>
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-cyan-50 dark:bg-cyan-950/30 flex items-center justify-center">
-                    <BarChart3 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-500" />
-                  </div>
-                </div>
-                <p className="text-base sm:text-xl font-semibold tabular-nums tracking-tight">{formatCompactCurrency(stats?.thisMonthVolume || 0)}</p>
-                <ChangeIndicator value={stats?.volumeChange || 0} />
-              </CardContent>
-            </Card>
+  const getHealthBg = (margin: number) => {
+    if (margin >= 8) return 'bg-emerald-500'
+    if (margin >= 5) return 'bg-amber-500'
+    return 'bg-red-500'
+  }
 
-            {/* Total Transaksi */}
-            <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up overflow-hidden border-l-[3px] border-l-amber-500">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Total Transaksi</p>
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center">
-                    <CreditCard className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500" />
-                  </div>
-                </div>
-                <div className="flex items-baseline gap-1.5">
-                  <p className="text-base sm:text-xl font-semibold tabular-nums tracking-tight">{stats?.totalTransactions?.toLocaleString('id-ID') || 0}</p>
-                  {(stats?.todayCount || 0) > 0 && <Badge className="bg-amber-100/80 text-amber-700 dark:bg-amber-900/20 text-amber-400 text-[8px] px-1">+{stats?.todayCount}</Badge>}
-                </div>
-                <p className="text-[9px] text-muted-foreground mt-0.5">{successRate.toFixed(1)}% success rate</p>
-              </CardContent>
-            </Card>
+  const getHealthLabel = (margin: number) => {
+    if (margin >= 8) return 'Excellent'
+    if (margin >= 5) return 'Good'
+    return 'Needs Attention'
+  }
 
-            {/* Customer */}
-            <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up overflow-hidden border-l-[3px] border-l-pink-500 col-span-2 lg:col-span-1">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Total Pelanggan</p>
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-pink-50 dark:bg-pink-950/30 flex items-center justify-center">
-                    <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-pink-500" />
-                  </div>
-                </div>
-                <div className="flex items-baseline gap-1.5">
-                  <p className="text-base sm:text-xl font-semibold tabular-nums tracking-tight">{stats?.totalCustomers?.toLocaleString('id-ID') || 0}</p>
-                  {(stats?.newCustomersThisMonth || 0) > 0 && <Badge className="bg-pink-100/80 text-pink-700 dark:bg-pink-900/20 text-pink-400 text-[8px] px-1">+{stats?.newCustomersThisMonth} baru</Badge>}
-                </div>
-                <p className="text-[9px] text-muted-foreground mt-0.5">{stats?.activePartners || 0} partner aktif</p>
-              </CardContent>
-            </Card>
-          </>
-        )}
-      </div>
+  // MOBILE VIEW
+  if (isMobile) {
+    return (
+      <DashboardLayout>
+        <div 
+          ref={containerRef}
+          className="h-[calc(100vh-60px)] overflow-y-auto"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* Pull to refresh indicator */}
+          <div
+            className="flex items-center justify-center transition-all duration-200"
+            style={{
+              height: pullDistance,
+              opacity: pullDistance / 60,
+            }}
+          >
+            <RefreshCw className={cn(
+              'h-6 w-6 text-primary',
+              (isRefreshing || pullDistance > 60) && 'animate-spin'
+            )} />
+          </div>
 
-      {/* ═══════════════════════════════════════════════════
-          SECTION 2: CHART + CMO QUICK METRICS
-          ═══════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5 sm:gap-3">
-        {/* Revenue Chart — soft glass feel */}
-        <Card className="lg:col-span-2 rounded-2xl border border-border/50 shadow-sm overflow-hidden animate-slide-up backdrop-blur-sm bg-white/70 dark:bg-card/70">
-          <CardHeader className="pb-1 px-3.5 sm:px-5 pt-3 sm:pt-4">
+          {/* Mobile Header */}
+          <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
-                <Activity className="w-4 h-4 text-muted-foreground" />
-                Tren Revenue 7 Hari
-              </CardTitle>
+              <div>
+                <h1 className="text-lg font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+                  Command Center
+                </h1>
+                <p className="text-xs text-muted-foreground">Owner Dashboard</p>
+              </div>
               <div className="flex items-center gap-2">
-                {stats?.weekProfit !== undefined && stats?.weekProfit > 0 && (
-                  <ChangeIndicator value={weekProfitChange} />
-                )}
+                <Badge variant="outline" className="text-xs gap-1 bg-emerald-500/10 border-emerald-500/30 text-emerald-600">
+                  <Activity className="h-3 w-3 animate-pulse" />
+                  Live
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => fetchStats(true)}
+                  disabled={isRefreshing}
+                  className="h-9 w-9"
+                >
+                  <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
+                </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="px-2 sm:px-5 pb-3 sm:pb-4">
-            {dataLoading ? (
-              <Skeleton className="h-40 sm:h-48 w-full rounded-xl" />
-            ) : chartData.length > 0 && chartData.some(d => d.volume > 0) ? (
-              <>
-                <ResponsiveContainer width="100%" height={160} className="sm:!h-[190px]">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="colorVol" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.2} />
-                    <XAxis dataKey="dayName" tick={{ fontSize: 10 }} stroke="#9ca3af" tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 9 }} stroke="#9ca3af"
-                      tickFormatter={(v) => v >= 1000000000 ? `${(v/1000000000).toFixed(0)}M` : v >= 1000000 ? `${(v/1000000).toFixed(0)}jt` : v >= 1000 ? `${(v/1000).toFixed(0)}rb` : v.toString()}
-                      width={38} tickLine={false} axisLine={false} />
-                    <Tooltip formatter={(value: number) => formatCurrency(value)} labelStyle={{ fontSize: 11 }}
-                      contentStyle={{ fontSize: 10, borderRadius: 10, border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }} />
-                    <Area type="monotone" dataKey="volume" stroke="#7c3aed" strokeWidth={2} fillOpacity={1} fill="url(#colorVol)" name="Volume" />
-                  </AreaChart>
-                </ResponsiveContainer>
-                <div className="flex items-center justify-center gap-4 mt-2 pt-2 border-t border-border/40 text-[10px] text-muted-foreground">
-                  <span>Total: <strong className="text-foreground font-medium">{formatCompactCurrency(chartTotalVolume)}</strong></span>
-                  <span className="text-border">·</span>
-                  <span>Rata-rata/hari: <strong className="text-foreground font-medium">{formatCompactCurrency(chartTotalVolume / 7)}</strong></span>
+          </div>
+
+          <div className="space-y-4 p-4 pb-safe">
+            {/* Stats Grid - 2x2 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 p-4 text-white shadow-sm">
+                <p className="text-xs text-white/80">Total Profit</p>
+                <p className="text-lg font-bold mt-1 truncate">{formatCurrency(stats.totalProfit)}</p>
+                <div className="flex items-center gap-1 mt-1 text-xs text-white/70">
+                  <ArrowUpRight className="h-3 w-3" />
+                  <span>Owner profit</span>
                 </div>
-              </>
-            ) : (
-              <div className="h-40 sm:h-48 flex items-center justify-center text-muted-foreground">
-                <div className="text-center"><BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-15" /><p className="text-xs">Belum ada transaksi 7 hari terakhir</p></div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* CMO Quick Metrics — softer icon containers */}
-        <div className="flex flex-col gap-4">
-          {/* Conversion Rate */}
-          <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up flex-1">
-            <CardContent className="p-3 sm:p-4 flex items-center gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center flex-shrink-0">
-                <Target className="w-4 h-4 text-indigo-500" />
+              
+              <div className="rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 p-4 text-white shadow-sm">
+                <p className="text-xs text-white/80">Transaksi</p>
+                <p className="text-lg font-bold mt-1">{formatNumber(stats.totalTransactions)}</p>
+                <div className="flex items-center gap-2 mt-1 text-xs text-white/70">
+                  <span>{stats.completedOrders} done</span>
+                  <span>•</span>
+                  <span>{stats.pendingOrders} pending</span>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Conversion Rate</p>
-                <p className="text-xl sm:text-2xl font-semibold tracking-tight">{(stats?.conversionRate || 0).toFixed(1)}%</p>
-                <ProgressBar value={stats?.conversionRate || 0} max={100} color="bg-indigo-500" className="mt-2" />
+              
+              <div className="rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 p-4 text-white shadow-sm">
+                <p className="text-xs text-white/80">Mitra Aktif</p>
+                <p className="text-lg font-bold mt-1">{formatNumber(stats.activePartners)}</p>
+                <div className="flex items-center gap-1 mt-1 text-xs text-white/70">
+                  <Activity className="h-3 w-3" />
+                  <span>Currently active</span>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Avg Transaction */}
-          <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up flex-1">
-            <CardContent className="p-3 sm:p-4 flex items-center gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-fuchsia-50 dark:bg-fuchsia-950/30 flex items-center justify-center flex-shrink-0">
-                <Calculator className="w-4 h-4 text-fuchsia-500" />
+              
+              <div className="rounded-xl bg-gradient-to-br from-fuchsia-500 to-pink-600 p-4 text-white shadow-sm">
+                <p className="text-xs text-white/80">Total Volume</p>
+                <p className="text-lg font-bold mt-1 truncate">{formatCurrency(stats.totalVolume)}</p>
+                <div className="flex items-center gap-1 mt-1 text-xs text-white/70">
+                  <Target className="h-3 w-3" />
+                  <span>Transaction vol</span>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Avg Transaction</p>
-                <p className="text-xl sm:text-2xl font-semibold tracking-tight">{formatCompactCurrency(stats?.avgTransactionValue || 0)}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* ═══════════════════════════════════════════════════
-          SECTION 3: PIPELINE
-          ═══════════════════════════════════════════════════ */}
-      {activePipeline + (stats?.successCount || 0) + (stats?.failedCount || 0) > 0 && (
-        <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5" /> Pipeline Transaksi
-              </p>
-              {activePipeline > 0 && <Badge variant="outline" className="text-[9px]">{activePipeline} aktif</Badge>}
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-0.5 scrollbar-none">
-              {pipelineStages.map((stage) => {
-                return (
-                  <Link key={stage.label} href={stage.href} className="flex-shrink-0">
-                    <div className={cn(
-                      'flex items-center gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-2xl text-xs font-medium transition-all cursor-pointer min-w-[85px] shadow-sm',
-                      stage.count === 0
-                        ? 'bg-muted/30 text-muted-foreground/30 cursor-default'
-                        : `${stage.color} text-white hover:shadow-md hover:brightness-110`
-                    )}>
-                      <span className="text-[11px]">{stage.label}</span>
-                      <span className="text-sm font-semibold">{stage.count}</span>
+
+            {/* Smart Alerts - Collapsible */}
+            <CollapsibleSection
+              title="Smart Alerts"
+              icon={Zap}
+              iconColor="bg-amber-500/10 text-amber-500"
+              defaultOpen={stats.lowMarginAlerts.length > 0 || stats.highRiskTransactions.length > 0}
+            >
+              <div className="p-4 space-y-3">
+                {/* Low Margin Alert */}
+                <div
+                  className="p-3 rounded-xl border-2 border-amber-500/30 bg-amber-500/5"
+                  onClick={() => router.push('/owner/transactions?alert=low-margin')}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4 text-amber-500" />
+                      <span className="text-sm font-medium text-amber-700 dark:text-amber-400">Low Margin</span>
                     </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                    {stats.lowMarginAlerts.length > 0 && (
+                      <Badge className="bg-amber-500 text-white animate-pulse text-xs">
+                        {stats.lowMarginAlerts.length}
+                      </Badge>
+                    )}
+                  </div>
+                  {stats.lowMarginAlerts.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {stats.lowMarginAlerts.slice(0, 2).map((alert, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs p-2 rounded-lg bg-amber-500/10">
+                          <span className="font-mono text-amber-700 dark:text-amber-300 truncate max-w-[100px]">{alert.orderId}</span>
+                          <Badge variant="outline" className="bg-amber-500/20 border-amber-500/30 text-amber-600 text-[10px]">
+                            {alert.marginPercent.toFixed(1)}%
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-emerald-600 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      All margins healthy
+                    </p>
+                  )}
+                </div>
 
-      {/* ═══════════════════════════════════════════════════
-          SECTION 4: CMO INSIGHTS — Payment Distribution + Partner Leaderboard
-          ═══════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 sm:gap-3">
-        {/* CMO: Payment Type Distribution */}
-        <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
-                <PieChart className="w-4 h-4 text-muted-foreground" />
-                <span className="text-muted-foreground font-medium text-[10px] uppercase tracking-wider">CMO</span>
-                Payment Distribution
-              </CardTitle>
-              <Badge variant="outline" className="text-[9px] text-muted-foreground">30 hari</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="px-3.5 sm:px-5 pb-4">
-            {dataLoading ? (
-              <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-8 rounded-lg" />)}</div>
-            ) : analytics?.paymentTypes && analytics.paymentTypes.length > 0 ? (
-              <div className="space-y-3">
-                {analytics.paymentTypes.slice(0, 5).map((pt, i) => {
-                  const maxVol = Math.max(...analytics.paymentTypes.slice(0, 5).map(p => p.totalVolume), 1);
-                  return (
-                    <div key={pt.id} className="group">
-                      <div className="flex items-center justify-between mb-1">
+                {/* High Risk */}
+                <div
+                  className="p-3 rounded-xl border-2 border-red-500/30 bg-red-500/5"
+                  onClick={() => router.push('/owner/transactions?alert=high-risk')}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                      <span className="text-sm font-medium text-red-700 dark:text-red-400">High Risk</span>
+                    </div>
+                    {stats.highRiskTransactions.length > 0 && (
+                      <Badge className="bg-red-500 text-white animate-pulse text-xs">
+                        {stats.highRiskTransactions.length}
+                      </Badge>
+                    )}
+                  </div>
+                  {stats.highRiskTransactions.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {stats.highRiskTransactions.slice(0, 2).map((tx, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs p-2 rounded-lg bg-red-500/10">
+                          <span className="truncate max-w-[80px] text-red-700 dark:text-red-300">{tx.customerName}</span>
+                          <span className="font-semibold text-red-600 text-xs">
+                            {formatCurrency(tx.nominal).replace('Rp', '').trim()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-emerald-600 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      No high-risk transactions
+                    </p>
+                  )}
+                </div>
+
+                {/* Top Performers */}
+                <div
+                  className="p-3 rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5"
+                  onClick={() => router.push('/owner/partners')}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="h-4 w-4 text-emerald-500" />
+                      <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Top Partners</span>
+                    </div>
+                  </div>
+                  {stats.topPartners.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {stats.topPartners.slice(0, 3).map((partner, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs p-2 rounded-lg bg-emerald-500/10">
+                          <div className="flex items-center gap-2">
+                            <div className={cn(
+                              "w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold",
+                              i === 0 ? "bg-yellow-500" : i === 1 ? "bg-slate-400" : "bg-amber-600"
+                            )}>
+                              {i + 1}
+                            </div>
+                            <span className="truncate max-w-[70px] text-emerald-700 dark:text-emerald-300">{partner.name}</span>
+                          </div>
+                          <Badge className={cn("text-white text-[10px]", tierColors[partner.tier] || 'bg-slate-500')}>
+                            {partner.tier}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No partners yet</p>
+                  )}
+                </div>
+              </div>
+            </CollapsibleSection>
+
+            {/* Partners Near Target - Close to achieving monthly target */}
+            {stats.partnersNearTarget && stats.partnersNearTarget.length > 0 && (
+              <CollapsibleSection
+                title="Target Progress"
+                icon={Target}
+                iconColor="bg-blue-500/10 text-blue-500"
+                defaultOpen={true}
+              >
+                <div className="p-4 space-y-3">
+                  {stats.partnersNearTarget.map((partner) => (
+                    <div
+                      key={partner.partnerId}
+                      className="p-3 rounded-xl border bg-gradient-to-r from-blue-500/5 to-cyan-500/5"
+                      onClick={() => router.push(`/owner/partners?id=${partner.partnerId}`)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: PAYMENT_COLORS[i % PAYMENT_COLORS.length] }} />
-                          <span className="text-xs font-medium">{pt.name}</span>
+                          <span className="text-sm font-medium truncate max-w-[100px]">{partner.name}</span>
+                          <Badge className={cn("text-white text-[10px]", tierColors[partner.tier] || 'bg-slate-500')}>
+                            {partner.tier}
+                          </Badge>
                         </div>
+                        <Badge className={cn(
+                          "text-white text-[10px]",
+                          partner.progress >= 90 ? "bg-emerald-500" :
+                          partner.progress >= 75 ? "bg-blue-500" :
+                          "bg-amber-500"
+                        )}>
+                          {partner.progress.toFixed(0)}%
+                        </Badge>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Progress 
+                          value={partner.progress} 
+                          className="h-1.5"
+                        />
+                        <div className="flex justify-between text-[10px] text-muted-foreground">
+                          <span>{formatCurrency(partner.totalProfit)}</span>
+                          <span>Target: {formatCurrency(partner.targetAmount)}</span>
+                        </div>
+                        {partner.progress >= 90 && (
+                          <div className="flex items-center gap-1 text-[10px] text-emerald-600">
+                            <Sparkles className="h-3 w-3" />
+                            <span>Gap: {formatCurrency(partner.gap)} lagi!</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {/* Top Volume 30 Days - Mobile */}
+            {stats.topPartnersByVolume30Days && stats.topPartnersByVolume30Days.length > 0 && (
+              <CollapsibleSection
+                title="Top Volume 30 Hari"
+                icon={BarChart3}
+                iconColor="bg-violet-500/10 text-violet-500"
+                defaultOpen={false}
+              >
+                <div className="p-4 space-y-3">
+                  {stats.topPartnersByVolume30Days.map((partner, i) => (
+                    <div
+                      key={partner.partnerId}
+                      className="p-3 rounded-xl border bg-gradient-to-r from-violet-500/5 to-purple-500/5"
+                      onClick={() => router.push(`/owner/partners?id=${partner.partnerId}`)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground">{pt.transactionCount} tx</span>
-                          <span className="text-xs font-medium">{formatCompactCurrency(pt.totalVolume)}</span>
+                          <div className={cn(
+                            "w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold",
+                            i === 0 ? "bg-yellow-500" : i === 1 ? "bg-slate-400" : i === 2 ? "bg-amber-600" : "bg-violet-500"
+                          )}>
+                            {i + 1}
+                          </div>
+                          <span className="text-sm font-medium truncate max-w-[100px]">{partner.name}</span>
+                          <Badge className={cn("text-white text-[10px]", tierColors[partner.tier] || 'bg-slate-500')}>
+                            {partner.tier}
+                          </Badge>
                         </div>
                       </div>
-                      <ProgressBar value={pt.totalVolume} max={maxVol} color="" className="!h-1" barStyle={{ backgroundColor: PAYMENT_COLORS[i % PAYMENT_COLORS.length] }} />
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground"><PieChart className="w-8 h-8 mx-auto mb-1 opacity-15" /><p className="text-[10px]">Belum ada data</p></div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* CMO: Partner Performance Leaderboard */}
-        <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
-                <Trophy className="w-4 h-4 text-amber-500" />
-                Top Partner Bulan Ini
-              </CardTitle>
-              <Button variant="ghost" size="sm" asChild className="h-7 text-[10px] text-muted-foreground hover:text-foreground">
-                <Link href="/owner/dashboard/partners">Lihat Semua <ChevronRight className="w-3 h-3 ml-0.5" /></Link>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="px-3.5 sm:px-5 pb-4">
-            {dataLoading ? (
-              <div className="space-y-2">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
-            ) : data?.topPartnersThisMonth?.length ? (
-              <div className="space-y-1">
-                {data.topPartnersThisMonth.slice(0, 5).map((partner, index) => {
-                  const medals = [
-                    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-                    'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
-                    'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-                  ];
-                  const maxProfit = Math.max(...data.topPartnersThisMonth.slice(0, 5).map(p => p.profit || 0), 1);
-                  return (
-                    <div key={partner.id} className="flex items-center gap-3 p-2 sm:p-2.5 rounded-xl hover:bg-muted/40 transition-colors">
-                      <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-semibold flex-shrink-0', medals[index] || 'bg-muted text-muted-foreground')}>
-                        {index + 1}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium truncate">{partner.name}</p>
-                        <ProgressBar value={partner.profit || 0} max={maxProfit} color="bg-amber-400" className="mt-1" />
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-xs font-medium">{formatCurrency(partner.profit || 0)}</p>
-                        <Badge variant="outline" className="text-[8px]">{partner.tier}</Badge>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-violet-600">{formatCurrency(partner.totalVolume)}</span>
+                        <span className="text-muted-foreground">{partner.transactions} transaksi</span>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground"><Users className="w-8 h-8 mx-auto mb-1 opacity-15" /><p className="text-[10px]">Belum ada data partner</p></div>
+                  ))}
+                </div>
+              </CollapsibleSection>
             )}
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* ═══════════════════════════════════════════════════
-          SECTION 4.5: CMO WIDGETS — Customer Acquisition + Top Customers
-          ═══════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 sm:gap-3">
-        {/* CMO: Customer Acquisition Funnel */}
-        <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
-                <Filter className="w-4 h-4 text-muted-foreground" />
-                <span className="text-muted-foreground font-medium text-[10px] uppercase tracking-wider">CMO</span>
-                Customer Acquisition
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="px-3.5 sm:px-5 pb-4">
-            {dataLoading ? (
-              <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}</div>
-            ) : stats ? (
-              <div className="space-y-4">
-                {/* Total Customers */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
+            {/* Margin Health */}
+            <CollapsibleSection
+              title="Margin Health"
+              icon={Activity}
+              iconColor="bg-violet-500/10 text-violet-500"
+              defaultOpen={true}
+            >
+              <div className="p-4 space-y-3">
+                {/* CC */}
+                <div className="p-3 rounded-xl border bg-gradient-to-r from-violet-500/5 to-purple-500/5">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <Users className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-xs font-medium">Total Pelanggan</span>
+                      <CreditCard className="h-4 w-4 text-violet-500" />
+                      <span className="text-sm font-medium">Credit Card</span>
                     </div>
-                    <span className="text-sm font-semibold">{stats.totalCustomers?.toLocaleString('id-ID') || 0}</span>
+                    <Badge className={cn("text-white text-xs", getHealthBg(stats.marginHealth.cc.avgMarginPercent))}>
+                      {getHealthLabel(stats.marginHealth.cc.avgMarginPercent)}
+                    </Badge>
                   </div>
-                  <div className="h-2 bg-muted/80 rounded-full overflow-hidden">
-                    <div className="h-full bg-zinc-400 dark:bg-zinc-500 rounded-full transition-all duration-700" style={{ width: '100%' }} />
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="text-2xl font-bold" style={{ color: getHealthColor(stats.marginHealth.cc.avgMarginPercent).replace('text-', '').includes('emerald') ? '#10b981' : getHealthColor(stats.marginHealth.cc.avgMarginPercent).includes('amber') ? '#f59e0b' : '#ef4444' }}>
+                        {stats.marginHealth.cc.avgMarginPercent.toFixed(1)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">Avg margin</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">{formatCurrency(stats.marginHealth.cc.totalProfit)}</p>
+                      <p className="text-xs text-muted-foreground">{stats.marginHealth.cc.count} tx</p>
+                    </div>
                   </div>
                 </div>
-                {/* New This Month */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
+
+                {/* Paylater */}
+                <div className="p-3 rounded-xl border bg-gradient-to-r from-cyan-500/5 to-teal-500/5">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <UserPlus className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-xs font-medium">Baru Bulan Ini</span>
+                      <Wallet className="h-4 w-4 text-cyan-500" />
+                      <span className="text-sm font-medium">Paylater</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-semibold">{stats.newCustomersThisMonth || 0}</span>
-                      <span className="text-[9px] text-muted-foreground">
-                        ({stats.totalCustomers ? ((stats.newCustomersThisMonth / stats.totalCustomers) * 100).toFixed(1) : 0}%)
-                      </span>
+                    <Badge className={cn("text-white text-xs", getHealthBg(stats.marginHealth.paylater.avgMarginPercent))}>
+                      {getHealthLabel(stats.marginHealth.paylater.avgMarginPercent)}
+                    </Badge>
+                  </div>
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="text-2xl font-bold" style={{ color: getHealthColor(stats.marginHealth.paylater.avgMarginPercent).replace('text-', '').includes('emerald') ? '#10b981' : getHealthColor(stats.marginHealth.paylater.avgMarginPercent).includes('amber') ? '#f59e0b' : '#ef4444' }}>
+                        {stats.marginHealth.paylater.avgMarginPercent.toFixed(1)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">Avg margin</p>
                     </div>
-                  </div>
-                  <ProgressBar value={stats.newCustomersThisMonth || 0} max={stats.totalCustomers || 1} color="bg-violet-400" className="!h-2" />
-                </div>
-                {/* Conversion Rate */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <Target className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-xs font-medium">Conversion Rate</span>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">{formatCurrency(stats.marginHealth.paylater.totalProfit)}</p>
+                      <p className="text-xs text-muted-foreground">{stats.marginHealth.paylater.count} tx</p>
                     </div>
-                    <span className="text-sm font-semibold">{(stats.conversionRate || 0).toFixed(1)}%</span>
-                  </div>
-                  <ProgressBar value={stats.conversionRate || 0} max={100} color="bg-emerald-400" className="!h-2" />
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground"><Filter className="w-8 h-8 mx-auto mb-1 opacity-15" /><p className="text-[10px]">Belum ada data</p></div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* CMO: Top Customers */}
-        <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
-                <Crown className="w-4 h-4 text-amber-500" />
-                Top Pelanggan Bulan Ini
-              </CardTitle>
-              <Button variant="ghost" size="sm" asChild className="h-7 text-[10px] text-muted-foreground hover:text-foreground">
-                <Link href="/owner/dashboard/customers">Lihat Semua <ChevronRight className="w-3 h-3 ml-0.5" /></Link>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="px-3.5 sm:px-5 pb-4">
-            {dataLoading ? (
-              <div className="space-y-2">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
-            ) : data?.topCustomersThisMonth?.length ? (
-              <div className="space-y-1">
-                {data.topCustomersThisMonth.slice(0, 5).map((customer, index) => {
-                  const maxVol = Math.max(...data.topCustomersThisMonth.slice(0, 5).map(c => c.volume), 1);
-                  const medals = [
-                    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-                    'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
-                    'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-                  ];
-                  return (
-                    <div key={customer.id} className="flex items-center gap-3 p-2 sm:p-2.5 rounded-xl hover:bg-muted/40 transition-colors">
-                      <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-semibold flex-shrink-0', medals[index] || 'bg-muted text-muted-foreground')}>
-                        {index + 1}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-medium truncate">{customer.name}</p>
-                          {customer.label && <Badge variant="outline" className="text-[7px] px-1 py-0">{customer.label}</Badge>}
-                        </div>
-                        <ProgressBar value={customer.volume} max={maxVol} color="bg-emerald-400" className="mt-1" />
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-xs font-medium">{formatCompactCurrency(customer.volume)}</p>
-                        <p className="text-[9px] text-muted-foreground">{customer.transactions} tx</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground"><Crown className="w-8 h-8 mx-auto mb-1 opacity-15" /><p className="text-[10px]">Belum ada data pelanggan</p></div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ═══════════════════════════════════════════════════
-          SECTION 5: CTO INSIGHTS — Forecast + Fee + Error Rate + Status + Marketplace + Peak Hours
-          ═══════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
-        {/* CTO: Revenue Forecast */}
-        <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
-              <Gauge className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground font-medium text-[10px] uppercase tracking-wider">CTO</span>
-              Forecast Bulan Ini
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3.5 sm:px-5 pb-4">
-            {dataLoading ? (
-              <div className="space-y-3"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-1/2" /></div>
-            ) : fc ? (
-              <div className="space-y-3">
-                <div>
-                  <p className="text-[10px] text-muted-foreground mb-0.5">Projected Profit</p>
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-xl font-semibold">{formatCurrency(fc.projectedProfit)}</p>
-                    <ChangeIndicator value={fc.profitChange} />
-                  </div>
-                  <ProgressBar value={fc.currentMonthProfit} max={fc.projectedProfit} color="bg-blue-500" className="mt-2" />
-                  <p className="text-[9px] text-muted-foreground mt-1.5">{fc.daysRemaining} hari tersisa · rata-rata {formatCurrency(fc.avgDailyProfit)}/hari</p>
-                </div>
-                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border/40">
-                  <div>
-                    <p className="text-[9px] text-muted-foreground">Volume Aktual</p>
-                    <p className="text-xs font-medium">{formatCompactCurrency(fc.currentMonthVolume)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-muted-foreground">Volume Projected</p>
-                    <p className="text-xs font-medium">{formatCompactCurrency(fc.projectedVolume)}</p>
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground"><Gauge className="w-8 h-8 mx-auto mb-1 opacity-15" /><p className="text-[10px]">Belum ada data</p></div>
-            )}
-          </CardContent>
-        </Card>
+            </CollapsibleSection>
 
-        {/* CTO: Fee & Margin Analysis */}
-        <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
-              <Percent className="w-4 h-4 text-muted-foreground" />
-              Analisa Fee & Margin
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3.5 sm:px-5 pb-4">
-            {dataLoading ? (
-              <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-6 rounded" />)}</div>
-            ) : fee ? (
-              <div className="space-y-3">
+            {/* Forecast */}
+            <CollapsibleSection
+              title="30-Day Forecast"
+              icon={TrendingUp}
+              iconColor="bg-violet-500/10 text-violet-500"
+              defaultOpen={false}
+            >
+              <div className="p-4 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-muted/40 rounded-xl p-3 text-center">
-                    <p className="text-[9px] text-muted-foreground">Payment Fee</p>
-                    <p className="text-sm font-semibold text-orange-600">{fee.avgPaymentFeePercent.toFixed(2)}%</p>
-                    <p className="text-[9px] text-muted-foreground">{formatCompactCurrency(fee.totalPaymentFee)}</p>
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 border border-violet-500/20">
+                    <p className="text-xs text-muted-foreground">Predicted Volume</p>
+                    <p className="text-base font-bold text-violet-600 mt-1 truncate">
+                      {formatCurrency(stats.forecast.predicted30DaysVolume)}
+                    </p>
                   </div>
-                  <div className="bg-muted/40 rounded-xl p-3 text-center">
-                    <p className="text-[9px] text-muted-foreground">Platform Fee</p>
-                    <p className="text-sm font-semibold text-blue-600">{fee.avgPlatformFeePercent.toFixed(2)}%</p>
-                    <p className="text-[9px] text-muted-foreground">{formatCompactCurrency(fee.totalPlatformFee)}</p>
-                  </div>
-                </div>
-                <div className="bg-emerald-50/60 dark:bg-emerald-950/20 rounded-xl p-3 text-center">
-                  <p className="text-[9px] text-muted-foreground">Net Margin</p>
-                  <p className="text-lg font-semibold text-emerald-600">{fee.avgMarginPercent.toFixed(2)}%</p>
-                  <p className="text-[9px] text-muted-foreground">Owner profit: {formatCompactCurrency(fee.totalOwnerProfit)}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground"><Percent className="w-8 h-8 mx-auto mb-1 opacity-15" /><p className="text-[10px]">Belum ada data</p></div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* CTO: Error Rate Tracker */}
-        <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
-              <AlertTriangle className="w-4 h-4 text-muted-foreground" />
-              Error Rate Tracker
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3.5 sm:px-5 pb-4">
-            {dataLoading ? (
-              <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-6 rounded" />)}</div>
-            ) : stats?.totalTransactions ? (
-              <div className="space-y-3">
-                {/* Error Rate Circle-style Indicator */}
-                <div className="flex items-center gap-4">
-                  <div className="relative w-16 h-16 flex-shrink-0">
-                    <svg className="w-16 h-16 -rotate-90" viewBox="0 0 36 36">
-                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        fill="none" stroke="currentColor" strokeWidth="2.5" className="text-muted/50" />
-                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        fill="none" stroke={failedRate > 10 ? '#ef4444' : failedRate > 5 ? '#f97316' : '#10b981'} strokeWidth="2.5"
-                        strokeDasharray={`${failedRate}, 100`} strokeLinecap="round" />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className={cn('text-sm font-semibold', failedRate > 10 ? 'text-red-600' : failedRate > 5 ? 'text-orange-600' : 'text-emerald-600')}>
-                        {failedRate.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium">Gagal Rate</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      {stats.failedCount} dari {stats.totalTransactions} transaksi
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
+                    <p className="text-xs text-muted-foreground">Predicted Profit</p>
+                    <p className="text-base font-bold text-emerald-600 mt-1 truncate">
+                      {formatCurrency(stats.forecast.predicted30DaysProfit)}
                     </p>
                   </div>
                 </div>
-                {/* Status Distribution Summary */}
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/40">
-                  <div className="text-center">
-                    <p className="text-[9px] text-muted-foreground">Pending</p>
-                    <p className="text-xs font-medium text-orange-600">{stats.pendingCount}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[9px] text-muted-foreground">Proses</p>
-                    <p className="text-xs font-medium text-blue-600">{stats.processCount}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[9px] text-muted-foreground">Berhasil</p>
-                    <p className="text-xs font-medium text-emerald-600">{stats.successCount}</p>
-                  </div>
-                </div>
               </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground"><AlertTriangle className="w-8 h-8 mx-auto mb-1 opacity-15" /><p className="text-[10px]">Belum ada data</p></div>
-            )}
-          </CardContent>
-        </Card>
+            </CollapsibleSection>
 
-        {/* CTO: Status Breakdown — Stacked Bar */}
-        <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
-              <Layers className="w-4 h-4 text-muted-foreground" />
-              Status Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3.5 sm:px-5 pb-4">
-            {dataLoading ? (
-              <div className="space-y-3"><Skeleton className="h-3 rounded-full" /><Skeleton className="h-4 w-full" /></div>
-            ) : statusDetails.length > 0 ? (
-              <div className="space-y-3">
-                {/* Stacked Bar */}
-                <div className="flex h-3 rounded-full overflow-hidden bg-muted/50">
-                  {statusDetails.map((sd) => {
-                    const pct = statusTotalVolume > 0 ? (sd.totalVolume / statusTotalVolume) * 100 : 0;
-                    if (pct < 0.5) return null;
+            {/* Recent Transactions */}
+            <CollapsibleSection
+              title="Recent Transactions"
+              icon={Clock}
+              iconColor="bg-blue-500/10 text-blue-500"
+              defaultOpen={true}
+              rightElement={
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-xs"
+                  onClick={(e) => { e.stopPropagation(); router.push('/owner/transactions') }}
+                >
+                  View All
+                </Button>
+              }
+            >
+              <div className="divide-y">
+                {stats.recentTransactions.length === 0 ? (
+                  <div className="p-6 text-center">
+                    <ShoppingBag className="h-10 w-10 mx-auto mb-2 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">No recent transactions</p>
+                  </div>
+                ) : (
+                  stats.recentTransactions.slice(0, 5).map((tx) => {
+                    const status = statusConfig[tx.status] || statusConfig.PENDING
+                    const StatusIcon = status.icon
+
                     return (
                       <div
-                        key={sd.status}
-                        className="h-full first:rounded-l-full last:rounded-r-full transition-all duration-500"
-                        style={{ width: `${pct}%`, backgroundColor: STATUS_COLORS[sd.status] || '#9ca3af' }}
-                        title={`${sd.status}: ${formatCompactCurrency(sd.totalVolume)}`}
-                      />
-                    );
-                  })}
-                </div>
-                {/* Legend */}
-                <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-                  {statusDetails.map((sd) => (
-                    <div key={sd.status} className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: STATUS_COLORS[sd.status] || '#9ca3af' }} />
-                      <span className="text-[10px] text-muted-foreground capitalize">{sd.status}</span>
-                      <span className="text-[10px] font-medium">{sd.count}</span>
-                    </div>
-                  ))}
-                </div>
-                {/* Total Volume */}
-                <div className="pt-2 border-t border-border/40">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] text-muted-foreground">Total Volume</span>
-                    <span className="text-xs font-medium">{formatCompactCurrency(statusTotalVolume)}</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground"><Layers className="w-8 h-8 mx-auto mb-1 opacity-15" /><p className="text-[10px]">Belum ada data</p></div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* CTO: Marketplace Performance */}
-        <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
-                <ShoppingBag className="w-4 h-4 text-muted-foreground" />
-                Marketplace Performance
-              </CardTitle>
-              <Badge variant="outline" className="text-[9px] text-muted-foreground">30 hari</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="px-3.5 sm:px-5 pb-4">
-            {dataLoading ? (
-              <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-8 rounded-lg" />)}</div>
-            ) : analytics?.marketplaceAnalysis && analytics.marketplaceAnalysis.length > 0 ? (
-              <div className="space-y-2.5">
-                {analytics.marketplaceAnalysis.slice(0, 5).map((mp, i) => {
-                  const maxFee = Math.max(...analytics.marketplaceAnalysis.slice(0, 5).map(m => m.totalFee), 1);
-                  return (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium truncate">{mp.name}</span>
-                          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                            <span className="text-[10px] text-muted-foreground">{mp.transactionCount} tx</span>
-                            <span className="text-[10px] font-medium">{mp.feePercent.toFixed(1)}%</span>
+                        key={tx.orderId}
+                        className="flex items-center justify-between p-3 active:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/track?orderId=${tx.orderId}`)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 flex items-center justify-center">
+                            <ShoppingBag className="h-5 w-5 text-violet-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium truncate max-w-[120px]">{tx.customerName}</p>
+                            <p className="text-xs text-muted-foreground">{formatRelativeTime(tx.createdAt)}</p>
                           </div>
                         </div>
-                        <ProgressBar value={mp.totalFee} max={maxFee} color="bg-violet-400" className="!h-1" />
+                        <div className="text-right">
+                          <p className="text-sm font-semibold">{formatCurrency(tx.nominal)}</p>
+                          <Badge className={cn("text-[10px] px-2 py-0.5", status.bg, status.text)}>
+                            {tx.status}
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    )
+                  })
+                )}
               </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground"><ShoppingBag className="w-8 h-8 mx-auto mb-1 opacity-15" /><p className="text-[10px]">Belum ada data</p></div>
-            )}
-          </CardContent>
-        </Card>
+            </CollapsibleSection>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
-        {/* CTO: Peak Hours & System Health */}
-        <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up">
-          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
-              <Zap className="w-4 h-4 text-muted-foreground" />
-              Peak Hours & Health
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3.5 sm:px-5 pb-4">
-            {dataLoading ? (
-              <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-6 rounded" />)}</div>
-            ) : analytics?.peakHours && analytics.peakHours.length > 0 ? (
-              <div className="space-y-3">
-                {/* System Health */}
-                <div className="flex items-center gap-3 bg-muted/40 rounded-xl p-3">
-                  <Shield className={cn('w-7 h-7', successRate > 80 ? 'text-emerald-500' : successRate > 50 ? 'text-yellow-500' : 'text-red-500')} />
-                  <div>
-                    <p className="text-xs font-medium">Success Rate</p>
-                    <p className="text-[9px] text-muted-foreground">{stats?.totalTransactions || 0} transaksi · {successRate.toFixed(1)}% berhasil</p>
-                  </div>
-                  <p className={cn('ml-auto text-lg font-semibold', successRate > 80 ? 'text-emerald-600' : 'text-yellow-600')}>{successRate.toFixed(0)}%</p>
-                </div>
-                {/* Peak Hours */}
-                <div>
-                  <p className="text-[10px] text-muted-foreground mb-2 font-medium">Jam Terpadat (30 hari)</p>
-                  <div className="flex gap-1">
-                    {analytics.peakHours.slice(0, 5).map((ph, i) => (
-                      <div key={i} className="flex-1 bg-muted/40 rounded-lg p-2 text-center">
-                        <p className="text-[10px] font-medium">{ph.hour.toString().padStart(2, '0')}:00</p>
-                        <p className="text-[9px] text-muted-foreground">{ph.count} tx</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground"><Zap className="w-8 h-8 mx-auto mb-1 opacity-15" /><p className="text-[10px]">Belum ada data</p></div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+  // DESKTOP VIEW (original layout)
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+              Command Center
+            </h1>
+            <p className="text-muted-foreground">Owner Dashboard - Real-time Overview & Analytics</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="text-sm gap-1.5 bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
+              <Activity className="h-3 w-3 animate-pulse" />
+              Live
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchStats(true)}
+              disabled={isRefreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
+              Refresh
+            </Button>
+          </div>
+        </div>
 
-      {/* ═══════════════════════════════════════════════════
-          SECTION 6: TRANSACTIONS + MESSAGES
-          ═══════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 sm:gap-3">
-        {/* Transaksi Terbaru */}
-        <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up overflow-hidden">
-          <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2 tracking-tight">
-                <CircleDot className="w-4 h-4 text-muted-foreground" />
-                Transaksi Terbaru
-              </CardTitle>
-              <Button variant="ghost" size="sm" asChild className="h-7 text-[10px] text-muted-foreground hover:text-foreground">
-                <Link href="/owner/dashboard/transactions">Lihat Semua <ChevronRight className="w-3 h-3 ml-0.5" /></Link>
-              </Button>
+        {/* Smart Alerts Section */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-amber-500/10">
+              <Zap className="h-4 w-4 text-amber-500" />
             </div>
-          </CardHeader>
-          <CardContent className="px-3.5 sm:px-5 pb-4">
-            {dataLoading ? (
-              <div className="space-y-1.5">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
-            ) : data?.recentTransactions?.length ? (
-              <ScrollArea className="max-h-[200px] sm:max-h-[320px]">
-                <div className="space-y-0.5">
-                  {data.recentTransactions.slice(0, 5).map((tx) => (
-                    <div key={tx.id} className="group flex items-center gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-xl hover:bg-muted/40 transition-colors">
-                      <div className={cn('w-1 h-8 sm:h-10 rounded-full flex-shrink-0',
-                        tx.status === 'success' ? 'bg-emerald-500' : tx.status === 'pending' ? 'bg-orange-500' : tx.status === 'verification' ? 'bg-yellow-500' : tx.status === 'process' ? 'bg-blue-500' : 'bg-red-500'
-                      )} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[9px] sm:text-[10px] font-mono text-muted-foreground">{tx.orderId}</span>
-                          <StatusBadge status={tx.status} />
+            <h2 className="text-lg font-semibold">Smart Alerts</h2>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {/* Low Margin Alerts */}
+            <Card
+              className={cn(
+                "group relative overflow-hidden transition-all duration-300",
+                "border-2 border-amber-500/20 hover:border-amber-500/40",
+                "bg-gradient-to-br from-amber-500/5 via-amber-500/10 to-orange-500/5",
+                "hover:shadow-lg hover:shadow-amber-500/10 cursor-pointer"
+              )}
+              onClick={() => router.push('/owner/transactions?alert=low-margin')}
+            >
+              <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <CardHeader className="pb-2 relative">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                    <div className="p-1.5 rounded-md bg-amber-500/20">
+                      <TrendingDown className="h-4 w-4" />
+                    </div>
+                    Low Margin Alert
+                  </CardTitle>
+                  {stats.lowMarginAlerts.length > 0 && (
+                    <Badge className="bg-amber-500 text-white animate-pulse">
+                      {stats.lowMarginAlerts.length}
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <p className="text-xs text-muted-foreground">
+                  Transactions with margin below 5%
+                </p>
+                {stats.lowMarginAlerts.length > 0 ? (
+                  <ScrollArea className="mt-3 h-24">
+                    <div className="space-y-2 pr-2">
+                      {stats.lowMarginAlerts.slice(0, 5).map((alert, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs p-2 rounded-md bg-amber-500/10">
+                          <span className="font-mono text-amber-700 dark:text-amber-300 truncate max-w-[100px]">{alert.orderId}</span>
+                          <Badge variant="outline" className="bg-amber-500/20 border-amber-500/30 text-amber-600 dark:text-amber-400 font-mono">
+                            {alert.marginPercent.toFixed(1)}%
+                          </Badge>
                         </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-xs font-medium truncate">{tx.customer.name}</span>
-                          {tx.partner && <span className="text-[10px] text-muted-foreground hidden sm:inline">via {tx.partner.name}</span>}
+                      ))}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="mt-3 flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="h-4 w-4" />
+                    All margins are healthy
+                  </div>
+                )}
+                <div className="mt-3 flex items-center text-xs text-muted-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                  <span>View details</span>
+                  <ArrowRight className="h-3 w-3 ml-1 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* High Risk Transactions */}
+            <Card
+              className={cn(
+                "group relative overflow-hidden transition-all duration-300",
+                "border-2 border-red-500/20 hover:border-red-500/40",
+                "bg-gradient-to-br from-red-500/5 via-red-500/10 to-rose-500/5",
+                "hover:shadow-lg hover:shadow-red-500/10 cursor-pointer"
+              )}
+              onClick={() => router.push('/owner/transactions?alert=high-risk')}
+            >
+              <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <CardHeader className="pb-2 relative">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2 text-red-600 dark:text-red-400">
+                    <div className="p-1.5 rounded-md bg-red-500/20">
+                      <AlertTriangle className="h-4 w-4" />
+                    </div>
+                    High Risk Pending
+                  </CardTitle>
+                  {stats.highRiskTransactions.length > 0 && (
+                    <Badge className="bg-red-500 text-white animate-pulse">
+                      {stats.highRiskTransactions.length}
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <p className="text-xs text-muted-foreground">
+                  Large transactions (≥ 5jt) pending
+                </p>
+                {stats.highRiskTransactions.length > 0 ? (
+                  <ScrollArea className="mt-3 h-24">
+                    <div className="space-y-2 pr-2">
+                      {stats.highRiskTransactions.slice(0, 5).map((tx, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs p-2 rounded-md bg-red-500/10">
+                          <span className="truncate max-w-[80px] text-red-700 dark:text-red-300">{tx.customerName}</span>
+                          <span className="font-semibold text-red-600 dark:text-red-400">
+                            {formatCurrency(tx.nominal).replace('Rp', '').trim()}
+                          </span>
                         </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="mt-3 flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="h-4 w-4" />
+                    No high-risk transactions
+                  </div>
+                )}
+                <div className="mt-3 flex items-center text-xs text-muted-foreground group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                  <span>View details</span>
+                  <ArrowRight className="h-3 w-3 ml-1 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Top Partners */}
+            <Card
+              className={cn(
+                "group relative overflow-hidden transition-all duration-300",
+                "border-2 border-emerald-500/20 hover:border-emerald-500/40",
+                "bg-gradient-to-br from-emerald-500/5 via-emerald-500/10 to-teal-500/5",
+                "hover:shadow-lg hover:shadow-emerald-500/10 cursor-pointer"
+              )}
+              onClick={() => router.push('/owner/partners')}
+            >
+              <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <CardHeader className="pb-2 relative">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                    <div className="p-1.5 rounded-md bg-emerald-500/20">
+                      <Trophy className="h-4 w-4" />
+                    </div>
+                    Top Performers
+                  </CardTitle>
+                  <Sparkles className="h-4 w-4 text-emerald-500" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <p className="text-xs text-muted-foreground">
+                  Best performing partners
+                </p>
+                {stats.topPartners.length > 0 ? (
+                  <ScrollArea className="mt-3 h-24">
+                    <div className="space-y-2 pr-2">
+                      {stats.topPartners.slice(0, 5).map((partner, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs p-2 rounded-md bg-emerald-500/10">
+                          <div className="flex items-center gap-2">
+                            <div className={cn(
+                              "w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold",
+                              i === 0 ? "bg-yellow-500" : i === 1 ? "bg-slate-400" : i === 2 ? "bg-amber-600" : "bg-emerald-500"
+                            )}>
+                              {i + 1}
+                            </div>
+                            <span className="truncate max-w-[70px] text-emerald-700 dark:text-emerald-300">{partner.name}</span>
+                          </div>
+                          <Badge className={cn("text-white text-[10px]", tierColors[partner.tier] || 'bg-slate-500')}>
+                            {partner.tier}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    No partners yet
+                  </div>
+                )}
+                <div className="mt-3 flex items-center text-xs text-muted-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                  <span>View all partners</span>
+                  <ArrowRight className="h-3 w-3 ml-1 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Partners Near Target Section - Desktop */}
+        {stats.partnersNearTarget && stats.partnersNearTarget.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-blue-500/10">
+                <Target className="h-4 w-4 text-blue-500" />
+              </div>
+              <h2 className="text-lg font-semibold">Partner Target Progress</h2>
+              <Badge variant="outline" className="text-xs bg-blue-500/10 border-blue-500/30 text-blue-600">
+                Mendekati Target
+              </Badge>
+            </div>
+            
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {stats.partnersNearTarget.map((partner) => (
+                <Card
+                  key={partner.partnerId}
+                  className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg cursor-pointer border-2 border-blue-500/20 hover:border-blue-500/40 bg-gradient-to-br from-blue-500/5 via-blue-500/10 to-cyan-500/5"
+                  onClick={() => router.push(`/owner/partners?id=${partner.partnerId}`)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate max-w-[120px]">{partner.name}</span>
+                        <Badge className={cn("text-white text-xs", tierColors[partner.tier] || 'bg-slate-500')}>
+                          {partner.tier}
+                        </Badge>
                       </div>
-                      <div className="text-right flex-shrink-0 flex flex-col items-end gap-0.5">
-                        <p className="text-xs font-medium">{formatCurrency(tx.nominal)}</p>
-                        <p className="text-[9px] text-muted-foreground">{formatDateAgo(tx.createdAt)}</p>
+                      <Badge className={cn(
+                        "text-white text-xs",
+                        partner.progress >= 90 ? "bg-emerald-500 animate-pulse" :
+                        partner.progress >= 75 ? "bg-blue-500" :
+                        "bg-amber-500"
+                      )}>
+                        {partner.progress.toFixed(0)}%
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Progress value={partner.progress} className="h-2" />
+                      
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Profit: {formatCurrency(partner.totalProfit)}</span>
+                        <span>Target: {formatCurrency(partner.targetAmount)}</span>
                       </div>
-                      {tx.status !== 'success' && tx.status !== 'failed' && (
-                        <div className="hidden sm:flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {tx.status === 'pending' && (
-                            <button onClick={() => updateTransactionStatus(tx.id, 'process')} disabled={updatingStatus === tx.id}
-                              className="w-7 h-7 rounded-lg bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center transition-colors disabled:opacity-50">
-                              {updatingStatus === tx.id ? <Loader2 className="w-3 h-3 text-white animate-spin" /> : <ArrowUpRight className="w-3 h-3 text-white" />}
-                            </button>
-                          )}
-                          {tx.status === 'verification' && (<>
-                            <button onClick={() => updateTransactionStatus(tx.id, 'success')} disabled={updatingStatus === tx.id}
-                              className="w-7 h-7 rounded-lg bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center transition-colors disabled:opacity-50">
-                              {updatingStatus === tx.id ? <Loader2 className="w-3 h-3 text-white animate-spin" /> : <CheckCircle className="w-3 h-3 text-white" />}
-                            </button>
-                            <button onClick={() => updateTransactionStatus(tx.id, 'failed')} disabled={updatingStatus === tx.id}
-                              className="w-7 h-7 rounded-lg bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors disabled:opacity-50">
-                              <XCircle className="w-3 h-3 text-white" />
-                            </button>
-                          </>)}
-                          {tx.status === 'process' && (
-                            <button onClick={() => updateTransactionStatus(tx.id, 'verification')} disabled={updatingStatus === tx.id}
-                              className="w-7 h-7 rounded-lg bg-violet-500 hover:bg-violet-600 flex items-center justify-center transition-colors disabled:opacity-50">
-                              {updatingStatus === tx.id ? <Loader2 className="w-3 h-3 text-white animate-spin" /> : <AlertCircle className="w-3 h-3 text-white" />}
-                            </button>
-                          )}
+                      
+                      {partner.progress >= 90 && (
+                        <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 p-2 rounded-lg">
+                          <Sparkles className="h-3 w-3" />
+                          <span>Gap: {formatCurrency(partner.gap)} lagi!</span>
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            ) : (
-              <div className="text-center py-10 text-muted-foreground"><Wallet className="w-8 h-8 mx-auto mb-2 opacity-15" /><p className="text-xs">Belum ada transaksi</p></div>
-            )}
-          </CardContent>
-        </Card>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
-        {/* Pesan Partner + Notifications */}
-        <div className="flex flex-col gap-4">
-          <Card className={cn('rounded-2xl border border-border/50 shadow-sm animate-slide-up overflow-hidden', (data?.unreadPartnerMessages || 0) > 0 ? 'border-amber-300/50 dark:border-amber-700/50' : '')}>
-            <CardHeader className="pb-2 px-3.5 sm:px-5 pt-3 sm:pt-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className={cn('w-4 h-4', (data?.unreadPartnerMessages || 0) > 0 ? 'text-amber-500' : 'text-muted-foreground')} />
-                  <CardTitle className="text-sm font-medium">Pesan Partner</CardTitle>
-                  {(data?.unreadPartnerMessages || 0) > 0 && <Badge className="bg-amber-500 text-white text-[9px]">{data?.unreadPartnerMessages} baru</Badge>}
-                </div>
-                <Button variant="ghost" size="sm" asChild className="h-7 text-[10px] text-muted-foreground hover:text-foreground">
-                  <Link href="/owner/dashboard/notifications">Lihat Semua <ChevronRight className="w-3 h-3 ml-0.5" /></Link>
-                </Button>
+        {/* Top Partners by Volume 30 Days - Desktop */}
+        {stats.topPartnersByVolume30Days && stats.topPartnersByVolume30Days.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-violet-500/10">
+                <BarChart3 className="h-4 w-4 text-violet-500" />
+              </div>
+              <h2 className="text-lg font-semibold">Top Volume 30 Hari</h2>
+              <Badge variant="outline" className="text-xs bg-violet-500/10 border-violet-500/30 text-violet-600">
+                Best Sellers
+              </Badge>
+            </div>
+            
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+              {stats.topPartnersByVolume30Days.map((partner, i) => (
+                <Card
+                  key={partner.partnerId}
+                  className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg cursor-pointer border-2 border-violet-500/20 hover:border-violet-500/40 bg-gradient-to-br from-violet-500/5 via-violet-500/10 to-purple-500/5"
+                  onClick={() => router.push(`/owner/partners?id=${partner.partnerId}`)}
+                >
+                  <CardContent className="p-4 text-center">
+                    {/* Rank Badge */}
+                    <div className="flex justify-center mb-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-lg",
+                        i === 0 ? "bg-gradient-to-br from-yellow-400 to-amber-500 shadow-yellow-500/30" :
+                        i === 1 ? "bg-gradient-to-br from-slate-300 to-slate-500 shadow-slate-400/30" :
+                        i === 2 ? "bg-gradient-to-br from-amber-600 to-amber-700 shadow-amber-600/30" :
+                        "bg-gradient-to-br from-violet-500 to-purple-500 shadow-violet-500/30"
+                      )}>
+                        {i === 0 ? <Crown className="h-5 w-5" /> : i === 1 ? <Medal className="h-5 w-5" /> : i === 2 ? <Award className="h-5 w-5" /> : i + 1}
+                      </div>
+                    </div>
+                    
+                    <p className="font-medium truncate mb-1">{partner.name}</p>
+                    <Badge className={cn("text-white text-xs mb-2", tierColors[partner.tier] || 'bg-slate-500')}>
+                      {partner.tier}
+                    </Badge>
+                    
+                    <div className="mt-2">
+                      <p className="text-lg font-bold text-violet-600 dark:text-violet-400">
+                        {formatCurrency(partner.totalVolume)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {partner.transactions} transaksi
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Stats Cards Row */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Total Profit */}
+          <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-emerald-500/5" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Profit
+              </CardTitle>
+              <div className="p-2 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30">
+                <DollarSign className="h-4 w-4" />
               </div>
             </CardHeader>
-            <CardContent className="px-3.5 sm:px-5 pb-4">
-              {dataLoading ? (
-                <div className="space-y-2">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
-              ) : (data?.partnerMessages?.length || 0) > 0 ? (
-                <ScrollArea className="max-h-[130px] sm:max-h-40">
-                  <div className="space-y-1 pr-1">
-                    {data.partnerMessages.slice(0, 4).map((msg) => (
-                      <div key={msg.id} className={cn('p-2 sm:p-2.5 rounded-xl transition-colors cursor-pointer',
-                        !msg.isRead ? 'bg-amber-50/60 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30' : 'bg-muted/30 border border-transparent hover:bg-muted/40'
-                      )} onClick={() => { if (msg.transactionId) router.push(`/owner/dashboard/transactions?highlight=${msg.transactionId}`); }}>
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <p className={cn('text-xs font-medium truncate', !msg.isRead ? 'text-amber-700 dark:text-amber-300' : '')}>{msg.title}</p>
-                              {!msg.isRead && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />}
-                            </div>
-                            <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{msg.message}</p>
-                          </div>
-                          <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                            {msg.data?.nominal && <span className="text-[10px] font-medium">{formatCurrency(msg.data.nominal)}</span>}
-                            <span className="text-[9px] text-muted-foreground">{formatDateAgo(msg.createdAt)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              ) : (data?.partnerNotifications?.length || 0) > 0 ? (
-                <ScrollArea className="max-h-[130px] sm:max-h-40">
-                  <div className="space-y-1 pr-1">
-                    {data.partnerNotifications.slice(0, 4).map((notif) => (
-                      <div key={notif.id} className="p-2 rounded-xl bg-muted/30 border border-transparent">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium truncate">{notif.partnerName || 'Partner'}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{notif.notes?.split('\n').pop()?.replace(/\[.*?\]\s*/, '') || ''}</p>
-                          </div>
-                          <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                            <span className="text-[10px] font-medium">{formatCurrency(notif.nominal)}</span>
-                            <span className="text-[9px] text-muted-foreground">{formatDateAgo(notif.updatedAt)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              ) : (
-                <div className="text-center py-6 text-muted-foreground"><MessageSquare className="w-6 h-6 mx-auto mb-1 opacity-15" /><p className="text-[10px]">Tidak ada pesan baru</p></div>
-              )}
+            <CardContent className="relative">
+              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                {formatCurrency(stats.totalProfit)}
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                  <ArrowUpRight className="h-3 w-3" />
+                  <span>Owner profit</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Week Summary */}
-          <Card className="rounded-2xl border border-border/50 shadow-sm animate-slide-up bg-muted/20">
-            <CardContent className="p-3 sm:p-4">
-              <p className="text-[10px] text-muted-foreground font-medium mb-3 uppercase tracking-wider flex items-center gap-1.5">
-                <Eye className="w-3 h-3" /> Minggu Ini
-              </p>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="text-center">
-                  <p className="text-xs sm:text-sm font-semibold">{formatCompactCurrency(stats?.weekProfit || 0)}</p>
-                  <p className="text-[9px] text-muted-foreground">Profit</p>
+          {/* Total Transaksi */}
+          <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg">
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-transparent to-violet-500/5" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Transaksi
+              </CardTitle>
+              <div className="p-2 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 text-white shadow-lg shadow-violet-500/30">
+                <ShoppingBag className="h-4 w-4" />
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-2xl font-bold">
+                {formatNumber(stats.totalTransactions)}
+              </div>
+              <div className="flex items-center gap-3 mt-2">
+                <div className="flex items-center gap-1 text-xs">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                  <span className="text-muted-foreground">{stats.completedOrders} done</span>
                 </div>
-                <div className="text-center border-x border-border/40">
-                  <p className="text-xs sm:text-sm font-semibold">{formatCompactCurrency(stats?.weekVolume || 0)}</p>
-                  <p className="text-[9px] text-muted-foreground">Volume</p>
+                <div className="flex items-center gap-1 text-xs">
+                  <Clock className="h-3 w-3 text-amber-500" />
+                  <span className="text-muted-foreground">{stats.pendingOrders} pending</span>
                 </div>
-                <div className="text-center">
-                  <p className="text-xs sm:text-sm font-semibold">{stats?.weekCount || 0}</p>
-                  <p className="text-[9px] text-muted-foreground">Transaksi</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Mitra Aktif */}
+          <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-blue-500/5" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Mitra Aktif
+              </CardTitle>
+              <div className="p-2 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/30">
+                <Users className="h-4 w-4" />
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {formatNumber(stats.activePartners)}
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
+                  <Activity className="h-3 w-3" />
+                  <span>Currently active</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Volume */}
+          <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg">
+            <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-500/10 via-transparent to-fuchsia-500/5" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Volume
+              </CardTitle>
+              <div className="p-2 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 text-white shadow-lg shadow-fuchsia-500/30">
+                <BarChart3 className="h-4 w-4" />
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-2xl font-bold text-fuchsia-600 dark:text-fuchsia-400">
+                {formatCurrency(stats.totalVolume)}
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-1 text-xs text-fuchsia-600 dark:text-fuchsia-400">
+                  <Target className="h-3 w-3" />
+                  <span>Transaction volume</span>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
-      </div>
 
-      {/* ═══════════════════════════════════════════════════
-          SECTION 7: QUICK ACTIONS
-          ═══════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 animate-slide-up">
-        {[
-          { label: 'Transaksi', icon: Wallet, href: '/owner/dashboard/transactions', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/30' },
-          { label: 'Partner', icon: Users, href: '/owner/dashboard/partners', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-950/30' },
-          { label: 'Pelanggan', icon: UserPlus, href: '/owner/dashboard/customers', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/30' },
-          { label: 'Broadcast', icon: Radio, href: '/owner/dashboard/broadcast', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950/30' },
-          { label: 'Fee & Tarif', icon: Tag, href: '/owner/dashboard/fees', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/30' },
-          { label: 'Settings', icon: Settings, href: '/owner/dashboard/settings', color: 'text-zinc-600 dark:text-zinc-400', bg: 'bg-zinc-100 dark:bg-zinc-800/50' },
-        ].map((action) => (
-          <Link key={action.label} href={action.href}>
-            <Card className="rounded-2xl border border-border/50 shadow-sm hover:bg-muted/50 transition-colors cursor-pointer group h-full">
-              <CardContent className="p-2 sm:p-3 flex flex-col items-center gap-1.5 justify-center">
-                <div className={cn('w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105', action.bg)}>
-                  <action.icon className={cn('w-3.5 h-3.5 sm:w-4.5 sm:h-4.5', action.color)} />
+        {/* Margin Health Section */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-violet-500/10">
+              <Activity className="h-4 w-4 text-violet-500" />
+            </div>
+            <h2 className="text-lg font-semibold">Margin Health</h2>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* CC Margin Health */}
+            <Card className="overflow-hidden">
+              <div className={cn(
+                "h-1",
+                getHealthBg(stats.marginHealth.cc.avgMarginPercent)
+              )} />
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 text-white">
+                      <CreditCard className="h-4 w-4" />
+                    </div>
+                    CC Margin Health
+                  </CardTitle>
+                  <Badge className={cn(
+                    "text-white",
+                    getHealthBg(stats.marginHealth.cc.avgMarginPercent)
+                  )}>
+                    {getHealthLabel(stats.marginHealth.cc.avgMarginPercent)}
+                  </Badge>
                 </div>
-                <span className="text-[9px] sm:text-[10px] font-medium text-center">{action.label}</span>
+                <CardDescription>
+                  Credit Card transaction performance
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Margin Gauge */}
+                <div className="relative pt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Average Margin</span>
+                    <span className={cn("text-2xl font-bold", getHealthColor(stats.marginHealth.cc.avgMarginPercent))}>
+                      {stats.marginHealth.cc.avgMarginPercent.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="relative h-3 bg-muted rounded-full overflow-hidden">
+                    <div className="absolute inset-0 flex">
+                      <div className="w-1/3 bg-red-500/20" />
+                      <div className="w-1/3 bg-amber-500/20" />
+                      <div className="w-1/3 bg-emerald-500/20" />
+                    </div>
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        getHealthBg(stats.marginHealth.cc.avgMarginPercent)
+                      )}
+                      style={{ width: `${Math.min(100, stats.marginHealth.cc.avgMarginPercent * 10)}%` }}
+                    />
+                    <div
+                      className="absolute top-0 bottom-0 w-0.5 bg-foreground"
+                      style={{ left: `${Math.min(100, stats.marginHealth.cc.avgMarginPercent * 10)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                    <span>0%</span>
+                    <span>5%</span>
+                    <span>10%+</span>
+                  </div>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-3 gap-3 pt-2 border-t">
+                  <div className="text-center p-2 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground">Transactions</p>
+                    <p className="text-lg font-bold">{formatNumber(stats.marginHealth.cc.count)}</p>
+                  </div>
+                  <div className="text-center p-2 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground">Volume</p>
+                    <p className="text-sm font-semibold">{formatCurrency(stats.marginHealth.cc.totalVolume)}</p>
+                  </div>
+                  <div className="text-center p-2 rounded-lg bg-emerald-500/10">
+                    <p className="text-xs text-muted-foreground">Profit</p>
+                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(stats.marginHealth.cc.totalProfit)}</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          </Link>
-        ))}
-      </div>
 
-      {/* Footer */}
-      {lastUpdated && (
-        <p className="text-center text-[10px] text-muted-foreground/30 pb-1">
-          Data diperbarui {lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} · Auto-refresh setiap 1 menit
-        </p>
-      )}
-    </div>
-  );
+            {/* Paylater Margin Health */}
+            <Card className="overflow-hidden">
+              <div className={cn(
+                "h-1",
+                getHealthBg(stats.marginHealth.paylater.avgMarginPercent)
+              )} />
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 text-white">
+                      <Wallet className="h-4 w-4" />
+                    </div>
+                    Paylater Margin Health
+                  </CardTitle>
+                  <Badge className={cn(
+                    "text-white",
+                    getHealthBg(stats.marginHealth.paylater.avgMarginPercent)
+                  )}>
+                    {getHealthLabel(stats.marginHealth.paylater.avgMarginPercent)}
+                  </Badge>
+                </div>
+                <CardDescription>
+                  Paylater transaction performance
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Margin Gauge */}
+                <div className="relative pt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Average Margin</span>
+                    <span className={cn("text-2xl font-bold", getHealthColor(stats.marginHealth.paylater.avgMarginPercent))}>
+                      {stats.marginHealth.paylater.avgMarginPercent.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="relative h-3 bg-muted rounded-full overflow-hidden">
+                    <div className="absolute inset-0 flex">
+                      <div className="w-1/3 bg-red-500/20" />
+                      <div className="w-1/3 bg-amber-500/20" />
+                      <div className="w-1/3 bg-emerald-500/20" />
+                    </div>
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        getHealthBg(stats.marginHealth.paylater.avgMarginPercent)
+                      )}
+                      style={{ width: `${Math.min(100, stats.marginHealth.paylater.avgMarginPercent * 10)}%` }}
+                    />
+                    <div
+                      className="absolute top-0 bottom-0 w-0.5 bg-foreground"
+                      style={{ left: `${Math.min(100, stats.marginHealth.paylater.avgMarginPercent * 10)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                    <span>0%</span>
+                    <span>5%</span>
+                    <span>10%+</span>
+                  </div>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-3 gap-3 pt-2 border-t">
+                  <div className="text-center p-2 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground">Transactions</p>
+                    <p className="text-lg font-bold">{formatNumber(stats.marginHealth.paylater.count)}</p>
+                  </div>
+                  <div className="text-center p-2 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground">Volume</p>
+                    <p className="text-sm font-semibold">{formatCurrency(stats.marginHealth.paylater.totalVolume)}</p>
+                  </div>
+                  <div className="text-center p-2 rounded-lg bg-emerald-500/10">
+                    <p className="text-xs text-muted-foreground">Profit</p>
+                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(stats.marginHealth.paylater.totalProfit)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Margin Trend Chart */}
+        {filteredMarginTrend.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <CardTitle>Margin Trend</CardTitle>
+                  <CardDescription>
+                    Last 30 days daily margin by payment type
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-violet-500" />
+                    <span className="text-muted-foreground">CC</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-cyan-500" />
+                    <span className="text-muted-foreground">Paylater</span>
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={filteredMarginTrend}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={formatDateLabel}
+                      className="text-xs"
+                      tick={{ fontSize: 11 }}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      className="text-xs"
+                      tick={{ fontSize: 11 }}
+                      tickFormatter={(value) => `${value.toFixed(0)}%`}
+                      domain={[0, 'auto']}
+                    />
+                    <ChartTooltip
+                      content={<ChartTooltipContent />}
+                      labelFormatter={formatDateLabel}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="ccMargin"
+                      stroke="hsl(262 83% 58%)"
+                      strokeWidth={2.5}
+                      dot={{ fill: 'hsl(262 83% 58%)', strokeWidth: 0, r: 3 }}
+                      activeDot={{ r: 5, strokeWidth: 2, stroke: 'hsl(262 83% 58%)' }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="paylaterMargin"
+                      stroke="hsl(187 92% 40%)"
+                      strokeWidth={2.5}
+                      dot={{ fill: 'hsl(187 92% 40%)', strokeWidth: 0, r: 3 }}
+                      activeDot={{ r: 5, strokeWidth: 2, stroke: 'hsl(187 92% 40%)' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Forecast & Prediksi Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white">
+                    <TrendingUp className="h-4 w-4" />
+                  </div>
+                  30-Day Forecast
+                </CardTitle>
+                <CardDescription>
+                  Predicted performance based on historical data
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Forecast Summary */}
+            <div className="grid gap-4 sm:grid-cols-2 mb-6">
+              <div className="relative overflow-hidden p-4 rounded-xl bg-gradient-to-br from-violet-500/10 via-violet-500/5 to-fuchsia-500/10 border border-violet-500/20">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-violet-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                <div className="flex items-start justify-between relative">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Predicted Volume</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-violet-600 dark:text-violet-400 mt-1">
+                      {formatCurrency(stats.forecast.predicted30DaysVolume)}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Next 30 days projection
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-violet-500/20">
+                    <BarChart3 className="h-5 w-5 text-violet-500" />
+                  </div>
+                </div>
+              </div>
+              <div className="relative overflow-hidden p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-teal-500/10 border border-emerald-500/20">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                <div className="flex items-start justify-between relative">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Predicted Profit</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                      {formatCurrency(stats.forecast.predicted30DaysProfit)}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Next 30 days projection
+                    </p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-emerald-500/20">
+                    <DollarSign className="h-5 w-5 text-emerald-500" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Historical Trend Chart */}
+            {stats.forecast.monthlyTrend.some(d => d.volume > 0 || d.profit > 0) && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm font-medium">Volume vs Profit Trend</p>
+                  <p className="text-xs text-muted-foreground">Last 14 days</p>
+                </div>
+                <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats.forecast.monthlyTrend.slice(-14)} barGap={4}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={formatDateLabel}
+                        className="text-xs"
+                        tick={{ fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        className="text-xs"
+                        tick={{ fontSize: 11 }}
+                        tickFormatter={(value) => `${(value / 1000000).toFixed(0)}jt`}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <ChartTooltip
+                        content={<ChartTooltipContent />}
+                        labelFormatter={formatDateLabel}
+                        formatter={(value: number) => formatCurrency(value)}
+                      />
+                      <Legend
+                        wrapperStyle={{ paddingTop: '12px' }}
+                        iconType="circle"
+                        iconSize={8}
+                      />
+                      <Bar dataKey="volume" fill="hsl(262 83% 58%)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      <Bar dataKey="profit" fill="hsl(142 76% 36%)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </div>
+            )}
+
+            {/* Empty State for Chart */}
+            {stats.forecast.monthlyTrend.every(d => d.volume === 0 && d.profit === 0) && (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                  <BarChart3 className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">No historical data available yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Start processing transactions to see trends</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Transactions */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Recent Transactions
+              </CardTitle>
+              <CardDescription>Last 7 days activity</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => router.push('/owner/transactions')} className="gap-2">
+              View All
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {stats.recentTransactions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <ShoppingBag className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <p className="text-sm font-medium">No recent transactions</p>
+                <p className="text-xs text-muted-foreground mt-1">Transactions from the last 7 days will appear here</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 gap-2"
+                  onClick={() => router.push('/owner/transactions')}
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  Create Transaction
+                </Button>
+              </div>
+            ) : (
+              <ScrollArea className="max-h-[400px]">
+                <div className="space-y-2 pr-2">
+                  {stats.recentTransactions.map((tx) => {
+                    const status = statusConfig[tx.status] || statusConfig.PENDING
+                    const StatusIcon = status.icon
+
+                    return (
+                      <div
+                        key={tx.orderId}
+                        className={cn(
+                          "group flex items-center justify-between p-3 rounded-xl border transition-all duration-200",
+                          "hover:bg-muted/50 hover:shadow-sm cursor-pointer",
+                          "active:scale-[0.99]"
+                        )}
+                        onClick={() => router.push(`/track?orderId=${tx.orderId}`)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 flex items-center justify-center border border-violet-500/20">
+                            <ShoppingBag className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium truncate max-w-[120px] sm:max-w-[180px]">{tx.customerName}</p>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <span className="font-mono text-xs">{tx.orderId.slice(-8)}</span>
+                              <span className="hidden sm:inline">•</span>
+                              <span className="hidden sm:inline text-xs">{tx.paymentType}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="font-semibold text-sm">{formatCurrency(tx.nominal)}</p>
+                            <div className="flex items-center gap-2 justify-end">
+                              <Badge
+                                className={cn(
+                                  "text-[10px] px-2 py-0.5 gap-1 font-medium",
+                                  status.bg,
+                                  status.text
+                                )}
+                              >
+                                <StatusIcon className={cn("h-3 w-3", tx.status === 'PROCESSING' && "animate-spin")} />
+                                {tx.status}
+                              </Badge>
+                              <span className="text-[10px] text-muted-foreground hidden sm:inline">
+                                {formatRelativeTime(tx.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
+  )
 }

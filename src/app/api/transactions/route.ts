@@ -1,414 +1,316 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { db, toNumber } from '@/lib/db';
-import { generateOrderId, calculatePaymentFee, calculateMarginBreakdown } from '@/lib/auth';
-import { sendTelegramNotification, formatCurrency } from '@/lib/telegram';
-import { checkCustomerDuplicate, normalizePhone } from '@/lib/customer-utils';
-import { sanitizeName, sanitizePhone, sanitizeBankAccount, sanitizeCity, sanitizeString, validateLength, isValidCuid, isValidMethodTransaction, FIELD_LIMITS } from '@/lib/sanitize';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { generateOrderId, validateWhatsApp, formatWhatsApp, calculateTransactionFees } from '@/lib/calculations'
 
-// Helper to serialize transaction with Decimal fields
-function serializeTransaction(tx: Record<string, unknown>) {
-  return {
-    ...tx,
-    nominal: toNumber(tx.nominal),
-    paymentFee: toNumber(tx.paymentFee),
-    platformFee: toNumber(tx.platformFee),
-    netMargin: toNumber(tx.netMargin),
-    partnerProfit: toNumber(tx.partnerProfit),
-    ownerProfit: toNumber(tx.ownerProfit),
-    totalReceived: toNumber(tx.totalReceived),
-    customer: tx.customer ? {
-      ...tx.customer as object,
-      totalVolume: toNumber((tx.customer as Record<string, unknown>).totalVolume),
-    } : null,
-    paymentType: tx.paymentType ? {
-      ...tx.paymentType as object,
-      onlineFeePercent: toNumber((tx.paymentType as Record<string, unknown>).onlineFeePercent),
-      onlineFeeFlat: toNumber((tx.paymentType as Record<string, unknown>).onlineFeeFlat),
-      codFeePercent: toNumber((tx.paymentType as Record<string, unknown>).codFeePercent),
-      codFeeFlat: toNumber((tx.paymentType as Record<string, unknown>).codFeeFlat),
-      threshold: toNumber((tx.paymentType as Record<string, unknown>).threshold),
-    } : null,
-    marketplace: tx.marketplace ? {
-      ...tx.marketplace as object,
-      feePercent: toNumber((tx.marketplace as Record<string, unknown>).feePercent),
-      feeFlat: toNumber((tx.marketplace as Record<string, unknown>).feeFlat),
-    } : null,
-    partner: tx.partner ? {
-      ...tx.partner as object,
-      commission: toNumber((tx.partner as Record<string, unknown>).commission),
-      target: toNumber((tx.partner as Record<string, unknown>).target),
-      totalProfit: toNumber((tx.partner as Record<string, unknown>).totalProfit),
-      totalVolume: toNumber((tx.partner as Record<string, unknown>).totalVolume),
-    } : null,
-  };
-}
-
-// GET transactions with pagination
+// GET /api/transactions - List transactions with filters
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    const { searchParams } = new URL(request.url)
+    
+    const status = searchParams.get('status')
+    const partnerId = searchParams.get('partnerId')
+    const customerId = searchParams.get('customerId')
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+    const page = parseInt(searchParams.get('page') || '1')
+    const pageSize = parseInt(searchParams.get('pageSize') || '10')
+    const days = searchParams.get('days') // For recent transactions
 
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Tidak terautentikasi' },
-        { status: 401 }
-      );
-    }
-
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const days = searchParams.get('days');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const offset = (page - 1) * limit;
-
-    const where: Record<string, unknown> = {};
-
-    if (user.role === 'partner') {
-      const partner = await db.partner.findUnique({
-        where: { userId: user.id },
-      });
-      where.partnerId = partner?.id;
-    }
+    // Build where clause
+    const where: Record<string, unknown> = {}
 
     if (status) {
-      where.status = status;
+      where.status = status
     }
 
-    // Filter by days (e.g., last 30 days)
+    if (partnerId) {
+      where.partnerId = partnerId
+    }
+
+    if (customerId) {
+      where.customerId = customerId
+    }
+
+    if (startDate || endDate) {
+      where.createdAt = {}
+      if (startDate) {
+        (where.createdAt as Record<string, unknown>).gte = new Date(startDate)
+      }
+      if (endDate) {
+        (where.createdAt as Record<string, unknown>).lte = new Date(endDate)
+      }
+    }
+
+    // For recent transactions (e.g., last 7 days)
     if (days) {
-      const daysAgo = new Date();
-      daysAgo.setDate(daysAgo.getDate() - parseInt(days));
-      where.createdAt = { gte: daysAgo };
+      const daysAgo = new Date()
+      daysAgo.setDate(daysAgo.getDate() - parseInt(days))
+      where.createdAt = {
+        gte: daysAgo
+      }
     }
 
-    const [transactions, total] = await Promise.all([
-      db.transaction.findMany({
-        where,
-        include: {
-          customer: true,
-          paymentType: true,
-          marketplace: true,
-          partner: true,
+    // Get total count
+    const total = await db.transaction.count({ where })
+
+    // Get transactions
+    const transactions = await db.transaction.findMany({
+      where,
+      include: {
+        customer: true,
+        partner: {
+          include: {
+            user: {
+              select: {
+                name: true,
+                email: true
+              }
+            }
+          }
         },
-        orderBy: { createdAt: 'desc' },
-        take: limit,
-        skip: offset,
-      }),
-      db.transaction.count({ where }),
-    ]);
-
-    const totalPages = Math.ceil(total / limit);
-
-    // Serialize transactions to convert Decimal fields to numbers
-    const serializedTransactions = transactions.map(serializeTransaction);
+        paymentType: true,
+        marketplace: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      skip: (page - 1) * pageSize,
+      take: pageSize
+    })
 
     return NextResponse.json({
       success: true,
-      data: serializedTransactions,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalItems: total,
-        itemsPerPage: limit,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
-      },
-    });
+      data: transactions,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize)
+    })
   } catch (error) {
-    console.error('Get transactions error:', error);
+    console.error('Error fetching transactions:', error)
     return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
+      { success: false, error: 'Failed to fetch transactions' },
       { status: 500 }
-    );
+    )
   }
 }
 
-// POST create transaction
+// POST /api/transactions - Create new transaction (owner input)
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-
-    if (!user) {
+    const body = await request.json()
+    
+    // Validate required fields
+    if (!body.nominal || body.nominal <= 0) {
       return NextResponse.json(
-        { success: false, error: 'Tidak terautentikasi' },
-        { status: 401 }
-      );
+        { success: false, error: 'Nominal harus lebih dari 0' },
+        { status: 400 }
+      )
     }
 
-    const body = await request.json();
-    const {
-      customerId,
-      customerName,
-      customerPhone,
-      customerCity,
-      customerBankName,
-      customerBankAccount,
-      customerBankHolder,
-      isNewCustomer,
-      nominal,
-      paymentTypeId,
-      methodTransaction,
-      marketplaceId,
-      partnerId,
-    } = body;
-
-    // ── Input Sanitization ──
-    const sanitizedName = customerName ? sanitizeName(customerName) : '';
-    const sanitizedPhone = customerPhone ? sanitizePhone(customerPhone) : '';
-    const sanitizedCity = customerCity ? sanitizeCity(customerCity) : '';
-    const sanitizedBankName = customerBankName ? sanitizeString(customerBankName) : '';
-    const sanitizedBankAccount = customerBankAccount ? sanitizeBankAccount(customerBankAccount) : '';
-    const sanitizedBankHolder = customerBankHolder ? sanitizeName(customerBankHolder) : '';
-
-    // Validation
-    if (!nominal || !paymentTypeId || !methodTransaction) {
+    if (!body.paymentTypeId) {
       return NextResponse.json(
-        { success: false, error: 'Field wajib harus diisi' },
+        { success: false, error: 'Payment type harus dipilih' },
         { status: 400 }
-      );
+      )
     }
 
-    // For existing customer, customerId is required
-    if (!isNewCustomer && !customerId) {
+    if (!body.method || !['ONLINE', 'COD'].includes(body.method)) {
       return NextResponse.json(
-        { success: false, error: 'Customer harus dipilih' },
+        { success: false, error: 'Method harus ONLINE atau COD' },
         { status: 400 }
-      );
+      )
     }
 
-    // For new customer, name and phone are required
-    if (isNewCustomer && (!sanitizedName || !sanitizedPhone)) {
+    // Check if we have an existing customer or need to create new one
+    let customer
+    
+    if (body.customerId) {
+      // Use existing customer
+      customer = await db.customer.findUnique({
+        where: { id: body.customerId }
+      })
+
+      if (!customer) {
+        return NextResponse.json(
+          { success: false, error: 'Customer tidak ditemukan' },
+          { status: 400 }
+        )
+      }
+    } else if (body.newCustomer) {
+      // Create new customer
+      const { name, whatsapp, bank, accountNumber, accountHolder, city, label } = body.newCustomer
+
+      if (!name || !name.trim()) {
+        return NextResponse.json(
+          { success: false, error: 'Nama customer harus diisi' },
+          { status: 400 }
+        )
+      }
+
+      if (!whatsapp || !validateWhatsApp(whatsapp)) {
+        return NextResponse.json(
+          { success: false, error: 'Format WhatsApp tidak valid' },
+          { status: 400 }
+        )
+      }
+
+      // Check if customer with this WhatsApp already exists
+      const formattedWhatsapp = formatWhatsApp(whatsapp)
+      const existingCustomer = await db.customer.findFirst({
+        where: { whatsapp: formattedWhatsapp }
+      })
+
+      if (existingCustomer) {
+        // Update existing customer
+        customer = await db.customer.update({
+          where: { id: existingCustomer.id },
+          data: {
+            name: name.trim(),
+            bank: bank?.trim() || existingCustomer.bank,
+            accountNumber: accountNumber?.trim() || existingCustomer.accountNumber,
+            accountHolder: accountHolder?.trim() || existingCustomer.accountHolder,
+            city: city?.trim() || existingCustomer.city,
+            label: label || existingCustomer.label
+          }
+        })
+      } else {
+        // Create new customer
+        customer = await db.customer.create({
+          data: {
+            name: name.trim(),
+            whatsapp: formattedWhatsapp,
+            bank: bank?.trim() || null,
+            accountNumber: accountNumber?.trim() || null,
+            accountHolder: accountHolder?.trim() || null,
+            city: city?.trim() || null,
+            label: label || 'NEW',
+            partnerId: body.partnerId || null
+          }
+        })
+      }
+    } else {
       return NextResponse.json(
-        { success: false, error: 'Nama dan nomor customer harus diisi' },
+        { success: false, error: 'Customer ID atau data customer baru harus disediakan' },
         { status: 400 }
-      );
+      )
     }
 
     // Get payment type
     const paymentType = await db.paymentType.findUnique({
-      where: { id: paymentTypeId },
-    });
+      where: { id: body.paymentTypeId }
+    })
 
     if (!paymentType) {
       return NextResponse.json(
-        { success: false, error: 'Tipe pembayaran tidak valid' },
+        { success: false, error: 'Payment type tidak ditemukan' },
         { status: 400 }
-      );
+      )
     }
 
     // Get marketplace if provided
-    // Accept 'none' or '' as signals to not use marketplace
-    let platformFee = 0;
-    const effectiveMarketplaceId = (marketplaceId && marketplaceId !== 'none') ? marketplaceId : null;
-
-    if (effectiveMarketplaceId) {
-      const marketplace = await db.marketplace.findUnique({
-        where: { id: effectiveMarketplaceId },
-      });
-      if (marketplace) {
-        // Convert Decimal to number safely (handles Neon PostgreSQL Decimal type)
-        let mpFeePercent = toNumber(marketplace.feePercent);
-        const mpFeeFlat = toNumber(marketplace.feeFlat);
-        // Safety: normalize fee percent if > 100 (database precision issue fix)
-        if (mpFeePercent > 100) {
-          mpFeePercent = mpFeePercent / 1000;
-        }
-        platformFee = toNumber(nominal) * (mpFeePercent / 100) + mpFeeFlat;
-      }
+    let marketplace = null
+    if (body.marketplaceId) {
+      marketplace = await db.marketplace.findUnique({
+        where: { id: body.marketplaceId }
+      })
     }
 
-    // Get partner
-    let actualPartnerId = partnerId || null;
-    let partnerRate = 0;
-
-    if (user.role === 'partner') {
-      const partner = await db.partner.findUnique({
-        where: { userId: user.id },
-      });
-      actualPartnerId = partner?.id;
-      partnerRate = partner?.commission || 0;
-    } else if (partnerId) {
-      const partner = await db.partner.findUnique({
-        where: { id: partnerId },
-      });
-      partnerRate = partner?.commission || 0;
+    // Get partner if provided
+    let partner = null
+    if (body.partnerId) {
+      partner = await db.partner.findUnique({
+        where: { id: body.partnerId }
+      })
     }
+
+    // Generate unique order ID
+    const orderId = generateOrderId()
 
     // Calculate fees
-    // Convert Decimal values to numbers for PostgreSQL compatibility
-    const paymentFee = calculatePaymentFee(
-      toNumber(nominal),
+    // IMPORTANT: partnerRate should be 0 when there's no partner (owner gets all margin)
+    // When there's a partner, use their commission rate
+    const partnerRate = partner ? partner.commissionRate : 0
+    
+    const feeCalculation = calculateTransactionFees(
+      body.nominal,
       {
-        onlineFeePercent: toNumber(paymentType.onlineFeePercent),
-        onlineFeeFlat: toNumber(paymentType.onlineFeeFlat),
-        codFeePercent: toNumber(paymentType.codFeePercent),
-        codFeeFlat: toNumber(paymentType.codFeeFlat),
-        threshold: toNumber(paymentType.threshold),
+        id: paymentType.id,
+        name: paymentType.name,
+        type: paymentType.type as 'CC' | 'PAYLATER',
+        threshold: paymentType.threshold,
+        onlineFeePercent: paymentType.onlineFeePercent,
+        onlineFeeFixed: paymentType.onlineFeeFixed,
+        codFeePercent: paymentType.codFeePercent,
+        codFeeFixed: paymentType.codFeeFixed,
+        status: paymentType.status as 'ACTIVE' | 'INACTIVE',
+        createdAt: paymentType.createdAt.toISOString(),
+        updatedAt: paymentType.updatedAt.toISOString()
       },
-      methodTransaction
-    );
-    const { netMargin, partnerProfit, ownerProfit } = calculateMarginBreakdown(
-      paymentFee,
-      platformFee,
-      toNumber(partnerRate)
-    );
+      marketplace ? {
+        id: marketplace.id,
+        name: marketplace.name,
+        feePercent: marketplace.feePercent,
+        logo: marketplace.logo,
+        status: marketplace.status as 'ACTIVE' | 'INACTIVE',
+        createdAt: marketplace.createdAt.toISOString(),
+        updatedAt: marketplace.updatedAt.toISOString()
+      } : null,
+      body.method,
+      partnerRate
+    )
 
-    // Generate order ID
-    const orderId = generateOrderId();
-
-    // Default status: "process" for owner, "pending" for partner/public
-    const defaultStatus = user.role === 'owner' ? 'process' : 'pending';
-
-    // Handle customer - create new or use existing
-    let finalCustomerId = customerId;
-
-    if (isNewCustomer) {
-      // Normalize phone number
-      const normalizedPhone = normalizePhone(sanitizedPhone);
-      
-      // Check for duplicate customer (by phone OR name)
-      const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, sanitizedName);
-
-      if (duplicateCheck.isDuplicate && duplicateCheck.existingCustomer) {
-        // Use existing customer - update with new info if provided
-        finalCustomerId = duplicateCheck.existingCustomer.id;
-        
-        // Update customer info if new data provided
-        await db.customer.update({
-          where: { id: finalCustomerId },
-          data: {
-            name: sanitizedName,
-            phone: normalizedPhone,
-            city: sanitizedCity || undefined,
-            bankName: sanitizedBankName || undefined,
-            bankAccount: sanitizedBankAccount || undefined,
-            bankHolder: sanitizedBankHolder || undefined,
-            partnerId: user.role === 'partner' ? actualPartnerId : undefined,
-          },
-        });
-      } else {
-        // Create new customer with bank details
-        const newCustomer = await db.customer.create({
-          data: {
-            name: sanitizedName,
-            phone: normalizedPhone,
-            city: sanitizedCity || null,
-            bankName: sanitizedBankName || null,
-            bankAccount: sanitizedBankAccount || null,
-            bankHolder: sanitizedBankHolder || null,
-            totalVolume: 0,
-            totalTransactions: 0,
-            addedBy: user.role === 'owner' ? 'owner' : 'partner',
-            partnerId: user.role === 'partner' ? actualPartnerId : null,
-          },
-        });
-        finalCustomerId = newCustomer.id;
-      }
-    }
+    // Determine status based on source
+    // - Partner creates transaction -> status = 'PENDING' (needs owner verification)
+    // - Owner creates transaction -> status = 'VERIFIED' (auto-verified)
+    const createdByPartner = body.source === 'PARTNER'
+    const defaultStatus = createdByPartner ? 'PENDING' : 'VERIFIED'
 
     // Create transaction
     const transaction = await db.transaction.create({
       data: {
         orderId,
-        customerId: finalCustomerId,
-        partnerId: actualPartnerId,
-        nominal,
-        paymentFee,
-        platformFee,
-        netMargin,
-        partnerProfit,
-        ownerProfit,
-        totalReceived: nominal - paymentFee,
-        paymentTypeId,
-        methodTransaction,
-        marketplaceId: effectiveMarketplaceId,
-        status: defaultStatus,
+        customerId: customer.id,
+        partnerId: body.partnerId || null,
+        nominal: body.nominal,
+        paymentTypeId: body.paymentTypeId,
+        marketplaceId: body.marketplaceId || null,
+        method: body.method,
+        paymentFee: feeCalculation.paymentFee,
+        platformFee: feeCalculation.platformFee,
+        netMargin: feeCalculation.netMargin,
+        partnerProfit: feeCalculation.partnerProfit,
+        ownerProfit: feeCalculation.ownerProfit,
+        totalServiceFee: feeCalculation.totalServiceFee,
+        receivedAmount: feeCalculation.receivedAmount,
+        status: defaultStatus
       },
       include: {
         customer: true,
-        paymentType: true,
-        partner: true,
-        marketplace: true,
-      },
-    });
-
-    // Update customer stats (always track customer activity)
-    await db.customer.update({
-      where: { id: finalCustomerId },
-      data: {
-        totalVolume: { increment: nominal },
-        totalTransactions: { increment: 1 },
-      },
-    });
-
-    // Note: Partner stats (totalProfit, totalVolume) are only updated when transaction status changes to 'success'
-    // This ensures partner targets are based on actual successful transactions
-    // See PATCH handler in /api/transactions/[id]/route.ts for the stats update logic
-
-    // Create notification for owner about new transaction
-    try {
-      const ownerProfile = await db.ownerProfile.findFirst();
-      if (ownerProfile) {
-        await db.notification.create({
-          data: {
-            type: 'new_order',
-            title: 'Transaksi Baru',
-            message: `${transaction.customer?.name || 'Customer'} - ${formatCurrency(toNumber(nominal))}`,
-            data: JSON.stringify({
-              orderId: transaction.orderId,
-              customerName: transaction.customer?.name,
-              nominal: toNumber(nominal),
-              paymentFee: toNumber(paymentFee),
-              paymentType: transaction.paymentType?.name,
-              partnerName: transaction.partner?.name,
-            }),
-            targetType: 'owner',
-            transactionId: transaction.id,
-            partnerId: actualPartnerId,
-          },
-        });
-
-        // Send Telegram notification if enabled
-        const notifSettings = await db.notificationSettings.findUnique({
-          where: { ownerProfileId: ownerProfile.id },
-        });
-
-        if (notifSettings?.telegramEnabled && notifSettings.telegramBotToken && notifSettings.telegramChatId && notifSettings.notifyNewTransaction) {
-          await sendTelegramNotification(
-            notifSettings.telegramBotToken,
-            notifSettings.telegramChatId,
-            {
-              type: 'new_order',
-              title: '💳 Transaksi Baru',
-              message: `Order ID: ${transaction.orderId}`,
-              additionalData: {
-                'Pelanggan': transaction.customer?.name,
-                'Nominal': formatCurrency(toNumber(nominal)),
-                'Fee': formatCurrency(toNumber(paymentFee)),
-                'Tipe': transaction.paymentType?.name,
-                'Partner': transaction.partner?.name || '-',
-              },
+        partner: {
+          include: {
+            user: {
+              select: {
+                name: true,
+                email: true
+              }
             }
-          );
-        }
+          }
+        },
+        paymentType: true,
+        marketplace: true
       }
-    } catch (notifError) {
-      console.error('Failed to create notification:', notifError);
-      // Don't fail the request if notification fails
-    }
+    })
 
     return NextResponse.json({
       success: true,
-      data: serializeTransaction(transaction as unknown as Record<string, unknown>),
-      message: `Transaksi berhasil dibuat dengan status ${defaultStatus}`,
-    });
+      data: transaction
+    })
   } catch (error) {
-    console.error('Create transaction error:', error);
+    console.error('Error creating transaction:', error)
     return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
+      { success: false, error: 'Terjadi kesalahan saat membuat transaksi' },
       { status: 500 }
-    );
+    )
   }
 }

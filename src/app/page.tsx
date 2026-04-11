@@ -1,840 +1,476 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import {
-  CreditCard,
-  Wallet,
-  Truck,
-  Shield,
-  Clock,
+import { useState } from 'react'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import { 
+  ArrowRight, 
+  CreditCard, 
+  Wallet, 
+  Truck, 
+  Shield, 
+  Clock, 
+  CheckCircle2,
+  Search,
   Users,
-  ArrowRight,
-  Sparkles,
-  Zap,
-  Star,
   TrendingUp,
-  MessageCircle,
-  Wifi,
-  HelpCircle as HelpCircleIcon,
-  Banknote,
-} from 'lucide-react';
-import { useSiteConfig } from '@/hooks/use-site-config';
-import { formatCurrency } from '@/lib/utils';
-import { OrganizationJsonLd, FAQJsonLd } from '@/components/seo/json-ld';
-import TestimonialsSection from '@/components/testimonials-section';
+  Sparkles,
+  Zap
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { NavbarDesktop } from '@/components/layout/navbar-desktop'
+import { MobileBottomBar } from '@/components/layout/mobile-bottom-bar'
+import { Footer } from '@/components/layout/footer'
 
-const features = [
+const services = [
   {
     icon: CreditCard,
-    title: 'Kartu Kredit',
-    description: 'Tarik tunai dari semua jenis kartu kredit dengan proses cepat',
+    title: 'Tarik Tunai Kartu Kredit',
+    description: 'Cairkan limit kartu kredit Anda menjadi uang tunai dengan proses cepat dan aman.',
+    fee: 'Mulai 10%',
+    color: 'from-violet-500 to-purple-600',
   },
   {
     icon: Wallet,
-    title: 'Paylater',
-    description: 'GoPay, Shopee, Akulaku & berbagai platform paylater',
+    title: 'Paylater Shopee/GoPay',
+    description: 'Tarik saldo paylater dari berbagai platform e-commerce dengan mudah.',
+    fee: 'Mulai 12%',
+    color: 'from-fuchsia-500 to-pink-600',
   },
+]
+
+const features = [
   {
-    icon: Truck,
-    title: 'COD & Online',
-    description: 'Pilih metode transaksi sesuai kebutuhan Anda',
+    icon: Clock,
+    title: 'Proses Cepat',
+    description: 'Transaksi diproses dalam hitungan menit',
+    color: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
   },
   {
     icon: Shield,
     title: 'Aman & Terpercaya',
-    description: 'Proses transparan dengan tracking real-time',
-  },
-];
-
-const steps = [
-  {
-    step: '01',
-    title: 'Buat Order',
-    description: 'Isi nominal dan data rekening tujuan Anda',
+    description: 'Transaksi dijamin aman dan terpercaya',
+    color: 'bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400',
   },
   {
-    step: '02',
-    title: 'Verifikasi',
-    description: 'Tim kami memverifikasi dan memproses order',
+    icon: Truck,
+    title: 'COD Tersedia',
+    description: 'Layanan COD untuk kenyamanan Anda',
+    color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
   },
-  {
-    step: '03',
-    title: 'Dana Diterima',
-    description: 'Dana langsung ditransfer ke rekening Anda',
-  },
-];
+]
 
-const partnerBenefits = [
-  { icon: TrendingUp, text: 'Komisi hingga 30% dari setiap transaksi' },
-  { icon: Star, text: 'Tier & Badge dengan reward menarik' },
-  { icon: Zap, text: 'Target bulanan dengan bonus' },
-  { icon: Users, text: 'Support tim profesional' },
-];
-
-interface FAQ {
-  id: string;
-  question: string;
-  answer: string;
-  category: string;
-}
-
-interface PaymentType {
-  id: string;
-  name: string;
-  onlineFeePercent: number;
-  onlineFeeFlat: number;
-  codFeePercent: number;
-  codFeeFlat: number;
-  threshold: number;
-  isActive: boolean;
-}
-
-// Credit Card Visual Component - More Compact
-function CreditCardVisual({ siteName, getInitials, logoUrl, logoError, setLogoError }: { 
-  siteName: string; 
-  getInitials: () => string;
-  logoUrl: string | null;
-  logoError: boolean;
-  setLogoError: (error: boolean) => void;
-}) {
-  return (
-    <div className="relative w-full max-w-[280px] sm:max-w-[320px] mx-auto">
-      {/* Glow Effect */}
-      <div className="absolute -inset-2 bg-primary/20 rounded-2xl blur-xl opacity-50" />
-      
-      {/* Card */}
-      <div className="relative aspect-[1.586/1] rounded-xl overflow-hidden shadow-xl">
-        {/* Card Background */}
-        <div 
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #1a1a2e 60%, #2d1b4e 100%)',
-          }}
-        />
-        
-        {/* Gradient Overlay */}
-        <div 
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(45deg, rgba(139, 92, 246, 0.15) 0%, rgba(168, 85, 247, 0.1) 50%, rgba(217, 70, 239, 0.15) 100%)',
-          }}
-        />
-        
-        {/* Shine Animation */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div 
-            className="absolute top-0 -left-full w-1/2 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12"
-            style={{
-              animation: 'shine 3s ease-in-out infinite',
-            }}
-          />
-        </div>
-        
-        {/* Card Content */}
-        <div className="relative z-10 h-full p-4 flex flex-col justify-between">
-          {/* Top Row */}
-          <div className="flex items-start justify-between">
-            {/* Chip */}
-            <div className="w-8 h-6 rounded bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 flex items-center justify-center">
-              <div className="w-5 h-4 border border-amber-700/30 rounded-sm" />
-            </div>
-            {/* Contactless Icon */}
-            <Wifi className="w-4 h-4 text-white/50 rotate-90" />
-          </div>
-          
-          {/* Card Number */}
-          <div className="my-2">
-            <p className="text-white text-sm tracking-[0.2em] font-mono drop-shadow-lg">
-              •••• •••• •••• ••••
-            </p>
-          </div>
-          
-          {/* Bottom Row */}
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-white/40 text-[8px] uppercase tracking-wider mb-0.5">
-                Card Holder
-              </p>
-              <p className="text-white text-xs font-medium tracking-wide">
-                VALUED CUSTOMER
-              </p>
-            </div>
-            <div className="text-right">
-              {/* Logo or Initials */}
-              <div className="flex items-center gap-1.5 justify-end">
-                {logoUrl && !logoError ? (
-                  <img 
-                    src={logoUrl} 
-                    alt={siteName}
-                    className="w-6 h-6 object-contain"
-                    onError={() => setLogoError(true)}
-                  />
-                ) : (
-                  <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-                    <span className="text-white text-[8px] font-bold">{getInitials()}</span>
-                  </div>
-                )}
-                <span className="text-white font-bold text-sm tracking-tight">
-                  {siteName}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Decorative Elements */}
-        <div className="absolute -bottom-8 -right-8 w-20 h-20 rounded-full bg-primary/10 blur-lg" />
-        <div className="absolute -top-4 -left-4 w-12 h-12 rounded-full bg-purple-500/10 blur-lg" />
-      </div>
-      
-      {/* Floating Elements */}
-      <div className="absolute -top-2 -right-2 w-10 h-10 rounded-full bg-primary/20 blur-md animate-pulse" />
-      <div className="absolute -bottom-2 -left-2 w-8 h-8 rounded-full bg-purple-500/20 blur-md animate-pulse" style={{ animationDelay: '1s' }} />
-    </div>
-  );
-}
-
-// Animated Background Component - Simplified
-function AnimatedBackground() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Base gradient */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          background: `
-            radial-gradient(ellipse 80% 50% at 50% -20%, rgba(139, 92, 246, 0.12), transparent),
-            radial-gradient(ellipse 60% 40% at 80% 100%, rgba(168, 85, 247, 0.08), transparent)
-          `,
-        }}
-      />
-      
-      {/* Grid pattern */}
-      <div 
-        className="absolute inset-0 opacity-[0.02]"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(139, 92, 246, 0.5) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(139, 92, 246, 0.5) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px',
-        }}
-      />
-      
-      {/* Floating orbs - reduced */}
-      <div className="absolute top-1/4 left-[10%] w-48 h-48 bg-primary/15 rounded-full blur-[60px] animate-float-slow" />
-      <div className="absolute top-1/2 right-[5%] w-64 h-64 bg-purple-500/10 rounded-full blur-[80px] animate-float-medium" />
-    </div>
-  );
-}
+const stats = [
+  { value: '10K+', label: 'Transaksi' },
+  { value: '5K+', label: 'Customer' },
+  { value: '100+', label: 'Mitra' },
+  { value: '99%', label: 'Kepuasan' },
+]
 
 export default function LandingPage() {
-  const { config, getInitials } = useSiteConfig();
-  const [logoError, setLogoError] = useState(false);
-  const [faqs, setFaqs] = useState<FAQ[]>([]);
-  const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
-  const [paymentTypesLoading, setPaymentTypesLoading] = useState(true);
-  
-  const siteName = config.websiteTitle || 'Black Bear';
+  const [orderId, setOrderId] = useState('')
 
-  // Fetch FAQs
-  useEffect(() => {
-    const fetchFAQs = async () => {
-      try {
-        const response = await fetch('/api/seo/faq?public=true&limit=5');
-        const result = await response.json();
-        if (result.success && result.data) {
-          setFaqs(result.data.slice(0, 5));
-        }
-      } catch (error) {
-        console.error('Failed to fetch FAQs:', error);
-      }
-    };
-    fetchFAQs();
-  }, []);
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0 },
+  }
 
-  // Fetch active payment types
-  useEffect(() => {
-    const fetchPaymentTypes = async () => {
-      try {
-        const response = await fetch('/api/payment-types?activeOnly=true');
-        const result = await response.json();
-        if (result.success && result.data) {
-          setPaymentTypes(result.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch payment types:', error);
-      } finally {
-        setPaymentTypesLoading(false);
-      }
-    };
-    fetchPaymentTypes();
-  }, []);
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  }
 
   return (
-    <>
-      {/* JSON-LD Structured Data for SEO */}
-      <OrganizationJsonLd />
-      <FAQJsonLd />
+    <div className="min-h-screen flex flex-col">
+      <NavbarDesktop currentPage="landing" />
       
-      <div className="min-h-screen bg-background relative">
-        {/* Animated Background */}
-        <AnimatedBackground />
-        
-        {/* Hero Section - Compact */}
-        <header className="relative py-8 sm:py-12 lg:py-16 overflow-hidden">
-          <div className="container mx-auto px-4 relative z-10">
-            <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-center">
+      <main className="flex-1 pb-20 md:pb-0">
+        {/* Hero Section - Enhanced */}
+        <section className="relative min-h-[90vh] md:min-h-[85vh] flex items-center overflow-hidden">
+          {/* Animated Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 dark:from-violet-950/30 dark:via-background dark:to-fuchsia-950/30" />
+          
+          {/* Decorative Elements */}
+          <div className="absolute inset-0 overflow-hidden">
+            {/* Primary blob */}
+            <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-gradient-to-br from-violet-400/20 to-fuchsia-400/20 dark:from-violet-500/10 dark:to-fuchsia-500/10 rounded-full blur-3xl animate-pulse" />
+            <div className="absolute top-1/4 -left-20 w-[300px] h-[300px] bg-gradient-to-tr from-purple-400/20 to-violet-400/20 dark:from-purple-500/10 dark:to-violet-500/10 rounded-full blur-3xl" />
+            <div className="absolute -bottom-20 right-1/4 w-[400px] h-[400px] bg-gradient-to-tl from-fuchsia-400/15 to-pink-400/15 dark:from-fuchsia-500/10 dark:to-pink-500/10 rounded-full blur-3xl" />
+            
+            {/* Grid pattern overlay */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,oklch(0.5_0.25_290/0.05)_1px,transparent_1px),linear-gradient(to_bottom,oklch(0.5_0.25_290/0.05)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+          </div>
+
+          <div className="container relative px-4 sm:px-6 py-12 md:py-16 lg:py-20 mx-auto">
+            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
               {/* Left Content */}
-              <div className="flex-1 max-w-xl text-center lg:text-left">
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={staggerContainer}
+                className="space-y-6 md:space-y-8 text-center lg:text-left"
+              >
                 {/* Badge */}
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
-                  <Sparkles className="w-3 h-3" aria-hidden="true" />
-                  <span>Layanan Tarik Tunai Terpercaya</span>
-                </div>
-
-                {/* Title */}
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 leading-tight tracking-tight">
-                  Butuh Dana Cepat?
-                  <br />
-                  <span className="text-primary">{siteName} Solusinya</span>
-                </h1>
-
-                {/* Description */}
-                <p className="text-sm sm:text-base text-muted-foreground mb-5 leading-relaxed">
-                  {config.metaDescription || 'Layanan tarik tunai profesional untuk Kartu Kredit & Paylater dengan proses cepat, aman, dan transparan.'}
-                </p>
-
-                {/* CTA Buttons */}
-                <nav className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center lg:justify-start mb-5" aria-label="Main actions">
-                  <Button asChild size="default" className="h-10 px-5 text-sm">
-                    <Link href="/order">
-                      Order Sekarang
-                      <ArrowRight className="w-4 h-4 ml-1.5" aria-hidden="true" />
-                    </Link>
-                  </Button>
-                  <Button asChild size="default" variant="outline" className="h-10 px-5 text-sm">
-                    <Link href="/track">
-                      <Clock className="w-4 h-4 mr-1.5" aria-hidden="true" />
-                      Track Order
-                    </Link>
-                  </Button>
-                </nav>
-
-                {/* Trust Indicators */}
-                <ul className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs text-muted-foreground" aria-label="Trust indicators">
-                  <li className="flex items-center gap-1.5">
-                    <Shield className="w-4 h-4 text-emerald-500" aria-hidden="true" />
-                    <span>Aman 100%</span>
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <Zap className="w-4 h-4 text-amber-500" aria-hidden="true" />
-                    <span>Proses Cepat</span>
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <Star className="w-4 h-4 text-primary" aria-hidden="true" />
-                    <span>Terpercaya</span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Right Content - Credit Card */}
-              <div className="flex-1 flex justify-center items-center" role="img" aria-label="Credit card illustration">
-                <CreditCardVisual 
-                  siteName={siteName} 
-                  getInitials={getInitials}
-                  logoUrl={config.logoUrl}
-                  logoError={logoError}
-                  setLogoError={setLogoError}
-                />
-              </div>
-            </div>
-          </div>
-        </header>
-
-      {/* Stats Section - Compact */}
-      <section className="relative py-6 sm:py-8 border-y bg-muted/30 backdrop-blur-sm z-10" aria-label="Statistics">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 max-w-3xl mx-auto">
-            {[
-              { value: '10K+', label: 'Transaksi' },
-              { value: '99%', label: 'Sukses Rate' },
-              { value: '24/7', label: 'Support' },
-              { value: '5★', label: 'Rating' },
-            ].map((stat, index) => (
-              <div key={index} className="text-center">
-                <p className="text-xl sm:text-2xl font-bold text-primary">{stat.value}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Services Section - Compact */}
-      <section className="relative py-10 sm:py-12 lg:py-16 z-10" aria-labelledby="services-heading">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-8">
-            <h2 id="services-heading" className="text-xl sm:text-2xl font-bold mb-2">Layanan Kami</h2>
-            <p className="text-muted-foreground text-xs sm:text-sm max-w-md mx-auto">
-              Pilih layanan tarik tunai yang sesuai dengan kebutuhan Anda
-            </p>
-          </div>
-
-          <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto" role="list">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <li key={index}>
-                  <Card 
-                    className="border-border/50 hover:border-primary/30 hover:shadow-md transition-all duration-300 group h-full"
-                  >
-                    <CardContent className="p-3 sm:p-4">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-primary/20 transition-colors">
-                        <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" aria-hidden="true" />
-                      </div>
-                      <h3 className="font-semibold text-sm sm:text-base mb-1">{feature.title}</h3>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
-                        {feature.description}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      </section>
-
-      {/* Payment Types Section - Gestun Tersedia */}
-      <section className="relative py-10 sm:py-12 lg:py-14 z-10" aria-labelledby="payment-types-heading">
-        <div className="container mx-auto px-4">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 id="payment-types-heading" className="text-lg sm:text-xl font-bold">Tipe Gestun</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {paymentTypesLoading ? 'Memuat...' : paymentTypes.length > 0 ? `${paymentTypes.length} metode tersedia` : 'Belum tersedia'}
-              </p>
-            </div>
-            <Button asChild variant="ghost" size="sm" className="h-8 px-3 text-xs text-muted-foreground hover:text-primary">
-              <Link href="/order">
-                Order Sekarang <ArrowRight className="w-3 h-3 ml-1" />
-              </Link>
-            </Button>
-          </div>
-
-          {/* Content */}
-          {paymentTypesLoading ? (
-            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="flex-shrink-0 w-[160px] sm:w-[180px] rounded-xl bg-card border border-border/50 p-4 animate-pulse">
-                  <div className="w-9 h-9 rounded-lg bg-muted mb-3" />
-                  <div className="h-3.5 bg-muted rounded w-20 mb-2" />
-                  <div className="h-3 bg-muted rounded w-28 mb-3" />
-                  <div className="h-2.5 bg-muted rounded w-16" />
-                </div>
-              ))}
-            </div>
-          ) : paymentTypes.length > 0 ? (
-            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
-              {paymentTypes.map((pt, index) => {
-                const isKartuKredit = pt.name.toLowerCase().includes('kartu') || pt.name.toLowerCase().includes('credit');
-                const isPaylater = pt.name.toLowerCase().includes('paylater') || pt.name.toLowerCase().includes('akulaku');
-                const Icon = isPaylater ? Wallet : isKartuKredit ? CreditCard : Banknote;
-
-                return (
-                  <div
-                    key={pt.id}
-                    className="flex-shrink-0 w-[160px] sm:w-[180px] sm:flex-shrink rounded-xl bg-card border border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 p-4 group active-scale animate-fade-in cursor-default"
-                    style={{ animationDelay: `${index * 50}ms`, opacity: 0 }}
-                  >
-                    {/* Icon */}
-                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center mb-3 group-hover:from-primary/25 group-hover:to-primary/10 transition-all duration-300">
-                      <Icon className="w-4.5 h-4.5 text-primary" aria-hidden="true" />
-                    </div>
-
-                    {/* Name */}
-                    <h3 className="font-semibold text-sm leading-tight mb-1.5 truncate">{pt.name}</h3>
-
-                    {/* Fee - single line */}
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <span className="text-blue-500 dark:text-blue-400 font-medium">{pt.onlineFeePercent}%</span>
-                      <span className="text-border">·</span>
-                      <span className="text-amber-500 dark:text-amber-400 font-medium">{pt.codFeePercent}%</span>
-                      <span className="text-muted-foreground/60">fee</span>
-                    </div>
-
-                    {/* Threshold */}
-                    {pt.threshold > 0 && (
-                      <p className="text-[10px] text-muted-foreground/70 mt-2">
-                        min. {formatCurrency(pt.threshold)}
-                      </p>
-                    )}
+                <motion.div variants={fadeInUp}>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-violet-500/20 text-sm font-medium">
+                    <Zap className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                    <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent font-semibold">
+                      Layanan Gestun Terpercaya
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="rounded-xl bg-muted/30 border border-dashed border-border/50 p-8 text-center">
-              <CreditCard className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" aria-hidden="true" />
-              <p className="text-sm text-muted-foreground">Belum ada tipe gestun tersedia</p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* How It Works Section - Compact */}
-      <section className="relative py-10 sm:py-12 lg:py-16 z-10" aria-labelledby="how-it-works-heading">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-8">
-            <h2 id="how-it-works-heading" className="text-xl sm:text-2xl font-bold mb-2">Cara Kerja</h2>
-            <p className="text-muted-foreground text-xs sm:text-sm max-w-md mx-auto">
-              Hanya 3 langkah sederhana untuk mendapatkan dana Anda
-            </p>
-          </div>
-
-          <ol className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-            {steps.map((step, index) => (
-              <li key={index} className="text-center">
-                <div className="text-3xl sm:text-4xl font-bold text-primary/20 mb-2" aria-hidden="true">{step.step}</div>
-                <h3 className="text-base sm:text-lg font-semibold mb-1">{step.title}</h3>
-                <p className="text-xs text-muted-foreground">{step.description}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <TestimonialsSection />
-
-      {/* FAQ Section - Compact */}
-      <section className="relative py-10 sm:py-12 lg:py-16 bg-muted/30 backdrop-blur-sm z-10" aria-labelledby="faq-heading">
-        <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-3">
-                <HelpCircleIcon className="w-3 h-3" aria-hidden="true" />
-                <span>FAQ</span>
-              </div>
-              <h2 id="faq-heading" className="text-xl sm:text-2xl font-bold mb-2">
-                Pertanyaan Umum
-              </h2>
-              <p className="text-muted-foreground text-xs sm:text-sm max-w-md mx-auto">
-                Temukan jawaban untuk pertanyaan yang sering diajukan
-              </p>
-            </div>
-
-            {faqs.length > 0 ? (
-              <>
-                <Card className="border-border/50">
-                  <CardContent className="p-0">
-                    <Accordion type="single" collapsible className="w-full">
-                      {faqs.map((faq, index) => (
-                        <AccordionItem 
-                          key={faq.id} 
-                          value={faq.id}
-                          className={index === faqs.length - 1 ? 'border-b-0' : ''}
-                        >
-                          <AccordionTrigger className="px-4 text-sm hover:no-underline">
-                            <span className="text-left font-medium pr-4">
-                              {faq.question}
-                            </span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 text-xs text-muted-foreground leading-relaxed">
-                            {faq.answer}
-                          </AccordionContent>
-                        </AccordionItem>
-                      ))}
-                    </Accordion>
-                  </CardContent>
-                </Card>
-                <div className="text-center mt-4">
-                  <Button asChild variant="outline" size="sm" className="h-9 text-xs">
-                    <Link href="/faq">
-                      Lihat Semua FAQ
-                      <ArrowRight className="w-3 h-3 ml-1.5" />
-                    </Link>
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground text-sm mb-3">
-                  Belum ada FAQ tersedia
-                </p>
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/faq">
-                    Kunjungi Halaman FAQ
-                  </Link>
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Partner Section - Compact */}
-      <section className="relative py-10 sm:py-12 lg:py-16 z-10" aria-labelledby="partner-heading">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-center">
-              {/* Content */}
-              <div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-3">
-                  <Users className="w-3 h-3" aria-hidden="true" />
-                  <span>Program Mitra</span>
-                </div>
-                <h2 id="partner-heading" className="text-xl sm:text-2xl font-bold mb-2">
-                  Bergabung Sebagai Mitra {siteName}
-                </h2>
-                <p className="text-muted-foreground text-xs sm:text-sm mb-5 leading-relaxed">
-                  Dapatkan penghasilan tambahan dengan menjadi mitra {siteName}. 
-                  Sistem komisi transparan dengan dashboard real-time untuk memantau profit Anda.
-                </p>
-                
-                <ul className="space-y-2 sm:space-y-3 mb-5" role="list">
-                  {partnerBenefits.map((benefit, index) => {
-                    const BenefitIcon = benefit.icon;
-                    return (
-                      <li key={index} className="flex items-center gap-2 text-sm">
-                        <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <BenefitIcon className="w-4 h-4 text-primary" aria-hidden="true" />
-                        </div>
-                        <span>{benefit.text}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-
-                <Button asChild size="default" className="h-10 px-5 text-sm">
-                  <Link href="/register">
-                    Daftar Mitra Sekarang
-                    <ArrowRight className="w-4 h-4 ml-1.5" aria-hidden="true" />
-                  </Link>
-                </Button>
-              </div>
-
-              {/* Card */}
-              <aside className="lg:pl-4">
-                <Card className="border-border/50 overflow-hidden">
-                  <CardContent className="p-5 sm:p-6">
-                    <div className="text-center">
-                      {/* Logo */}
-                      <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center mx-auto mb-4 shadow-lg">
-                        {config.logoUrl && !logoError ? (
-                          <img 
-                            src={config.logoUrl} 
-                            alt={siteName}
-                            className="w-7 h-7 object-contain"
-                            onError={() => setLogoError(true)}
-                          />
-                        ) : (
-                          <span className="text-white font-bold text-lg">{getInitials()}</span>
-                        )}
-                      </div>
-                      <h3 className="text-lg font-bold mb-1">Mitra Dashboard</h3>
-                      <p className="text-muted-foreground text-xs mb-5">
-                        Kelola transaksi dan pantau profit Anda
-                      </p>
-                      
-                      {/* Stats */}
-                      <div className="grid grid-cols-2 gap-3 mb-5">
-                        <div className="bg-muted/50 rounded-lg p-3">
-                          <p className="text-xl font-bold text-primary">30%</p>
-                          <p className="text-[10px] text-muted-foreground">Komisi Default</p>
-                        </div>
-                        <div className="bg-muted/50 rounded-lg p-3">
-                          <p className="text-xl font-bold text-primary">5jt</p>
-                          <p className="text-[10px] text-muted-foreground">Target Bulanan</p>
-                        </div>
-                      </div>
-
-                      {/* Contact */}
-                      <div className="pt-4 border-t flex items-center justify-center gap-4">
-                        {config.footerWhatsapp && (
-                          <a 
-                            href={`https://wa.me/${config.footerWhatsapp}`}
-                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                            aria-label="Contact via WhatsApp"
-                          >
-                            <MessageCircle className="w-3.5 h-3.5" aria-hidden="true" />
-                            WhatsApp
-                          </a>
-                        )}
-                        {config.footerEmail && (
-                          <a 
-                            href={`mailto:${config.footerEmail}`}
-                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                            aria-label="Contact via Email"
-                          >
-                            Contact
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </aside>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section - Compact */}
-      <section className="relative py-12 sm:py-16 overflow-hidden z-10">
-        {/* Animated Background */}
-        <div className="absolute inset-0">
-          {/* Base gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-purple-600/90 to-fuchsia-600/90 dark:from-primary/80 dark:via-purple-700/80 dark:to-fuchsia-700/80" />
-          
-          {/* Dark mode overlay */}
-          <div className="absolute inset-0 bg-black/0 dark:bg-black/30" />
-          
-          {/* Grid pattern overlay */}
-          <div 
-            className="absolute inset-0 opacity-5 dark:opacity-10"
-            style={{
-              backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
-              backgroundSize: '30px 30px',
-            }}
-          />
-        </div>
-        
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-3xl mx-auto">
-            {/* Main Content Card */}
-            <div className="relative bg-white/10 dark:bg-white/5 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-white/10 p-5 sm:p-8 shadow-xl">
-              
-              <div className="relative">
-                {/* Badge */}
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-sm text-white text-xs font-medium mb-4">
-                  <Zap className="w-3 h-3" />
-                  Proses Cepat & Aman
-                </div>
+                </motion.div>
                 
                 {/* Heading */}
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2 leading-tight">
-                  Siap Untuk Memulai?
-                </h2>
-                <p className="text-sm sm:text-base text-white/80 dark:text-white/70 mb-5 max-w-lg">
-                  Order sekarang dan dapatkan dana Anda dalam waktu singkat. Proses mudah, transparan, dan aman.
-                </p>
+                <motion.h1 
+                  variants={fadeInUp}
+                  className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight"
+                >
+                  <span className="text-foreground">Tarik Tunai</span>
+                  <br />
+                  <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
+                    Cepat & Aman
+                  </span>
+                </motion.h1>
+                
+                {/* Description */}
+                <motion.p 
+                  variants={fadeInUp}
+                  className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed"
+                >
+                  Layanan pencairan limit kartu kredit dan paylater dengan proses mudah, 
+                  transparan, dan terpercaya di seluruh Indonesia.
+                </motion.p>
                 
                 {/* CTA Buttons */}
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-5">
+                <motion.div 
+                  variants={fadeInUp}
+                  className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start"
+                >
                   <Button 
-                    asChild 
-                    size="default" 
-                    className="h-10 px-5 text-sm bg-white text-primary hover:bg-white/90 shadow-lg shadow-black/20"
+                    size="lg" 
+                    className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white shadow-lg shadow-violet-500/25 dark:shadow-violet-500/10 gap-2 h-12 px-8 text-base"
+                    asChild
                   >
                     <Link href="/order">
-                      <Sparkles className="w-4 h-4 mr-1.5" />
                       Order Sekarang
-                      <ArrowRight className="w-4 h-4 ml-1.5" />
+                      <ArrowRight className="h-5 w-5" />
                     </Link>
                   </Button>
                   <Button 
-                    asChild 
-                    size="default" 
+                    size="lg" 
                     variant="outline" 
-                    className="h-10 px-5 text-sm border-2 border-white/30 dark:border-white/20 text-white hover:bg-white/10 dark:hover:bg-white/5"
+                    className="gap-2 h-12 px-6 text-base border-violet-500/20 hover:bg-violet-500/5"
+                    asChild
                   >
                     <Link href="/track">
-                      <Clock className="w-4 h-4 mr-1.5" />
+                      <Search className="h-5 w-5" />
                       Track Order
                     </Link>
                   </Button>
-                </div>
+                </motion.div>
                 
-                {/* Trust indicators */}
-                <div className="flex flex-wrap items-center justify-center gap-4 pt-4 border-t border-white/20 dark:border-white/10">
-                  <div className="flex items-center gap-1.5 text-white/80 dark:text-white/70">
-                    <div className="w-6 h-6 rounded-full bg-white/20 dark:bg-white/10 flex items-center justify-center">
-                      <Shield className="w-3 h-3" />
+                {/* Stats */}
+                <motion.div 
+                  variants={fadeInUp}
+                  className="grid grid-cols-4 gap-3 sm:gap-6 pt-6 md:pt-8"
+                >
+                  {stats.map((stat, index) => (
+                    <div
+                      key={stat.label}
+                      className="text-center p-2 sm:p-3 rounded-xl bg-gradient-to-b from-white/80 to-white/40 dark:from-white/5 dark:to-transparent border border-violet-500/10"
+                    >
+                      <div className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+                        {stat.value}
+                      </div>
+                      <div className="text-[10px] sm:text-xs text-muted-foreground">{stat.label}</div>
                     </div>
-                    <span className="text-xs">100% Aman</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-white/80 dark:text-white/70">
-                    <div className="w-6 h-6 rounded-full bg-white/20 dark:bg-white/10 flex items-center justify-center">
-                      <Zap className="w-3 h-3" />
+                  ))}
+                </motion.div>
+              </motion.div>
+              
+              {/* Right Content - Enhanced Credit Card */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, rotateY: -15 }}
+                animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="flex justify-center lg:justify-end perspective-1000"
+              >
+                <div className="relative w-full max-w-sm sm:max-w-md">
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-violet-500/30 to-fuchsia-500/30 blur-3xl transform scale-95" />
+                  
+                  {/* Credit Card */}
+                  <div className="relative credit-card-enhanced w-full aspect-[1.6/1] p-5 sm:p-6 md:p-8 text-white transform hover:scale-[1.02] transition-transform duration-500">
+                    {/* Shimmer effect */}
+                    <div className="absolute inset-0 overflow-hidden rounded-2xl">
+                      <div className="absolute inset-0 shimmer" />
                     </div>
-                    <span className="text-xs">Proses Cepat</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-white/80 dark:text-white/70">
-                    <div className="w-6 h-6 rounded-full bg-white/20 dark:bg-white/10 flex items-center justify-center">
-                      <Star className="w-3 h-3" />
+                    
+                    {/* Decorative elements */}
+                    <div className="absolute top-0 right-0 w-32 h-32 sm:w-40 sm:h-40 bg-gradient-to-br from-white/20 to-transparent rounded-full -translate-y-1/2 translate-x-1/2" />
+                    <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-tr from-white/15 to-transparent rounded-full translate-y-1/2 -translate-x-1/2" />
+                    
+                    <div className="relative z-10 h-full flex flex-col justify-between">
+                      {/* Top row */}
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-white/60 text-xs sm:text-sm tracking-wider uppercase">Black Bear</p>
+                          <h3 className="text-lg sm:text-xl font-bold mt-0.5 sm:mt-1">Gestun Service</h3>
+                        </div>
+                        <div className="w-10 h-7 sm:w-12 sm:h-8 rounded bg-gradient-to-br from-yellow-300 to-amber-500 shadow-lg" />
+                      </div>
+                      
+                      {/* Middle row - Card number placeholder */}
+                      <div className="space-y-2 sm:space-y-3">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="w-7 h-5 sm:w-9 sm:h-6 bg-white/15 rounded backdrop-blur-sm" />
+                          ))}
+                        </div>
+                        <p className="text-xs sm:text-sm text-white/60 flex items-center gap-2">
+                          <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
+                          Pencairan Cepat & Aman
+                        </p>
+                      </div>
+                      
+                      {/* Bottom row */}
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <p className="text-white/60 text-[10px] sm:text-xs">Total Transaksi</p>
+                          <p className="text-xl sm:text-2xl font-bold">Rp 10.000.000</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-white/60 text-[10px] sm:text-xs">Status</p>
+                          <div className="flex items-center gap-1 text-emerald-400">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <span className="font-medium text-sm sm:text-base">Aktif</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-xs">Terpercaya</span>
                   </div>
                 </div>
-              </div>
-            </div>
-            
-            {/* Floating stat cards */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-4">
-              <div className="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-xl p-3 text-center border border-white/10 dark:border-white/5">
-                <p className="text-lg sm:text-xl font-bold text-white">10K+</p>
-                <p className="text-[10px] sm:text-xs text-white/70 dark:text-white/60">Transaksi</p>
-              </div>
-              <div className="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-xl p-3 text-center border border-white/10 dark:border-white/5">
-                <p className="text-lg sm:text-xl font-bold text-white">99%</p>
-                <p className="text-[10px] sm:text-xs text-white/70 dark:text-white/60">Sukses Rate</p>
-              </div>
-              <div className="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-xl p-3 text-center border border-white/10 dark:border-white/5">
-                <p className="text-lg sm:text-xl font-bold text-white">24/7</p>
-                <p className="text-[10px] sm:text-xs text-white/70 dark:text-white/60">Support</p>
-              </div>
+              </motion.div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Footer Note */}
-      <section className="relative py-4 z-10">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-[10px] text-muted-foreground">
-            *Biaya ongkir marketplace & layanan tambahan tidak termasuk
-          </p>
-        </div>
-      </section>
+        {/* Services Section */}
+        <section className="py-16 sm:py-20 md:py-24 bg-gradient-to-b from-transparent via-muted/30 to-transparent">
+          <div className="container px-4 sm:px-6 mx-auto">
+            <motion.div 
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              variants={staggerContainer}
+              className="text-center mb-10 sm:mb-12 md:mb-16"
+            >
+              <motion.h2 
+                variants={fadeInUp}
+                className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4"
+              >
+                Layanan Tarik Tunai
+              </motion.h2>
+              <motion.p 
+                variants={fadeInUp}
+                className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base"
+              >
+                Pilih layanan sesuai kebutuhan Anda dengan biaya transparan dan proses yang mudah.
+              </motion.p>
+            </motion.div>
+            
+            <div className="grid md:grid-cols-2 gap-5 sm:gap-6 max-w-4xl mx-auto">
+              {services.map((service, index) => (
+                <motion.div
+                  key={service.title}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  variants={fadeInUp}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card className="h-full hover:shadow-xl hover:shadow-violet-500/5 transition-all duration-300 cursor-pointer group border-violet-500/10 hover:border-violet-500/20 overflow-hidden">
+                    <CardHeader className="p-5 sm:p-6">
+                      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center mb-4 shadow-lg transform group-hover:scale-110 transition-transform duration-300`}>
+                        <service.icon className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+                      </div>
+                      <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-lg sm:text-xl">
+                        {service.title}
+                        <span className="text-xs sm:text-sm font-normal bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent bg-violet-500/10 px-3 py-1 rounded-full border border-violet-500/10">
+                          {service.fee}
+                        </span>
+                      </CardTitle>
+                      <CardDescription className="text-sm">{service.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-5 sm:p-6 pt-0">
+                      <Button 
+                        variant="outline" 
+                        className="w-full group-hover:bg-gradient-to-r group-hover:from-violet-600 group-hover:to-fuchsia-600 group-hover:text-white group-hover:border-transparent transition-all duration-300" 
+                        asChild
+                      >
+                        <Link href="/order">
+                          Order Sekarang
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
 
-      {/* Shine Animation Style */}
-      <style jsx global>{`
-        @keyframes shine {
-          0% { transform: translateX(-100%) skewX(12deg); }
-          50%, 100% { transform: translateX(200%) skewX(12deg); }
-        }
-        
-        @keyframes float-slow {
-          0%, 100% { transform: translateY(0) translateX(0); }
-          50% { transform: translateY(-15px) translateX(5px); }
-        }
-        
-        @keyframes float-medium {
-          0%, 100% { transform: translateY(0) translateX(0); }
-          50% { transform: translateY(-20px) translateX(-10px); }
-        }
-        
-        .animate-float-slow {
-          animation: float-slow 20s ease-in-out infinite;
-        }
-        
-        .animate-float-medium {
-          animation: float-medium 15s ease-in-out infinite;
-        }
-      `}</style>
-      </div>
-    </>
-  );
+        {/* Track Order Section */}
+        <section className="py-16 sm:py-20 md:py-24">
+          <div className="container px-4 sm:px-6 mx-auto">
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="max-w-2xl mx-auto"
+            >
+              <Card className="border-2 border-dashed border-violet-500/20 hover:border-violet-500/40 transition-colors bg-gradient-to-b from-violet-500/5 to-transparent">
+                <CardHeader className="text-center p-6 sm:p-8">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-violet-500/25">
+                    <Search className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
+                  </div>
+                  <CardTitle className="text-xl sm:text-2xl">Track Order Gestun</CardTitle>
+                  <CardDescription className="text-sm">
+                    Masukkan Order ID untuk melihat status transaksi Anda
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-6 sm:p-8 pt-0">
+                  <form action="/track" className="flex flex-col sm:flex-row gap-3">
+                    <Input
+                      name="orderId"
+                      placeholder="Contoh: BB-ABC123-XYZ"
+                      value={orderId}
+                      onChange={(e) => setOrderId(e.target.value)}
+                      className="flex-1 h-12 border-violet-500/20 focus:border-violet-500"
+                    />
+                    <Button 
+                      type="submit" 
+                      className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white h-12 px-6"
+                    >
+                      <Search className="h-4 w-4 mr-2" />
+                      Cari
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="py-16 sm:py-20 md:py-24 bg-gradient-to-b from-muted/30 to-transparent">
+          <div className="container px-4 sm:px-6 mx-auto">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+              {features.map((feature, index) => (
+                <motion.div
+                  key={feature.title}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  variants={fadeInUp}
+                  transition={{ delay: index * 0.1 }}
+                  className="text-center p-6 sm:p-8 rounded-2xl bg-gradient-to-b from-white/80 to-white/40 dark:from-white/5 dark:to-transparent border border-violet-500/10 hover:border-violet-500/20 transition-colors"
+                >
+                  <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl ${feature.color} flex items-center justify-center mx-auto mb-4`}>
+                    <feature.icon className="h-7 w-7 sm:h-8 sm:w-8" />
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-semibold mb-2">{feature.title}</h3>
+                  <p className="text-muted-foreground text-sm">{feature.description}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Partner Offer Section */}
+        <section className="py-16 sm:py-20 md:py-24">
+          <div className="container px-4 sm:px-6 mx-auto">
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-violet-500/10 border-violet-500/20 overflow-hidden">
+                <CardContent className="p-6 sm:p-8 md:p-12">
+                  <div className="grid md:grid-cols-2 gap-8 items-center">
+                    <div className="space-y-4 sm:space-y-6">
+                      <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">
+                        Penawaran Mitra Black Bear
+                      </h2>
+                      <p className="text-muted-foreground text-sm sm:text-base">
+                        Bergabung sebagai mitra Black Bear dan dapatkan komisi menarik dari setiap transaksi. 
+                        Sistem transparan dengan dashboard lengkap dan support 24/7.
+                      </p>
+                      <ul className="space-y-2 sm:space-y-3">
+                        {[
+                          'Komisi hingga 30% dari fee transaksi',
+                          'Dashboard real-time untuk monitoring',
+                          'Sistem tier & badge untuk mitra aktif',
+                          'Support & training gratis',
+                        ].map((item, i) => (
+                          <li key={i} className="flex items-center gap-3 text-sm sm:text-base">
+                            <CheckCircle2 className="h-5 w-5 text-violet-600 dark:text-violet-400 flex-shrink-0" />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <Button 
+                        size="lg" 
+                        className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white" 
+                        asChild
+                      >
+                        <Link href="/register">
+                          Daftar Sebagai Mitra
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </Link>
+                      </Button>
+                    </div>
+                    <div className="hidden md:block">
+                      <div className="grid grid-cols-2 gap-4">
+                        {[
+                          { icon: Users, value: '100+', label: 'Mitra Aktif' },
+                          { icon: TrendingUp, value: '30%', label: 'Komisi' },
+                          { icon: Wallet, value: '5 Juta', label: 'Target Bulanan' },
+                          { icon: Shield, value: 'Aman', label: 'Transaksi' },
+                        ].map((item, i) => (
+                          <Card key={i} className="border-violet-500/10 bg-white/50 dark:bg-white/5">
+                            <CardContent className="p-6 text-center">
+                              <item.icon className="h-8 w-8 text-violet-600 dark:text-violet-400 mx-auto mb-2" />
+                              <div className="text-2xl font-bold">{item.value}</div>
+                              <div className="text-sm text-muted-foreground">{item.label}</div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+      <MobileBottomBar />
+    </div>
+  )
 }

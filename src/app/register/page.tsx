@@ -1,772 +1,726 @@
-'use client';
+'use client'
 
-import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth-store';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Eye, EyeOff, Loader2, CheckCircle2, ArrowLeft, User, CreditCard, 
-  MapPin, Shield, Sparkles, Zap, Star, TrendingUp, Wallet, Lock,
-  Mail, Phone, Building2, ChevronRight, Clock
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useSiteConfig } from '@/hooks/use-site-config';
-import { CitySearch } from '@/components/ui/city-search';
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Eye, EyeOff, Loader2, User, Mail, Phone, Building2, CreditCard, MapPin, ArrowRight, ArrowLeft, Check, Lock, Sparkles } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { useAuthStore } from '@/store/auth'
+import { useToast } from '@/hooks/use-toast'
+import { NavbarDesktop } from '@/components/layout/navbar-desktop'
+import { Footer } from '@/components/layout/footer'
+import { cn } from '@/lib/utils'
 
-const banks = [
-  'BCA', 'Mandiri', 'BRI', 'BNI', 'CIMB Niaga', 'Permata', 'Danamon', 
-  'Panin', 'OCBC NISP', 'Jenius', 'Seabank', 'Bank Jago', 'Lainnya'
-];
+const registerSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Nama lengkap wajib diisi')
+    .min(3, 'Nama minimal 3 karakter'),
+  email: z
+    .string()
+    .min(1, 'Email wajib diisi')
+    .email('Format email tidak valid'),
+  whatsapp: z
+    .string()
+    .min(1, 'No. WhatsApp wajib diisi')
+    .regex(/^08\d{8,12}$/, 'Format WhatsApp tidak valid (contoh: 08xxxxxxxxxx)'),
+  password: z
+    .string()
+    .min(6, 'Password minimal 6 karakter'),
+  confirmPassword: z
+    .string()
+    .min(1, 'Konfirmasi password wajib diisi'),
+  bankName: z
+    .string()
+    .min(1, 'Nama bank wajib diisi'),
+  accountNumber: z
+    .string()
+    .min(1, 'No. rekening wajib diisi')
+    .regex(/^\d+$/, 'No. rekening harus berupa angka'),
+  accountHolder: z
+    .string()
+    .min(1, 'Nama pemilik rekening wajib diisi'),
+  city: z
+    .string()
+    .min(1, 'Kota wajib diisi'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Password tidak cocok',
+  path: ['confirmPassword'],
+})
 
-// Floating particle component
-function FloatingParticle({ delay, duration, size, left }: { delay: number; duration: number; size: number; left: number }) {
-  return (
-    <div
-      className="absolute rounded-full bg-primary/20 animate-float-up"
-      style={{
-        width: size,
-        height: size,
-        left: `${left}%`,
-        bottom: '-10%',
-        animationDelay: `${delay}s`,
-        animationDuration: `${duration}s`,
-      }}
-    />
-  );
-}
+type RegisterFormValues = z.infer<typeof registerSchema>
 
-// Animated background
-function AnimatedBackground() {
-  return (
-    <div className="absolute inset-0 overflow-hidden">
-      {/* Gradient base */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          background: `
-            radial-gradient(ellipse 80% 60% at 70% 40%, rgba(139, 92, 246, 0.15), transparent),
-            radial-gradient(ellipse 60% 50% at 30% 80%, rgba(168, 85, 247, 0.1), transparent)
-          `,
-        }}
-      />
-      
-      {/* Floating particles */}
-      {[...Array(8)].map((_, i) => (
-        <FloatingParticle
-          key={i}
-          delay={i * 0.8}
-          duration={8 + Math.random() * 4}
-          size={4 + Math.random() * 8}
-          left={10 + (i * 12)}
-        />
-      ))}
-      
-      {/* Decorative orbs */}
-      <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-primary/10 rounded-full blur-[80px] animate-pulse" />
-      <div className="absolute bottom-1/3 left-1/4 w-48 h-48 bg-purple-500/10 rounded-full blur-[60px] animate-pulse" style={{ animationDelay: '1s' }} />
-    </div>
-  );
-}
-
-// Feature card for desktop sidebar
-function FeatureCard({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) {
-  return (
-    <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 group">
-      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
-        <Icon className="w-6 h-6 text-white" />
-      </div>
-      <div>
-        <h3 className="font-semibold text-white mb-1">{title}</h3>
-        <p className="text-sm text-white/60">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-// Step indicator component
-function StepIndicator({ step, title, isActive, isCompleted }: { step: number; title: string; isActive: boolean; isCompleted: boolean }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className={cn(
-        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300",
-        isCompleted ? "bg-primary text-white" : 
-        isActive ? "bg-primary text-white shadow-lg shadow-primary/30" : 
-        "bg-muted text-muted-foreground"
-      )}>
-        {isCompleted ? (
-          <CheckCircle2 className="w-5 h-5" />
-        ) : (
-          step
-        )}
-      </div>
-      <span className={cn(
-        "font-medium transition-colors",
-        isActive ? "text-foreground" : "text-muted-foreground"
-      )}>
-        {title}
-      </span>
-    </div>
-  );
-}
+// Steps configuration
+const steps = [
+  { id: 1, title: 'Informasi Pribadi', description: 'Data diri Anda', icon: User },
+  { id: 2, title: 'Keamanan', description: 'Password akun', icon: Lock },
+  { id: 3, title: 'Informasi Bank', description: 'Data rekening', icon: Building2 },
+]
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const { isAuthenticated, isLoading, hasHydrated, setUser, setPartner, hydrate } = useAuthStore();
-  const { config, getInitials } = useSiteConfig();
-  const hasRedirected = useRef(false);
+  const router = useRouter()
+  const { login } = useAuthStore()
+  const { toast } = useToast()
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [currentStep, setCurrentStep] = useState(1)
+
+  const form = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    mode: 'onChange',
+    defaultValues: {
+      name: '',
+      email: '',
+      whatsapp: '',
+      password: '',
+      confirmPassword: '',
+      bankName: '',
+      accountNumber: '',
+      accountHolder: '',
+      city: '',
+    },
+  })
+
+  // Watch form values for progress calculation
+  const formValues = form.watch()
   
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    bankName: '',
-    bankAccount: '',
-    bankHolder: '',
-    city: '',
-  });
+  // Calculate step completion
+  const getStepCompletion = (stepId: number) => {
+    switch (stepId) {
+      case 1:
+        return {
+          name: formValues.name.length >= 3,
+          email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formValues.email),
+          whatsapp: /^08\d{8,12}$/.test(formValues.whatsapp),
+        }
+      case 2:
+        return {
+          password: formValues.password.length >= 6,
+          confirmPassword: formValues.confirmPassword.length >= 6 && formValues.password === formValues.confirmPassword,
+        }
+      case 3:
+        return {
+          bankName: formValues.bankName.length >= 1,
+          accountNumber: /^\d+$/.test(formValues.accountNumber),
+          accountHolder: formValues.accountHolder.length >= 1,
+          city: formValues.city.length >= 1,
+        }
+      default:
+        return {}
+    }
+  }
   
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [logoError, setLogoError] = useState(false);
-  const [customBankName, setCustomBankName] = useState('');
+  // Calculate overall progress
+  const calculateProgress = () => {
+    const allSteps = [1, 2, 3]
+    let completed = 0
+    let total = 0
+    
+    allSteps.forEach(stepId => {
+      const completion = getStepCompletion(stepId)
+      total += Object.keys(completion).length
+      completed += Object.values(completion).filter(Boolean).length
+    })
+    
+    return Math.round((completed / total) * 100)
+  }
+  
+  // Check if current step is valid
+  const isStepValid = (stepId: number) => {
+    const completion = getStepCompletion(stepId)
+    return Object.values(completion).every(Boolean)
+  }
 
-  // Security: Honeypot & Cooldown
-  const [honeypotValue, setHoneypotValue] = useState('');
-  const [submitCooldown, setSubmitCooldown] = useState(0);
-  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Navigation handlers
+  const nextStep = () => {
+    if (currentStep < 3 && isStepValid(currentStep)) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+  
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
+  }
 
-  const siteName = config.websiteTitle || 'Black Bear';
-
-  // Run hydration on mount
-  useEffect(() => {
-    if (!hasHydrated) {
-      hydrate();
-    }
-  }, [hasHydrated, hydrate]);
-
-  // Redirect to dashboard if already authenticated
-  useEffect(() => {
-    if (hasHydrated && isAuthenticated && !hasRedirected.current && !loading) {
-      hasRedirected.current = true;
-      router.replace('/partner/dashboard');
-    }
-  }, [hasHydrated, isAuthenticated, router, loading]);
-
-  const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    // Security: Cooldown check
-    if (submitCooldown > 0) {
-      setError(`Tunggu ${submitCooldown} detik sebelum submit ulang`);
-      return;
-    }
-
-    // Security: Enhanced client-side validation
-    if (formData.name.trim().length < 2 || formData.name.length > 100) {
-      setError('Nama harus 2-100 karakter');
-      return;
-    }
-    if (!/^[a-zA-Z\s\-'.]+$/.test(formData.name.trim())) {
-      setError('Nama hanya boleh mengandung huruf, spasi, tanda hubung, dan titik');
-      return;
-    }
-    if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(formData.email)) {
-      setError('Format email tidak valid');
-      return;
-    }
-    if (!/^08[0-9]{8,12}$/.test(formData.phone)) {
-      setError('Format nomor WhatsApp tidak valid (contoh: 08xxx)');
-      return;
-    }
-    if (formData.password.length < 8 ||
-        !/[A-Z]/.test(formData.password) ||
-        !/[a-z]/.test(formData.password) ||
-        !/[0-9]/.test(formData.password)) {
-      setError('Password minimal 8 karakter, harus mengandung huruf besar, huruf kecil, dan angka');
-      return;
-    }
-    if (formData.password.length > 128) {
-      setError('Password maksimal 128 karakter');
-      return;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError('Konfirmasi password tidak cocok');
-      return;
-    }
-    if (formData.bankAccount.length < 5 || formData.bankAccount.length > 20) {
-      setError('Nomor rekening harus 5-20 digit');
-      return;
-    }
-    if (formData.bankName === 'Lainnya' && !customBankName.trim()) {
-      setError('Nama bank harus diisi');
-      return;
-    }
-
-    setLoading(true);
-
+  const onSubmit = async (data: RegisterFormValues) => {
+    setIsLoading(true)
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          ...formData,
-          // Honeypot fields - bots will fill these
-          website: honeypotValue,
-          company_url: '',
-          contact_preference: '',
+          name: data.name,
+          email: data.email,
+          whatsapp: data.whatsapp,
+          password: data.password,
+          bankName: data.bankName,
+          accountNumber: data.accountNumber,
+          accountHolder: data.accountHolder,
+          city: data.city,
         }),
-      });
+      })
 
-      const data = await response.json();
+      const result = await response.json()
 
-      // Handle rate limit (429)
-      if (response.status === 429) {
-        setError(data.error || 'Terlalu banyak percobaan. Tunggu beberapa saat.');
-        setLoading(false);
-        return;
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Registrasi gagal')
       }
 
-      if (!response.ok || !data.success) {
-        setError(data.error || 'Registrasi gagal');
-        setLoading(false);
-        return;
-      }
+      // Update auth store
+      login(result.data.user, result.data.token, result.data.partner)
 
-      setUser(data.user);
-      setPartner(data.partner);
-      router.replace('/partner/dashboard');
-    } catch {
-      setError('Terjadi kesalahan. Silakan coba lagi.');
-      setLoading(false);
+      toast({
+        title: 'Registrasi berhasil',
+        description: 'Selamat datang! Akun mitra Anda telah dibuat.',
+      })
+
+      // Redirect to partner dashboard
+      router.push('/partner/dashboard')
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Registrasi gagal',
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
+      })
+    } finally {
+      setIsLoading(false)
     }
-  };
-
-  // Calculate step completion
-  const personalInfoComplete = formData.name && formData.email && formData.phone && formData.password && formData.confirmPassword;
-  const bankInfoComplete = formData.bankName && formData.bankAccount && formData.bankHolder && formData.city;
-
-  // Show loading while hydrating auth state
-  if (isLoading || !hasHydrated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
-        <AnimatedBackground />
-        <div className="relative flex flex-col items-center gap-4">
-          <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center shadow-2xl shadow-primary/30 animate-pulse">
-            <span className="text-white font-bold text-2xl">{getInitials()}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <p className="text-muted-foreground">Memuat...</p>
-          </div>
-        </div>
-      </div>
-    );
   }
 
-  // Don't render register form if already authenticated
-  if (isAuthenticated) {
-    return null;
+  const progress = calculateProgress()
+
+  // Animation variants
+  const slideVariants = {
+    enter: (direction: number) => ({
+      x: direction > 0 ? 300 : -300,
+      opacity: 0,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+    },
+    exit: (direction: number) => ({
+      x: direction < 0 ? 300 : -300,
+      opacity: 0,
+    }),
   }
 
   return (
-    <div className="min-h-screen flex bg-background relative overflow-hidden">
-      <AnimatedBackground />
-      
-      {/* Desktop Left Side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-purple-600 to-fuchsia-600" />
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '40px 40px' }} />
-        </div>
-        
-        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
-          {/* Logo */}
-          <div className="flex items-center gap-4 mb-12">
-            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 shadow-2xl">
-              {config.logoUrl && !logoError ? (
-                <img 
-                  src={config.logoUrl} 
-                  alt={siteName}
-                  className="w-10 h-10 object-contain"
-                  onError={() => setLogoError(true)}
-                />
-              ) : (
-                <span className="text-white font-bold text-xl">{getInitials()}</span>
-              )}
+    <div className="min-h-screen flex flex-col bg-background">
+      <NavbarDesktop />
+
+      <main className="flex-1 flex items-center justify-center px-4 py-8 md:py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="w-full max-w-lg"
+        >
+          <Card className="overflow-hidden border-0 shadow-xl">
+            {/* Header with gradient */}
+            <div className="gradient-primary p-6 text-center text-white">
+              <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mx-auto mb-3"
+              >
+                <span className="text-white font-bold text-xl">BB</span>
+              </motion.div>
+              <h2 className="text-xl font-bold mb-1">Daftar Mitra</h2>
+              <p className="text-white/80 text-sm">
+                Bergabung menjadi mitra Black Bear Gestun
+              </p>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">{siteName}</h1>
-              <p className="text-white/60 text-sm">Gestun Management System</p>
-            </div>
-          </div>
-
-          {/* Hero Text */}
-          <div className="mb-12">
-            <h2 className="text-4xl xl:text-5xl font-bold text-white leading-tight mb-4">
-              Bergabung<br />
-              <span className="text-white/80">Sebagai Mitra</span>
-            </h2>
-            <p className="text-white/60 text-lg max-w-md">
-              Dapatkan penghasilan tambahan dengan sistem komisi transparan dan dukungan tim profesional.
-            </p>
-          </div>
-
-          {/* Benefits */}
-          <div className="space-y-4 max-w-lg">
-            <FeatureCard 
-              icon={TrendingUp}
-              title="Komisi Hingga 30%"
-              description="Dapatkan komisi menarik dari setiap transaksi yang Anda proses"
-            />
-            <FeatureCard 
-              icon={Star}
-              title="Tier & Badge System"
-              description="Naik level dan dapatkan reward eksklusif berdasarkan performa"
-            />
-            <FeatureCard 
-              icon={Shield}
-              title="Support Profesional"
-              description="Tim support siap membantu Anda 24/7 untuk kelancaran bisnis"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Header */}
-      <div className="lg:hidden absolute top-0 left-0 right-0 z-20">
-        <div className="h-32 bg-gradient-to-b from-primary/10 to-transparent" />
-      </div>
-
-      {/* Right Side / Mobile - Register Form */}
-      <div className={cn(
-        "w-full lg:w-1/2 xl:w-[45%] flex items-center justify-center p-4 sm:p-6 relative z-10",
-        "lg:p-8 xl:p-12"
-      )}>
-        <div className="w-full max-w-md">
-          {/* Mobile Logo */}
-          <div className="lg:hidden flex flex-col items-center mb-6">
-            <div className="w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center shadow-xl shadow-primary/25 mb-4">
-              {config.logoUrl && !logoError ? (
-                <img 
-                  src={config.logoUrl} 
-                  alt={siteName}
-                  className="w-9 h-9 object-contain"
-                  onError={() => setLogoError(true)}
-                />
-              ) : (
-                <span className="text-white font-bold text-lg">{getInitials()}</span>
-              )}
-            </div>
-            <h1 className="text-xl font-bold">{siteName}</h1>
-          </div>
-
-          {/* Back button - Mobile only */}
-          <Button 
-            variant="ghost" 
-            asChild 
-            className="mb-4 -ml-2 tap-highlight lg:hidden"
-          >
-            <Link href="/">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Kembali ke Home
-            </Link>
-          </Button>
-
-          <Card className={cn(
-            "border-0 shadow-2xl shadow-black/5 bg-background/80 backdrop-blur-xl",
-            "rounded-3xl overflow-hidden",
-            hasHydrated && "animate-in fade-in slide-in-from-bottom-4 duration-500"
-          )}>
-            {/* Gradient accent line */}
-            <div className="h-1 sm:h-1.5 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
             
-            <CardContent className="p-4 sm:p-8">
-              {/* Header */}
-              <div className="text-center mb-4">
-                <h2 className="text-xl sm:text-2xl font-bold mb-2">Daftar Mitra</h2>
-                <p className="text-muted-foreground">Bergabung dengan {siteName}</p>
+            {/* Progress Bar */}
+            <div className="px-6 pt-4 bg-muted/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-muted-foreground">Progress</span>
+                <span className="text-xs font-medium text-primary">{progress}%</span>
               </div>
-
-              {/* Benefits badges */}
-              <div className="flex flex-wrap justify-center gap-2 mb-4">
-                <Badge variant="secondary" className="px-2.5 py-1 sm:px-3 sm:py-1.5 gap-1.5 rounded-full">
-                  <CreditCard className="w-3.5 h-3.5 text-primary" />
-                  Komisi 30%
-                </Badge>
-                <Badge variant="secondary" className="px-2.5 py-1 sm:px-3 sm:py-1.5 gap-1.5 rounded-full">
-                  <User className="w-3.5 h-3.5 text-primary" />
-                  Target 5jt
-                </Badge>
-                <Badge variant="secondary" className="px-2.5 py-1 sm:px-3 sm:py-1.5 gap-1.5 rounded-full">
-                  <Shield className="w-3.5 h-3.5 text-primary" />
-                  Aman
-                </Badge>
-              </div>
-
-              {error && (
-                <Alert variant="destructive" className="mb-5 rounded-xl border-destructive/50 bg-destructive/5">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 relative">
-                {/* Personal Info Section */}
-                <div className="space-y-4">
-                  <StepIndicator 
-                    step={1} 
-                    title="Data Pribadi" 
-                    isActive={true} 
-                    isCompleted={!!personalInfoComplete}
-                  />
+              <Progress value={progress} className="h-1.5" />
+              
+              {/* Step Indicators */}
+              <div className="flex items-center justify-between mt-4 mb-2">
+                {steps.map((step, index) => {
+                  const Icon = step.icon
+                  const isActive = currentStep === step.id
+                  const isCompleted = isStepValid(step.id)
                   
-                  <div className="pl-11 space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="text-sm font-medium flex items-center gap-2">
-                        <User className="w-4 h-4 text-muted-foreground" />
-                        Nama Lengkap
-                      </Label>
-                      <Input
-                        id="name"
-                        placeholder="Nama lengkap Anda"
-                        value={formData.name}
-                        onChange={(e) => handleChange('name', e.target.value.slice(0, 100))}
-                        required
-                        className="h-11 sm:h-12 rounded-xl border-2 focus:border-primary transition-colors"
-                        autoComplete="name"
-                        maxLength={100}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
-                          <Mail className="w-4 h-4 text-muted-foreground" />
-                          Email
-                        </Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="email@contoh.com"
-                          value={formData.email}
-                          onChange={(e) => handleChange('email', e.target.value.slice(0, 255))}
-                          required
-                          className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
-                          autoComplete="email"
-                          maxLength={255}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="phone" className="text-sm font-medium flex items-center gap-2">
-                          <Phone className="w-4 h-4 text-muted-foreground" />
-                          No. WhatsApp
-                        </Label>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          placeholder="08xxxxxxxxxx"
-                          value={formData.phone}
-                          onChange={(e) => handleChange('phone', e.target.value.replace(/[^0-9]/g, '').slice(0, 15))}
-                          required
-                          className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
-                          autoComplete="tel"
-                          maxLength={15}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Password Fields */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="password" className="text-sm font-medium flex items-center gap-2">
-                          <Lock className="w-4 h-4 text-muted-foreground" />
-                          Password
-                        </Label>
-                        <div className="relative">
-                          <Input
-                            id="password"
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="Min. 8 karakter, A-Z, a-z, 0-9"
-                            value={formData.password}
-                            onChange={(e) => handleChange('password', e.target.value.slice(0, 128))}
-                            required
-                            minLength={8}
-                            className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pr-12"
-                            autoComplete="new-password"
-                            maxLength={128}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 sm:h-10 sm:w-10 hover:bg-muted rounded-lg tap-highlight"
-                            onClick={() => setShowPassword(!showPassword)}
-                          >
-                            {showPassword ? (
-                              <EyeOff className="h-5 w-5 text-muted-foreground" />
-                            ) : (
-                              <Eye className="h-5 w-5 text-muted-foreground" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="confirmPassword" className="text-sm font-medium flex items-center gap-2">
-                          <Lock className="w-4 h-4 text-muted-foreground" />
-                          Konfirmasi
-                        </Label>
-                        <div className="relative">
-                          <Input
-                            id="confirmPassword"
-                            type={showConfirmPassword ? 'text' : 'password'}
-                            placeholder="Ulangi password"
-                            value={formData.confirmPassword}
-                            onChange={(e) => handleChange('confirmPassword', e.target.value.slice(0, 128))}
-                            required
-                            minLength={8}
-                            className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pr-12"
-                            autoComplete="new-password"
-                            maxLength={128}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 sm:h-10 sm:w-10 hover:bg-muted rounded-lg tap-highlight"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          >
-                            {showConfirmPassword ? (
-                              <EyeOff className="h-5 w-5 text-muted-foreground" />
-                            ) : (
-                              <Eye className="h-5 w-5 text-muted-foreground" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-dashed border-border/50" />
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span className="px-4 bg-card text-xs text-muted-foreground">Data Bank</span>
-                  </div>
-                </div>
-
-                {/* Bank Info Section */}
-                <div className="space-y-4">
-                  <StepIndicator 
-                    step={2} 
-                    title="Data Bank" 
-                    isActive={!!personalInfoComplete} 
-                    isCompleted={!!bankInfoComplete}
-                  />
-                  
-                  <div className="pl-11 space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-muted-foreground" />
-                        Nama Bank
-                      </Label>
-                      {formData.bankName !== 'Lainnya' ? (
-                        <Select
-                          value={formData.bankName}
-                          onValueChange={(value) => {
-                            handleChange('bankName', value);
-                            if (value !== 'Lainnya') setCustomBankName('');
-                          }}
+                  return (
+                    <div key={step.id} className="flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (step.id < currentStep || isStepValid(step.id)) {
+                            setCurrentStep(step.id)
+                          }
+                        }}
+                        className={cn(
+                          "flex flex-col items-center",
+                          (step.id < currentStep || isStepValid(step.id)) && "cursor-pointer"
+                        )}
+                      >
+                        <motion.div
+                          animate={{ scale: isActive ? 1.1 : 1 }}
+                          className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                            isActive && "ring-2 ring-primary ring-offset-2",
+                            isCompleted
+                              ? "gradient-primary text-white"
+                              : isActive
+                              ? "bg-primary text-white"
+                              : "bg-muted text-muted-foreground"
+                          )}
                         >
-                          <SelectTrigger className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors">
-                            <SelectValue placeholder="Pilih bank" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {banks.map((bank) => (
-                              <SelectItem key={bank} value={bank}>
-                                {bank}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input
-                          placeholder="Ketik nama bank Anda"
-                          value={customBankName}
-                          onChange={(e) => {
-                            setCustomBankName(e.target.value);
-                            handleChange('bankName', `Lainnya: ${e.target.value}`);
-                          }}
-                          required
-                          className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
-                        />
+                          {isCompleted ? (
+                            <Check className="h-5 w-5" />
+                          ) : (
+                            <Icon className="h-5 w-5" />
+                          )}
+                        </motion.div>
+                        <span className={cn(
+                          "text-xs mt-1.5 font-medium",
+                          isActive ? "text-primary" : "text-muted-foreground"
+                        )}>
+                          {step.title}
+                        </span>
+                      </button>
+                      
+                      {index < steps.length - 1 && (
+                        <div className={cn(
+                          "w-12 h-0.5 mx-2 mb-6",
+                          isStepValid(step.id) ? "bg-primary" : "bg-muted"
+                        )} />
                       )}
                     </div>
+                  )
+                })}
+              </div>
+            </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">No. Rekening</Label>
-                        <Input
-                          placeholder="Nomor rekening"
-                          value={formData.bankAccount}
-                          onChange={(e) => handleChange('bankAccount', e.target.value.replace(/[^0-9]/g, '').slice(0, 20))}
-                          required
-                          className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
-                          inputMode="numeric"
-                          maxLength={20}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Nama Pemilik</Label>
-                        <Input
-                          placeholder="Nama di rekening"
-                          value={formData.bankHolder}
-                          onChange={(e) => handleChange('bankHolder', e.target.value.slice(0, 100))}
-                          required
-                          className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
-                          maxLength={100}
-                        />
-                      </div>
-                    </div>
+            <CardContent className="pt-6">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <AnimatePresence mode="wait" custom={currentStep}>
+                    {/* Step 1: Personal Information */}
+                    {currentStep === 1 && (
+                      <motion.div
+                        key="step1"
+                        custom={1}
+                        variants={slideVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{ duration: 0.3 }}
+                        className="space-y-4"
+                      >
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <User className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-sm">Informasi Pribadi</h3>
+                            <p className="text-xs text-muted-foreground">Lengkapi data diri Anda</p>
+                          </div>
+                        </div>
 
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-muted-foreground" />
-                        Kota
-                      </Label>
-                      <CitySearch
-                        value={formData.city}
-                        onChange={(value) => handleChange('city', value)}
-                        placeholder="Cari kota domisili..."
-                      />
-                    </div>
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Nama Lengkap</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    placeholder="Masukkan nama lengkap"
+                                    {...field}
+                                    disabled={isLoading}
+                                    className="pl-10"
+                                  />
+                                  {field.value.length >= 3 && (
+                                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                                  )}
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    type="email"
+                                    placeholder="contoh@email.com"
+                                    {...field}
+                                    disabled={isLoading}
+                                    className="pl-10"
+                                  />
+                                  {/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value) && (
+                                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                                  )}
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="whatsapp"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>No. WhatsApp</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    placeholder="08xxxxxxxxxx"
+                                    {...field}
+                                    disabled={isLoading}
+                                    className="pl-10"
+                                  />
+                                  {/^08\d{8,12}$/.test(field.value) && (
+                                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                                  )}
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </motion.div>
+                    )}
+
+                    {/* Step 2: Security */}
+                    {currentStep === 2 && (
+                      <motion.div
+                        key="step2"
+                        custom={2}
+                        variants={slideVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{ duration: 0.3 }}
+                        className="space-y-4"
+                      >
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Lock className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-sm">Keamanan</h3>
+                            <p className="text-xs text-muted-foreground">Buat password untuk akun Anda</p>
+                          </div>
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Password</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    type={showPassword ? 'text' : 'password'}
+                                    placeholder="Minimal 6 karakter"
+                                    {...field}
+                                    disabled={isLoading}
+                                    className="pl-10 pr-10"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    disabled={isLoading}
+                                  >
+                                    {showPassword ? (
+                                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                      <Eye className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                  </Button>
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                              {field.value.length > 0 && (
+                                <div className="flex gap-1 mt-2">
+                                  <div className={cn(
+                                    "h-1 flex-1 rounded-full transition-colors",
+                                    field.value.length >= 6 ? "bg-green-500" : "bg-yellow-500"
+                                  )} />
+                                  <div className={cn(
+                                    "h-1 flex-1 rounded-full transition-colors",
+                                    field.value.length >= 8 ? "bg-green-500" : "bg-muted"
+                                  )} />
+                                  <div className={cn(
+                                    "h-1 flex-1 rounded-full transition-colors",
+                                    field.value.length >= 10 ? "bg-green-500" : "bg-muted"
+                                  )} />
+                                </div>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="confirmPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Konfirmasi Password</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    type={showConfirmPassword ? 'text' : 'password'}
+                                    placeholder="Ulangi password"
+                                    {...field}
+                                    disabled={isLoading}
+                                    className="pl-10 pr-10"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    disabled={isLoading}
+                                  >
+                                    {showConfirmPassword ? (
+                                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                      <Eye className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                  </Button>
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                              {field.value.length > 0 && field.value === formValues.password && (
+                                <p className="text-xs text-green-500 flex items-center gap-1 mt-1">
+                                  <Check className="h-3 w-3" />
+                                  Password cocok
+                                </p>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+                      </motion.div>
+                    )}
+
+                    {/* Step 3: Bank Information */}
+                    {currentStep === 3 && (
+                      <motion.div
+                        key="step3"
+                        custom={3}
+                        variants={slideVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{ duration: 0.3 }}
+                        className="space-y-4"
+                      >
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Building2 className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-sm">Informasi Bank</h3>
+                            <p className="text-xs text-muted-foreground">Data rekening untuk pencairan</p>
+                          </div>
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="bankName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Nama Bank</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    placeholder="Contoh: BCA, Mandiri, BRI"
+                                    {...field}
+                                    disabled={isLoading}
+                                    className="pl-10"
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <FormField
+                            control={form.control}
+                            name="accountNumber"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>No. Rekening</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Masukkan nomor rekening"
+                                    {...field}
+                                    disabled={isLoading}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="accountHolder"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Pemilik Rekening</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Nama di rekening"
+                                    {...field}
+                                    disabled={isLoading}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="city"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Kota</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    placeholder="Masukkan kota"
+                                    {...field}
+                                    disabled={isLoading}
+                                    className="pl-10"
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Navigation Buttons */}
+                  <div className="flex gap-3 pt-4">
+                    {currentStep > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={prevStep}
+                        disabled={isLoading}
+                        className="flex-1"
+                      >
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Sebelumnya
+                      </Button>
+                    )}
+                    
+                    {currentStep < 3 ? (
+                      <Button
+                        type="button"
+                        onClick={nextStep}
+                        disabled={isLoading || !isStepValid(currentStep)}
+                        className="gradient-primary text-white flex-1"
+                      >
+                        Selanjutnya
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="submit"
+                        disabled={isLoading || !isStepValid(currentStep)}
+                        className="gradient-primary text-white flex-1"
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Memproses...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Daftar Sekarang
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
-                </div>
-
-                {/* Submit Button */}
-                <Button
-                  type="submit"
-                  className="w-full h-11 sm:h-12 rounded-xl text-sm sm:text-base font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-300"
-                  disabled={loading || submitCooldown > 0}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Memproses...
-                    </>
-                  ) : submitCooldown > 0 ? (
-                    <>
-                      <Clock className="w-4 h-4 mr-2" />
-                      Tunggu {submitCooldown}s
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Daftar Sekarang
-                      <ChevronRight className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-
-                {/* Honeypot fields - hidden from real users, bots will fill these */}
-                <div
-                  aria-hidden="true"
-                  style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, height: 0, overflow: 'hidden' }}
-                  tabIndex={-1}
-                  autoComplete="off"
-                >
-                  <label htmlFor="website">Jangan isi field ini</label>
-                  <input
-                    type="text"
-                    id="website"
-                    name="website"
-                    value={honeypotValue}
-                    onChange={(e) => setHoneypotValue(e.target.value)}
-                    tabIndex={-1}
-                    autoComplete="off"
-                  />
-                  <input type="text" name="company_url" tabIndex={-1} autoComplete="off" defaultValue="" />
-                  <input type="text" name="contact_preference" tabIndex={-1} autoComplete="off" defaultValue="" />
-                </div>
-              </form>
-
-              {/* Login Link */}
-              <div className="mt-4 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Sudah punya akun?{' '}
-                  <Link href="/login" className="text-primary font-semibold hover:underline tap-highlight inline-flex items-center gap-1">
-                    Login Disini
-                    <ArrowLeft className="w-3 h-3 rotate-180" />
-                  </Link>
-                </p>
-              </div>
-
-              {/* Trust Badge */}
-              <div className="mt-4 pt-4 border-t border-dashed border-border/50">
-                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                  <Shield className="w-3.5 h-3.5 text-primary" />
-                  <span>Data Anda aman dan terenkripsi</span>
-                </div>
-              </div>
+                </form>
+              </Form>
             </CardContent>
+
+            <CardFooter className="flex flex-col gap-3 py-4 border-t">
+              <p className="text-sm text-muted-foreground text-center">
+                Sudah punya akun?{' '}
+                <Link href="/login" className="text-primary font-medium hover:underline">
+                  Masuk di sini
+                </Link>
+              </p>
+            </CardFooter>
           </Card>
-
-          {/* Back button - Desktop */}
-          <Button 
-            variant="ghost" 
-            asChild 
-            className="mt-4 mx-auto hidden lg:flex tap-highlight"
+          
+          {/* Additional info */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="text-center text-xs text-muted-foreground mt-4"
           >
-            <Link href="/">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Kembali ke Home
-            </Link>
-          </Button>
-        </div>
-      </div>
+            Dengan mendaftar, Anda menyetujui{' '}
+            <Link href="#" className="underline hover:text-foreground">
+              Syarat & Ketentuan
+            </Link>{' '}
+            kami
+          </motion.p>
+        </motion.div>
+      </main>
 
-      {/* CSS Animation */}
-      <style jsx global>{`
-        @keyframes float-up {
-          0% {
-            transform: translateY(0) scale(1);
-            opacity: 0;
-          }
-          10% {
-            opacity: 0.6;
-          }
-          90% {
-            opacity: 0.6;
-          }
-          100% {
-            transform: translateY(-100vh) scale(0.5);
-            opacity: 0;
-          }
-        }
-        .animate-float-up {
-          animation: float-up linear infinite;
-        }
-      `}</style>
+      <Footer />
     </div>
-  );
+  )
 }

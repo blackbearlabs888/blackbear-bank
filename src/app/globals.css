@@ -43,74 +43,75 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* Violet/Purple/Fuchsia Theme */
 :root {
-  --radius: 0.875rem;
+  --radius: 0.625rem;
+  /* Light Mode - Violet/Purple/Fuchsia Theme */
   --background: oklch(0.99 0.005 300);
-  --foreground: oklch(0.15 0.02 300);
+  --foreground: oklch(0.2 0.02 280);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.02 300);
+  --card-foreground: oklch(0.2 0.02 280);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.02 300);
-  --primary: oklch(0.55 0.25 295);
+  --popover-foreground: oklch(0.2 0.02 280);
+  --primary: oklch(0.5 0.25 290); /* Violet */
   --primary-foreground: oklch(0.99 0.005 300);
-  --secondary: oklch(0.96 0.02 300);
-  --secondary-foreground: oklch(0.25 0.08 300);
-  --muted: oklch(0.96 0.01 300);
-  --muted-foreground: oklch(0.5 0.03 300);
-  --accent: oklch(0.92 0.04 300);
-  --accent-foreground: oklch(0.25 0.08 300);
-  --destructive: oklch(0.55 0.22 25);
-  --border: oklch(0.9 0.02 300);
-  --input: oklch(0.9 0.02 300);
-  --ring: oklch(0.55 0.25 295);
-  --chart-1: oklch(0.55 0.25 295);
-  --chart-2: oklch(0.6 0.2 310);
-  --chart-3: oklch(0.65 0.18 320);
-  --chart-4: oklch(0.7 0.15 330);
-  --chart-5: oklch(0.75 0.12 340);
+  --secondary: oklch(0.95 0.03 300);
+  --secondary-foreground: oklch(0.3 0.08 290);
+  --muted: oklch(0.96 0.02 300);
+  --muted-foreground: oklch(0.5 0.05 290);
+  --accent: oklch(0.6 0.28 320); /* Fuchsia */
+  --accent-foreground: oklch(0.99 0.005 300);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.92 0.02 300);
+  --input: oklch(0.92 0.02 300);
+  --ring: oklch(0.5 0.25 290);
+  --chart-1: oklch(0.55 0.25 290); /* Violet */
+  --chart-2: oklch(0.6 0.28 320); /* Fuchsia */
+  --chart-3: oklch(0.65 0.22 300); /* Purple */
+  --chart-4: oklch(0.7 0.2 280); /* Light Violet */
+  --chart-5: oklch(0.75 0.18 320); /* Light Fuchsia */
   --sidebar: oklch(0.98 0.01 300);
-  --sidebar-foreground: oklch(0.15 0.02 300);
-  --sidebar-primary: oklch(0.55 0.25 295);
+  --sidebar-foreground: oklch(0.2 0.02 280);
+  --sidebar-primary: oklch(0.5 0.25 290);
   --sidebar-primary-foreground: oklch(0.99 0.005 300);
-  --sidebar-accent: oklch(0.94 0.03 300);
-  --sidebar-accent-foreground: oklch(0.25 0.08 300);
-  --sidebar-border: oklch(0.9 0.02 300);
-  --sidebar-ring: oklch(0.55 0.25 295);
+  --sidebar-accent: oklch(0.95 0.03 300);
+  --sidebar-accent-foreground: oklch(0.3 0.08 290);
+  --sidebar-border: oklch(0.92 0.02 300);
+  --sidebar-ring: oklch(0.5 0.25 290);
 }
 
 .dark {
-  --background: oklch(0.12 0.02 295);
+  /* Dark Mode - Violet/Purple/Fuchsia Theme */
+  --background: oklch(0.15 0.02 290);
   --foreground: oklch(0.95 0.01 300);
-  --card: oklch(0.17 0.025 295);
+  --card: oklch(0.18 0.03 290);
   --card-foreground: oklch(0.95 0.01 300);
-  --popover: oklch(0.17 0.025 295);
+  --popover: oklch(0.18 0.03 290);
   --popover-foreground: oklch(0.95 0.01 300);
-  --primary: oklch(0.7 0.22 295);
-  --primary-foreground: oklch(0.12 0.02 295);
-  --secondary: oklch(0.22 0.03 300);
+  --primary: oklch(0.7 0.25 290); /* Brighter Violet for dark mode */
+  --primary-foreground: oklch(0.15 0.02 290);
+  --secondary: oklch(0.25 0.05 290);
   --secondary-foreground: oklch(0.95 0.01 300);
-  --muted: oklch(0.22 0.02 300);
-  --muted-foreground: oklch(0.65 0.02 300);
-  --accent: oklch(0.25 0.04 300);
-  --accent-foreground: oklch(0.95 0.01 300);
-  --destructive: oklch(0.6 0.2 25);
-  --border: oklch(0.28 0.02 300);
-  --input: oklch(0.28 0.02 300);
-  --ring: oklch(0.7 0.22 295);
-  --chart-1: oklch(0.7 0.22 295);
-  --chart-2: oklch(0.65 0.2 310);
-  --chart-3: oklch(0.6 0.18 320);
-  --chart-4: oklch(0.55 0.15 330);
-  --chart-5: oklch(0.5 0.12 340);
-  --sidebar: oklch(0.15 0.025 295);
+  --muted: oklch(0.22 0.04 290);
+  --muted-foreground: oklch(0.7 0.05 290);
+  --accent: oklch(0.65 0.28 320); /* Fuchsia */
+  --accent-foreground: oklch(0.15 0.02 290);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(0.3 0.05 290);
+  --input: oklch(0.25 0.05 290);
+  --ring: oklch(0.6 0.25 290);
+  --chart-1: oklch(0.65 0.25 290);
+  --chart-2: oklch(0.6 0.28 320);
+  --chart-3: oklch(0.55 0.22 300);
+  --chart-4: oklch(0.7 0.2 280);
+  --chart-5: oklch(0.75 0.18 320);
+  --sidebar: oklch(0.12 0.03 290);
   --sidebar-foreground: oklch(0.95 0.01 300);
-  --sidebar-primary: oklch(0.7 0.22 295);
-  --sidebar-primary-foreground: oklch(0.12 0.02 295);
-  --sidebar-accent: oklch(0.22 0.03 300);
+  --sidebar-primary: oklch(0.7 0.25 290);
+  --sidebar-primary-foreground: oklch(0.15 0.02 290);
+  --sidebar-accent: oklch(0.22 0.05 290);
   --sidebar-accent-foreground: oklch(0.95 0.01 300);
-  --sidebar-border: oklch(0.28 0.02 300);
-  --sidebar-ring: oklch(0.7 0.22 295);
+  --sidebar-border: oklch(0.25 0.05 290);
+  --sidebar-ring: oklch(0.6 0.25 290);
 }
 
 @layer base {
@@ -120,577 +121,603 @@
   body {
     @apply bg-background text-foreground;
   }
-  
-  /* Mobile-first touch targets */
-  button, a, input, select, textarea {
-    min-height: 44px;
-  }
 }
 
-/* Global Minimalist Scrollbar */
-html {
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-  overflow-y: scroll;
-}
-
-html:hover,
-html:active {
-  scrollbar-color: oklch(0.7 0.08 300) transparent;
-}
-
-html::-webkit-scrollbar {
+/* Custom scrollbar */
+::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
-html::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
 }
 
-html::-webkit-scrollbar-thumb {
-  background-color: transparent;
+::-webkit-scrollbar-thumb {
+  background: oklch(0.6 0.15 290 / 0.3);
   border-radius: 4px;
-  transition: background-color 0.3s ease;
 }
 
-html:hover::-webkit-scrollbar-thumb,
-html:active::-webkit-scrollbar-thumb {
-  background-color: oklch(0.75 0.1 300);
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.6 0.15 290 / 0.5);
 }
 
-.dark html {
-  scrollbar-color: transparent transparent;
+.dark ::-webkit-scrollbar-thumb {
+  background: oklch(0.5 0.15 290 / 0.3);
 }
 
-.dark html:hover,
-.dark html:active {
-  scrollbar-color: oklch(0.4 0.05 300) transparent;
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0.15 290 / 0.5);
 }
 
-.dark html:hover::-webkit-scrollbar-thumb,
-.dark html:active::-webkit-scrollbar-thumb {
-  background-color: oklch(0.4 0.05 300);
+/* Gradient backgrounds */
+.gradient-primary {
+  background: linear-gradient(135deg, oklch(0.5 0.25 290), oklch(0.6 0.28 320));
 }
 
-/* iOS Friendly Styles */
-@layer utilities {
-  .ios-safe-top {
-    padding-top: env(safe-area-inset-top, 0);
-  }
-  
-  .ios-safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0);
-  }
-  
-  .ios-safe-left {
-    padding-left: env(safe-area-inset-left, 0);
-  }
-  
-  .ios-safe-right {
-    padding-right: env(safe-area-inset-right, 0);
-  }
-  
-  .glass {
-    background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-  }
-  
-  .dark .glass {
-    background: rgba(30, 20, 40, 0.75);
-  }
-  
-  .glass-card {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-  }
-  
-  .dark .glass-card {
-    background: rgba(40, 30, 50, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  /* Gradient backgrounds */
-  .gradient-primary {
-    background: linear-gradient(135deg, oklch(0.55 0.25 295) 0%, oklch(0.6 0.22 310) 100%);
-  }
-  
-  .gradient-accent {
-    background: linear-gradient(135deg, oklch(0.65 0.2 310) 0%, oklch(0.7 0.18 320) 100%);
-  }
-  
-  .gradient-hero {
-    background: linear-gradient(180deg, oklch(0.98 0.02 295) 0%, oklch(0.99 0.005 300) 100%);
-  }
-  
-  .dark .gradient-hero {
-    background: linear-gradient(180deg, oklch(0.12 0.02 295) 0%, oklch(0.15 0.01 300) 100%);
-  }
-
-  /* Minimalist Invisible Scrollbar - appears only on scroll */
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-    transition: scrollbar-color 0.3s ease;
-  }
-  
-  .scrollbar-thin:hover,
-  .scrollbar-thin:active,
-  .scrollbar-thin:focus-within,
-  .scrollbar-thin.scrolling {
-    scrollbar-color: oklch(0.7 0.05 300) transparent;
-  }
-  
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: transparent;
-    border-radius: 3px;
-    transition: background-color 0.3s ease;
-  }
-  
-  .scrollbar-thin:hover::-webkit-scrollbar-thumb,
-  .scrollbar-thin:active::-webkit-scrollbar-thumb,
-  .scrollbar-thin:focus-within::-webkit-scrollbar-thumb {
-    background-color: oklch(0.7 0.1 300);
-  }
-  
-  .dark .scrollbar-thin {
-    scrollbar-color: transparent transparent;
-  }
-  
-  .dark .scrollbar-thin:hover,
-  .dark .scrollbar-thin:active {
-    scrollbar-color: oklch(0.4 0.03 300) transparent;
-  }
-  
-  .dark .scrollbar-thin:hover::-webkit-scrollbar-thumb,
-  .dark .scrollbar-thin:active::-webkit-scrollbar-thumb {
-    background-color: oklch(0.4 0.05 300);
-  }
-
-  /* iOS-style tap highlight */
-  .tap-highlight {
-    -webkit-tap-highlight-color: rgba(139, 92, 246, 0.15);
-  }
-  
-  /* Smooth transitions */
-  .transition-smooth {
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  /* Mobile card shadow */
-  .mobile-shadow {
-    box-shadow: 0 4px 20px -4px rgba(139, 92, 246, 0.15);
-  }
-  
-  .dark .mobile-shadow {
-    box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.3);
-  }
-  
-  /* Active state for mobile */
-  .active-scale {
-    transform: scale(1);
-    transition: transform 0.1s ease;
-  }
-  
-  .active-scale:active {
-    transform: scale(0.98);
-  }
-  
-  /* Hide scrollbar on mobile */
-  .hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  
-  /* Safe area for cards */
-  .safe-card {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 1rem;
-    box-shadow: 0 4px 20px -4px rgba(139, 92, 246, 0.15);
-  }
-  
-  .dark .safe-card {
-    background: rgba(40, 30, 50, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.3);
-  }
-  
-  /* Mobile input styling */
-  .mobile-input {
-    @apply h-12 text-base rounded-xl border-2 border-input bg-background px-4;
-    @apply focus:border-primary focus:ring-2 focus:ring-primary/20;
-    @apply placeholder:text-muted-foreground/60;
-  }
-  
-  /* Mobile button styling */
-  .mobile-btn {
-    @apply h-12 px-6 rounded-xl font-semibold text-base;
-    @apply flex items-center justify-center gap-2;
-    transform: scale(1);
-    transition: transform 0.1s ease;
-  }
-  
-  .mobile-btn:active {
-    transform: scale(0.98);
-  }
-  
-  .mobile-btn-primary {
-    @apply h-12 px-6 rounded-xl font-semibold text-base;
-    @apply flex items-center justify-center gap-2 text-white;
-    background: linear-gradient(135deg, oklch(0.55 0.25 295) 0%, oklch(0.6 0.22 310) 100%);
-    transform: scale(1);
-    transition: transform 0.1s ease;
-  }
-  
-  .mobile-btn-primary:active {
-    transform: scale(0.98);
-  }
-  
-  .mobile-btn-outline {
-    @apply h-12 px-6 rounded-xl font-semibold text-base;
-    @apply flex items-center justify-center gap-2;
-    @apply border-2 border-primary text-primary bg-transparent;
-    @apply hover:bg-primary/5;
-    transform: scale(1);
-    transition: transform 0.1s ease;
-  }
-  
-  .mobile-btn-outline:active {
-    transform: scale(0.98);
-  }
-  
-  /* Mobile section spacing */
-  .section-mobile {
-    @apply px-4 py-6 sm:px-6 sm:py-8;
-  }
-  
-  /* Mobile title */
-  .title-mobile {
-    @apply text-2xl font-bold tracking-tight sm:text-3xl;
-  }
-  
-  /* Mobile subtitle */
-  .subtitle-mobile {
-    @apply text-sm text-muted-foreground sm:text-base;
-  }
-  
-  /* Floating action button */
-  .fab {
-    @apply fixed bottom-24 right-4 w-14 h-14 rounded-full;
-    @apply text-white shadow-lg z-40;
-    @apply flex items-center justify-center;
-    background: linear-gradient(135deg, oklch(0.55 0.25 295) 0%, oklch(0.6 0.22 310) 100%);
-    transform: scale(1);
-    transition: transform 0.1s ease;
-  }
-  
-  .fab:active {
-    transform: scale(0.95);
-  }
-  
-  /* Pull to refresh indicator */
-  .pull-indicator {
-    @apply w-8 h-8 rounded-full bg-muted flex items-center justify-center;
-  }
+.gradient-primary-hover:hover {
+  background: linear-gradient(135deg, oklch(0.45 0.27 290), oklch(0.55 0.3 320));
 }
 
-/* Animation utilities */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+.gradient-accent {
+  background: linear-gradient(135deg, oklch(0.6 0.28 320), oklch(0.55 0.25 300));
 }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+.gradient-card {
+  background: linear-gradient(180deg, oklch(0.5 0.25 290 / 0.1), transparent);
 }
 
-@keyframes slideInRight {
-  from { opacity: 0; transform: translateX(16px); }
-  to { opacity: 1; transform: translateX(0); }
+/* Glass effect */
+.glass {
+  background: oklch(1 0 0 / 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid oklch(1 0 0 / 0.2);
 }
 
-@keyframes pulse-soft {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+.dark .glass {
+  background: oklch(0.18 0.03 290 / 0.8);
+  border: 1px solid oklch(1 0 0 / 0.1);
 }
 
-@keyframes bounce-soft {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+/* Animation classes */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
 }
 
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px oklch(0.5 0.25 290 / 0.3); }
+  50% { box-shadow: 0 0 40px oklch(0.5 0.25 290 / 0.5); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Credit card style */
+.credit-card {
+  background: linear-gradient(135deg, oklch(0.25 0.08 290), oklch(0.35 0.12 300));
+  border-radius: 1rem;
+  box-shadow: 
+    0 25px 50px -12px oklch(0 0 0 / 0.25),
+    0 0 0 1px oklch(1 0 0 / 0.1) inset;
+}
+
+/* Enhanced Credit Card Style */
+.credit-card-enhanced {
+  background: linear-gradient(135deg, oklch(0.3 0.1 290) 0%, oklch(0.4 0.15 300) 50%, oklch(0.35 0.12 310) 100%);
+  border-radius: 1.25rem;
+  box-shadow: 
+    0 25px 50px -12px oklch(0 0 0 / 0.4),
+    0 0 0 1px oklch(1 0 0 / 0.15) inset,
+    0 0 80px oklch(0.5 0.25 290 / 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.dark .credit-card-enhanced {
+  box-shadow: 
+    0 25px 50px -12px oklch(0 0 0 / 0.5),
+    0 0 0 1px oklch(1 0 0 / 0.1) inset,
+    0 0 60px oklch(0.6 0.25 290 / 0.2);
+}
+
+/* Shimmer effect */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.35s ease-out forwards;
-}
-
-.animate-slide-up {
-  animation: slideUp 0.4s ease-out forwards;
-}
-
-.animate-slide-in-right {
-  animation: slideInRight 0.4s ease-out forwards;
-}
-
-.animate-pulse-soft {
-  animation: pulse-soft 2s ease-in-out infinite;
-}
-
-.animate-bounce-soft {
-  animation: bounce-soft 2s ease-in-out infinite;
-}
-
-.animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(1 0 0 / 0.1),
+    transparent
+  );
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 2s linear infinite;
 }
 
-/* Stagger animation delays */
-.stagger-1 { animation-delay: 50ms; }
-.stagger-2 { animation-delay: 100ms; }
-.stagger-3 { animation-delay: 150ms; }
-.stagger-4 { animation-delay: 200ms; }
-.stagger-5 { animation-delay: 250ms; }
-
-/* Mobile-optimized table */
-@media (max-width: 640px) {
-  .mobile-table {
-    display: block;
-  }
-  
-  .mobile-table thead {
-    display: none;
-  }
-  
-  .mobile-table tbody {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .mobile-table tr {
-    display: flex;
-    flex-direction: column;
-    padding: 16px;
-    border-radius: 16px;
-    background: var(--card);
-    gap: 8px;
-  }
-  
-  .mobile-table td {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0;
-  }
-  
-  .mobile-table td::before {
-    content: attr(data-label);
-    font-weight: 500;
-    color: var(--muted-foreground);
-    font-size: 12px;
-  }
-}
-
-/* Bottom sheet modal */
-.bottom-sheet {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--background);
-  border-radius: 24px 24px 0 0;
-  padding: 12px 16px 32px;
-  max-height: 85vh;
-  overflow-y: auto;
-  z-index: 50;
-  animation: slideUp 0.3s ease-out;
-}
-
-.bottom-sheet::before {
-  content: '';
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 36px;
-  height: 4px;
-  background: var(--muted-foreground);
-  border-radius: 2px;
-  opacity: 0.3;
-}
-
-/* Marquee for announcements */
+/* Marquee animation for running text */
 @keyframes marquee {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
 .animate-marquee {
   animation: marquee 20s linear infinite;
 }
 
-/* Responsive font sizing */
-.text-responsive-sm {
-  font-size: clamp(0.875rem, 2.5vw, 1rem);
+/* Safe area for mobile */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-.text-responsive-base {
-  font-size: clamp(1rem, 3vw, 1.125rem);
+.safe-area-pt {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
-.text-responsive-lg {
-  font-size: clamp(1.125rem, 3.5vw, 1.25rem);
+.safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 1rem);
 }
 
-.text-responsive-xl {
-  font-size: clamp(1.25rem, 4vw, 1.5rem);
+.safe-area-top {
+  padding-top: max(env(safe-area-inset-top, 0px), 0.5rem);
 }
 
-.text-responsive-2xl {
-  font-size: clamp(1.5rem, 5vw, 2rem);
+/* Touch target minimum size (44px recommended by Apple) */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
 }
 
-.text-responsive-3xl {
-  font-size: clamp(1.875rem, 6vw, 2.5rem);
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* Credit Card Styles */
-.credit-card {
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Overscroll behavior for mobile */
+.overscroll-contain {
+  overscroll-behavior: contain;
+}
+
+.overscroll-none {
+  overscroll-behavior: none;
+}
+
+/* Perspective for 3D transforms */
+.perspective-1000 {
   perspective: 1000px;
-  transform-style: preserve-3d;
 }
 
-.credit-card-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-  transform-style: preserve-3d;
+/* Card hover effects */
+.card-hover {
+  transition: all 0.3s ease;
 }
 
-.credit-card:hover .credit-card-inner {
-  transform: rotateY(-8deg) rotateX(8deg);
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -12px oklch(0.5 0.25 290 / 0.15);
 }
 
-.credit-card-shine {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    105deg,
-    transparent 20%,
-    rgba(255, 255, 255, 0.1) 40%,
-    rgba(255, 255, 255, 0.25) 50%,
-    rgba(255, 255, 255, 0.1) 60%,
-    transparent 80%
-  );
-  transform: translateX(-100%);
-  transition: transform 0.6s ease;
-  pointer-events: none;
-  border-radius: inherit;
+.dark .card-hover:hover {
+  box-shadow: 0 20px 40px -12px oklch(0 0 0 / 0.3);
 }
 
-.credit-card:hover .credit-card-shine {
-  transform: translateX(100%);
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotateY(-5deg) rotateX(5deg); }
-  50% { transform: translateY(-10px) rotateY(-8deg) rotateX(8deg); }
-}
-
-@keyframes cardFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+/* Responsive text */
+@media (max-width: 640px) {
+  .text-responsive-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
   }
 }
 
-.animate-card-float {
-  animation: cardFadeIn 0.6s ease-out forwards, float 4s ease-in-out infinite 0.6s;
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, oklch(0.5 0.25 290), oklch(0.6 0.28 320));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-/* Chip icon styling */
-.credit-chip {
-  background: linear-gradient(135deg, #d4af37 0%, #f5d742 50%, #d4af37 100%);
-  border-radius: 6px;
-  position: relative;
-  overflow: hidden;
+/* ============================================ */
+/* MOBILE-FIRST APP-LIKE EXPERIENCE */
+/* ============================================ */
+
+/* Root font size for mobile (prevents zoom issues) */
+html {
+  font-size: 16px; /* Base size for mobile */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
-.credit-chip::before {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  background: linear-gradient(135deg, #c9a227 0%, #e5c835 50%, #c9a227 100%);
-  border-radius: 4px;
+/* Smooth scroll for mobile */
+@media (max-width: 768px) {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Prevent overscroll bounce */
+  body {
+    overscroll-behavior-y: contain;
+  }
+  
+  /* App-like full-height */
+  .app-height {
+    height: 100dvh; /* Dynamic viewport height for mobile */
+  }
+  
+  /* Touch-friendly form inputs */
+  input, select, textarea, button {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+  
+  /* Compact cards for mobile */
+  .mobile-card {
+    padding: 0.875rem;
+    border-radius: 0.75rem;
+  }
+  
+  /* Mobile-optimized text sizes */
+  .mobile-text-xs { font-size: 0.75rem; line-height: 1rem; }
+  .mobile-text-sm { font-size: 0.8125rem; line-height: 1.25rem; }
+  .mobile-text-base { font-size: 0.875rem; line-height: 1.375rem; }
+  .mobile-text-lg { font-size: 1rem; line-height: 1.5rem; }
+  .mobile-text-xl { font-size: 1.125rem; line-height: 1.625rem; }
+  .mobile-text-2xl { font-size: 1.25rem; line-height: 1.75rem; }
+  
+  /* Mobile-optimized spacing */
+  .mobile-p-1 { padding: 0.25rem; }
+  .mobile-p-2 { padding: 0.5rem; }
+  .mobile-p-3 { padding: 0.75rem; }
+  .mobile-p-4 { padding: 1rem; }
+  .mobile-gap-1 { gap: 0.25rem; }
+  .mobile-gap-2 { gap: 0.5rem; }
+  .mobile-gap-3 { gap: 0.75rem; }
+  .mobile-gap-4 { gap: 1rem; }
 }
 
-.credit-chip::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 4px;
-  right: 4px;
-  height: 1px;
-  background: rgba(0, 0, 0, 0.2);
+/* Active states for touch */
+@media (hover: none) and (pointer: coarse) {
+  .touch-active:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+  
+  button:active, a:active {
+    transform: scale(0.98);
+  }
 }
 
-/* Contactless icon */
-.contactless-icon {
-  position: relative;
+/* Prevent text selection on interactive elements */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-.contactless-icon::before,
-.contactless-icon::after {
-  content: '';
-  position: absolute;
-  border: 2px solid currentColor;
-  border-radius: 50%;
-  border-left-color: transparent;
-  border-bottom-color: transparent;
+/* Safe area utilities for iOS */
+.safe-area-inset {
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
 }
 
-.contactless-icon::before {
-  width: 8px;
-  height: 8px;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%) rotate(-45deg);
+/* Bottom sheet shadow for mobile */
+.mobile-shadow-top {
+  box-shadow: 0 -4px 20px -4px oklch(0 0 0 / 0.1);
 }
 
-.contactless-icon::after {
-  width: 14px;
-  height: 14px;
-  top: 50%;
-  right: -3px;
-  transform: translateY(-50%) rotate(-45deg);
+.dark .mobile-shadow-top {
+  box-shadow: 0 -4px 20px -4px oklch(0 0 0 / 0.3);
+}
+
+/* Mobile FAB position */
+.mobile-fab {
+  position: fixed;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0));
+  right: 1rem;
+  z-index: 40;
+}
+
+/* Hide desktop-only content on mobile */
+@media (max-width: 767px) {
+  .desktop-only { display: none !important; }
+}
+
+/* Hide mobile-only content on desktop */
+@media (min-width: 768px) {
+  .mobile-only { display: none !important; }
+}
+
+/* Mobile table - horizontal scroll wrapper */
+.mobile-table-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* Mobile list item styling */
+.mobile-list-item {
+  display: flex;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  min-height: 56px;
+  border-bottom: 1px solid oklch(0.9 0.02 300);
+  transition: background-color 0.15s ease;
+}
+
+.dark .mobile-list-item {
+  border-bottom-color: oklch(0.25 0.05 290);
+}
+
+.mobile-list-item:active {
+  background-color: oklch(0.95 0.02 300);
+}
+
+.dark .mobile-list-item:active {
+  background-color: oklch(0.22 0.04 290);
+}
+
+/* Mobile-friendly status badges */
+.badge-mobile {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border-radius: 9999px;
+}
+
+/* Mobile grid utilities */
+@media (max-width: 640px) {\n  .mobile-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  
+  .mobile-grid-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+/* Mobile section titles */
+.mobile-section-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: oklch(0.5 0.05 290);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.dark .mobile-section-title {
+  color: oklch(0.6 0.05 290);
+}
+
+/* ============================================ */
+/* SAFARI-SPECIFIC FIXES */
+/* ============================================ */
+
+/* Fix for iOS Safari overflow issues in modals/drawers */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific */
+  .drawer-scroll, 
+  [data-vaul-drawer-direction="bottom"] {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  
+  /* Fix height calculation in flex containers */
+  .safari-flex-fix {
+    flex-shrink: 0;
+  }
+  
+  /* Fix for modals in Safari */
+  [role="dialog"] {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent body scroll when modal is open */
+  body.modal-open {
+    position: fixed;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  /* ============================================ */
+  /* CRITICAL: Safari Fixed Bottom Navbar Fix */
+  /* ============================================ */
+  
+  /* Force hardware acceleration for fixed elements in Safari */
+  .safari-fixed-bottom {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  
+  /* Alternative approach using sticky for Safari */
+  .safari-sticky-bottom {
+    position: -webkit-sticky;
+    position: sticky;
+    bottom: 0;
+  }
+  
+  /* Fix for fixed bottom nav in Safari - z-index lower than dialogs */
+  .mobile-bottom-nav-safari {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-perspective: 1000;
+    perspective: 1000;
+    will-change: transform;
+    z-index: 40 !important;
+  }
+  
+  /* Mobile menu overlay - Safari fix */
+  .mobile-menu-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    background-color: oklch(0 0 0 / 0.4);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+  
+  /* Mobile menu content - Safari fix */
+  .mobile-menu-content {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    border-top-left-radius: 1rem;
+    border-top-right-radius: 1rem;
+    box-shadow: 0 -4px 20px oklch(0 0 0 / 0.15);
+  }
+  
+  .dark .mobile-menu-content {
+    box-shadow: 0 -4px 20px oklch(0 0 0 / 0.4);
+  }
+  
+  /* Ensure body doesn't interfere with fixed positioning */
+  body {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Fix for iOS Safari viewport height issues */
+  .ios-vh-fix {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Webkit overflow scrolling for all scrollable containers */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Fix for Safari height: 100vh issues */
+.h-safari-fill {
+  height: -webkit-fill-available;
+}
+
+/* Minimum height for touch targets on iOS */
+@supports (-webkit-touch-callout: none) {
+  button, 
+  a, 
+  input, 
+  select, 
+  textarea {
+    min-height: 44px;
+  }
+  
+  /* Fix for input zoom on iOS */
+  input, 
+  select, 
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Additional Safari fixes for better mobile experience */
+  
+  /* Fix for bottom navigation overlap with home indicator */
+  .mobile-bottom-safe {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px);
+  }
+  
+  /* Fix for modal/drawer scroll in Safari */
+  [data-radix-collection-item],
+  [role="dialog"],
+  [data-vaul-drawer] {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  
+  /* Fix for sticky elements in Safari */
+  .sticky-safari {
+    position: -webkit-sticky;
+    position: sticky;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+  
+  /* Ensure proper tap highlight behavior */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Fix for flexbox issues in Safari */
+  .flex-safari-fix {
+    -webkit-flex-shrink: 0;
+    flex-shrink: 0;
+  }
+  
+  /* Fix for CSS Grid in older Safari */
+  .grid-safari-fix {
+    display: -ms-grid;
+    display: grid;
+  }
+  
+  /* Smooth scroll fix for Safari */
+  .smooth-scroll-safari {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  /* Fix for rounded corners with overflow hidden */
+  .rounded-overflow-fix {
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    mask-image: radial-gradient(white, black);
+  }
+  
+  /* Fix for position fixed in transforms */
+  .fixed-transform-fix {
+    -webkit-transform: none;
+    transform: none;
+  }
+}
+
+/* Additional iOS Safari fixes */
+@supports (padding: max(0px)) {
+  /* Safe area padding utilities */
+  .safe-area-top-ios {
+    padding-top: max(env(safe-area-inset-top, 0px), 0px);
+  }
+  
+  .safe-area-bottom-ios {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+  }
+  
+  .safe-area-left-ios {
+    padding-left: max(env(safe-area-inset-left, 0px), 0px);
+  }
+  
+  .safe-area-right-ios {
+    padding-right: max(env(safe-area-inset-right, 0px), 0px);
+  }
 }

@@ -1,99 +1,91 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { db, toNumber } from '@/lib/db';
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
-// GET marketplaces
-export async function GET(request: NextRequest) {
+// GET - List all marketplaces (optionally filter by status)
+export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const activeOnly = searchParams.get('activeOnly');
-
-    const where: Record<string, unknown> = {};
-    if (activeOnly === 'true') {
-      where.isActive = true;
-    }
+    const includeInactive = searchParams.get("all") === "true";
 
     const marketplaces = await db.marketplace.findMany({
-      where,
-      orderBy: { name: 'asc' },
+      where: includeInactive ? {} : { status: "ACTIVE" },
+      orderBy: {
+        name: "asc",
+      },
     });
-
-    // Convert Decimal values to numbers for frontend compatibility
-    const serializedMarketplaces = marketplaces.map(mp => ({
-      ...mp,
-      feePercent: toNumber(mp.feePercent),
-      feeFlat: toNumber(mp.feeFlat),
-    }));
 
     return NextResponse.json({
       success: true,
-      data: serializedMarketplaces,
+      data: marketplaces,
     });
   } catch (error) {
-    console.error('Get marketplaces error:', error);
+    console.error("Error fetching marketplaces:", error);
     return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
+      {
+        success: false,
+        error: "Failed to fetch marketplaces",
+      },
       { status: 500 }
     );
   }
 }
 
-// POST create marketplace
-export async function POST(request: NextRequest) {
+// POST - Create new marketplace
+export async function POST(request: Request) {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== 'owner') {
-      return NextResponse.json(
-        { success: false, error: 'Tidak memiliki akses' },
-        { status: 403 }
-      );
-    }
-
     const body = await request.json();
-    const { name, feePercent, feeFlat, description, isActive, shippingFee } = body;
+    const { name, feePercent, logo, status } = body;
 
+    // Validation
     if (!name) {
       return NextResponse.json(
-        { success: false, error: 'Nama marketplace wajib diisi' },
+        { success: false, error: "Name is required" },
         { status: 400 }
       );
     }
 
-    // Check if name already exists
-    const existing = await db.marketplace.findUnique({
+    // Validate fee percentage (0-100)
+    const fee = Number(feePercent) || 0;
+    if (fee < 0 || fee > 100) {
+      return NextResponse.json(
+        { success: false, error: "Fee percent must be between 0-100" },
+        { status: 400 }
+      );
+    }
+
+    // Check for duplicate name
+    const existing = await db.marketplace.findFirst({
       where: { name },
     });
 
     if (existing) {
       return NextResponse.json(
-        { success: false, error: 'Nama marketplace sudah ada' },
+        { success: false, error: "Marketplace with this name already exists" },
         { status: 400 }
       );
     }
 
-    // Handle both feePercent and shippingFee field names for backwards compatibility
-    const fee = feePercent ?? shippingFee ?? 0;
-
     const marketplace = await db.marketplace.create({
       data: {
         name,
-        feePercent: parseFloat(fee) || 0,
-        feeFlat: parseFloat(feeFlat) || 0,
-        description: description || null,
-        isActive: isActive ?? true,
+        feePercent: fee / 100, // Store as decimal
+        logo: logo || null,
+        status: status || "ACTIVE",
       },
     });
 
     return NextResponse.json({
       success: true,
       data: marketplace,
-      message: 'Marketplace berhasil dibuat',
+      message: "Marketplace created successfully",
     });
   } catch (error) {
-    console.error('Create marketplace error:', error);
+    console.error("Error creating marketplace:", error);
     return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
+      {
+        success: false,
+        error: "Failed to create marketplace",
+      },
       { status: 500 }
     );
   }

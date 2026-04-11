@@ -1,124 +1,130 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
+// PATCH - Update payment type
 export async function PATCH(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== 'owner') {
-      return NextResponse.json(
-        { success: false, error: 'Tidak memiliki akses' },
-        { status: 403 }
-      );
-    }
-
     const { id } = await params;
     const body = await request.json();
     const {
       name,
-      onlineFeePercent,
-      onlineFeeFlat,
-      codFeePercent,
-      codFeeFlat,
+      type,
       threshold,
-      isActive,
+      onlineFeePercent,
+      onlineFeeFixed,
+      codFeePercent,
+      codFeeFixed,
+      status,
     } = body;
 
     // Check if payment type exists
-    const existingPaymentType = await db.paymentType.findUnique({
+    const existing = await db.paymentType.findUnique({
       where: { id },
     });
 
-    if (!existingPaymentType) {
+    if (!existing) {
       return NextResponse.json(
-        { success: false, error: 'Tipe pembayaran tidak ditemukan' },
+        { success: false, error: "Payment type not found" },
         { status: 404 }
       );
     }
 
+    // Validate type if provided
+    if (type && !["CC", "PAYLATER"].includes(type)) {
+      return NextResponse.json(
+        { success: false, error: "Type must be CC or PAYLATER" },
+        { status: 400 }
+      );
+    }
+
+    // Validate fee percentages (0-100)
+    if (onlineFeePercent !== undefined) {
+      const percent = Number(onlineFeePercent);
+      if (percent < 0 || percent > 100) {
+        return NextResponse.json(
+          { success: false, error: "Online fee percent must be between 0-100" },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (codFeePercent !== undefined) {
+      const percent = Number(codFeePercent);
+      if (percent < 0 || percent > 100) {
+        return NextResponse.json(
+          { success: false, error: "COD fee percent must be between 0-100" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate fixed fees (positive number)
+    if (onlineFeeFixed !== undefined && Number(onlineFeeFixed) < 0) {
+      return NextResponse.json(
+        { success: false, error: "Online fixed fee must be a positive number" },
+        { status: 400 }
+      );
+    }
+
+    if (codFeeFixed !== undefined && Number(codFeeFixed) < 0) {
+      return NextResponse.json(
+        { success: false, error: "COD fixed fee must be a positive number" },
+        { status: 400 }
+      );
+    }
+
+    // Validate status
+    if (status && !["ACTIVE", "INACTIVE"].includes(status)) {
+      return NextResponse.json(
+        { success: false, error: "Status must be ACTIVE or INACTIVE" },
+        { status: 400 }
+      );
+    }
+
+    // Check for duplicate name if changing name
+    if (name && name !== existing.name) {
+      const duplicate = await db.paymentType.findFirst({
+        where: { name, id: { not: id } },
+      });
+      if (duplicate) {
+        return NextResponse.json(
+          { success: false, error: "Payment type with this name already exists" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Build update data
+    const updateData: Record<string, unknown> = {};
+    if (name !== undefined) updateData.name = name;
+    if (type !== undefined) updateData.type = type;
+    if (threshold !== undefined) updateData.threshold = Number(threshold);
+    if (onlineFeePercent !== undefined) updateData.onlineFeePercent = Number(onlineFeePercent) / 100;
+    if (onlineFeeFixed !== undefined) updateData.onlineFeeFixed = Number(onlineFeeFixed);
+    if (codFeePercent !== undefined) updateData.codFeePercent = Number(codFeePercent) / 100;
+    if (codFeeFixed !== undefined) updateData.codFeeFixed = Number(codFeeFixed);
+    if (status !== undefined) updateData.status = status;
+
     const paymentType = await db.paymentType.update({
       where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(onlineFeePercent !== undefined && { onlineFeePercent: parseFloat(onlineFeePercent) || 0 }),
-        ...(onlineFeeFlat !== undefined && { onlineFeeFlat: parseFloat(onlineFeeFlat) || 0 }),
-        ...(codFeePercent !== undefined && { codFeePercent: parseFloat(codFeePercent) || 0 }),
-        ...(codFeeFlat !== undefined && { codFeeFlat: parseFloat(codFeeFlat) || 0 }),
-        ...(threshold !== undefined && { threshold: parseFloat(threshold) || 0 }),
-        ...(isActive !== undefined && { isActive }),
-      },
+      data: updateData,
     });
 
     return NextResponse.json({
       success: true,
       data: paymentType,
-      message: 'Tipe pembayaran berhasil diperbarui',
+      message: "Payment type updated successfully",
     });
   } catch (error) {
-    console.error('Update payment type error:', error);
+    console.error("Error updating payment type:", error);
     return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== 'owner') {
-      return NextResponse.json(
-        { success: false, error: 'Tidak memiliki akses' },
-        { status: 403 }
-      );
-    }
-
-    const { id } = await params;
-
-    // Check if payment type exists
-    const existingPaymentType = await db.paymentType.findUnique({
-      where: { id },
-    });
-
-    if (!existingPaymentType) {
-      return NextResponse.json(
-        { success: false, error: 'Tipe pembayaran tidak ditemukan' },
-        { status: 404 }
-      );
-    }
-
-    // Check if payment type is being used
-    const transactionsUsing = await db.transaction.count({
-      where: { paymentTypeId: id },
-    });
-
-    if (transactionsUsing > 0) {
-      return NextResponse.json(
-        { success: false, error: 'Tipe pembayaran tidak dapat dihapus karena sudah digunakan dalam transaksi' },
-        { status: 400 }
-      );
-    }
-
-    await db.paymentType.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: 'Tipe pembayaran berhasil dihapus',
-    });
-  } catch (error) {
-    console.error('Delete payment type error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
+      {
+        success: false,
+        error: "Failed to update payment type",
+      },
       { status: 500 }
     );
   }

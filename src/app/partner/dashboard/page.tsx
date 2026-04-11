@@ -1,1333 +1,1363 @@
-'use client';
+'use client'
 
-import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth-store';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useEffect, useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import {
+  TrendingUp,
+  TrendingDown,
   DollarSign,
   ShoppingBag,
-  TrendingUp,
-  Trophy,
-  Target,
+  BarChart3,
   Clock,
-  Megaphone,
-  ExternalLink,
-  Users,
-  AlertTriangle,
-  CheckCircle,
-  Info,
-  Bell,
+  Trophy,
+  Medal,
+  Award,
   Star,
-  Zap,
-  TrendingDown,
-  ArrowUpRight,
-  Gift,
-  Sparkles,
-  ChevronRight,
-  Copy,
-  Check,
-  X,
-  Radio,
-  Tag,
-  FileText,
-  Calendar,
-  Loader2,
-  CreditCard,
-  Quote,
-  Globe,
-  BookOpen,
-  ChevronDown,
+  Crown,
+  Target,
   ChevronUp,
-  Lightbulb,
-  Shield,
-  MessageCircle,
-  Wallet,
-} from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
-import Link from 'next/link';
-import { cn } from '@/lib/utils';
+  ChevronDown,
+  AlertCircle,
+  Volume2,
+  VolumeX,
+  Sparkles,
+  Flame,
+  X,
+  Zap,
+  Gift,
+  BadgeCheck,
+  ArrowRight,
+  Minus,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  Info
+} from 'lucide-react'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { LoadingSpinner } from '@/components/shared/loading'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { formatCurrency, formatNumber } from '@/lib/calculations'
+import { apiFetch } from '@/lib/api'
+import { useAuthStore, useIsPartner } from '@/store/auth'
+import { cn } from '@/lib/utils'
+
+interface PartnerStats {
+  profit: number
+  transactions: number
+  volume: number
+  pending: number
+  lastMonthProfit?: number
+  lastMonthTransactions?: number
+  lastMonthVolume?: number
+}
+
+interface TierInfo {
+  current: string
+  calculated: string
+  progress: number
+  gapToNext: number
+  nextTier: string | null
+  commissionRate: number
+  badge: string | null
+}
+
+interface TargetInfo {
+  amount: number
+  progress: number
+  currentAmount: number
+}
+
+interface LeaderboardItem {
+  partnerId: string
+  name: string
+  profit: number
+  volume: number
+  transactions: number
+  tier: string
+  badge: string | null
+  rank: number
+  avatar?: string | null
+}
+
+interface VolumeLeaderboardItem {
+  partnerId: string
+  name: string
+  tier: string
+  totalVolume: number
+  transactions: number
+  avatar?: string | null
+  rank: number
+}
+
+interface BadgeHistoryItem {
+  id: string
+  year: number
+  month: number
+  badge: string
+  profit: number
+  volume: number
+  transactions: number
+  rank: number
+}
 
 interface Announcement {
-  id: string;
-  title: string;
-  description?: string;
-  type: 'promo' | 'broadcast' | 'announcement';
-  link?: string;
-  startDate?: string;
-  expireDate?: string;
+  id: string
+  title: string
+  description: string
+  type?: string
 }
 
-export default function PartnerDashboardPage() {
-  const router = useRouter();
-  const { user, partner, isAuthenticated, isLoading, hasHydrated, hydrate } = useAuthStore();
-  const [data, setData] = useState<Record<string, unknown> | null>(null);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [selectedBroadcast, setSelectedBroadcast] = useState<Announcement | null>(null);
-  const [selectedPromo, setSelectedPromo] = useState<Announcement | null>(null);
-  const [guideOpen, setGuideOpen] = useState(false);
-  const [insightOpen, setInsightOpen] = useState(false);
-  const redirectAttempted = useRef(false);
+interface PartnerInfo {
+  id: string
+  name: string
+  email: string
+  avatar: string | null
+  tier: string
+  badge: string | null
+  totalProfit: number
+  totalVolume: number
+  totalTransactions: number
+}
 
-  // Recent transactions & testimonials state
-  const [recentTransactions, setRecentTransactions] = useState<Array<{
-    id: string;
-    orderId: string;
-    nominal: number;
-    status: string;
-    createdAt: string;
-    customer: { name: string };
-    paymentType: { name: string };
-  }>>([]);
-  const [transactionsLoading, setTransactionsLoading] = useState(true);
-  const [partnerTestimonials, setPartnerTestimonials] = useState<Array<{
-    id: string;
-    rating: number;
-    review: string;
-    customerName: string;
-    isApproved: boolean;
-    isFeatured: boolean;
-    createdAt: string;
-    transaction: { orderId: string; nominal: number; paymentType: { name: string } } | null;
-  }>>([]);
-  const [testimonialsLoading, setTestimonialsLoading] = useState(true);
+interface DashboardData {
+  stats: PartnerStats
+  tier: TierInfo
+  target: TargetInfo
+  leaderboard: LeaderboardItem[]
+  partnerRank: number
+  gapToNextRank: number
+  topPartnersByVolume30Days: VolumeLeaderboardItem[]
+  partnerVolumeRank: number
+  gapToNextVolumeRank: number
+  badgeHistory: BadgeHistoryItem[]
+  announcements: Announcement[]
+  partner: PartnerInfo
+  achievements?: string[]
+}
 
-  useEffect(() => {
-    if (!hasHydrated) {
-      hydrate();
-    }
-  }, [hasHydrated, hydrate]);
-
-  useEffect(() => {
-    if (hasHydrated && !isLoading && !redirectAttempted.current) {
-      redirectAttempted.current = true;
-      if (!isAuthenticated) {
-        router.replace('/login');
-      } else if (user?.role === 'owner') {
-        router.replace('/owner/dashboard');
-      }
-    }
-  }, [hasHydrated, isLoading, isAuthenticated, user, router]);
-
-  useEffect(() => {
-    if (isAuthenticated && hasHydrated && user?.role === 'partner') {
-      fetchDashboard();
-      fetchRecentTransactions();
-      fetchPartnerTestimonials();
-    }
-  }, [isAuthenticated, hasHydrated, user]);
-
-  // Fetch recent partner transactions
-  const fetchRecentTransactions = async () => {
-    setTransactionsLoading(true);
-    try {
-      const response = await fetch('/api/transactions?limit=5&status=success');
-      const result = await response.json();
-      if (result.success && result.data) {
-        setRecentTransactions(result.data);
-      }
-    } catch {
-      // Non-critical
-    } finally {
-      setTransactionsLoading(false);
-    }
-  };
-
-  // Fetch partner testimonials
-  const fetchPartnerTestimonials = async () => {
-    setTestimonialsLoading(true);
-    try {
-      const response = await fetch('/api/testimonials/partner');
-      const result = await response.json();
-      if (result.success && result.data) {
-        setPartnerTestimonials(result.data);
-      }
-    } catch {
-      // Non-critical
-    } finally {
-      setTestimonialsLoading(false);
-    }
-  };
-
-  // Window focus revalidation for real-time data
-  useEffect(() => {
-    const handleFocus = () => {
-      if (isAuthenticated && hasHydrated && user?.role === 'partner') {
-        fetchDashboard();
-        fetchRecentTransactions();
-        fetchPartnerTestimonials();
-      }
-    };
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [isAuthenticated, hasHydrated, user]);
-
-  const fetchDashboard = async () => {
-    setDataLoading(true);
-    try {
-      const response = await fetch('/api/dashboard');
-      const result = await response.json();
-      if (result.success) {
-        setData(result.data);
-      } else {
-        setError(result.error || 'Gagal memuat data');
-      }
-    } catch {
-      setError('Terjadi kesalahan');
-    } finally {
-      setDataLoading(false);
-    }
-  };
-
-  if (isLoading || !hasHydrated) {
-    return <DashboardSkeleton />;
+// Tier configuration with enhanced styling
+const TIER_CONFIG: Record<string, { 
+  color: string
+  bgClass: string
+  gradientClass: string
+  borderClass: string
+  icon: typeof Trophy
+  minProfit: number
+  glowColor: string
+}> = {
+  Bronze: { 
+    color: 'text-amber-600', 
+    bgClass: 'bg-amber-500/20', 
+    gradientClass: 'from-amber-500/20 via-amber-600/10 to-transparent',
+    borderClass: 'border-amber-500/30',
+    icon: Medal, 
+    minProfit: 0,
+    glowColor: 'shadow-amber-500/20'
+  },
+  Silver: { 
+    color: 'text-slate-400', 
+    bgClass: 'bg-slate-400/20', 
+    gradientClass: 'from-slate-400/20 via-slate-500/10 to-transparent',
+    borderClass: 'border-slate-400/30',
+    icon: Medal, 
+    minProfit: 5000000,
+    glowColor: 'shadow-slate-400/20'
+  },
+  Gold: { 
+    color: 'text-yellow-500', 
+    bgClass: 'bg-yellow-500/20', 
+    gradientClass: 'from-yellow-500/20 via-amber-500/10 to-transparent',
+    borderClass: 'border-yellow-500/30',
+    icon: Award, 
+    minProfit: 10000000,
+    glowColor: 'shadow-yellow-500/30'
+  },
+  Platinum: { 
+    color: 'text-cyan-400', 
+    bgClass: 'bg-cyan-500/20', 
+    gradientClass: 'from-cyan-500/20 via-teal-500/10 to-transparent',
+    borderClass: 'border-cyan-500/30',
+    icon: Sparkles, 
+    minProfit: 25000000,
+    glowColor: 'shadow-cyan-500/30'
+  },
+  Diamond: { 
+    color: 'text-purple-400', 
+    bgClass: 'bg-purple-500/20', 
+    gradientClass: 'from-purple-500/20 via-violet-500/10 to-transparent',
+    borderClass: 'border-purple-500/30',
+    icon: Crown, 
+    minProfit: 50000000,
+    glowColor: 'shadow-purple-500/40'
   }
+}
 
-  if (!isAuthenticated || user?.role !== 'partner') {
-    return null;
+// Badge configuration with enhanced styling
+const BADGE_CONFIG: Record<string, { icon: typeof Trophy; color: string; label: string; gradient: string }> = {
+  'Champion': { icon: Crown, color: 'text-yellow-500', label: 'Monthly Champion', gradient: 'from-yellow-500 to-amber-600' },
+  'Top Performer': { icon: Star, color: 'text-blue-400', label: 'Top Performer', gradient: 'from-blue-500 to-cyan-500' },
+  'Rising Star': { icon: Sparkles, color: 'text-green-400', label: 'Rising Star', gradient: 'from-green-500 to-emerald-500' },
+  'Veteran': { icon: Award, color: 'text-amber-500', label: 'Veteran', gradient: 'from-amber-500 to-orange-500' }
+}
+
+// Achievement configuration
+const ACHIEVEMENT_CONFIG: Record<string, { icon: typeof Trophy; color: string; label: string; description: string }> = {
+  'First Transaction': { icon: Zap, color: 'text-blue-400', label: 'First Steps', description: 'Complete your first transaction' },
+  'Target Hunter': { icon: Target, color: 'text-green-400', label: 'Target Hunter', description: 'Hit monthly target 3 times' },
+  'Streak Master': { icon: Flame, color: 'text-orange-400', label: 'Streak Master', description: '10 transactions in a row' },
+  'Rising Champion': { icon: TrendingUp, color: 'text-purple-400', label: 'Rising Champion', description: 'Reach Gold tier' },
+  'Top Earner': { icon: DollarSign, color: 'text-emerald-400', label: 'Top Earner', description: 'Earn 1M+ in a month' },
+  'Volume King': { icon: BarChart3, color: 'text-cyan-400', label: 'Volume King', description: 'Process 50M+ volume' },
+  'Customer Favorite': { icon: Gift, color: 'text-pink-400', label: 'Customer Favorite', description: 'Serve 100+ customers' },
+  'Consistent Partner': { icon: BadgeCheck, color: 'text-teal-400', label: 'Consistent Partner', description: 'Active for 6 months' }
+}
+
+// Month names in Indonesian
+const MONTH_NAMES = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+]
+
+// Medal icons component for top 3 - Mobile Optimized
+function MedalIcon({ rank }: { rank: number }) {
+  const sizeClasses = 'w-7 h-7 sm:w-8 sm:h-8'
+  
+  if (rank === 1) {
+    return (
+      <div className="relative">
+        <div className="absolute inset-0 animate-ping opacity-20">
+          <div className={cn(sizeClasses, 'rounded-full bg-yellow-400')} />
+        </div>
+        <div className={cn(
+          'relative rounded-full flex items-center justify-center shadow-lg shadow-yellow-500/40',
+          sizeClasses,
+          'bg-gradient-to-br from-yellow-400 to-amber-500'
+        )}>
+          <Crown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
+        </div>
+      </div>
+    )
   }
-
-  const stats = data?.stats as Record<string, number> | null;
-  const partnerData = data?.partner as Record<string, unknown> | null;
-  const leaderboard = data?.leaderboard as Array<Record<string, unknown>> | null;
-  const announcements = data?.announcements as Announcement[] | null;
-  const promos = data?.promos as Announcement[] | null;
-
-  // Use partner data from store or API response
-  const currentPartner = partner || partnerData;
-  const progressPercent = Math.min(((currentPartner?.totalProfit as number || 0) / (currentPartner?.target as number || 1)) * 100, 100);
-
-  // Find leaderboard position
-  const leaderboardPosition = leaderboard?.findIndex(
-    (p: Record<string, unknown>) => p.id === currentPartner?.id
-  ) + 1 || 0;
-
-  // Separate broadcasts from announcements
-  const broadcasts = announcements?.filter(a => a.type === 'broadcast') || [];
-  // Only show 'announcement' type in running text (not promo or broadcast)
-  const regularAnnouncements = announcements?.filter(a => a.type === 'announcement') || [];
-  const promoItems = announcements?.filter(a => a.type === 'promo') || [];
-
+  if (rank === 2) {
+    return (
+      <div className={cn(
+        'rounded-full flex items-center justify-center shadow-lg shadow-slate-400/30',
+        sizeClasses,
+        'bg-gradient-to-br from-slate-300 to-slate-500'
+      )}>
+        <Medal className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
+      </div>
+    )
+  }
+  if (rank === 3) {
+    return (
+      <div className={cn(
+        'rounded-full flex items-center justify-center shadow-lg shadow-amber-600/30',
+        sizeClasses,
+        'bg-gradient-to-br from-amber-600 to-amber-700'
+      )}>
+        <Award className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
+      </div>
+    )
+  }
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-6 space-y-3 sm:space-y-6 pb-24 md:pb-6">
-      {/* Welcome Card - Clean Modern Design */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/80">
-        {/* Simple decorative circle */}
-        <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full" />
-        <div className="absolute -right-4 -bottom-8 w-24 h-24 bg-white/5 rounded-full" />
-        
-        <div className="relative p-4 sm:p-5">
-          <div className="flex items-center gap-3">
-            {/* Avatar */}
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-xl sm:text-2xl font-bold text-white">
-                {user?.name?.charAt(0)?.toUpperCase() || 'P'}
-              </span>
-            </div>
-            
-            {/* Greeting */}
-            <div className="flex-1 min-w-0">
-              <p className="text-white/70 text-xs">Selamat datang,</p>
-              <h1 className="text-lg sm:text-xl font-bold text-white truncate">
-                {user?.name?.split(' ')[0]}!
-              </h1>
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <Badge className="bg-white/20 text-white border-0 text-[10px] px-2 py-0 h-auto">
-                  {currentPartner?.tier as string}
-                </Badge>
-                <Badge className="bg-white/20 text-white border-0 text-[10px] px-2 py-0 h-auto">
-                  {currentPartner?.commission as number}%
-                </Badge>
-              </div>
-            </div>
-            
-            {/* Progress Circle */}
-            <div className="text-center flex-shrink-0">
-              <div className="relative w-14 h-14 sm:w-16 sm:h-16">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                  <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
-                  <circle 
-                    cx="18" cy="18" r="16" fill="none" stroke="white" strokeWidth="3"
-                    strokeDasharray={`${Math.min(progressPercent, 100)} 100`}
-                    strokeLinecap="round"
-                    className="transition-all duration-500"
-                  />
-                </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-sm sm:text-base">
-                  {progressPercent.toFixed(0)}%
-                </span>
-              </div>
-              <p className="text-white/60 text-[10px] mt-1">Target</p>
-            </div>
-          </div>
-          
-          {/* Quick Stats */}
-          <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/10 text-xs">
-            <div>
-              <p className="text-white/60">Profit</p>
-              <p className="text-white font-semibold">{formatCurrency(currentPartner?.totalProfit as number || 0)}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-white/60">Target</p>
-              <p className="text-white font-semibold">{formatCurrency(currentPartner?.target as number || 0)}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Broadcast Notifications - Modern Design */}
-      {broadcasts && broadcasts.length > 0 && (
-        <div className="space-y-3 animate-fade-in">
-          {broadcasts.slice(0, 3).map((broadcast, index) => (
-            <Card 
-              key={broadcast.id}
-              className="glass-card overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 active-scale"
-              onClick={() => setSelectedBroadcast(broadcast)}
-            >
-              <div className="flex">
-                {/* Left accent bar */}
-                <div className="w-1 bg-gradient-to-b from-amber-400 to-orange-500" />
-                
-                <CardContent className="flex-1 p-4">
-                  <div className="flex items-start gap-3">
-                    {/* Icon */}
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg">
-                      <Radio className="w-5 h-5 text-white" />
-                    </div>
-                    
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="secondary" className="text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
-                          BROADCAST
-                        </Badge>
-                        {broadcast.startDate && (
-                          <span className="text-[10px] text-muted-foreground">
-                            {formatDate(broadcast.startDate)}
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="font-semibold text-sm mb-1 truncate">{broadcast.title}</h3>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{broadcast.description}</p>
-                    </div>
-                    
-                    {/* Arrow */}
-                    <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                  </div>
-                </CardContent>
-              </div>
-            </Card>
-          ))}
-          
-          {/* Show more button if there are more broadcasts */}
-          {broadcasts.length > 3 && (
-            <button className="w-full py-2 text-xs text-muted-foreground hover:text-primary transition-colors">
-              +{broadcasts.length - 3} broadcast lainnya
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Announcements Banner (Running Text) - Modern Design */}
-      {regularAnnouncements && regularAnnouncements.length > 0 && (
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border border-primary/20">
-          <div className="flex items-center gap-3 py-3 px-4">
-            {/* Icon */}
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Bell className="w-4 h-4 text-primary" />
-            </div>
-            
-            {/* Running text */}
-            <div className="flex-1 overflow-hidden">
-              <div className="animate-marquee whitespace-nowrap">
-                {regularAnnouncements.map((a, i) => (
-                  <span key={a.id} className="text-sm">
-                    <strong className="text-primary">{a.title}</strong>
-                    {a.description && (
-                      <span className="text-muted-foreground">: {a.description}</span>
-                    )}
-                    {i < regularAnnouncements.length - 1 && (
-                      <span className="mx-4 text-primary/50">•</span>
-                    )}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Stats Cards - Enhanced Design */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-        <StatsCard 
-          title="Profit Saya" 
-          value={formatCurrency(stats?.totalProfit || 0)} 
-          icon={DollarSign} 
-          gradient 
-          trend={stats?.totalProfit > 0 ? 'up' : 'neutral'}
-        />
-        <StatsCard 
-          title="Total Transaksi" 
-          value={String(stats?.totalTransactions || 0)} 
-          icon={ShoppingBag} 
-          color="text-blue-600" 
-          bg="bg-blue-100 dark:bg-blue-900/30"
-          trend={stats?.totalTransactions > 0 ? 'up' : 'neutral'}
-        />
-        <StatsCard 
-          title="Total Volume" 
-          value={formatCurrency(stats?.totalVolume || 0)} 
-          icon={TrendingUp} 
-          color="text-green-600" 
-          bg="bg-green-100 dark:bg-green-900/30"
-          trend={stats?.totalVolume > 0 ? 'up' : 'neutral'}
-        />
-        <StatsCard 
-          title="Pending" 
-          value={String(stats?.pendingTransactions || 0)} 
-          icon={Clock} 
-          color="text-orange-600" 
-          bg="bg-orange-100 dark:bg-orange-900/30"
-          alert={stats?.pendingTransactions > 0}
-        />
-      </div>
-
-      {/* Panduan Partner - Quick Guide Card */}
-      <Card className="glass-card animate-slide-up overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-teal-500 via-emerald-500 to-green-500" />
-        <button
-          className="w-full text-left"
-          onClick={() => setGuideOpen(!guideOpen)}
-        >
-          <CardHeader className="pb-2 cursor-pointer">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-teal-500" />
-                Panduan Partner
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Badge className="bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 text-[10px]">
-                  {guideOpen ? 'Tutup' : 'Buka'}
-                </Badge>
-                {guideOpen ? (
-                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                )}
-              </div>
-            </div>
-            <CardDescription className="text-[10px] sm:text-xs">
-              Apa itu Tugas Partner?
-            </CardDescription>
-          </CardHeader>
-        </button>
-        {guideOpen && (
-          <CardContent className="px-3 sm:px-6 pb-4 pt-0">
-            <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-900/10 dark:to-emerald-900/10 border border-teal-200/50 dark:border-teal-800/30">
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-3">
-                Sebagai partner, tugas Anda adalah membantu customer melakukan{' '}
-                <strong className="text-foreground">gestun (tarik tunai dari kartu kredit/paylater)</strong>.{' '}
-                Setiap transaksi yang berhasil akan memberikan Anda komisi.
-              </p>
-
-              <div className="space-y-2.5">
-                <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <span className="w-5 h-5 rounded-md bg-teal-500 text-white flex items-center justify-center text-[10px] font-bold">1</span>
-                  Langkah Kerja Partner
-                </p>
-                <div className="space-y-2 ml-1">
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <span className="mt-0.5">🔍</span>
-                    <span>Cari customer yang butuh dana cepat (teman, keluarga, kenalan)</span>
-                  </div>
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <span className="mt-0.5">💬</span>
-                    <span>Jelaskan layanan gestun dan tawarkan bantuan Anda</span>
-                  </div>
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <span className="mt-0.5">📋</span>
-                    <span>Bantu customer buat order melalui link pribadi Anda</span>
-                  </div>
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <span className="mt-0.5">⏳</span>
-                    <span>Tunggu admin memverifikasi dan mengirimkan link pembayaran</span>
-                  </div>
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <span className="mt-0.5">💸</span>
-                    <span>Customer bayar via link menggunakan kartu kredit/paylater</span>
-                  </div>
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <span className="mt-0.5">✅</span>
-                    <span>Dana dikirim ke rekening customer, Anda dapat komisi!</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-3 pt-3 border-t border-teal-200/50 dark:border-teal-800/30">
-                <p className="text-[10px] font-semibold text-foreground flex items-center gap-1.5 mb-2">
-                  <Lightbulb className="w-3 h-3 text-amber-500" />
-                  Tips Penting
-                </p>
-                <ul className="space-y-1.5 ml-1">
-                  <li className="flex items-start gap-2 text-[10px] sm:text-xs text-muted-foreground">
-                    <span className="mt-0.5 text-teal-500">•</span>
-                    Pastikan customer punya kartu kredit atau akun paylater aktif
-                  </li>
-                  <li className="flex items-start gap-2 text-[10px] sm:text-xs text-muted-foreground">
-                    <span className="mt-0.5 text-teal-500">•</span>
-                    Jelaskan biaya layanan dengan transparansi sebelum order
-                  </li>
-                  <li className="flex items-start gap-2 text-[10px] sm:text-xs text-muted-foreground">
-                    <span className="mt-0.5 text-teal-500">•</span>
-                    Gunakan link pribadi Anda agar transaksi otomatis tercatat atas nama Anda
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        )}
-      </Card>
-
-      {/* Insight Cerdas - Smart Selling Tips */}
-      <Card className="glass-card animate-slide-up stagger-1 overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500" />
-        <button
-          className="w-full text-left"
-          onClick={() => setInsightOpen(!insightOpen)}
-        >
-          <CardHeader className="pb-2 cursor-pointer">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                <Lightbulb className="w-4 h-4 text-amber-500" />
-                Insight Cerdas
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Badge className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[10px]">
-                  {insightOpen ? 'Tutup' : '6 Tips'}
-                </Badge>
-                {insightOpen ? (
-                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                )}
-              </div>
-            </div>
-            <CardDescription className="text-[10px] sm:text-xs">
-              Cara Menawarkan Gestun ke Customer
-            </CardDescription>
-          </CardHeader>
-        </button>
-        {insightOpen && (
-          <CardContent className="px-3 sm:px-6 pb-4 pt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-              {/* Tip 1 */}
-              <div className="p-3 rounded-xl bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-900/10 dark:to-orange-900/10 border border-rose-200/50 dark:border-rose-800/30">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-md">
-                    <Target className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <p className="text-[11px] sm:text-xs font-semibold leading-tight">Targetkan Saat Butuh Dana Darurat</p>
-                </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
-                  Orang paling butuh gestun saat: kebutuhan mendesak, bayar kuliah, modal usaha, biaya medis, dll. Tawarkan solusi cepat!
-                </p>
-              </div>
-
-              {/* Tip 2 */}
-              <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/10 dark:to-teal-900/10 border border-emerald-200/50 dark:border-emerald-800/30">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0 shadow-md">
-                    <Shield className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <p className="text-[11px] sm:text-xs font-semibold leading-tight">Gestun vs Pinjol</p>
-                </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
-                  Gestun lebih menguntungkan: tanpa bunga cicilan, tanpa BI checking, proses cepat, langsung cair ke rekening. Beda dengan pinjol yang bunganya tinggi!
-                </p>
-              </div>
-
-              {/* Tip 3 */}
-              <div className="p-3 rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10 border border-amber-200/50 dark:border-amber-800/30">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center flex-shrink-0 shadow-md">
-                    <Star className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <p className="text-[11px] sm:text-xs font-semibold leading-tight">Manfaatkan Testimoni & Rating</p>
-                </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
-                  Bagikan testimoni customer puas Anda untuk bangun kepercayaan. Rating tinggi = lebih banyak customer percaya!
-                </p>
-              </div>
-
-              {/* Tip 4 */}
-              <div className="p-3 rounded-xl bg-gradient-to-br from-sky-50 to-cyan-50 dark:from-sky-900/10 dark:to-cyan-900/10 border border-sky-200/50 dark:border-sky-800/30">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-400 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-md">
-                    <Wallet className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <p className="text-[11px] sm:text-xs font-semibold leading-tight">Tawarkan COD untuk Customer Baru</p>
-                </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
-                  Untuk customer yang ragu, tawarkan metode COD. Lebih aman karena barang sampai baru bayar.
-                </p>
-              </div>
-
-              {/* Tip 5 */}
-              <div className="p-3 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/10 dark:to-purple-900/10 border border-violet-200/50 dark:border-violet-800/30">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center flex-shrink-0 shadow-md">
-                    <Clock className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <p className="text-[11px] sm:text-xs font-semibold leading-tight">Follow Up Transaksi Pending</p>
-                </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
-                  Cek dashboard secara rutin. Segera follow up customer yang statusnya pending agar proses cepat selesai dan komisi cepat didapat!
-                </p>
-              </div>
-
-              {/* Tip 6 */}
-              <div className="p-3 rounded-xl bg-gradient-to-br from-pink-50 to-fuchsia-50 dark:from-pink-900/10 dark:to-fuchsia-900/10 border border-pink-200/50 dark:border-pink-800/30">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-pink-400 to-fuchsia-500 flex items-center justify-center flex-shrink-0 shadow-md">
-                    <Megaphone className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <p className="text-[11px] sm:text-xs font-semibold leading-tight">Promosikan di Media Sosial</p>
-                </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
-                  Share link order Anda ke status WA, story IG, dll. Semakin banyak yang tahu, semakin besar peluang earning!
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        )}
-      </Card>
-
-      {/* Quick Actions - Mobile */}
-      <div className="grid grid-cols-2 gap-2 sm:hidden">
-        <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5 tap-highlight active-scale glass-card">
-          <Link href="/partner/dashboard/customers">
-            <Users className="w-4 h-4" />
-            <span className="text-[10px]">Kelola Customer</span>
-          </Link>
-        </Button>
-        <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5 tap-highlight active-scale glass-card">
-          <Link href="/partner/dashboard/transactions">
-            <ShoppingBag className="w-4 h-4" />
-            <span className="text-[10px]">Riwayat Transaksi</span>
-          </Link>
-        </Button>
-      </div>
-
-      {/* Share Order Link - Partner Referral */}
-      <Card className="glass-card animate-slide-up overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-cyan-500 via-primary to-violet-500" />
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-            <Globe className="w-4 h-4 text-cyan-500" />
-            Link Order Customer
-          </CardTitle>
-          <CardDescription className="text-[10px] sm:text-xs">
-            Bagikan link ini ke customer untuk order langsung dengan nama Anda
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-3 sm:px-6">
-          <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-r from-cyan-500/5 via-primary/5 to-violet-500/5 border border-primary/10">
-            <div className="flex items-center gap-2 sm:gap-3 mb-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-primary flex items-center justify-center flex-shrink-0 shadow-lg">
-                <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold truncate">Link Pribadi Anda</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                  {typeof window !== 'undefined' ? `${window.location.origin}/order?partnerId=${currentPartner?.id}` : '/order?partnerId=...'}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                className="flex-1 h-10 sm:h-11 rounded-xl bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 text-white shadow-md text-xs sm:text-sm"
-                onClick={() => {
-                  const link = `${window.location.origin}/order?partnerId=${currentPartner?.id}`;
-                  navigator.clipboard.writeText(link);
-                }}
-              >
-                {navigator ? (
-                  <>
-                    {false ? <Check className="w-4 h-4 mr-1.5" /> : <Copy className="w-4 h-4 mr-1.5" />}
-                    Salin Link
-                  </>
-                ) : 'Salin Link'}
-              </Button>
-              <Button
-                variant="outline"
-                className="h-10 sm:h-11 px-3 sm:px-4 rounded-xl text-xs sm:text-sm"
-                onClick={() => {
-                  const link = `${window.location.origin}/order?partnerId=${currentPartner?.id}`;
-                  if (navigator.share) {
-                    navigator.share({ title: 'Order Gestun', url: link });
-                  } else {
-                    navigator.clipboard.writeText(link);
-                  }
-                }}
-              >
-                <ExternalLink className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-          {/* Instruction Box */}
-          <div className="mt-3 p-3 rounded-xl bg-gradient-to-r from-cyan-50 via-primary/5 to-violet-50 dark:from-cyan-900/10 dark:via-primary/5 dark:to-violet-900/10 border border-primary/10">
-            <div className="flex items-start gap-2">
-              <MessageCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-              <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
-                <strong className="text-foreground">Cara pakai link:</strong> Kirim link ini ke customer via WhatsApp. Customer akan otomatis tercatat atas nama Anda. Semakin banyak customer yang order lewat link Anda, semakin besar komisi yang Anda dapatkan!
-              </p>
-            </div>
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-2 text-center">
-            💡 Customer yang order lewat link ini otomatis tercatat atas nama Anda
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Smart Alerts Section */}
-      <SmartAlertsCard
-        pendingCount={stats?.pendingTransactions || 0}
-        targetProgress={progressPercent}
-        leaderboardPosition={leaderboardPosition}
-        newCustomersCount={stats?.newCustomersThisMonth || 0}
-        announcements={announcements || []}
-        promos={promoItems || []}
-        dataLoading={dataLoading}
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
-        {/* Target Progress - Enhanced */}
-        <Card className="glass-card animate-slide-up overflow-hidden">
-          <div className="h-1 gradient-primary" />
-          <CardHeader className="pb-1 sm:pb-2">
-            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-              <Target className="w-4 h-4 text-primary" />
-              Progress Target
-            </CardTitle>
-            <CardDescription className="text-[10px] sm:text-xs">Target bulanan Anda</CardDescription>
-          </CardHeader>
-          <CardContent className="px-2 sm:px-6">
-            <div className="space-y-3 sm:space-y-4">
-              <div>
-                <div className="flex justify-between mb-1 sm:mb-2 text-xs sm:text-sm">
-                  <span className="text-muted-foreground">Progress</span>
-                  <span className="font-bold text-primary">{progressPercent.toFixed(0)}%</span>
-                </div>
-                <div className="relative">
-                  <Progress value={progressPercent} className="h-2 sm:h-3" />
-                  {progressPercent >= 100 && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-white animate-pulse" />
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                <div className="p-2 sm:p-4 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">Profit Saat Ini</p>
-                  <p className="text-base sm:text-xl font-bold text-primary">
-                    {formatCurrency(currentPartner?.totalProfit as number || 0)}
-                  </p>
-                </div>
-                <div className="p-2 sm:p-4 rounded-lg sm:rounded-xl bg-muted/50">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">Target</p>
-                  <p className="text-base sm:text-xl font-bold">{formatCurrency(currentPartner?.target as number || 0)}</p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-1 sm:pt-2">
-                <Badge className="gradient-primary text-white text-[10px] sm:text-xs">{currentPartner?.tier as string}</Badge>
-                <Badge variant="secondary" className="text-[10px] sm:text-xs">{currentPartner?.badge as string}</Badge>
-                <Badge variant="outline" className="border-primary/30 text-primary text-[10px] sm:text-xs">
-                  Komisi: {currentPartner?.commission as number}%
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Leaderboard - Enhanced */}
-        <Card className="glass-card animate-slide-up stagger-1 overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-500" />
-          <CardHeader className="pb-1 sm:pb-2">
-            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-yellow-500" />
-              Leaderboard
-            </CardTitle>
-            <CardDescription className="text-[10px] sm:text-xs">Top 5 Partner bulan ini</CardDescription>
-          </CardHeader>
-          <CardContent className="px-1 sm:px-6">
-            <div className="space-y-0.5 sm:space-y-1">
-              {dataLoading ? (
-                [...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 sm:h-14 rounded-lg sm:rounded-xl" />)
-              ) : leaderboard?.length ? (
-                leaderboard.map((p: Record<string, unknown>, index: number) => {
-                  const isMe = p.id === currentPartner?.id;
-                  return (
-                    <div 
-                      key={p.id as string} 
-                      className={cn(
-                        'flex items-center gap-2 sm:gap-3 py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl transition-all tap-highlight active-scale',
-                        isMe ? 'bg-primary/10 ring-2 ring-primary/30 shadow-md' : 'hover:bg-muted/50'
-                      )}
-                    >
-                      <div className={cn(
-                        'w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center font-bold text-[10px] sm:text-xs flex-shrink-0',
-                        index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white shadow-md' :
-                        index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-white' :
-                        index === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white' :
-                        'bg-muted text-muted-foreground'
-                      )}>
-                        {index + 1}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-xs sm:text-sm truncate">
-                          {p.name as string}
-                          {isMe && <span className="text-primary ml-1 font-bold">(Anda)</span>}
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">{formatCurrency(p.totalProfit as number)}</p>
-                      </div>
-                      <Badge variant="outline" className="text-[9px] sm:text-[10px]">{p.tier as string}</Badge>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-center text-muted-foreground py-6 sm:py-8 text-xs sm:text-sm">Belum ada data</div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Promos Section - Enhanced */}
-      {(promoItems && promoItems.length > 0) && (
-        <Card className="glass-card animate-slide-up stagger-2 overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500" />
-          <CardHeader className="pb-1 sm:pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                <Gift className="w-4 h-4 text-pink-500" />
-                Promo & Materi
-              </CardTitle>
-              <Badge className="bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 text-[10px]">
-                {promoItems.length} Aktif
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-              {promoItems.map((promo) => (
-                <button
-                  key={promo.id}
-                  onClick={() => setSelectedPromo(promo)}
-                  className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-br from-pink-50 to-purple-50 dark:from-pink-900/10 dark:to-purple-900/10 rounded-lg sm:rounded-xl hover:from-pink-100 hover:to-purple-100 dark:hover:from-pink-900/20 dark:hover:to-purple-900/20 transition-all tap-highlight active-scale border border-pink-100 dark:border-pink-900/30 text-left"
-                >
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-                    <Gift className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-xs sm:text-sm truncate">{promo.title}</p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                      {promo.description || 'Tap untuk melihat'}
-                    </p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground flex-shrink-0" />
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Recent Transactions & Testimonials Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-        {/* Recent Transactions */}
-        <Card className="glass-card animate-slide-up overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-emerald-500 via-primary to-purple-500" />
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-500" />
-                Transaksi Terakhir
-              </CardTitle>
-              <Button variant="ghost" size="sm" asChild className="tap-highlight h-7 sm:h-8 text-[10px] sm:text-xs">
-                <Link href="/partner/dashboard/transactions">
-                  Semua
-                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-0.5 sm:ml-1" />
-                </Link>
-              </Button>
-            </div>
-            <CardDescription className="text-[10px] sm:text-xs">
-              <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Transaksi berhasil
-              </span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-2 sm:px-6">
-            {transactionsLoading ? (
-              <div className="space-y-2">
-                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-14 sm:h-16 rounded-xl" />)}
-              </div>
-            ) : recentTransactions.length > 0 ? (
-              <div className="space-y-1.5">
-                {recentTransactions.map((tx) => (
-                  <div key={tx.id} className="flex items-center gap-2.5 sm:gap-3 p-2 sm:p-2.5 rounded-xl bg-muted/20 hover:bg-muted/40 transition-all border border-transparent hover:border-emerald-500/20">
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center flex-shrink-0 shadow-lg">
-                      <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-semibold text-xs sm:text-sm truncate">{tx.customer.name}</p>
-                      </div>
-                      <p className="text-sm sm:text-base font-bold text-primary">{formatCurrency(tx.nominal)}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5 text-[9px] sm:text-[10px] text-muted-foreground">
-                        <span className="truncate">{tx.paymentType.name}</span>
-                        <span>•</span>
-                        <span>{formatDate(tx.createdAt)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <CheckCircle className="w-10 h-10 mx-auto mb-2 text-muted-foreground opacity-20" />
-                <p className="text-xs sm:text-sm text-muted-foreground">Belum ada transaksi berhasil</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Partner Testimonials */}
-        <Card className="glass-card animate-slide-up stagger-1 overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400" />
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                <Star className="w-4 h-4 text-amber-500" />
-                Testimoni Customer
-              </CardTitle>
-              <Badge className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px]">
-                {partnerTestimonials.length}
-              </Badge>
-            </div>
-            <CardDescription className="text-[10px] sm:text-xs">
-              <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                Dari transaksi Anda
-              </span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-2 sm:px-6">
-            {testimonialsLoading ? (
-              <div className="space-y-2">
-                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-16 sm:h-20 rounded-xl" />)}
-              </div>
-            ) : partnerTestimonials.length > 0 ? (
-              <div className="space-y-1.5 max-h-[380px] sm:max-h-[420px] overflow-y-auto pr-1">
-                {partnerTestimonials.map((t) => (
-                  <div
-                    key={t.id}
-                    className={cn(
-                      "rounded-xl p-2.5 sm:p-3 transition-all duration-200 border",
-                      !t.isApproved
-                        ? "bg-amber-50/50 dark:bg-amber-900/10 border-amber-200/50 dark:border-amber-800/30"
-                        : "bg-muted/20 border-transparent hover:border-primary/20"
-                    )}
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <div className={cn(
-                        "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg",
-                        !t.isApproved
-                          ? "bg-gradient-to-br from-amber-400 to-orange-500"
-                          : "bg-gradient-to-br from-emerald-400 to-green-500"
-                      )}>
-                        <Star className="w-4 h-4 sm:w-5 sm:h-5 text-white fill-white" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className="font-semibold text-xs sm:text-sm truncate">{t.customerName}</p>
-                          <div className="flex items-center gap-0.5 flex-shrink-0">
-                            {[1, 2, 3, 4, 5].map((s) => (
-                              <Star
-                                key={s}
-                                className={cn(
-                                  "w-2.5 h-2.5 sm:w-3 sm:h-3",
-                                  s <= t.rating
-                                    ? "text-amber-400 fill-amber-400"
-                                    : "text-muted-foreground/20"
-                                )}
-                              />
-                            ))}
-                          </div>
-                          {t.isFeatured && (
-                            <Trophy className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                          )}
-                        </div>
-                        {t.review && (
-                          <div className="relative mt-1">
-                            <Quote className="absolute -top-0.5 -left-0.5 w-2.5 h-2.5 text-muted-foreground/15" />
-                            <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed pl-3 line-clamp-2">
-                              {t.review}
-                            </p>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-1.5 mt-1 text-[9px] sm:text-[10px] text-muted-foreground">
-                          {t.transaction && (
-                            <span className="flex items-center gap-0.5">
-                              <CreditCard className="w-2.5 h-2.5" />
-                              {t.transaction.paymentType.name}
-                            </span>
-                          )}
-                          {t.transaction && (
-                            <>
-                              <span>•</span>
-                              <span className="font-medium text-primary">{formatCurrency(t.transaction.nominal)}</span>
-                            </>
-                          )}
-                          <span>•</span>
-                          <span>{formatDate(t.createdAt)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Star className="w-10 h-10 mx-auto mb-2 text-muted-foreground opacity-20" />
-                <p className="text-xs sm:text-sm text-muted-foreground">Belum ada testimoni</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-1">Testimoni akan muncul setelah customer memberi rating</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Broadcast Detail Dialog - Modern Design */}
-      <Dialog open={!!selectedBroadcast} onOpenChange={() => setSelectedBroadcast(null)}>
-        <DialogContent className="max-w-md p-0 overflow-hidden">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{selectedBroadcast?.title || 'Detail Broadcast'}</DialogTitle>
-            <DialogDescription>{selectedBroadcast?.description || 'Informasi broadcast'}</DialogDescription>
-          </DialogHeader>
-          {/* Header with gradient */}
-          <div className="relative bg-gradient-to-br from-amber-400 to-orange-500 p-6 pb-4">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                  <Radio className="w-5 h-5 text-white" />
-                </div>
-                <Badge className="bg-white/20 text-white border-white/30 text-[10px]">
-                  BROADCAST
-                </Badge>
-              </div>
-              <h2 className="text-lg font-bold text-white">{selectedBroadcast?.title}</h2>
-            </div>
-          </div>
-          
-          {/* Content */}
-          <div className="p-6 space-y-4">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {selectedBroadcast?.description}
-            </p>
-            
-            {selectedBroadcast?.startDate && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-                <Calendar className="w-4 h-4" />
-                <span>
-                  {formatDate(selectedBroadcast.startDate)}
-                  {selectedBroadcast.expireDate && ` - ${formatDate(selectedBroadcast.expireDate)}`}
-                </span>
-              </div>
-            )}
-            
-            {selectedBroadcast?.link && (
-              <Button asChild className="w-full h-11">
-                <a href={selectedBroadcast.link} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Buka Link
-                </a>
-              </Button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Promo Detail Dialog - Modern Design */}
-      <Dialog open={!!selectedPromo} onOpenChange={() => setSelectedPromo(null)}>
-        <DialogContent className="max-w-md p-0 overflow-hidden">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{selectedPromo?.title || 'Detail Promo'}</DialogTitle>
-            <DialogDescription>{selectedPromo?.description || 'Informasi promo'}</DialogDescription>
-          </DialogHeader>
-          {/* Header with gradient */}
-          <div className="relative bg-gradient-to-br from-pink-500 to-purple-600 p-6 pb-4">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                  <Gift className="w-5 h-5 text-white" />
-                </div>
-                <Badge className="bg-white/20 text-white border-white/30 text-[10px]">
-                  PROMO
-                </Badge>
-              </div>
-              <h2 className="text-lg font-bold text-white">{selectedPromo?.title}</h2>
-            </div>
-          </div>
-          
-          {/* Content */}
-          <div className="p-6 space-y-4">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {selectedPromo?.description}
-            </p>
-            
-            {selectedPromo?.startDate && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-                <Calendar className="w-4 h-4" />
-                <span>
-                  Berlaku: {formatDate(selectedPromo.startDate)}
-                  {selectedPromo.expireDate && ` - ${formatDate(selectedPromo.expireDate)}`}
-                </span>
-              </div>
-            )}
-            
-            <Button asChild className="w-full h-11 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700">
-              <a href={selectedPromo?.link} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Buka Materi Promo
-              </a>
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+    <div className={cn('rounded-full bg-muted flex items-center justify-center', sizeClasses)}>
+      <span className="text-xs sm:text-sm font-bold text-muted-foreground">{rank}</span>
     </div>
-  );
+  )
 }
 
-function StatsCard({ title, value, icon: Icon, gradient, color, bg, trend, alert }: { 
-  title: string; 
-  value: string; 
-  icon: React.ElementType;
-  gradient?: boolean;
-  color?: string;
-  bg?: string;
-  trend?: 'up' | 'down' | 'neutral';
-  alert?: boolean;
+// Enhanced Stats Card Component - Mobile Optimized
+function EnhancedStatsCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+  trend,
+  gradientFrom,
+  gradientTo,
+  iconBgClass
+}: {
+  title: string
+  value: string | number
+  description?: string
+  icon?: typeof DollarSign
+  trend?: { value: number; isPositive: boolean }
+  gradientFrom: string
+  gradientTo: string
+  iconBgClass: string
 }) {
   return (
     <Card className={cn(
-      'glass-card animate-fade-in tap-highlight active-scale overflow-hidden',
-      alert && 'ring-2 ring-orange-300 dark:ring-orange-700'
+      'relative overflow-hidden border-0 shadow-lg transition-all duration-300',
+      'active:scale-[0.98] sm:hover:shadow-xl sm:hover:scale-[1.02]',
+      'bg-gradient-to-br',
+      gradientFrom, gradientTo,
+      'min-h-[120px] sm:min-h-[140px]'
     )}>
-      <CardContent className="p-2 sm:p-4">
-        <div className="flex items-start justify-between gap-1 sm:gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">{title}</p>
-            <p className={cn('text-sm sm:text-xl font-bold truncate', gradient && 'text-primary')}>{value}</p>
-            {alert && (
-              <p className="text-[9px] sm:text-[10px] text-orange-600 dark:text-orange-400 mt-0.5 sm:mt-1 flex items-center gap-0.5">
-                <AlertTriangle className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                Perlu ditangani
-              </p>
-            )}
-          </div>
+      <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 -mr-6 sm:-mr-8 -mt-6 sm:-mt-8 rounded-full bg-white/5 blur-2xl" />
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 relative z-10 px-4 pt-4">
+        <CardTitle className="text-xs sm:text-sm font-medium text-white/80 line-clamp-1">
+          {title}
+        </CardTitle>
+        {Icon && (
           <div className={cn(
-            'w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0',
-            gradient && 'gradient-primary shadow-md',
-            !gradient && bg
+            'p-1.5 sm:p-2 rounded-lg sm:rounded-xl min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px] flex items-center justify-center',
+            iconBgClass
           )}>
-            <Icon className={cn('w-3.5 h-3.5 sm:w-5 sm:h-5', gradient ? 'text-white' : color)} />
+            <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
           </div>
-        </div>
+        )}
+      </CardHeader>
+      <CardContent className="relative z-10 px-4 pb-4">
+        <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white line-clamp-1">{value}</div>
+        {description && (
+          <p className="text-[10px] sm:text-xs text-white/60 mt-0.5 sm:mt-1 line-clamp-1">{description}</p>
+        )}
+        {trend && (
+          <div className="flex items-center gap-1 mt-1.5 sm:mt-2">
+            {trend.isPositive ? (
+              <TrendingUp className="h-3 w-3 text-green-300 flex-shrink-0" />
+            ) : trend.value === 0 ? (
+              <Minus className="h-3 w-3 text-white/60 flex-shrink-0" />
+            ) : (
+              <TrendingDown className="h-3 w-3 text-red-300 flex-shrink-0" />
+            )}
+            <span className={cn(
+              'text-[10px] sm:text-xs font-medium',
+              trend.isPositive ? 'text-green-300' : trend.value === 0 ? 'text-white/60' : 'text-red-300'
+            )}>
+              {trend.isPositive && trend.value > 0 ? '+' : ''}{trend.value}%
+            </span>
+            <span className="text-[10px] sm:text-xs text-white/50 hidden sm:inline">vs last month</span>
+          </div>
+        )}
       </CardContent>
     </Card>
-  );
+  )
 }
 
-function SmartAlertsCard({
-  pendingCount,
-  targetProgress,
-  leaderboardPosition,
-  newCustomersCount,
-  announcements,
-  promos,
-  dataLoading,
-}: {
-  pendingCount: number;
-  targetProgress: number;
-  leaderboardPosition: number;
-  newCustomersCount: number;
-  announcements: Announcement[];
-  promos: Announcement[];
-  dataLoading: boolean;
-}) {
-  if (dataLoading) {
-    return <Skeleton className="h-24 rounded-xl" />;
-  }
-
-  // Build notifications list - simplified
-  const notifications: Array<{
-    id: string;
-    icon: React.ElementType;
-    title: string;
-    value: string;
-    type: 'warning' | 'success' | 'info';
-    action?: { label: string; href: string };
-  }> = [];
-
-  // Pending transactions - priority warning
-  if (pendingCount > 0) {
-    notifications.push({
-      id: 'pending',
-      icon: AlertTriangle,
-      title: 'Transaksi Pending',
-      value: `${pendingCount} menunggu`,
-      type: 'warning',
-      action: { label: 'Lihat', href: '/partner/dashboard/transactions' },
-    });
-  }
-
-  // Target progress
-  if (targetProgress >= 100) {
-    notifications.push({
-      id: 'target',
-      icon: CheckCircle,
-      title: 'Target Tercapai',
-      value: 'Bulan ini',
-      type: 'success',
-    });
-  }
-
-  // Leaderboard position
-  if (leaderboardPosition > 0 && leaderboardPosition <= 3) {
-    notifications.push({
-      id: 'rank',
-      icon: Trophy,
-      title: 'Peringkat',
-      value: `#${leaderboardPosition}`,
-      type: 'success',
-    });
-  }
-
-  // New customers
-  if (newCustomersCount > 0) {
-    notifications.push({
-      id: 'customers',
-      icon: Users,
-      title: 'Customer Baru',
-      value: `${newCustomersCount} orang`,
-      type: 'info',
-    });
-  }
-
-  // Active promos
-  if (promos.length > 0) {
-    notifications.push({
-      id: 'promos',
-      icon: Gift,
-      title: 'Promo Aktif',
-      value: `${promos.length} tersedia`,
-      type: 'info',
-    });
-  }
-
-  // Announcements
-  if (announcements.length > 0) {
-    notifications.push({
-      id: 'announcements',
-      icon: Megaphone,
-      title: 'Pengumuman',
-      value: `${announcements.length} aktif`,
-      type: 'info',
-    });
-  }
-
-  if (notifications.length === 0) {
-    return null;
-  }
-
-  const getTypeStyle = (type: string) => {
-    switch (type) {
-      case 'warning':
-        return 'bg-amber-500';
-      case 'success':
-        return 'bg-green-500';
-      default:
-        return 'bg-primary';
-    }
-  };
-
+// Animated Tier Badge Component - Mobile Optimized
+function AnimatedTierBadge({ tier, tierConfig, size = 'default' }: { tier: string; tierConfig: typeof TIER_CONFIG['Bronze']; size?: 'sm' | 'default' }) {
+  const TierIcon = tierConfig.icon
+  const isSmall = size === 'sm'
+  
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-      {notifications.slice(0, 5).map((item) => {
-        const Icon = item.icon;
-        const isClickable = !!item.action;
-        
-        const content = (
-          <div
-            key={item.id}
-            className={cn(
-              'flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-card border flex-shrink-0 min-w-[140px]',
-              'transition-all duration-200',
-              isClickable && 'cursor-pointer hover:border-primary/50 hover:shadow-sm active:scale-[0.98]'
-            )}
-          >
-            <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', getTypeStyle(item.type))}>
-              <Icon className="w-4 h-4 text-white" />
+    <div className="relative group">
+      {/* Glow effect */}
+      <div className={cn(
+        'absolute inset-0 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-300',
+        tierConfig.bgClass
+      )} />
+      
+      {/* Badge */}
+      <div className={cn(
+        'relative rounded-full flex items-center justify-center',
+        'bg-gradient-to-br',
+        tierConfig.gradientClass,
+        'border-2',
+        tierConfig.borderClass,
+        'shadow-lg',
+        tierConfig.glowColor,
+        'group-hover:scale-110 transition-transform duration-300',
+        isSmall ? 'w-14 h-14' : 'w-16 h-16 sm:w-20 sm:h-20'
+      )}>
+        <TierIcon className={cn('animate-pulse', isSmall ? 'h-7 w-7' : 'h-8 w-8 sm:h-10 sm:w-10', tierConfig.color)} />
+      </div>
+      
+      {/* Sparkle animation for top tiers */}
+      {(tier === 'Diamond' || tier === 'Platinum') && (
+        <div className="absolute inset-0">
+          <Sparkles className={cn(
+            'absolute top-0 right-0',
+            isSmall ? 'h-3 w-3' : 'h-4 w-4',
+            tierConfig.color,
+            'animate-bounce'
+          )} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Animated Progress Bar Component
+function AnimatedProgress({ 
+  value, 
+  className,
+  indicatorClassName,
+  showAnimation = true 
+}: { 
+  value: number
+  className?: string
+  indicatorClassName?: string
+  showAnimation?: boolean
+}) {
+  const [animatedValue, setAnimatedValue] = useState(0)
+  const isFirstRender = useRef(true)
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAnimatedValue(value)
+    }, showAnimation && isFirstRender.current ? 100 : 0)
+    isFirstRender.current = false
+    return () => clearTimeout(timer)
+  }, [value, showAnimation])
+  
+  return (
+    <div className={cn('relative h-4 w-full overflow-hidden rounded-full bg-muted/30', className)}>
+      <div 
+        className={cn(
+          'h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden',
+          indicatorClassName
+        )}
+        style={{ width: `${animatedValue}%` }}
+      >
+        {/* Shimmer effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+      </div>
+    </div>
+  )
+}
+
+// Achievement Badge Component - Mobile Optimized with Sheet
+function AchievementBadge({ achievement }: { achievement: string }) {
+  const config = ACHIEVEMENT_CONFIG[achievement]
+  if (!config) return null
+  
+  const Icon = config.icon
+  
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <button className={cn(
+          'p-2.5 sm:p-3 rounded-xl bg-gradient-to-br from-muted to-muted/50',
+          'border border-border/50 hover:border-primary/50',
+          'transition-all duration-300 active:scale-95 sm:hover:scale-110 cursor-pointer',
+          'shadow-sm hover:shadow-md',
+          'min-h-[44px] min-w-[44px] sm:min-h-[48px] sm:min-w-[48px] flex items-center justify-center'
+        )}>
+          <Icon className={cn('h-5 w-5 sm:h-6 sm:w-6', config.color)} />
+        </button>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="rounded-t-2xl">
+        <SheetHeader className="text-left">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              'p-3 rounded-xl bg-gradient-to-br from-muted to-muted/50',
+              'border border-border/50'
+            )}>
+              <Icon className={cn('h-8 w-8', config.color)} />
             </div>
-            <div className="min-w-0">
-              <p className="text-[10px] text-muted-foreground truncate">{item.title}</p>
-              <p className="text-xs font-semibold truncate">{item.value}</p>
+            <div>
+              <SheetTitle className="text-lg">{config.label}</SheetTitle>
+              <p className="text-sm text-muted-foreground mt-0.5">{achievement}</p>
             </div>
           </div>
-        );
-
-        if (isClickable) {
-          return (
-            <Link key={item.id} href={item.action!.href} className="block">
-              {content}
-            </Link>
-          );
-        }
-
-        return content;
-      })}
-    </div>
-  );
+        </SheetHeader>
+        <div className="mt-4 p-4 rounded-xl bg-muted/50">
+          <p className="text-sm">{config.description}</p>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
 }
 
-function DashboardSkeleton() {
+export default function PartnerDashboardPage() {
+  const router = useRouter()
+  const isPartner = useIsPartner()
+  const { partner } = useAuthStore()
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [showBroadcast, setShowBroadcast] = useState(true)
+  const [isBroadcastPaused, setIsBroadcastPaused] = useState(false)
+  const broadcastRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isPartner || !partner) {
+      router.push('/login')
+      return
+    }
+
+    const fetchData = async () => {
+      try {
+        const response = await apiFetch(`/api/stats/partner?partnerId=${partner.id}`)
+        // Check 401 before parsing JSON
+        if (response.status === 401) {
+          useAuthStore.getState().logout()
+          return
+        }
+        const result = await response.json()
+        if (result.success) {
+          setData(result.data)
+        } else {
+          setError(result.error || 'Failed to fetch data')
+        }
+      } catch (err) {
+        setError('Failed to load dashboard data')
+        console.error(err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    // Hydrate auth state, then fetch dashboard data
+    useAuthStore.getState().hydrate().then(() => {
+      if (useAuthStore.getState().isAuthenticated) {
+        fetchData()
+      }
+    })
+  }, [isPartner, partner, router])
+
+  // Calculate trend percentages
+  const calculateTrend = (current: number, previous?: number) => {
+    if (!previous || previous === 0) return { value: 0, isPositive: current > 0 }
+    const change = ((current - previous) / previous) * 100
+    return { value: Math.round(change), isPositive: change >= 0 }
+  }
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          {/* Broadcast skeleton */}
+          <Skeleton className="h-12 w-full" />
+          
+          {/* Header skeleton */}
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          
+          {/* Stats skeleton */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-32" />
+            ))}
+          </div>
+          
+          {/* Main content skeleton */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Skeleton className="h-80" />
+            <Skeleton className="h-80" />
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (error || !data) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+          <div className="p-4 rounded-full bg-destructive/10">
+            <AlertCircle className="h-12 w-12 text-destructive" />
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-semibold text-destructive">{error || 'Failed to load data'}</p>
+            <p className="text-sm text-muted-foreground mt-1">Please try again later</p>
+          </div>
+          <Button onClick={() => window.location.reload()} variant="outline">
+            Retry
+          </Button>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  const tierConfig = TIER_CONFIG[data.tier.current] || TIER_CONFIG['Bronze']
+
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-6 space-y-3 sm:space-y-6">
-      <Skeleton className="h-24 sm:h-32 rounded-xl sm:rounded-2xl" />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-        {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-20 sm:h-32 rounded-lg sm:rounded-2xl" />)}
+    <DashboardLayout>
+      <div className="space-y-4 sm:space-y-6">
+        {/* Running Text Broadcast - Mobile Optimized */}
+        {data.announcements.length > 0 && showBroadcast && (
+          <div className="relative overflow-hidden rounded-lg sm:rounded-xl">
+            {/* Gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600" />
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiLz48cGF0aCBkPSJNMjAgMjBjMC01LjUyMy00LjQ3Ny0xMC0xMC0xMFMwIDE0LjQ3NyAwIDIwczQuNDc3IDEwIDEwIDEwIDEwLTQuNDc3IDEwLTEwem0yMCAwYzAtNS41MjMtNC40NzctMTAtMTAtMTBTMjAgMTQuNDc3IDIwIDIwczQuNDc3IDEwIDEwIDEwIDEwLTQuNDc3IDEwLTEweiIgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiLz48L2c+PC9zdmc+')] opacity-30" />
+            
+            <div className="relative flex items-center">
+              {/* Left icon section - Compact on mobile */}
+              <div className="flex-shrink-0 px-2 sm:px-4 py-2 sm:py-3 flex items-center gap-1.5 sm:gap-2 bg-white/10">
+                <Volume2 className="h-4 w-4 sm:h-5 sm:w-5 text-white animate-pulse" />
+                <span className="text-xs sm:text-sm font-semibold text-white hidden sm:inline">PENGUMUMAN</span>
+              </div>
+              
+              {/* Marquee content */}
+              <div 
+                className="flex-1 overflow-hidden cursor-pointer"
+                onTouchStart={() => setIsBroadcastPaused(true)}
+                onTouchEnd={() => setIsBroadcastPaused(false)}
+                onMouseEnter={() => setIsBroadcastPaused(true)}
+                onMouseLeave={() => setIsBroadcastPaused(false)}
+                ref={broadcastRef}
+              >
+                <div className={cn(
+                  'whitespace-nowrap py-2 sm:py-3 px-2 sm:px-4',
+                  isBroadcastPaused ? 'animate-marquee-paused' : 'animate-marquee'
+                )}>
+                  {[...data.announcements, ...data.announcements].map((ann, i) => (
+                    <span key={`${ann.id}-${i}`} className="inline-block text-white text-xs sm:text-sm">
+                      <span className="font-semibold">{ann.title}</span>
+                      <span className="mx-2 sm:mx-3 text-white/50">|</span>
+                      <span className="text-white/80">{ann.description}</span>
+                      {i < data.announcements.length * 2 - 1 && (
+                        <span className="mx-4 sm:mx-6 text-white/30">◆</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Close button - Touch friendly */}
+              <button
+                onClick={() => setShowBroadcast(false)}
+                className="flex-shrink-0 p-2 sm:p-3 hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                aria-label="Close broadcast"
+              >
+                <X className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Page Header - Mobile Optimized */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-primary/20">
+              <AvatarImage src={data.partner.avatar || undefined} />
+              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground font-semibold text-sm sm:text-base">
+                {data.partner.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text line-clamp-1">
+                Selamat Datang, {data.partner.name}!
+              </h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Berikut ringkasan performa Anda
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Badge 
+              variant="outline" 
+              className="text-xs sm:text-sm px-2.5 sm:px-3 py-1 border-primary/30 bg-primary/5"
+            >
+              {new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Personal Stats Cards - Mobile Optimized 2x2 Grid */}
+        <div className="grid gap-3 grid-cols-2 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <EnhancedStatsCard
+            title="Profit Bulan Ini"
+            value={formatCurrency(data.stats.profit)}
+            description="Komisi dari transaksi selesai"
+            icon={DollarSign}
+            trend={calculateTrend(data.stats.profit, data.stats.lastMonthProfit)}
+            gradientFrom="from-emerald-500"
+            gradientTo="to-green-600"
+            iconBgClass="bg-white/20"
+          />
+          <EnhancedStatsCard
+            title="Transaksi Bulan Ini"
+            value={formatNumber(data.stats.transactions)}
+            description="Total transaksi selesai"
+            icon={ShoppingBag}
+            trend={calculateTrend(data.stats.transactions, data.stats.lastMonthTransactions)}
+            gradientFrom="from-blue-500"
+            gradientTo="to-cyan-600"
+            iconBgClass="bg-white/20"
+          />
+          <EnhancedStatsCard
+            title="Volume Bulan Ini"
+            value={formatCurrency(data.stats.volume)}
+            description="Total nominal transaksi"
+            icon={BarChart3}
+            trend={calculateTrend(data.stats.volume, data.stats.lastMonthVolume)}
+            gradientFrom="from-violet-500"
+            gradientTo="to-purple-600"
+            iconBgClass="bg-white/20"
+          />
+          <EnhancedStatsCard
+            title="Pending Orders"
+            value={formatNumber(data.stats.pending)}
+            description={data.stats.pending > 0 ? "Menunggu diproses" : "Tidak ada pending"}
+            icon={Clock}
+            gradientFrom={data.stats.pending > 0 ? "from-amber-500" : "from-slate-500"}
+            gradientTo={data.stats.pending > 0 ? "to-orange-600" : "to-slate-600"}
+            iconBgClass="bg-white/20"
+          />
+        </div>
+
+        {/* Tier Progress & Target Section - Mobile Optimized */}
+        <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+          {/* Current Tier & Progress */}
+          <Card className={cn(
+            'relative overflow-hidden border-2',
+            tierConfig.borderClass,
+            'bg-gradient-to-br',
+            tierConfig.gradientClass
+          )}>
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-32 h-32 sm:w-40 sm:h-40 -mr-8 sm:-mr-10 -mt-8 sm:-mt-10 rounded-full bg-gradient-to-br from-white/5 to-transparent blur-2xl" />
+            
+            <CardHeader className="relative z-10 p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                Tier & Progress
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Status tier dan progress Anda</CardDescription>
+            </CardHeader>
+            
+            <CardContent className="space-y-4 sm:space-y-6 relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
+              {/* Current Tier Badge */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <AnimatedTierBadge tier={data.tier.current} tierConfig={tierConfig} size="sm" />
+                  <div>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Tier Saat Ini</p>
+                    <p className={cn('text-lg sm:text-2xl font-bold', tierConfig.color)}>
+                      {data.tier.current}
+                    </p>
+                    {data.tier.badge && BADGE_CONFIG[data.tier.badge] && (
+                      <Badge 
+                        variant="secondary" 
+                        className={cn(
+                          'mt-1 bg-gradient-to-r text-[10px] sm:text-xs',
+                          BADGE_CONFIG[data.tier.badge].gradient,
+                          'text-white border-0'
+                        )}
+                      >
+                        {(() => {
+                          const BadgeIcon = BADGE_CONFIG[data.tier.badge].icon
+                          return <BadgeIcon className="h-3 w-3 mr-1" />
+                        })()}
+                        {data.tier.badge}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Komisi</p>
+                  <div className="flex items-center gap-1 justify-end">
+                    <p className="text-lg sm:text-2xl font-bold text-green-500">
+                      {(data.tier.commissionRate * 100).toFixed(0)}%
+                    </p>
+                    <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              {data.tier.nextTier && (
+                <div className="space-y-2 sm:space-y-3">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                      Progress ke {data.tier.nextTier}
+                    </span>
+                    <span className="font-semibold">{data.tier.progress.toFixed(1)}%</span>
+                  </div>
+                  <AnimatedProgress 
+                    value={data.tier.progress} 
+                    indicatorClassName="bg-gradient-to-r from-primary to-primary/80"
+                  />
+                  <div className="flex items-center justify-center gap-2 p-2 sm:p-3 rounded-lg bg-background/50 border">
+                    <Target className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
+                    <p className="text-xs sm:text-sm text-center">
+                      Butuh <span className="font-bold text-primary">{formatCurrency(data.tier.gapToNext)}</span> untuk naik tier
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Max Tier Message */}
+              {!data.tier.nextTier && (
+                <div className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-r from-purple-500/20 via-fuchsia-500/20 to-pink-500/20 border border-purple-500/30">
+                  <div className="relative inline-block">
+                    <div className="absolute inset-0 animate-ping opacity-30">
+                      <Crown className="h-8 w-8 sm:h-10 sm:w-10 text-purple-400" />
+                    </div>
+                    <Crown className="relative h-8 w-8 sm:h-10 sm:w-10 text-purple-400 mx-auto mb-2" />
+                  </div>
+                  <p className="font-bold text-purple-400 text-base sm:text-lg">Tier Maksimal!</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Anda sudah di tier tertinggi</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Target Progress */}
+          <Card className="bg-gradient-to-br from-background to-muted/30">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Target className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                Target Bulanan
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Progress pencapaian target bulan ini</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0 sm:pt-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Target</p>
+                  <p className="text-lg sm:text-2xl font-bold">{formatCurrency(data.target.amount)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Tercapai</p>
+                  <div className="flex items-center gap-1 justify-end">
+                    <p className={cn(
+                      'text-lg sm:text-2xl font-bold',
+                      data.target.progress >= 100 ? 'text-green-500' : 'text-foreground'
+                    )}>
+                      {formatCurrency(data.target.currentAmount)}
+                    </p>
+                    {data.target.progress >= 100 && (
+                      <BadgeCheck className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2 sm:space-y-3">
+                <div className="flex items-center justify-between text-xs sm:text-sm">
+                  <span>Progress</span>
+                  <span className={cn(
+                    'font-semibold px-2 py-0.5 rounded-full text-[10px] sm:text-xs',
+                    data.target.progress >= 100 ? 'bg-green-500/20 text-green-500' :
+                    data.target.progress >= 75 ? 'bg-yellow-500/20 text-yellow-500' :
+                    'bg-muted text-muted-foreground'
+                  )}>
+                    {data.target.progress.toFixed(1)}%
+                  </span>
+                </div>
+                <AnimatedProgress 
+                  value={Math.min(100, data.target.progress)}
+                  indicatorClassName={cn(
+                    data.target.progress >= 100 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                    data.target.progress >= 75 ? 'bg-gradient-to-r from-yellow-500 to-amber-500' :
+                    'bg-gradient-to-r from-primary to-primary/80'
+                  )}
+                />
+              </div>
+
+              {data.target.progress < 100 && (
+                <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-yellow-500/20">
+                    <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium">Menuju Target</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Kurang <span className="font-semibold text-yellow-500">{formatCurrency(data.target.amount - data.target.currentAmount)}</span> lagi
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {data.target.progress >= 100 && (
+                <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-green-500/10 border border-green-500/20">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-green-500/20">
+                    <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-green-500">Target Tercapai!</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Luar biasa! Target bulan ini berhasil dicapai</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Leaderboard Section - Mobile Optimized with Collapsible */}
+        <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+          {/* Top 5 Leaderboard - Mobile Version with Collapsible */}
+          <Card className="sm:hidden">
+            <Collapsible defaultOpen>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="p-4 cursor-pointer active:bg-muted/30 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Trophy className="h-4 w-4 text-yellow-500" />
+                      Leaderboard Bulan Ini
+                    </CardTitle>
+                    <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 data-[state=open]:rotate-180" />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="p-4 pt-0">
+                  <ScrollArea className="max-h-80 -webkit-overflow-scrolling-touch">
+                    <div className="space-y-1.5">
+                      {data.leaderboard.map((item, index) => {
+                        const isCurrentUser = item.partnerId === partner?.id
+                        const itemTierConfig = TIER_CONFIG[item.tier] || TIER_CONFIG['Bronze']
+                        
+                        return (
+                          <div
+                            key={item.partnerId}
+                            className={cn(
+                              'flex items-center gap-2 p-2 rounded-lg transition-all duration-300',
+                              isCurrentUser 
+                                ? 'bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-2 border-primary/30' 
+                                : 'border border-transparent active:bg-muted/30'
+                            )}
+                          >
+                            <MedalIcon rank={index + 1} />
+                            <Avatar className={cn(
+                              'h-8 w-8 ring-2 flex-shrink-0',
+                              isCurrentUser ? 'ring-primary/50' : 'ring-transparent'
+                            )}>
+                              <AvatarImage src={item.avatar || undefined} />
+                              <AvatarFallback className={cn(itemTierConfig.bgClass, itemTierConfig.color, 'text-xs')}>
+                                {item.name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className={cn('font-medium truncate text-sm', isCurrentUser && 'text-primary')}>
+                                  {item.name}
+                                </p>
+                                {isCurrentUser && (
+                                  <Badge variant="default" className="text-[10px]">Anda</Badge>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground mt-0.5">
+                                {item.transactions} transaksi
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="font-bold text-green-500 text-xs">{formatCurrency(item.profit)}</p>
+                              <Badge variant="secondary" className={cn('text-[10px] mt-0.5', itemTierConfig.bgClass, itemTierConfig.color)}>
+                                {item.tier}
+                              </Badge>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </ScrollArea>
+                  {data.partnerRank > 5 && (
+                    <div className="mt-3 p-3 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-bold text-sm">
+                          #{data.partnerRank}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-primary text-sm truncate">{data.partner.name} (Anda)</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Kurang <span className="font-semibold text-green-500">{formatCurrency(data.gapToNextRank)}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
+          </Card>
+          
+          {/* Desktop Leaderboard */}
+          <Card className="hidden sm:block">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                Leaderboard Bulan Ini
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Top 5 partner dengan profit tertinggi</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+              <ScrollArea className="max-h-80 sm:max-h-96 -webkit-overflow-scrolling-touch">
+                <div className="space-y-1.5 sm:space-y-2">
+                  {data.leaderboard.map((item, index) => {
+                    const isCurrentUser = item.partnerId === partner?.id
+                    const itemTierConfig = TIER_CONFIG[item.tier] || TIER_CONFIG['Bronze']
+                    
+                    return (
+                      <div
+                        key={item.partnerId}
+                        className={cn(
+                          'flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-300',
+                          isCurrentUser 
+                            ? 'bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-2 border-primary/30 shadow-lg shadow-primary/10' 
+                            : 'hover:bg-muted/50 border border-transparent active:bg-muted/30'
+                        )}
+                      >
+                        {/* Rank with Medal */}
+                        <MedalIcon rank={index + 1} />
+
+                        {/* Avatar */}
+                        <Avatar className={cn(
+                          'h-8 w-8 sm:h-10 sm:w-10 ring-2 flex-shrink-0',
+                          isCurrentUser ? 'ring-primary/50' : 'ring-transparent'
+                        )}>
+                          <AvatarImage src={item.avatar || undefined} />
+                          <AvatarFallback className={cn(itemTierConfig.bgClass, itemTierConfig.color, 'text-xs sm:text-sm')}>
+                            {item.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                            <p className={cn(
+                              'font-medium truncate text-sm sm:text-base',
+                              isCurrentUser && 'text-primary'
+                            )}>
+                              {item.name}
+                            </p>
+                            {isCurrentUser && (
+                              <Badge variant="default" className="text-[10px] sm:text-xs">
+                                Anda
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                            <span>{item.transactions} transaksi</span>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="hidden sm:inline">{formatCurrency(item.volume)}</span>
+                          </div>
+                        </div>
+
+                        {/* Profit */}
+                        <div className="text-right flex-shrink-0">
+                          <p className="font-bold text-green-500 text-xs sm:text-sm">
+                            {formatCurrency(item.profit)}
+                          </p>
+                          <Badge 
+                            variant="secondary" 
+                            className={cn('text-[10px] sm:text-xs mt-0.5 sm:mt-1', itemTierConfig.bgClass, itemTierConfig.color)}
+                          >
+                            {item.tier}
+                          </Badge>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
+
+              {/* Current Partner Position (if not in top 5) */}
+              {data.partnerRank > 5 && (
+                <div className="mt-3 sm:mt-4 p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 border-dashed border-primary/30 bg-primary/5">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center font-bold text-sm sm:text-lg">
+                      #{data.partnerRank}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-primary text-sm truncate">{data.partner.name} (Anda)</p>
+                      <p className="text-[10px] sm:text-sm text-muted-foreground">
+                        Kurang <span className="font-semibold text-green-500">{formatCurrency(data.gapToNextRank)}</span> untuk naik rank
+                      </p>
+                    </div>
+                    <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary animate-bounce flex-shrink-0" />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Top Volume 30 Days - Mobile Optimized */}
+          <Card>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-violet-500" />
+                Top Volume 30 Hari
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Partner dengan volume penjualan tertinggi</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+              <ScrollArea className="max-h-80 sm:max-h-96 -webkit-overflow-scrolling-touch">
+                <div className="space-y-1.5 sm:space-y-2">
+                  {data.topPartnersByVolume30Days.map((item, index) => {
+                    const isCurrentUser = item.partnerId === partner?.id
+                    const itemTierConfig = TIER_CONFIG[item.tier] || TIER_CONFIG['Bronze']
+                    
+                    return (
+                      <div
+                        key={item.partnerId}
+                        className={cn(
+                          'flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-300',
+                          isCurrentUser 
+                            ? 'bg-gradient-to-r from-violet-500/10 via-violet-500/5 to-transparent border-2 border-violet-500/30' 
+                            : 'hover:bg-muted/50 border border-transparent active:bg-muted/30'
+                        )}
+                      >
+                        {/* Rank with Medal */}
+                        <MedalIcon rank={index + 1} />
+
+                        {/* Avatar */}
+                        <Avatar className={cn(
+                          'h-8 w-8 sm:h-10 sm:w-10 ring-2 flex-shrink-0',
+                          isCurrentUser ? 'ring-violet-500/50' : 'ring-transparent'
+                        )}>
+                          <AvatarImage src={item.avatar || undefined} />
+                          <AvatarFallback className={cn(itemTierConfig.bgClass, itemTierConfig.color, 'text-xs sm:text-sm')}>
+                            {item.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                            <p className={cn(
+                              'font-medium truncate text-sm sm:text-base',
+                              isCurrentUser && 'text-violet-600'
+                            )}>
+                              {item.name}
+                            </p>
+                            {isCurrentUser && (
+                              <Badge variant="default" className="text-[10px] sm:text-xs bg-violet-500">
+                                Anda
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                            <span>{item.transactions} transaksi</span>
+                          </div>
+                        </div>
+
+                        {/* Volume */}
+                        <div className="text-right flex-shrink-0">
+                          <p className="font-bold text-violet-500 text-xs sm:text-sm">
+                            {formatCurrency(item.totalVolume)}
+                          </p>
+                          <Badge 
+                            variant="secondary" 
+                            className={cn('text-[10px] sm:text-xs mt-0.5 sm:mt-1', itemTierConfig.bgClass, itemTierConfig.color)}
+                          >
+                            {item.tier}
+                          </Badge>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
+
+              {/* Current Partner Position (if not in top 5) */}
+              {data.partnerVolumeRank > 5 && (
+                <div className="mt-3 sm:mt-4 p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 border-dashed border-violet-500/30 bg-violet-500/5">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center font-bold text-sm sm:text-lg">
+                      #{data.partnerVolumeRank}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-violet-600 text-sm truncate">{data.partner.name} (Anda)</p>
+                      <p className="text-[10px] sm:text-sm text-muted-foreground">
+                        Kurang <span className="font-semibold text-violet-500">{formatCurrency(data.gapToNextVolumeRank)}</span> untuk naik rank
+                      </p>
+                    </div>
+                    <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5 text-violet-500 animate-bounce flex-shrink-0" />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Badge History & Achievements - Mobile Optimized */}
+          <Card>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Medal className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
+                Riwayat & Pencapaian
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Badge dan pencapaian Anda</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+              {/* Achievement Badges */}
+              {data.achievements && data.achievements.length > 0 && (
+                <div className="mb-4 sm:mb-6">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 sm:mb-3">Achievement Badges</p>
+                  <div className="flex flex-wrap gap-2">
+                    {data.achievements.map((achievement) => (
+                      <AchievementBadge key={achievement} achievement={achievement} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="border-t pt-3 sm:pt-4">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 sm:mb-3">Riwayat Badge Bulanan</p>
+                {data.badgeHistory.length === 0 ? (
+                  <div className="text-center py-6 sm:py-8">
+                    <div className="p-3 sm:p-4 rounded-full bg-muted/50 w-fit mx-auto mb-3">
+                      <Flame className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground/50" />
+                    </div>
+                    <p className="font-medium text-muted-foreground text-sm sm:text-base">Belum ada badge</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground/70">Raih posisi terbaik untuk mendapatkan badge!</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="max-h-48 sm:max-h-64 -webkit-overflow-scrolling-touch">
+                    <div className="space-y-1.5 sm:space-y-2">
+                      {data.badgeHistory.map((item) => {
+                        const badgeConfig = BADGE_CONFIG[item.badge]
+                        const BadgeIcon = badgeConfig?.icon || Medal
+                        
+                        return (
+                          <div
+                            key={item.id}
+                            className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg sm:rounded-xl border bg-gradient-to-r from-amber-500/5 to-transparent hover:from-amber-500/10 transition-colors"
+                          >
+                            <div className={cn(
+                              'w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0',
+                              'bg-gradient-to-br',
+                              badgeConfig?.gradient || 'from-amber-500 to-amber-600'
+                            )}>
+                              <BadgeIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                <p className="font-medium text-sm sm:text-base">{item.badge}</p>
+                                <Badge variant="outline" className="text-[10px] sm:text-xs">
+                                  #{item.rank}
+                                </Badge>
+                              </div>
+                              <p className="text-[10px] sm:text-sm text-muted-foreground">
+                                {MONTH_NAMES[item.month - 1]} {item.year}
+                              </p>
+                              <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                                <span className="text-green-500 font-medium">{formatCurrency(item.profit)}</span>
+                                <span>•</span>
+                                <span>{item.transactions} transaksi</span>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </ScrollArea>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Gap Indicator / Motivation Card - Mobile Optimized */}
+        {(data.tier.gapToNext > 0 || (data.partnerRank > 1 && data.gapToNextRank > 0) || data.target.progress < 100) && (
+          <Card className="relative overflow-hidden bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-fuchsia-500/10 border-violet-500/30">
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-40 h-40 sm:w-60 sm:h-60 -mr-12 sm:-mr-20 -mt-12 sm:-mt-20 rounded-full bg-gradient-to-br from-violet-500/20 to-transparent blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-28 h-28 sm:w-40 sm:h-40 -ml-6 sm:-ml-10 -mb-6 sm:-mb-10 rounded-full bg-gradient-to-tr from-fuchsia-500/20 to-transparent blur-3xl" />
+            
+            <CardContent className="p-4 sm:p-6 pt-4 sm:pt-6 relative z-10">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/30">
+                  <ChevronUp className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-base sm:text-lg flex items-center gap-2">
+                    <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                    Tingkatkan Performa!
+                  </h3>
+                  <div className="mt-2 sm:mt-3 grid gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                    {data.tier.gapToNext > 0 && (
+                      <div className="flex items-center gap-2 p-2 sm:p-2 rounded-lg bg-background/50">
+                        <Trophy className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
+                        <p className="text-[10px] sm:text-sm">
+                          <span className="font-semibold text-primary">{formatCurrency(data.tier.gapToNext)}</span>
+                          <span className="text-muted-foreground"> lagi untuk naik ke tier {data.tier.nextTier}</span>
+                        </p>
+                      </div>
+                    )}
+                    {data.partnerRank > 1 && data.gapToNextRank > 0 && (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-background/50">
+                        <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
+                        <p className="text-[10px] sm:text-sm">
+                          <span className="font-semibold text-green-500">{formatCurrency(data.gapToNextRank)}</span>
+                          <span className="text-muted-foreground"> lagi untuk naik ke posisi #{data.partnerRank - 1}</span>
+                        </p>
+                      </div>
+                    )}
+                    {data.target.progress < 100 && (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-background/50">
+                        <Target className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500 flex-shrink-0" />
+                        <p className="text-[10px] sm:text-sm">
+                          <span className="font-semibold text-yellow-500">{formatCurrency(data.target.amount - data.target.currentAmount)}</span>
+                          <span className="text-muted-foreground"> lagi untuk mencapai target bulanan</span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <Button 
+                  className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 shadow-lg shadow-violet-500/30 transition-all active:scale-95 sm:hover:scale-105 min-h-[44px] w-full sm:w-auto"
+                  onClick={() => router.push('/partner/transactions')}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tambah Transaksi
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
-      <Skeleton className="h-28 sm:h-32 rounded-xl sm:rounded-2xl" />
-      <Skeleton className="h-48 sm:h-64 rounded-xl sm:rounded-2xl" />
-    </div>
-  );
+
+      {/* Custom CSS for animations */}
+      <style jsx global>{`
+        @keyframes marquee {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+        
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-100%);
+          }
+          100% {
+            transform: translateX(100%);
+          }
+        }
+        
+        .animate-marquee {
+          display: inline-block;
+          animation: marquee 30s linear infinite;
+        }
+        
+        .animate-marquee-paused {
+          display: inline-block;
+          animation: marquee 30s linear infinite;
+          animation-play-state: paused;
+        }
+        
+        .animate-shimmer {
+          animation: shimmer 2s infinite;
+        }
+      `}</style>
+    </DashboardLayout>
+  )
+}
+
+// Plus icon component
+function Plus({ className }: { className?: string }) {
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  )
 }

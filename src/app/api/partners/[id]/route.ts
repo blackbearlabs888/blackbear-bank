@@ -1,45 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser, hashPassword, validatePassword } from '@/lib/auth';
-import { db, toNumber } from '@/lib/db';
-import { randomBytes } from 'crypto';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { getTierFromProfit, getTierProgress } from '@/lib/calculations'
 
-// Helper to serialize partner data
-function serializePartner(partner: Record<string, unknown>) {
-  return {
-    ...partner,
-    commission: toNumber(partner.commission),
-    target: toNumber(partner.target),
-    totalProfit: toNumber(partner.totalProfit),
-    totalVolume: toNumber(partner.totalVolume),
-  };
-}
-
-// Generate random password
-function generateRandomPassword(length: number = 8): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  let password = '';
-  for (let i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return password;
-}
-
-// GET single partner
+// GET /api/partners/[id] - Get partner detail
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== 'owner') {
-      return NextResponse.json(
-        { success: false, error: 'Tidak memiliki akses' },
-        { status: 403 }
-      );
-    }
-
-    const { id } = await params;
+    const { id } = await params
 
     const partner = await db.partner.findUnique({
       where: { id },
@@ -47,236 +16,218 @@ export async function GET(
         user: {
           select: {
             id: true,
-            email: true,
             name: true,
+            email: true,
+            avatar: true,
             createdAt: true,
           },
         },
-        rankingHistory: {
-          orderBy: { month: 'desc' },
-          take: 12,
-        },
         _count: {
-          select: { transactions: true, customers: true },
+          select: {
+            transactions: true,
+            customers: true,
+          },
         },
       },
-    });
+    })
 
     if (!partner) {
       return NextResponse.json(
         { success: false, error: 'Partner tidak ditemukan' },
         { status: 404 }
-      );
+      )
     }
 
-    // Get monthly stats for the current month
-    const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    // Calculate progress (based on PROFIT, not volume)
+    const targetProgress = partner.targetAmount > 0
+      ? Math.min(100, (partner.totalProfit / partner.targetAmount) * 100)
+      : 0
+    const tierProgress = getTierProgress(partner.totalProfit)
+    const calculatedTier = getTierFromProfit(partner.totalProfit)
 
-    const monthlyStats = await db.transaction.aggregate({
-      where: {
-        partnerId: id,
-        createdAt: {
-          gte: new Date(now.getFullYear(), now.getMonth(), 1),
-          lt: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+    // Get recent transactions (last 5)
+    const recentTransactions = await db.transaction.findMany({
+      where: { partnerId: partner.id },
+      include: {
+        customer: {
+          select: {
+            name: true,
+            whatsapp: true,
+          },
         },
-        status: 'success',
+        paymentType: {
+          select: {
+            name: true,
+          },
+        },
       },
-      _sum: {
-        nominal: true,
-        partnerProfit: true,
+      orderBy: {
+        createdAt: 'desc',
       },
-      _count: true,
-    });
+      take: 5,
+    })
 
     return NextResponse.json({
       success: true,
       data: {
-        ...serializePartner(partner as unknown as Record<string, unknown>),
-        monthlyStats: {
-          volume: toNumber(monthlyStats._sum.nominal),
-          profit: toNumber(monthlyStats._sum.partnerProfit),
-          transactions: monthlyStats._count,
-        },
+        ...partner,
+        commissionRate: partner.commissionRate * 100,
+        targetProgress,
+        tierProgress,
+        calculatedTier,
+        recentTransactions,
       },
-    });
+    })
   } catch (error) {
-    console.error('Get partner error:', error);
+    console.error('Error fetching partner:', error)
     return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
+      { success: false, error: 'Gagal mengambil data partner' },
       { status: 500 }
-    );
+    )
   }
 }
 
-// PATCH update partner
+// PATCH /api/partners/[id] - Update partner
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
+    const { id } = await params
+    const body = await request.json()
 
-    if (!user || user.role !== 'owner') {
-      return NextResponse.json(
-        { success: false, error: 'Tidak memiliki akses' },
-        { status: 403 }
-      );
-    }
-
-    const { id } = await params;
-    const body = await request.json();
-    const {
-      password,
-      generatePassword,
-      target,
-      tier,
-      status,
-      notes,
-      commission,
-      name,
-      phone,
-      bankName,
-      bankAccount,
-      bankHolder,
-      city,
-      badge,
-    } = body;
-
-    // Find partner
-    const partner = await db.partner.findUnique({
+    // Check if partner exists
+    const existingPartner = await db.partner.findUnique({
       where: { id },
-      include: { user: true },
-    });
+    })
 
-    if (!partner) {
+    if (!existingPartner) {
       return NextResponse.json(
         { success: false, error: 'Partner tidak ditemukan' },
         { status: 404 }
-      );
+      )
     }
 
-    const updateData: Record<string, unknown> = {};
-    const userData: Record<string, unknown> = {};
-    let newPassword: string | null = null;
-
-    // Handle password update
-    if (generatePassword) {
-      newPassword = generateRandomPassword(10);
-      userData.password = await hashPassword(newPassword);
-    } else if (password) {
-      // Validate password meets security requirements
-      if (!validatePassword(String(password))) {
+    // Validate commission rate if provided
+    if (body.commissionRate !== undefined) {
+      if (body.commissionRate < 0 || body.commissionRate > 100) {
         return NextResponse.json(
-          { success: false, error: 'Password minimal 8 karakter, harus mengandung huruf besar, huruf kecil, dan angka' },
+          { success: false, error: 'Komisi harus antara 0-100%' },
           { status: 400 }
-        );
+        )
       }
-      userData.password = await hashPassword(String(password));
     }
 
-    // Handle other fields
-    if (target !== undefined) updateData.target = parseFloat(target);
-    if (tier !== undefined) updateData.tier = tier;
-    if (status !== undefined) updateData.status = status;
-    if (notes !== undefined) updateData.notes = notes;
-    if (commission !== undefined) updateData.commission = parseFloat(commission);
-    if (badge !== undefined) updateData.badge = badge;
-
-    // Handle partner info updates
-    if (name !== undefined) {
-      updateData.name = name;
-      userData.name = name;
+    // Validate tier if provided
+    if (body.tier && !['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'].includes(body.tier)) {
+      return NextResponse.json(
+        { success: false, error: 'Tier tidak valid' },
+        { status: 400 }
+      )
     }
-    if (phone !== undefined) updateData.phone = phone;
-    if (bankName !== undefined) updateData.bankName = bankName;
-    if (bankAccount !== undefined) updateData.bankAccount = bankAccount;
-    if (bankHolder !== undefined) updateData.bankHolder = bankHolder;
-    if (city !== undefined) updateData.city = city;
 
-    // Update user if needed
-    if (Object.keys(userData).length > 0) {
-      await db.user.update({
-        where: { id: partner.userId },
-        data: userData,
-      });
+    // Validate status if provided
+    if (body.status && !['ACTIVE', 'SUSPENDED'].includes(body.status)) {
+      return NextResponse.json(
+        { success: false, error: 'Status tidak valid' },
+        { status: 400 }
+      )
     }
+
+    // Build update data
+    const updateData: Record<string, unknown> = {}
+
+    if (body.status !== undefined) updateData.status = body.status
+    if (body.tier !== undefined) updateData.tier = body.tier
+    if (body.commissionRate !== undefined) updateData.commissionRate = body.commissionRate / 100
+    if (body.targetAmount !== undefined) updateData.targetAmount = body.targetAmount
+    if (body.badge !== undefined) updateData.badge = body.badge
+    if (body.bankName !== undefined) updateData.bankName = body.bankName
+    if (body.accountNumber !== undefined) updateData.accountNumber = body.accountNumber
+    if (body.accountHolder !== undefined) updateData.accountHolder = body.accountHolder
+    if (body.city !== undefined) updateData.city = body.city
+    if (body.whatsapp !== undefined) updateData.whatsapp = body.whatsapp
 
     // Update partner
-    const updatedPartner = await db.partner.update({
+    const partner = await db.partner.update({
       where: { id },
       data: updateData,
-    });
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            createdAt: true,
+          },
+        },
+      },
+    })
+
+    // Calculate progress for response (based on PROFIT, not volume)
+    const targetProgress = partner.targetAmount > 0
+      ? Math.min(100, (partner.totalProfit / partner.targetAmount) * 100)
+      : 0
+    const tierProgress = getTierProgress(partner.totalProfit)
+    const calculatedTier = getTierFromProfit(partner.totalProfit)
 
     return NextResponse.json({
       success: true,
-      data: serializePartner(updatedPartner as unknown as Record<string, unknown>),
+      data: {
+        ...partner,
+        commissionRate: partner.commissionRate * 100,
+        targetProgress,
+        tierProgress,
+        calculatedTier,
+      },
       message: 'Partner berhasil diperbarui',
-      newPassword: newPassword, // Only returned when generating new password
-    });
+    })
   } catch (error) {
-    console.error('Update partner error:', error);
+    console.error('Error updating partner:', error)
     return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
+      { success: false, error: 'Gagal memperbarui partner' },
       { status: 500 }
-    );
+    )
   }
 }
 
-// DELETE partner
+// DELETE /api/partners/[id] - Delete partner (soft delete by suspending)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== 'owner') {
-      return NextResponse.json(
-        { success: false, error: 'Tidak memiliki akses' },
-        { status: 403 }
-      );
-    }
-
-    const { id } = await params;
+    const { id } = await params
 
     // Check if partner exists
-    const partner = await db.partner.findUnique({
+    const existingPartner = await db.partner.findUnique({
       where: { id },
-      include: {
-        _count: { select: { transactions: true } },
-      },
-    });
+    })
 
-    if (!partner) {
+    if (!existingPartner) {
       return NextResponse.json(
         { success: false, error: 'Partner tidak ditemukan' },
         { status: 404 }
-      );
+      )
     }
 
-    // Check if partner has transactions
-    if (partner._count.transactions > 0) {
-      return NextResponse.json(
-        { success: false, error: 'Partner tidak dapat dihapus karena sudah memiliki transaksi' },
-        { status: 400 }
-      );
-    }
-
-    // Delete partner (cascade will delete user too)
-    await db.partner.delete({
+    // Suspend instead of delete
+    const partner = await db.partner.update({
       where: { id },
-    });
+      data: { status: 'SUSPENDED' },
+    })
 
     return NextResponse.json({
       success: true,
-      message: 'Partner berhasil dihapus',
-    });
+      data: partner,
+      message: 'Partner berhasil di-suspend',
+    })
   } catch (error) {
-    console.error('Delete partner error:', error);
+    console.error('Error deleting partner:', error)
     return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
+      { success: false, error: 'Gagal menghapus partner' },
       { status: 500 }
-    );
+    )
   }
 }
