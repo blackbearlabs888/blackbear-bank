@@ -103,7 +103,7 @@ export default function HomePage() {
                   >
                     <Link href="/order">
                       <Zap className="w-4 h-4" />
-                      <span className="sm:inline hidden">Order Sekarang</span>
+                      <span className="sm:inline hidden"></span>Order Sekarang
                     </Link>
                   </Button>
                   <Button
@@ -114,7 +114,7 @@ export default function HomePage() {
                   >
                     <Link href="/track">
                       <Truck className="w-4 h-4" />
-                      <span className="sm:inline hidden">Track Order</span>
+                      <span className="sm:inline hidden"></span>Track Order
                     </Link>
                   </Button>
                 </div>
