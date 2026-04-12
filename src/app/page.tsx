@@ -64,18 +64,18 @@ export default function HomePage() {
 
       <div className="relative">
 
-        {/* ==================== HERO SECTION (Full Screen) ==================== */}
-        <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* ==================== HERO SECTION ==================== */}
+        <section className="relative overflow-hidden">
           {/* Background gradient blobs */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-20 left-1/4 w-[600px] h-[500px] bg-primary/5 rounded-full blur-[120px]" />
             <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-fuchsia-500/5 rounded-full blur-[100px]" />
           </div>
 
-          <div className="w-full px-4 md:px-6 lg:px-8 py-20">
-            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="w-full px-4 md:px-6 lg:px-8 pt-28 pb-20 md:pt-32 md:pb-24">
+            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
               {/* Left: Text Content */}
-              <div className="text-center lg:text-left space-y-7">
+              <div className="text-center lg:text-left space-y-6">
                 {/* Badge */}
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/15 bg-primary/5 text-primary text-sm font-medium">
                   <Sparkles className="w-3.5 h-3.5" />
@@ -244,7 +244,7 @@ export default function HomePage() {
               </div>
 
               {/* Payment Type Cards — Horizontal scroll (all screen sizes) */}
-              <div className="overflow-x-auto hide-scrollbar -mx-4 px-4">
+              <div className="overflow-x-auto hide-scrollbar">
                 <div className="flex gap-5 w-max pb-2">
                   {paymentTypes.map((pt, index) => {
                     const Icon = getPaymentIcon(index);
@@ -655,27 +655,33 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ==================== CTA SECTION ==================== */}
+        {/* ==================== CTA SECTION — Clean & Different from Partner ==================== */}
         <section className="relative py-20 md:py-24">
           <div className="w-full px-4 md:px-6 lg:px-8">
-            <div className="relative overflow-hidden rounded-3xl gradient-primary p-12 md:p-20 text-center">
-              {/* Subtle decorations */}
-              <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
-              <div className="absolute bottom-0 left-0 w-60 h-60 bg-fuchsia-400/10 rounded-full blur-3xl" />
+            <div className="max-w-4xl mx-auto">
+              {/* Top accent line */}
+              <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/30 to-transparent mb-12" />
 
-              <div className="relative z-10 space-y-8 max-w-2xl mx-auto">
-                <h2 className="text-3xl md:text-5xl font-bold text-white leading-tight tracking-tight">
-                  Siap Tarik Tunai Kartu Kredit Anda?
-                </h2>
-                <p className="text-white/75 text-lg leading-relaxed">
-                  Proses cepat, rate terbaik, dan dana langsung cair. Ribuan pelanggan telah membuktikan.
-                </p>
+              <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16">
+                {/* Left — Text */}
+                <div className="flex-1 space-y-4 text-center md:text-left">
+                  <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                    Siap Tarik Tunai{' '}
+                    <span className="bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
+                      Kartu Kredit Anda?
+                    </span>
+                  </h2>
+                  <p className="text-muted-foreground text-base leading-relaxed">
+                    Proses cepat, rate terbaik, dan dana langsung cair. Ribuan pelanggan telah membuktikan.
+                  </p>
+                </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                {/* Right — Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
                   <Button
                     asChild
                     size="lg"
-                    className="bg-white text-gray-900 hover:bg-white/90 rounded-xl h-12 px-8 text-sm font-medium shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                    className="gradient-primary text-white rounded-xl h-12 px-8 text-sm font-medium shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                   >
                     <Link href="/order">
                       <Zap className="w-4 h-4" />
@@ -684,9 +690,9 @@ export default function HomePage() {
                   </Button>
                   <Button
                     asChild
-                    size="lg"
                     variant="outline"
-                    className="border-2 border-white/25 text-white hover:bg-white/10 hover:text-white rounded-xl h-12 px-8 text-sm font-medium backdrop-blur-sm transition-all duration-300"
+                    size="lg"
+                    className="rounded-xl h-12 px-8 text-sm font-medium border-border/60 hover:bg-accent transition-all duration-300"
                   >
                     <Link href="/track">
                       <Truck className="w-4 h-4" />
@@ -695,6 +701,9 @@ export default function HomePage() {
                   </Button>
                 </div>
               </div>
+
+              {/* Bottom accent line */}
+              <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/30 to-transparent mt-12" />
             </div>
           </div>
         </section>
