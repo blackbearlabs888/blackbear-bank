@@ -311,50 +311,115 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* ==================== SERVICES / FEATURES SECTION (3 Grid) ==================== */}
-        <section className="relative py-20 md:py-24 bg-muted/30">
+        {/* ==================== SERVICES — Modern Bento Grid ==================== */}
+        <section className="relative py-20 md:py-24">
           <div className="w-full px-4 md:px-6 lg:px-8">
-            <div className="text-center mb-14">
+            {/* Section Header */}
+            <div className="mb-14">
               <p className="text-sm font-medium text-primary mb-3">Layanan Kami</p>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
                 Layanan Lengkap untuk Anda
               </h2>
-              <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
+              <p className="text-muted-foreground max-w-lg leading-relaxed">
                 Kami menyediakan berbagai layanan gestun dengan proses cepat dan aman.
               </p>
             </div>
 
-            <div className="grid sm:grid-cols-3 gap-5 max-w-4xl mx-auto">
-              {[
-                {
-                  icon: CreditCard,
-                  title: 'Kartu Kredit',
-                  description: 'Gestun semua jenis kartu kredit. Visa, Mastercard, JCB. Rate terbaik dan proses cepat.',
-                },
-                {
-                  icon: Wallet,
-                  title: 'Paylater',
-                  description: 'Tarik dana dari GoPay Paylater, Shopee Paylater, Akulaku, dan paylater lainnya.',
-                },
-                {
-                  icon: Shield,
-                  title: 'Aman & Terpercaya',
-                  description: 'Transaksi dilindungi dengan sistem tracking real-time. Ribuan pelanggan puas.',
-                },
-              ].map((feature, i) => (
-                <Card
-                  key={i}
-                  className="group border-border/50 hover:border-primary/20 hover:shadow-md transition-all duration-300 py-0 gap-0 bg-background"
-                >
-                  <CardContent className="p-6 space-y-4">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors duration-300">
-                      <feature.icon className="w-6 h-6 text-primary" />
+            {/* Bento Grid */}
+            <div className="grid md:grid-cols-3 gap-4 md:gap-5">
+              {/* Card 1 — Feature highlight (spans 2 cols on desktop) */}
+              <Card className="group md:col-span-2 border-border/50 hover:border-primary/20 hover:shadow-lg transition-all duration-500 py-0 gap-0 bg-background overflow-hidden">
+                <CardContent className="p-6 md:p-8">
+                  <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+                    <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/20">
+                      <CreditCard className="w-7 h-7 text-white" />
                     </div>
-                    <h3 className="font-semibold text-base">{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
+                    <div className="space-y-3 flex-1">
+                      <h3 className="text-xl font-bold">Kartu Kredit</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed max-w-md">
+                        Gestun semua jenis kartu kredit — Visa, Mastercard, JCB. Rate terbaik, proses cepat, dan dana langsung cair ke rekening Anda.
+                      </p>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {['Visa', 'Mastercard', 'JCB', 'BCA', 'BNI', 'Mandiri'].map((brand) => (
+                          <span key={brand} className="text-xs px-3 py-1 rounded-full bg-muted/80 text-muted-foreground font-medium">
+                            {brand}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Card 2 — Paylater */}
+              <Card className="group border-border/50 hover:border-fuchsia-500/20 hover:shadow-lg transition-all duration-500 py-0 gap-0 bg-background">
+                <CardContent className="p-6 md:p-8 flex flex-col h-full">
+                  <div className="w-14 h-14 rounded-2xl bg-fuchsia-500/10 flex items-center justify-center flex-shrink-0 mb-5 group-hover:bg-fuchsia-500/15 transition-colors duration-300">
+                    <Wallet className="w-7 h-7 text-fuchsia-500" />
+                  </div>
+                  <div className="space-y-3 flex-1">
+                    <h3 className="text-xl font-bold">Paylater</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Tarik dana dari GoPay, Shopee, Akulaku, dan paylater lainnya.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-4">
+                    {['GoPay', 'Shopee', 'Akulaku'].map((brand) => (
+                      <span key={brand} className="text-xs px-3 py-1 rounded-full bg-fuchsia-500/5 text-fuchsia-500/80 font-medium border border-fuchsia-500/10">
+                        {brand}
+                      </span>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Card 3 — Aman & Terpercaya */}
+              <Card className="group border-border/50 hover:border-emerald-500/20 hover:shadow-lg transition-all duration-500 py-0 gap-0 bg-background">
+                <CardContent className="p-6 md:p-8">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mb-5 group-hover:bg-emerald-500/15 transition-colors duration-300">
+                    <Shield className="w-7 h-7 text-emerald-500" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">Aman & Terpercaya</h3>
+                  <div className="space-y-3">
+                    {[
+                      { icon: Shield, text: 'Tracking real-time setiap transaksi' },
+                      { icon: Clock, text: 'Proses verifikasi 15-30 menit' },
+                      { icon: Users, text: '10,000+ pelanggan puas' },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-2.5">
+                        <item.icon className="w-4 h-4 text-emerald-500/70 flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground">{item.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Card 4 — Stat highlight */}
+              <Card className="group md:col-span-2 border-border/50 hover:border-primary/20 hover:shadow-lg transition-all duration-500 py-0 gap-0 bg-gradient-to-br from-primary/5 via-fuchsia-500/5 to-purple-500/5 overflow-hidden">
+                <CardContent className="p-6 md:p-8">
+                  <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center justify-between">
+                    <div className="space-y-3">
+                      <h3 className="text-xl font-bold">Tingkat Keberhasilan Tinggi</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
+                        Transaksi Anda diproses oleh tim profesional dengan pengalaman bertahun-tahun. Kepuasan pelanggan adalah prioritas utama kami.
+                      </p>
+                    </div>
+                    <div className="flex gap-4 flex-shrink-0">
+                      {[
+                        { value: '99%', label: 'Sukses Rate' },
+                        { value: '4.9★', label: 'Rating' },
+                        { value: '<30m', label: 'Proses' },
+                      ].map((s, i) => (
+                        <div key={i} className="text-center px-5 py-3 rounded-xl bg-background border border-border/50">
+                          <p className="text-xl font-bold text-primary">{s.value}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wider">{s.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </section>
@@ -443,116 +508,148 @@ export default function HomePage() {
         {/* ==================== TESTIMONIALS SECTION ==================== */}
         <TestimonialsSection />
 
-        {/* ==================== FAQ SECTION ==================== */}
+        {/* ==================== FAQ SECTION — Modern Split Layout ==================== */}
         {faqs.length > 0 && (
           <section className="relative py-20 md:py-24 bg-muted/30">
             <div className="w-full px-4 md:px-6 lg:px-8">
-              <div className="text-center mb-14">
-                <p className="text-sm font-medium text-primary mb-3">FAQ</p>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-                  Pertanyaan yang Sering Diajukan
-                </h2>
-                <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
-                  Temukan jawaban untuk pertanyaan umum tentang layanan kami.
-                </p>
-              </div>
+              <div className="grid lg:grid-cols-5 gap-12 lg:gap-16 items-start">
+                {/* Left — Sticky Header */}
+                <div className="lg:col-span-2 lg:sticky lg:top-24 space-y-4">
+                  <p className="text-sm font-medium text-primary">FAQ</p>
+                  <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                    Pertanyaan yang Sering Diajukan
+                  </h2>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Temukan jawaban untuk pertanyaan umum tentang layanan gestun kami.
+                  </p>
+                  <div className="flex items-center gap-3 pt-4">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <MessageCircle className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Masih ada pertanyaan?</p>
+                      <p className="text-xs text-muted-foreground">Hubungi kami via WhatsApp</p>
+                    </div>
+                  </div>
+                </div>
 
-              <div className="max-w-2xl mx-auto">
-                <Card className="border-border/50 bg-background py-0 gap-0">
-                  <CardContent className="p-0">
-                    <Accordion type="single" collapsible className="w-full">
-                      {faqs.map((faq) => (
-                        <AccordionItem
-                          key={faq.id}
-                          value={faq.id}
-                          className="border-b last:border-b-0 border-border/50 px-6"
-                        >
-                          <AccordionTrigger className="text-left text-sm md:text-base font-medium hover:text-primary hover:no-underline transition-colors duration-200 py-5">
-                            {faq.question}
-                          </AccordionTrigger>
-                          <AccordionContent className="text-muted-foreground text-sm leading-relaxed pb-5">
-                            {faq.answer}
-                          </AccordionContent>
-                        </AccordionItem>
-                      ))}
-                    </Accordion>
-                  </CardContent>
-                </Card>
+                {/* Right — FAQ Accordion */}
+                <div className="lg:col-span-3">
+                  <div className="space-y-3">
+                    {faqs.map((faq, index) => (
+                      <Card key={faq.id} className="border-border/50 bg-background py-0 gap-0 overflow-hidden">
+                        <Accordion type="single" collapsible className="w-full">
+                          <AccordionItem value={faq.id} className="border-none">
+                            <AccordionTrigger className="text-left text-sm md:text-base font-medium hover:text-primary hover:no-underline transition-colors duration-200 py-4 px-5 gap-4">
+                              <div className="flex items-center gap-3 flex-1">
+                                <span className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
+                                  {index + 1}
+                                </span>
+                                {faq.question}
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="text-muted-foreground text-sm leading-relaxed px-5 pb-4 pl-[3.25rem]">
+                              {faq.answer}
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </section>
         )}
 
-        {/* ==================== PARTNER SECTION ==================== */}
+        {/* ==================== PARTNER SECTION — Modern Gradient Card ==================== */}
         <section className="relative py-20 md:py-24">
           <div className="w-full px-4 md:px-6 lg:px-8">
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
-              {/* Left: Content */}
-              <div className="space-y-6">
-                <p className="text-sm font-medium text-primary">Program Mitra</p>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Bergabung Menjadi{' '}
-                  <span className="bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
-                    Mitra Kami
-                  </span>
-                </h2>
-                <p className="text-muted-foreground text-lg leading-relaxed">
-                  Dapatkan penghasilan tambahan dengan menjadi mitra. Komisi menarik dan dukungan penuh dari tim kami.
-                </p>
+            <div className="relative overflow-hidden rounded-2xl md:rounded-3xl">
+              {/* Background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-950" />
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-fuchsia-500/10" />
+              <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-72 h-72 bg-fuchsia-500/5 rounded-full blur-3xl" />
 
-                <div className="space-y-4 pt-2">
-                  {[
-                    'Komisi hingga 30% dari setiap transaksi',
-                    'Dashboard real-time untuk monitoring',
-                    'Support tim profesional 24/7',
-                    'Sistem aman dan transparan',
-                  ].map((text, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                      <span className="text-sm font-medium">{text}</span>
-                    </div>
-                  ))}
+              <div className="relative z-10 grid lg:grid-cols-2 gap-10 lg:gap-16 p-8 md:p-12 lg:p-16">
+                {/* Left: Content */}
+                <div className="space-y-6">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 text-white/70 text-xs font-medium">
+                    <Sparkles className="w-3 h-3" />
+                    Program Mitra
+                  </div>
+                  <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                    Bergabung Menjadi{' '}
+                    <span className="bg-gradient-to-r from-primary to-fuchsia-400 bg-clip-text text-transparent">
+                      Mitra Kami
+                    </span>
+                  </h2>
+                  <p className="text-white/50 text-base leading-relaxed">
+                    Dapatkan penghasilan tambahan dengan menjadi mitra. Komisi menarik dan dukungan penuh dari tim kami.
+                  </p>
+
+                  {/* Benefits Grid */}
+                  <div className="grid sm:grid-cols-2 gap-3 pt-2">
+                    {[
+                      { icon: TrendingUp, text: 'Komisi hingga 30%', color: 'text-emerald-400' },
+                      { icon: Clock, text: 'Dashboard real-time', color: 'text-primary' },
+                      { icon: MessageCircle, text: 'Support 24/7', color: 'text-fuchsia-400' },
+                      { icon: Shield, text: 'Sistem transparan', color: 'text-amber-400' },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/5 backdrop-blur-sm">
+                        <item.icon className={`w-4 h-4 ${item.color} flex-shrink-0`} />
+                        <span className="text-sm text-white/70 font-medium">{item.text}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button
+                    asChild
+                    size="lg"
+                    className="bg-white text-gray-900 hover:bg-white/90 rounded-xl h-12 px-8 shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] mt-2"
+                  >
+                    <Link href="/register">
+                      <Users className="w-4 h-4" />
+                      Daftar Menjadi Mitra
+                    </Link>
+                  </Button>
                 </div>
 
-                <Button
-                  asChild
-                  size="lg"
-                  className="gradient-primary text-white rounded-xl h-12 px-8 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] mt-2"
-                >
-                  <Link href="/register">
-                    <Users className="w-4 h-4" />
-                    Daftar Menjadi Mitra
-                  </Link>
-                </Button>
-              </div>
-
-              {/* Right: Visual Card */}
-              <div className="hidden lg:block">
-                <Card className="border-border/50 bg-muted/30 overflow-hidden py-0 gap-0">
-                  <CardContent className="p-8 space-y-6">
-                    <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center">
-                      <Users className="w-7 h-7 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold mb-2">Mitra Premium</h3>
-                      <p className="text-muted-foreground text-sm leading-relaxed">
-                        Nikmati semua keuntungan sebagai mitra premium kami. Semakin banyak transaksi, semakin besar komisi Anda.
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      {[
-                        { label: 'Komisi', value: '30%' },
-                        { label: 'Support', value: '24/7' },
-                        { label: 'Payout', value: 'H+1' },
-                      ].map((stat, i) => (
-                        <div key={i} className="text-center p-4 rounded-xl bg-background border border-border/50">
-                          <p className="text-xl font-bold text-primary">{stat.value}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+                {/* Right: Stats Card */}
+                <div className="hidden lg:flex items-center justify-center">
+                  <div className="relative w-full max-w-sm">
+                    <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-fuchsia-500/20 rounded-3xl blur-xl" />
+                    <div className="relative rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm p-8 space-y-8">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center shadow-lg shadow-primary/20">
+                          <Users className="w-6 h-6 text-white" />
                         </div>
-                      ))}
+                        <div>
+                          <p className="text-white font-bold">Mitra Premium</p>
+                          <p className="text-white/40 text-xs">Keuntungan eksklusif</p>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        {[
+                          { label: 'Komisi per Transaksi', value: '30%', bar: 'w-[60%]', color: 'bg-gradient-to-r from-primary to-fuchsia-500' },
+                          { label: 'Payout Speed', value: 'H+1', bar: 'w-[40%]', color: 'bg-gradient-to-r from-emerald-400 to-emerald-500' },
+                          { label: 'Support Response', value: '<5m', bar: 'w-[90%]', color: 'bg-gradient-to-r from-amber-400 to-orange-500' },
+                        ].map((stat, i) => (
+                          <div key={i} className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-white/50">{stat.label}</span>
+                              <span className="text-white font-bold">{stat.value}</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-white/5">
+                              <div className={`h-full rounded-full ${stat.color} ${stat.bar}`} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
