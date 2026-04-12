@@ -311,115 +311,127 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* ==================== SERVICES — Modern Bento Grid ==================== */}
+        {/* ==================== SERVICES — Desktop: Feature Cards Row ==================== */}
         <section className="relative py-20 md:py-24">
           <div className="w-full px-4 md:px-6 lg:px-8">
             {/* Section Header */}
-            <div className="mb-14">
+            <div className="text-center mb-14">
               <p className="text-sm font-medium text-primary mb-3">Layanan Kami</p>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
                 Layanan Lengkap untuk Anda
               </h2>
-              <p className="text-muted-foreground max-w-lg leading-relaxed">
+              <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
                 Kami menyediakan berbagai layanan gestun dengan proses cepat dan aman.
               </p>
             </div>
 
-            {/* Bento Grid */}
-            <div className="grid md:grid-cols-3 gap-4 md:gap-5">
-              {/* Card 1 — Feature highlight (spans 2 cols on desktop) */}
-              <Card className="group md:col-span-2 border-border/50 hover:border-primary/20 hover:shadow-lg transition-all duration-500 py-0 gap-0 bg-background overflow-hidden">
-                <CardContent className="p-6 md:p-8">
-                  <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
-                    <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/20">
-                      <CreditCard className="w-7 h-7 text-white" />
+            {/* Desktop: 3 equal feature cards in a row */}
+            <div className="hidden md:grid md:grid-cols-3 gap-5">
+              {[
+                {
+                  icon: CreditCard,
+                  title: 'Kartu Kredit',
+                  description: 'Gestun semua jenis kartu kredit — Visa, Mastercard, JCB. Rate terbaik, proses cepat, dan dana langsung cair ke rekening Anda.',
+                  accent: 'from-primary to-purple-500',
+                  iconBg: 'bg-primary/10',
+                  iconColor: 'text-primary',
+                  tags: ['Visa', 'Mastercard', 'JCB', 'BCA', 'BNI', 'Mandiri'],
+                  tagStyle: 'bg-muted/80 text-muted-foreground',
+                },
+                {
+                  icon: Wallet,
+                  title: 'Paylater',
+                  description: 'Tarik dana dari GoPay Paylater, Shopee Paylater, Akulaku, dan berbagai paylater lainnya dengan mudah.',
+                  accent: 'from-fuchsia-500 to-pink-500',
+                  iconBg: 'bg-fuchsia-500/10',
+                  iconColor: 'text-fuchsia-500',
+                  tags: ['GoPay', 'Shopee', 'Akulaku'],
+                  tagStyle: 'bg-fuchsia-500/5 text-fuchsia-500/80 border border-fuchsia-500/10',
+                },
+                {
+                  icon: Shield,
+                  title: 'Aman & Terpercaya',
+                  description: 'Transaksi dilindungi sistem tracking real-time. Proses transparan dan telah dipercaya ribuan pelanggan.',
+                  accent: 'from-emerald-500 to-teal-500',
+                  iconBg: 'bg-emerald-500/10',
+                  iconColor: 'text-emerald-500',
+                  tags: ['10K+ Pelanggan', '99% Sukses', '<30 Menit'],
+                  tagStyle: 'bg-emerald-500/5 text-emerald-500/80 border border-emerald-500/10',
+                },
+              ].map((f, i) => (
+                <Card
+                  key={i}
+                  className="group relative border-border/50 hover:border-primary/20 hover:shadow-lg transition-all duration-500 py-0 gap-0 bg-background overflow-hidden"
+                >
+                  {/* Top accent bar on hover */}
+                  <div className={`h-0.5 w-0 group-hover:w-full bg-gradient-to-r ${f.accent} transition-all duration-500`} />
+                  <CardContent className="p-6 lg:p-7">
+                    <div className={`w-12 h-12 rounded-xl ${f.iconBg} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300`}>
+                      <f.icon className={`w-6 h-6 ${f.iconColor}`} />
                     </div>
-                    <div className="space-y-3 flex-1">
-                      <h3 className="text-xl font-bold">Kartu Kredit</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed max-w-md">
-                        Gestun semua jenis kartu kredit — Visa, Mastercard, JCB. Rate terbaik, proses cepat, dan dana langsung cair ke rekening Anda.
-                      </p>
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {['Visa', 'Mastercard', 'JCB', 'BCA', 'BNI', 'Mandiri'].map((brand) => (
-                          <span key={brand} className="text-xs px-3 py-1 rounded-full bg-muted/80 text-muted-foreground font-medium">
-                            {brand}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Card 2 — Paylater */}
-              <Card className="group border-border/50 hover:border-fuchsia-500/20 hover:shadow-lg transition-all duration-500 py-0 gap-0 bg-background">
-                <CardContent className="p-6 md:p-8 flex flex-col h-full">
-                  <div className="w-14 h-14 rounded-2xl bg-fuchsia-500/10 flex items-center justify-center flex-shrink-0 mb-5 group-hover:bg-fuchsia-500/15 transition-colors duration-300">
-                    <Wallet className="w-7 h-7 text-fuchsia-500" />
-                  </div>
-                  <div className="space-y-3 flex-1">
-                    <h3 className="text-xl font-bold">Paylater</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      Tarik dana dari GoPay, Shopee, Akulaku, dan paylater lainnya.
+                    <h3 className="font-bold text-lg mb-2">{f.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-5">
+                      {f.description}
                     </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2 pt-4">
-                    {['GoPay', 'Shopee', 'Akulaku'].map((brand) => (
-                      <span key={brand} className="text-xs px-3 py-1 rounded-full bg-fuchsia-500/5 text-fuchsia-500/80 font-medium border border-fuchsia-500/10">
-                        {brand}
-                      </span>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Card 3 — Aman & Terpercaya */}
-              <Card className="group border-border/50 hover:border-emerald-500/20 hover:shadow-lg transition-all duration-500 py-0 gap-0 bg-background">
-                <CardContent className="p-6 md:p-8">
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mb-5 group-hover:bg-emerald-500/15 transition-colors duration-300">
-                    <Shield className="w-7 h-7 text-emerald-500" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-3">Aman & Terpercaya</h3>
-                  <div className="space-y-3">
-                    {[
-                      { icon: Shield, text: 'Tracking real-time setiap transaksi' },
-                      { icon: Clock, text: 'Proses verifikasi 15-30 menit' },
-                      { icon: Users, text: '10,000+ pelanggan puas' },
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-center gap-2.5">
-                        <item.icon className="w-4 h-4 text-emerald-500/70 flex-shrink-0" />
-                        <span className="text-sm text-muted-foreground">{item.text}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Card 4 — Stat highlight */}
-              <Card className="group md:col-span-2 border-border/50 hover:border-primary/20 hover:shadow-lg transition-all duration-500 py-0 gap-0 bg-gradient-to-br from-primary/5 via-fuchsia-500/5 to-purple-500/5 overflow-hidden">
-                <CardContent className="p-6 md:p-8">
-                  <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center justify-between">
-                    <div className="space-y-3">
-                      <h3 className="text-xl font-bold">Tingkat Keberhasilan Tinggi</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-                        Transaksi Anda diproses oleh tim profesional dengan pengalaman bertahun-tahun. Kepuasan pelanggan adalah prioritas utama kami.
-                      </p>
-                    </div>
-                    <div className="flex gap-4 flex-shrink-0">
-                      {[
-                        { value: '99%', label: 'Sukses Rate' },
-                        { value: '4.9★', label: 'Rating' },
-                        { value: '<30m', label: 'Proses' },
-                      ].map((s, i) => (
-                        <div key={i} className="text-center px-5 py-3 rounded-xl bg-background border border-border/50">
-                          <p className="text-xl font-bold text-primary">{s.value}</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wider">{s.label}</p>
-                        </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {f.tags.map((tag) => (
+                        <span key={tag} className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium ${f.tagStyle}`}>
+                          {tag}
+                        </span>
                       ))}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Mobile: stacked cards */}
+            <div className="md:hidden space-y-4">
+              {[
+                {
+                  icon: CreditCard,
+                  title: 'Kartu Kredit',
+                  description: 'Gestun semua jenis kartu kredit — Visa, Mastercard, JCB. Rate terbaik dan proses cepat.',
+                  iconBg: 'bg-primary/10', iconColor: 'text-primary',
+                  tags: ['Visa', 'Mastercard', 'JCB'],
+                  tagStyle: 'bg-muted/80 text-muted-foreground',
+                },
+                {
+                  icon: Wallet,
+                  title: 'Paylater',
+                  description: 'Tarik dana dari GoPay, Shopee, Akulaku, dan paylater lainnya.',
+                  iconBg: 'bg-fuchsia-500/10', iconColor: 'text-fuchsia-500',
+                  tags: ['GoPay', 'Shopee', 'Akulaku'],
+                  tagStyle: 'bg-fuchsia-500/5 text-fuchsia-500/80 border border-fuchsia-500/10',
+                },
+                {
+                  icon: Shield,
+                  title: 'Aman & Terpercaya',
+                  description: 'Tracking real-time, proses transparan, ribuan pelanggan puas.',
+                  iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-500',
+                  tags: ['10K+ Pelanggan', '99% Sukses'],
+                  tagStyle: 'bg-emerald-500/5 text-emerald-500/80 border border-emerald-500/10',
+                },
+              ].map((f, i) => (
+                <Card key={i} className="border-border/50 py-0 gap-0 bg-background">
+                  <CardContent className="p-5 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl ${f.iconBg} flex items-center justify-center flex-shrink-0`}>
+                        <f.icon className={`w-5 h-5 ${f.iconColor}`} />
+                      </div>
+                      <h3 className="font-semibold">{f.title}</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {f.tags.map((tag) => (
+                        <span key={tag} className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium ${f.tagStyle}`}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         </section>
@@ -508,55 +520,73 @@ export default function HomePage() {
         {/* ==================== TESTIMONIALS SECTION ==================== */}
         <TestimonialsSection />
 
-        {/* ==================== FAQ SECTION — Modern Split Layout ==================== */}
+        {/* ==================== FAQ SECTION ==================== */}
         {faqs.length > 0 && (
           <section className="relative py-20 md:py-24 bg-muted/30">
             <div className="w-full px-4 md:px-6 lg:px-8">
-              <div className="grid lg:grid-cols-5 gap-12 lg:gap-16 items-start">
-                {/* Left — Sticky Header */}
-                <div className="lg:col-span-2 lg:sticky lg:top-24 space-y-4">
-                  <p className="text-sm font-medium text-primary">FAQ</p>
-                  <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-                    Pertanyaan yang Sering Diajukan
-                  </h2>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Temukan jawaban untuk pertanyaan umum tentang layanan gestun kami.
-                  </p>
-                  <div className="flex items-center gap-3 pt-4">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <MessageCircle className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Masih ada pertanyaan?</p>
-                      <p className="text-xs text-muted-foreground">Hubungi kami via WhatsApp</p>
-                    </div>
-                  </div>
-                </div>
+              {/* Section Header */}
+              <div className="text-center mb-14">
+                <p className="text-sm font-medium text-primary mb-3">FAQ</p>
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
+                  Pertanyaan yang Sering Diajukan
+                </h2>
+                <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                  Temukan jawaban untuk pertanyaan umum tentang layanan kami.
+                </p>
+              </div>
 
-                {/* Right — FAQ Accordion */}
-                <div className="lg:col-span-3">
-                  <div className="space-y-3">
-                    {faqs.map((faq, index) => (
-                      <Card key={faq.id} className="border-border/50 bg-background py-0 gap-0 overflow-hidden">
-                        <Accordion type="single" collapsible className="w-full">
-                          <AccordionItem value={faq.id} className="border-none">
-                            <AccordionTrigger className="text-left text-sm md:text-base font-medium hover:text-primary hover:no-underline transition-colors duration-200 py-4 px-5 gap-4">
-                              <div className="flex items-center gap-3 flex-1">
-                                <span className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
-                                  {index + 1}
-                                </span>
-                                {faq.question}
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="text-muted-foreground text-sm leading-relaxed px-5 pb-4 pl-[3.25rem]">
-                              {faq.answer}
-                            </AccordionContent>
-                          </AccordionItem>
-                        </Accordion>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
+              {/* Desktop: 2-column grid */}
+              <div className="hidden md:grid md:grid-cols-2 gap-4 max-w-5xl mx-auto">
+                {faqs.map((faq, index) => (
+                  <Card key={faq.id} className="border-border/50 bg-background py-0 gap-0 overflow-hidden">
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value={faq.id} className="border-none">
+                        <AccordionTrigger className="text-left text-sm font-medium hover:text-primary hover:no-underline transition-colors duration-200 py-4 px-5 gap-3">
+                          <div className="flex items-start gap-3 text-left">
+                            <span className="mt-0.5 w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary">
+                              {String(index + 1).padStart(2, '0')}
+                            </span>
+                            <span className="leading-snug">{faq.question}</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="text-muted-foreground text-sm leading-relaxed px-5 pb-4 pl-[3.25rem]">
+                          {faq.answer}
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Mobile: single column */}
+              <div className="md:hidden max-w-2xl mx-auto space-y-3">
+                {faqs.map((faq, index) => (
+                  <Card key={faq.id} className="border-border/50 bg-background py-0 gap-0 overflow-hidden">
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value={faq.id} className="border-none">
+                        <AccordionTrigger className="text-left text-sm font-medium hover:text-primary hover:no-underline transition-colors duration-200 py-4 px-5 gap-3">
+                          <div className="flex items-start gap-3 text-left">
+                            <span className="mt-0.5 w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary">
+                              {String(index + 1).padStart(2, '0')}
+                            </span>
+                            <span className="leading-snug">{faq.question}</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="text-muted-foreground text-sm leading-relaxed px-5 pb-4 pl-[3.25rem]">
+                          {faq.answer}
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Bottom help text */}
+              <div className="mt-10 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Masih ada pertanyaan?{' '}
+                  <span className="font-medium text-primary">Hubungi kami via WhatsApp</span>
+                </p>
               </div>
             </div>
           </section>
