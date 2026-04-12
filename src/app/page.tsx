@@ -22,6 +22,8 @@ import { useSiteConfig } from '@/hooks/use-site-config';
 import { OrganizationJsonLd, FAQJsonLd } from '@/components/seo/json-ld';
 import TestimonialsSection from '@/components/testimonials-section';
 import PaymentTypesTable from '@/components/payment-types-table';
+import { AnimatedSectionHeading } from '@/components/animated-section-heading';
+import PaymentMethodBadges from '@/components/payment-method-badges';
 
 const features = [
   {
@@ -275,15 +277,14 @@ export default function LandingPage() {
         <section className="relative py-24 md:py-28 z-10" aria-labelledby="services-heading">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/[0.03] rounded-full blur-[100px] pointer-events-none" />
           <div className="container mx-auto px-4 relative">
-            <div className="text-center mb-14">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
-                <Sparkles className="w-3 h-3" />
-                Fitur Unggulan
-              </div>
-              <h2 id="services-heading" className="text-2xl md:text-3xl font-bold mb-2">Layanan Kami</h2>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Pilih layanan tarik tunai yang sesuai dengan kebutuhan Anda
-              </p>
+            <div className="mb-14">
+              <AnimatedSectionHeading
+                id="services-heading"
+                badge="Fitur Unggulan"
+                badgeIcon={Sparkles}
+                title="Layanan Kami"
+                description="Pilih layanan tarik tunai yang sesuai dengan kebutuhan Anda"
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-3xl mx-auto">
@@ -314,6 +315,9 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* ─── PAYMENT METHOD BADGES ─── */}
+        <PaymentMethodBadges />
+
         {/* ─── PAYMENT TYPES ─── */}
         <PaymentTypesTable />
 
@@ -323,15 +327,14 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background pointer-events-none" />
 
           <div className="container mx-auto px-4 relative">
-            <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
-                <Zap className="w-3 h-3" />
-                Mudah & Cepat
-              </div>
-              <h2 id="how-heading" className="text-2xl md:text-3xl font-bold mb-2">Cara Kerja</h2>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Hanya 3 langkah sederhana untuk mendapatkan dana Anda
-              </p>
+            <div className="mb-16">
+              <AnimatedSectionHeading
+                id="how-heading"
+                badge="Mudah & Cepat"
+                badgeIcon={Zap}
+                title="Cara Kerja"
+                description="Hanya 3 langkah sederhana untuk mendapatkan dana Anda"
+              />
             </div>
 
             <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-0">
@@ -378,17 +381,15 @@ export default function LandingPage() {
           <div className="container mx-auto px-4 relative">
             <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
-                  <Users className="w-3.5 h-3.5" />
-                  Program Mitra
-                </div>
-                <h2 id="partner-heading" className="text-2xl md:text-3xl font-bold mb-3">
-                  Bergabung Sebagai Mitra {siteName}
-                </h2>
-                <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-                  Dapatkan penghasilan tambahan dengan menjadi mitra {siteName}.
-                  Sistem komisi transparan dengan dashboard real-time.
-                </p>
+                <AnimatedSectionHeading
+                  id="partner-heading"
+                  align="left"
+                  badge="Program Mitra"
+                  badgeIcon={Users}
+                  title={`Bergabung Sebagai Mitra ${siteName}`}
+                  description={`Dapatkan penghasilan tambahan dengan menjadi mitra ${siteName}. Sistem komisi transparan dengan dashboard real-time.`}
+                  className="mb-6"
+                />
 
                 <ul className="space-y-3 mb-8" role="list">
                   {partnerBenefits.map((text) => (
