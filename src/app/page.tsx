@@ -72,7 +72,7 @@ export default function HomePage() {
             <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-fuchsia-500/5 rounded-full blur-[100px]" />
           </div>
 
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <div className="w-full px-4 md:px-6 lg:px-8 py-20">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               {/* Left: Text Content */}
               <div className="text-center lg:text-left space-y-7">
@@ -202,7 +202,7 @@ export default function HomePage() {
 
         {/* ==================== STATS SECTION ==================== */}
         <section className="relative pb-16">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full px-4 md:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 {[
@@ -231,7 +231,7 @@ export default function HomePage() {
         {/* ==================== PAYMENT TYPES SECTION ==================== */}
         {paymentTypes.length > 0 && (
           <section className="relative py-20 md:py-24" id="payment-types">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="w-full px-4 md:px-6 lg:px-8">
               {/* Section Header */}
               <div className="text-center mb-14">
                 <p className="text-sm font-medium text-primary mb-3">Jenis Pembayaran</p>
@@ -243,72 +243,69 @@ export default function HomePage() {
                 </p>
               </div>
 
-              {/* Payment Type Cards */}
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-5xl mx-auto">
-                {paymentTypes.map((pt, index) => {
-                  const Icon = getPaymentIcon(index);
-                  return (
-                    <Card
-                      key={pt.id}
-                      className="group border-border/50 hover:border-primary/20 transition-all duration-300 hover:shadow-md py-0 gap-0 bg-background"
-                    >
-                      <CardContent className="p-6 space-y-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-                            <Icon className="w-5 h-5 text-white" />
+              {/* Payment Type Cards — Horizontal scroll (all screen sizes) */}
+              <div className="overflow-x-auto hide-scrollbar -mx-4 px-4">
+                <div className="flex gap-5 w-max pb-2">
+                  {paymentTypes.map((pt, index) => {
+                    const Icon = getPaymentIcon(index);
+                    return (
+                      <Card
+                        key={pt.id}
+                        className="group border-border/50 hover:border-primary/20 transition-all duration-300 hover:shadow-md py-0 gap-0 bg-background w-[300px] sm:w-[320px] flex-shrink-0"
+                      >
+                        <CardContent className="p-6 space-y-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+                              <Icon className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold">{pt.name}</h3>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-semibold">{pt.name}</h3>
-                            {pt.threshold > 0 && (
-                              <p className="text-xs text-muted-foreground">
-                                Min. {formatCurrency(pt.threshold)}
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="rounded-xl bg-muted/50 p-3 text-center space-y-1">
+                              <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                                <Wifi className="w-3 h-3" />
+                                <span>Online</span>
+                              </div>
+                              <p className="text-lg font-bold text-primary">
+                                {pt.onlineFeePercent}%
                               </p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="rounded-xl bg-muted/50 p-3 text-center space-y-1">
-                            <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                              <Wifi className="w-3 h-3" />
-                              <span>Online</span>
+                              {pt.onlineFeeFlat > 0 && (
+                                <p className="text-[10px] text-muted-foreground">+ {formatCurrency(pt.onlineFeeFlat)}</p>
+                              )}
                             </div>
-                            <p className="text-lg font-bold text-primary">
-                              {pt.onlineFeePercent}%
-                            </p>
-                            {pt.onlineFeeFlat > 0 && (
-                              <p className="text-[10px] text-muted-foreground">+ {formatCurrency(pt.onlineFeeFlat)}</p>
-                            )}
-                          </div>
-                          <div className="rounded-xl bg-muted/50 p-3 text-center space-y-1">
-                            <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                              <Banknote className="w-3 h-3" />
-                              <span>COD</span>
+                            <div className="rounded-xl bg-muted/50 p-3 text-center space-y-1">
+                              <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                                <Banknote className="w-3 h-3" />
+                                <span>COD</span>
+                              </div>
+                              <p className="text-lg font-bold text-fuchsia-500">
+                                {pt.codFeePercent}%
+                              </p>
+                              {pt.codFeeFlat > 0 && (
+                                <p className="text-[10px] text-muted-foreground">+ {formatCurrency(pt.codFeeFlat)}</p>
+                              )}
                             </div>
-                            <p className="text-lg font-bold text-fuchsia-500">
-                              {pt.codFeePercent}%
-                            </p>
-                            {pt.codFeeFlat > 0 && (
-                              <p className="text-[10px] text-muted-foreground">+ {formatCurrency(pt.codFeeFlat)}</p>
-                            )}
                           </div>
-                        </div>
 
-                        <Button
-                          asChild
-                          variant="outline"
-                          className="w-full rounded-xl group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all duration-300"
-                          size="sm"
-                        >
-                          <Link href="/order">
-                            Gestun Sekarang
-                            <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-0.5" />
-                          </Link>
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                          <Button
+                            asChild
+                            variant="outline"
+                            className="w-full rounded-xl group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all duration-300"
+                            size="sm"
+                          >
+                            <Link href="/order">
+                              Gestun Sekarang
+                              <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-0.5" />
+                            </Link>
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </section>
@@ -316,7 +313,7 @@ export default function HomePage() {
 
         {/* ==================== SERVICES / FEATURES SECTION (3 Grid) ==================== */}
         <section className="relative py-20 md:py-24 bg-muted/30">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full px-4 md:px-6 lg:px-8">
             <div className="text-center mb-14">
               <p className="text-sm font-medium text-primary mb-3">Layanan Kami</p>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
@@ -364,7 +361,7 @@ export default function HomePage() {
 
         {/* ==================== HOW IT WORKS — Number Pipeline ==================== */}
         <section className="relative py-20 md:py-24">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full px-4 md:px-6 lg:px-8">
             <div className="text-center mb-14">
               <p className="text-sm font-medium text-primary mb-3">Cara Kerja</p>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
@@ -449,7 +446,7 @@ export default function HomePage() {
         {/* ==================== FAQ SECTION ==================== */}
         {faqs.length > 0 && (
           <section className="relative py-20 md:py-24 bg-muted/30">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="w-full px-4 md:px-6 lg:px-8">
               <div className="text-center mb-14">
                 <p className="text-sm font-medium text-primary mb-3">FAQ</p>
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
@@ -488,7 +485,7 @@ export default function HomePage() {
 
         {/* ==================== PARTNER SECTION ==================== */}
         <section className="relative py-20 md:py-24">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full px-4 md:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Left: Content */}
               <div className="space-y-6">
@@ -563,7 +560,7 @@ export default function HomePage() {
 
         {/* ==================== CTA SECTION ==================== */}
         <section className="relative py-20 md:py-24">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full px-4 md:px-6 lg:px-8">
             <div className="relative overflow-hidden rounded-3xl gradient-primary p-12 md:p-20 text-center">
               {/* Subtle decorations */}
               <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
@@ -607,7 +604,7 @@ export default function HomePage() {
 
         {/* ==================== FOOTER NOTE ==================== */}
         <section className="relative py-10 border-t border-border/50">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="w-full px-4 md:px-6 lg:px-8 text-center">
             <div className="flex flex-col items-center gap-3">
               {config.logoUrl && !logoError ? (
                 <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center p-1 dark:bg-transparent dark:border-transparent">
