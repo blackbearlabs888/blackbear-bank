@@ -8,13 +8,12 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/
 import {
   CreditCard, Wallet, Truck, Shield, Clock, Users, ArrowRight,
   Zap, Star, TrendingUp, MessageCircle, Wifi,
-  Smartphone, HelpCircle, Banknote, CheckCircle2,
-  Sparkles
+  Smartphone, Sparkles
 } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { OrganizationJsonLd, FAQJsonLd } from '@/components/seo/json-ld';
 import TestimonialsSection from '@/components/testimonials-section';
-import { formatCurrency } from '@/lib/utils';
+
 
 export default function HomePage() {
   const { config, getInitials } = useSiteConfig();
@@ -65,17 +64,17 @@ export default function HomePage() {
       <div className="relative">
 
         {/* ==================== HERO SECTION ==================== */}
-        <section className="relative overflow-hidden">
+        <section className="relative overflow-hidden min-h-dvh">
           {/* Background gradient blobs */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-20 left-1/4 w-[600px] h-[500px] bg-primary/5 rounded-full blur-[120px]" />
             <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-fuchsia-500/5 rounded-full blur-[100px]" />
           </div>
 
-          <div className="w-full px-4 md:px-6 lg:px-8 pt-28 pb-20 md:pt-32 md:pb-24">
-            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 md:pt-32 md:pb-24 flex flex-col min-h-dvh">
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center flex-1">
               {/* Left: Text Content */}
-              <div className="text-center lg:text-left space-y-6">
+              <div className="text-center lg:text-left space-y-5">
                 {/* Badge */}
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/15 bg-primary/5 text-primary text-sm font-medium">
                   <Sparkles className="w-3.5 h-3.5" />
@@ -83,116 +82,119 @@ export default function HomePage() {
                 </div>
 
                 {/* Heading */}
-                <div className="space-y-5">
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]">
+                <div className="space-y-4">
+                  <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]">
                     Tarik Tunai{' '}
                     <span className="bg-gradient-to-r from-primary via-fuchsia-500 to-purple-500 bg-clip-text text-transparent">
                       Cepat & Aman
                     </span>
                   </h1>
-                  <p className="text-lg sm:text-xl text-muted-foreground max-w-lg mx-auto lg:mx-0 leading-relaxed">
+                  <p className="text-base sm:text-xl text-muted-foreground max-w-lg mx-auto lg:mx-0 leading-relaxed">
                     Layanan gestun profesional untuk Kartu Kredit & Paylater. Proses instan, rate bersaing, dan 100% aman.
                   </p>
                 </div>
 
-                {/* CTA Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+                {/* CTA Buttons — Mobile: 2-grid, Desktop: inline */}
+                <div className="grid grid-cols-2 gap-3 lg:flex lg:gap-3 lg:justify-start">
                   <Button
                     asChild
                     size="lg"
-                    className="gradient-primary text-white rounded-xl h-12 px-8 text-sm font-medium shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                    className="gradient-primary text-white rounded-xl h-12 px-4 sm:px-8 text-sm font-medium shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                   >
                     <Link href="/order">
                       <Zap className="w-4 h-4" />
-                      Order Sekarang
+                      <span className="sm:inline hidden">Order </span>Sekarang
                     </Link>
                   </Button>
                   <Button
                     asChild
                     variant="outline"
                     size="lg"
-                    className="rounded-xl h-12 px-8 text-sm font-medium border-border/60 hover:bg-accent transition-all duration-300"
+                    className="rounded-xl h-12 px-4 sm:px-8 text-sm font-medium border-border/60 hover:bg-accent transition-all duration-300"
                   >
                     <Link href="/track">
                       <Truck className="w-4 h-4" />
-                      Track Order
+                      <span className="sm:inline hidden">Track </span>Order
                     </Link>
                   </Button>
                 </div>
 
                 {/* Trust indicators */}
-                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-8 gap-y-3 pt-2 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-emerald-500" />
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 pt-1 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-emerald-500" />
                     <span>100% Aman</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-primary" />
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-primary" />
                     <span>Proses 15-30 menit</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                  <div className="flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                     <span>4.9/5 Rating</span>
                   </div>
                 </div>
               </div>
 
-              {/* Right: Hero Card (visible on all screens) */}
-              <div className="flex justify-center">
-                <div className="relative w-full max-w-[380px]">
+              {/* Right: Hero Card — Redesigned Glassmorphic */}
+              <div className="flex justify-center lg:justify-end">
+                <div className="relative w-full max-w-[340px] lg:max-w-[400px]">
                   {/* Glow */}
-                  <div className="absolute -inset-6 bg-gradient-to-r from-primary/20 via-fuchsia-500/10 to-purple-500/20 rounded-3xl blur-2xl" />
+                  <div className="absolute -inset-8 bg-gradient-to-r from-primary/15 via-fuchsia-500/10 to-purple-500/15 rounded-3xl blur-3xl" />
 
-                  {/* Card */}
-                  <div className="relative credit-card w-full aspect-[1.6/1] rounded-2xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-950 dark:from-gray-800 dark:via-gray-700 dark:to-gray-900 p-6 sm:p-8 shadow-2xl border border-white/10 overflow-hidden">
-                    {/* Shine */}
-                    <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
-                      <div className="credit-card-shine" />
+                  {/* Main Card */}
+                  <div className="relative rounded-3xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-950 dark:from-gray-800 dark:via-gray-700 dark:to-gray-900 p-6 sm:p-8 shadow-2xl border border-white/10 overflow-hidden">
+                    {/* Mesh background */}
+                    <div className="absolute inset-0 opacity-30">
+                      <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-primary/20 rounded-full blur-3xl" />
+                      <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-fuchsia-500/15 rounded-full blur-3xl" />
                     </div>
 
-                    {/* Chip */}
-                    <div className="relative credit-chip w-11 h-8 rounded-md mt-1" />
-
-                    {/* Logo */}
-                    <div className="relative flex justify-end mt-[-2rem]">
-                      {config.logoUrl && !logoError ? (
-                        <img
-                          src={config.logoUrl}
-                          alt={config.websiteTitle}
-                          className="w-10 h-10 rounded-lg object-contain"
-                          onError={() => setLogoError(true)}
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center">
-                          <span className="text-white font-bold text-xs">{getInitials()}</span>
+                    <div className="relative z-10">
+                      {/* Top row: chip + logo */}
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="credit-chip w-12 h-9 rounded-lg" />
+                        <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm flex items-center justify-center">
+                          <Wifi className="w-4 h-4 text-white/50" />
                         </div>
-                      )}
-                    </div>
-
-                    {/* Card number */}
-                    <div className="relative mt-6 sm:mt-8 flex gap-3 sm:gap-4 text-white/60 text-sm sm:text-base tracking-[0.18em] font-mono">
-                      <span>••••</span><span>••••</span><span>••••</span><span>••••</span>
-                    </div>
-
-                    {/* Details */}
-                    <div className="relative mt-4 sm:mt-5 flex justify-between items-end">
-                      <div>
-                        <p className="text-white/30 text-[9px] sm:text-[10px] uppercase tracking-wider">Card Holder</p>
-                        <p className="text-white text-xs sm:text-sm font-medium mt-0.5 truncate max-w-[120px] sm:max-w-none">{config.websiteTitle}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-white/30 text-[9px] sm:text-[10px] uppercase tracking-wider">Gestun</p>
-                        <p className="text-primary text-xs sm:text-sm font-bold mt-0.5">PREMIUM</p>
+
+                      {/* Card number */}
+                      <div className="flex gap-2 sm:gap-3 text-white/50 text-sm sm:text-[15px] tracking-[0.2em] font-mono mb-6">
+                        <span>••••</span><span>••••</span><span>••••</span><span>••••</span>
+                      </div>
+
+                      {/* Bottom row */}
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <p className="text-white/25 text-[9px] sm:text-[10px] uppercase tracking-widest mb-0.5">Card Holder</p>
+                          <p className="text-white text-xs sm:text-sm font-semibold tracking-wide truncate max-w-[130px] sm:max-w-none">{config.websiteTitle}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-white/25 text-[9px] sm:text-[10px] uppercase tracking-widest mb-0.5">Gestun</p>
+                          <p className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-fuchsia-400 text-xs sm:text-sm font-bold">PREMIUM</p>
+                        </div>
+                      </div>
+
+                      {/* Logo overlay bottom-right */}
+                      <div className="absolute -bottom-4 -right-4 w-20 h-20 opacity-10">
+                        {config.logoUrl && !logoError ? (
+                          <img src={config.logoUrl} alt="" className="w-full h-full object-contain" onError={() => setLogoError(true)} />
+                        ) : (
+                          <div className="w-full h-full rounded-2xl gradient-primary flex items-center justify-center">
+                            <span className="text-white font-bold text-lg">{getInitials()}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   {/* Floating badges */}
-                  <div className="absolute -top-3 -right-3 w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl backdrop-blur-sm flex items-center justify-center animate-bounce-soft">
-                    <TrendingUp className="w-6 h-6 text-emerald-500" />
+                  <div className="absolute -top-2 -right-2 w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-xl backdrop-blur-sm flex items-center justify-center animate-bounce-soft">
+                    <TrendingUp className="w-5 h-5 text-emerald-500" />
                   </div>
-                  <div className="absolute -bottom-3 -left-3 w-12 h-12 bg-primary/10 border border-primary/20 rounded-2xl backdrop-blur-sm flex items-center justify-center animate-bounce-soft" style={{ animationDelay: '1s' }}>
-                    <Wallet className="w-5 h-5 text-primary" />
+                  <div className="absolute -bottom-2 -left-2 w-10 h-10 bg-primary/10 border border-primary/20 rounded-xl backdrop-blur-sm flex items-center justify-center animate-bounce-soft" style={{ animationDelay: '1s' }}>
+                    <Wallet className="w-4 h-4 text-primary" />
                   </div>
                 </div>
               </div>
@@ -202,7 +204,7 @@ export default function HomePage() {
 
         {/* ==================== STATS SECTION ==================== */}
         <section className="relative pb-16">
-          <div className="w-full px-4 md:px-6 lg:px-8">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 {[
@@ -228,12 +230,12 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ==================== PAYMENT TYPES SECTION ==================== */}
+        {/* ==================== PAYMENT TYPES — Running Text Cards ==================== */}
         {paymentTypes.length > 0 && (
           <section className="relative py-20 md:py-24" id="payment-types">
-            <div className="w-full px-4 md:px-6 lg:px-8">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               {/* Section Header */}
-              <div className="text-center mb-14">
+              <div className="text-center mb-10">
                 <p className="text-sm font-medium text-primary mb-3">Jenis Pembayaran</p>
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
                   Metode Pembayaran Tersedia
@@ -243,77 +245,76 @@ export default function HomePage() {
                 </p>
               </div>
 
-              {/* Payment Type Cards — Horizontal scroll (all screen sizes) */}
-              <div className="overflow-x-auto hide-scrollbar">
-                <div className="flex gap-5 w-max pb-2">
-                  {paymentTypes.map((pt, index) => {
-                    const Icon = getPaymentIcon(index);
-                    return (
-                      <Card
-                        key={pt.id}
-                        className="group border-border/50 hover:border-primary/20 transition-all duration-300 hover:shadow-md py-0 gap-0 bg-background w-[300px] sm:w-[320px] flex-shrink-0"
-                      >
-                        <CardContent className="p-6 space-y-5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-                              <Icon className="w-5 h-5 text-white" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold">{pt.name}</h3>
-                            </div>
+              {/* Running text — Row 1 */}
+              <div className="relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-12 md:w-20 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+                <div className="absolute right-0 top-0 bottom-0 w-12 md:w-20 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+                <div className="flex group/runner hover:[animation-play-state:paused]">
+                  <div
+                    className="flex gap-3 w-max"
+                    style={{ animation: `scroll-left ${Math.max(20, paymentTypes.length * 6)}s linear infinite` }}
+                  >
+                    {[...paymentTypes, ...paymentTypes].map((pt, index) => {
+                      const Icon = getPaymentIcon(index % paymentTypes.length);
+                      return (
+                        <Link
+                          key={`${pt.id}-${index}`}
+                          href="/order"
+                          className="flex items-center gap-2.5 px-5 py-3 rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm hover:border-primary/30 hover:shadow-md hover:bg-background transition-all duration-300 flex-shrink-0 group/card"
+                        >
+                          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
+                            <Icon className="w-4 h-4 text-white" />
                           </div>
-
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="rounded-xl bg-muted/50 p-3 text-center space-y-1">
-                              <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                                <Wifi className="w-3 h-3" />
-                                <span>Online</span>
-                              </div>
-                              <p className="text-lg font-bold text-primary">
-                                {pt.onlineFeePercent}%
-                              </p>
-                              {pt.onlineFeeFlat > 0 && (
-                                <p className="text-[10px] text-muted-foreground">+ {formatCurrency(pt.onlineFeeFlat)}</p>
-                              )}
-                            </div>
-                            <div className="rounded-xl bg-muted/50 p-3 text-center space-y-1">
-                              <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                                <Banknote className="w-3 h-3" />
-                                <span>COD</span>
-                              </div>
-                              <p className="text-lg font-bold text-fuchsia-500">
-                                {pt.codFeePercent}%
-                              </p>
-                              {pt.codFeeFlat > 0 && (
-                                <p className="text-[10px] text-muted-foreground">+ {formatCurrency(pt.codFeeFlat)}</p>
-                              )}
-                            </div>
-                          </div>
-
-                          <Button
-                            asChild
-                            variant="outline"
-                            className="w-full rounded-xl group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all duration-300"
-                            size="sm"
-                          >
-                            <Link href="/order">
-                              Gestun Sekarang
-                              <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-0.5" />
-                            </Link>
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                          <span className="text-sm font-medium whitespace-nowrap group-hover/card:text-primary transition-colors">
+                            {pt.name}
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover/card:text-primary group-hover/card:translate-x-0.5 transition-all" />
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
+
+              {/* Running text — Row 2 (reverse) */}
+              {paymentTypes.length > 2 && (
+                <div className="relative overflow-hidden mt-3">
+                  <div className="absolute left-0 top-0 bottom-0 w-12 md:w-20 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+                  <div className="absolute right-0 top-0 bottom-0 w-12 md:w-20 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+                  <div className="flex group/runner2 hover:[animation-play-state:paused]">
+                    <div
+                      className="flex gap-3 w-max"
+                      style={{ animation: `scroll-right ${Math.max(22, paymentTypes.length * 7)}s linear infinite` }}
+                    >
+                      {[...paymentTypes, ...paymentTypes].map((pt, index) => {
+                        const Icon = getPaymentIcon(index % paymentTypes.length);
+                        return (
+                          <Link
+                            key={`rev-${pt.id}-${index}`}
+                            href="/order"
+                            className="flex items-center gap-2.5 px-5 py-3 rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm hover:border-primary/30 hover:shadow-md hover:bg-background transition-all duration-300 flex-shrink-0 group/card"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-fuchsia-500/10 flex items-center justify-center flex-shrink-0">
+                              <Icon className="w-4 h-4 text-fuchsia-500" />
+                            </div>
+                            <span className="text-sm font-medium whitespace-nowrap group-hover/card:text-fuchsia-500 transition-colors">
+                              {pt.name}
+                            </span>
+                            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover/card:text-fuchsia-500 group-hover/card:translate-x-0.5 transition-all" />
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         )}
 
         {/* ==================== SERVICES — Desktop: Feature Cards Row ==================== */}
         <section className="relative py-20 md:py-24">
-          <div className="w-full px-4 md:px-6 lg:px-8">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             {/* Section Header */}
             <div className="text-center mb-14">
               <p className="text-sm font-medium text-primary mb-3">Layanan Kami</p>
@@ -438,7 +439,7 @@ export default function HomePage() {
 
         {/* ==================== HOW IT WORKS — Number Pipeline ==================== */}
         <section className="relative py-20 md:py-24">
-          <div className="w-full px-4 md:px-6 lg:px-8">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-14">
               <p className="text-sm font-medium text-primary mb-3">Cara Kerja</p>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
@@ -523,7 +524,7 @@ export default function HomePage() {
         {/* ==================== FAQ SECTION ==================== */}
         {faqs.length > 0 && (
           <section className="relative py-20 md:py-24 bg-muted/30">
-            <div className="w-full px-4 md:px-6 lg:px-8">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               {/* Section Header */}
               <div className="text-center mb-14">
                 <p className="text-sm font-medium text-primary mb-3">FAQ</p>
@@ -594,7 +595,7 @@ export default function HomePage() {
 
         {/* ==================== PARTNER SECTION — Modern Gradient Card ==================== */}
         <section className="relative py-20 md:py-24">
-          <div className="w-full px-4 md:px-6 lg:px-8">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="relative overflow-hidden rounded-2xl md:rounded-3xl">
               {/* Background */}
               <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-950" />
@@ -687,7 +688,7 @@ export default function HomePage() {
 
         {/* ==================== CTA SECTION — Clean & Different from Partner ==================== */}
         <section className="relative py-20 md:py-24">
-          <div className="w-full px-4 md:px-6 lg:px-8">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
               {/* Top accent line */}
               <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/30 to-transparent mb-12" />
@@ -740,7 +741,7 @@ export default function HomePage() {
 
         {/* ==================== FOOTER NOTE ==================== */}
         <section className="relative py-10 border-t border-border/50">
-          <div className="w-full px-4 md:px-6 lg:px-8 text-center">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="flex flex-col items-center gap-3">
               {config.logoUrl && !logoError ? (
                 <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center p-1 dark:bg-transparent dark:border-transparent">
