@@ -5,15 +5,30 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   CreditCard, Wallet, Truck, Shield, Clock, Users, ArrowRight,
   Zap, Star, TrendingUp, MessageCircle, Wifi,
   Smartphone, Sparkles
 } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
+import { AnimatedCounter } from '@/components/animated-counter';
+import { FadeInSection } from '@/components/fade-in-section';
 import { OrganizationJsonLd, FAQJsonLd } from '@/components/seo/json-ld';
 import TestimonialsSection from '@/components/testimonials-section';
+import WhatsAppFab from '@/components/whatsapp-fab';
+import SocialProofToast from '@/components/social-proof-toast';
+import AnnouncementBar from '@/components/announcement-bar';
+import RateCalculator from '@/components/rate-calculator';
 
+
+function formatStatValue(index: number, raw: number): string {
+  if (index === 0) return `${Math.floor(raw / 1000)}K+`;
+  if (index === 1) return `${Math.floor(raw)}%`;
+  if (index === 2) return `${Math.floor(raw)}/7`;
+  if (index === 3) return `${Math.floor(raw)}\u2605`;
+  return String(raw);
+}
 
 export default function HomePage() {
   const { config, getInitials } = useSiteConfig();
@@ -63,12 +78,16 @@ export default function HomePage() {
 
       <div className="relative">
 
+        {/* ==================== ANNOUNCEMENT BAR ==================== */}
+        <AnnouncementBar />
+
         {/* ==================== HERO SECTION ==================== */}
         <section className="relative overflow-hidden min-h-dvh">
           {/* Background gradient blobs */}
-          <div className="absolute inset-0 -z-10">
-            <div className="absolute top-20 left-1/4 w-[600px] h-[500px] bg-primary/5 rounded-full blur-[120px]" />
-            <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-fuchsia-500/5 rounded-full blur-[100px]" />
+          <div className="absolute inset-0 -z-10 overflow-hidden">
+            <div className="absolute top-10 -left-32 w-[500px] h-[400px] bg-primary/8 rounded-full blur-[100px] animate-pulse-soft" />
+            <div className="absolute top-1/3 -right-20 w-[400px] h-[400px] bg-fuchsia-500/6 rounded-full blur-[100px] animate-pulse-soft" style={{ animationDelay: '3s' }} />
+            <div className="absolute -bottom-10 left-1/3 w-[300px] h-[300px] bg-purple-500/5 rounded-full blur-[80px] animate-pulse-soft" style={{ animationDelay: '6s' }} />
           </div>
 
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-8 md:pt-24 md:pb-16 flex flex-col min-h-dvh">
@@ -136,65 +155,94 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Right: Hero Card — Redesigned Glassmorphic */}
+              {/* Right: Hero Card — Premium Holographic 2.0 */}
               <div className="flex justify-center lg:justify-end">
-                <div className="relative w-full max-w-[340px] lg:max-w-[400px]">
-                  {/* Glow */}
-                  <div className="absolute -inset-8 bg-gradient-to-r from-primary/15 via-fuchsia-500/10 to-purple-500/15 rounded-3xl blur-3xl" />
+                <div className="hero-card-wrapper relative w-full max-w-[340px] lg:max-w-[400px]">
+                  {/* Glow behind card */}
+                  <div className="absolute -inset-10 bg-gradient-to-r from-primary/20 via-fuchsia-500/15 to-purple-500/20 rounded-[2rem] blur-3xl animate-pulse-soft" />
 
-                  {/* Main Card */}
-                  <div className="relative rounded-3xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-950 dark:from-gray-800 dark:via-gray-700 dark:to-gray-900 p-6 sm:p-8 shadow-2xl border border-white/10 overflow-hidden">
-                    {/* Mesh background */}
-                    <div className="absolute inset-0 opacity-30">
-                      <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-primary/20 rounded-full blur-3xl" />
-                      <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-fuchsia-500/15 rounded-full blur-3xl" />
-                    </div>
+                  {/* Animated gradient border */}
+                  <div className="hero-card-border">
+                    <div className="hero-card-inner p-6 sm:p-8 shadow-2xl">
+                      {/* Holographic overlay */}
+                      <div className="hero-card-holographic" />
+                      <div className="hero-card-light-streak" />
+                      <div className="hero-card-grid" />
 
-                    <div className="relative z-10">
-                      {/* Top row: chip + logo */}
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="credit-chip w-12 h-9 rounded-lg" />
-                        <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm flex items-center justify-center">
-                          <Wifi className="w-4 h-4 text-white/50" />
-                        </div>
-                      </div>
+                      {/* Floating particles */}
+                      <div className="hero-card-particle" style={{ bottom: '20%', left: '15%', animationDelay: '0s', animationDuration: '3s' }} />
+                      <div className="hero-card-particle" style={{ bottom: '30%', left: '45%', animationDelay: '1s', animationDuration: '4s' }} />
+                      <div className="hero-card-particle" style={{ bottom: '15%', right: '20%', animationDelay: '2s', animationDuration: '3.5s' }} />
+                      <div className="hero-card-particle" style={{ bottom: '50%', right: '35%', animationDelay: '0.5s', animationDuration: '4.5s' }} />
 
-                      {/* Card number */}
-                      <div className="flex gap-2 sm:gap-3 text-white/50 text-sm sm:text-[15px] tracking-[0.2em] font-mono mb-6">
-                        <span>••••</span><span>••••</span><span>••••</span><span>••••</span>
-                      </div>
+                      {/* Shine effect on hover */}
+                      <div className="credit-card-shine rounded-[1.375rem]" style={{ zIndex: 10 }} />
 
-                      {/* Bottom row */}
-                      <div className="flex justify-between items-end">
-                        <div>
-                          <p className="text-white/25 text-[9px] sm:text-[10px] uppercase tracking-widest mb-0.5">Card Holder</p>
-                          <p className="text-white text-xs sm:text-sm font-semibold tracking-wide truncate max-w-[130px] sm:max-w-none">{config.websiteTitle}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-white/25 text-[9px] sm:text-[10px] uppercase tracking-widest mb-0.5">Gestun</p>
-                          <p className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-fuchsia-400 text-xs sm:text-sm font-bold">PREMIUM</p>
-                        </div>
-                      </div>
-
-                      {/* Logo overlay bottom-right */}
-                      <div className="absolute -bottom-4 -right-4 w-20 h-20 opacity-10">
-                        {config.logoUrl && !logoError ? (
-                          <img src={config.logoUrl} alt="" className="w-full h-full object-contain" onError={() => setLogoError(true)} />
-                        ) : (
-                          <div className="w-full h-full rounded-2xl gradient-primary flex items-center justify-center">
-                            <span className="text-white font-bold text-lg">{getInitials()}</span>
+                      <div className="relative z-10">
+                        {/* Top row: brand + contactless */}
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center gap-2">
+                            {config.logoUrl && !logoError ? (
+                              <div className="w-9 h-9 rounded-lg overflow-hidden">
+                                <img src={config.logoUrl} alt="" className="w-full h-full object-contain" onError={() => setLogoError(true)} />
+                              </div>
+                            ) : (
+                              <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center">
+                                <span className="text-white font-bold text-sm">{getInitials()}</span>
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-white text-[10px] sm:text-xs font-bold tracking-wide leading-tight">BLACKBEAR</p>
+                              <p className="text-white/30 text-[8px] sm:text-[9px] tracking-widest uppercase">Gestun Pro</p>
+                            </div>
                           </div>
-                        )}
+                          <div className="w-10 h-10 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
+                            <Wifi className="w-4 h-4 text-white/40" />
+                          </div>
+                        </div>
+
+                        {/* Chip */}
+                        <div className="mb-5">
+                          <div className="credit-chip w-12 h-9 relative">
+                            <div className="credit-chip-lines" />
+                          </div>
+                        </div>
+
+                        {/* Card number with glow */}
+                        <div className="mb-6">
+                          <p className="text-white/80 text-base sm:text-lg tracking-[0.25em] font-mono font-light">
+                            4520 •••• •••• 7891
+                          </p>
+                        </div>
+
+                        {/* Bottom row */}
+                        <div className="flex justify-between items-end">
+                          <div>
+                            <p className="text-white/20 text-[8px] sm:text-[9px] uppercase tracking-[0.2em] mb-1">Card Holder</p>
+                            <p className="text-white text-xs sm:text-sm font-semibold tracking-wide truncate max-w-[140px] sm:max-w-none">{config.websiteTitle}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-white/20 text-[8px] sm:text-[9px] uppercase tracking-[0.2em] mb-1">Member Since</p>
+                            <p className="text-white/70 text-xs sm:text-sm font-mono">2024</p>
+                          </div>
+                        </div>
+
+                        {/* Premium badge — top right floating */}
+                        <div className="absolute top-3 right-3">
+                          <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-400/20 to-amber-500/20 border border-amber-400/30 backdrop-blur-sm">
+                            <p className="text-[8px] sm:text-[9px] font-bold text-amber-300 tracking-widest uppercase">★ Premium</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Floating badges — hidden on mobile to prevent overflow */}
-                  <div className="hidden sm:block absolute -top-2 -right-2 w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-xl backdrop-blur-sm flex items-center justify-center animate-bounce-soft">
+                  <div className="hidden sm:block absolute -top-3 -right-3 w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-xl backdrop-blur-sm flex items-center justify-center animate-bounce-soft">
                     <TrendingUp className="w-5 h-5 text-emerald-500" />
                   </div>
-                  <div className="hidden sm:block absolute -bottom-2 -left-2 w-10 h-10 bg-primary/10 border border-primary/20 rounded-xl backdrop-blur-sm flex items-center justify-center animate-bounce-soft" style={{ animationDelay: '1s' }}>
-                    <Wallet className="w-4 h-4 text-primary" />
+                  <div className="hidden sm:block absolute -bottom-3 -left-3 w-10 h-10 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-xl backdrop-blur-sm flex items-center justify-center animate-bounce-soft" style={{ animationDelay: '1s' }}>
+                    <Wallet className="w-4 h-4 text-fuchsia-500" />
                   </div>
                 </div>
               </div>
@@ -204,14 +252,14 @@ export default function HomePage() {
 
         {/* ==================== STATS SECTION ==================== */}
         <section className="relative pb-8">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeInSection className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 {[
-                  { value: '10K+', label: 'Transaksi', icon: CreditCard },
-                  { value: '99%', label: 'Sukses Rate', icon: TrendingUp },
-                  { value: '24/7', label: 'Support', icon: Clock },
-                  { value: '5★', label: 'Rating', icon: Star },
+                  { label: 'Transaksi', icon: CreditCard, target: 10000 },
+                  { label: 'Sukses Rate', icon: TrendingUp, target: 99 },
+                  { label: 'Support', icon: Clock, target: 24 },
+                  { label: 'Rating', icon: Star, target: 5 },
                 ].map((stat, i) => (
                   <Card key={i} className="border-border/50 bg-background/80 backdrop-blur-sm py-0 gap-0">
                     <CardContent className="flex items-center gap-3 p-4 md:p-5">
@@ -219,7 +267,9 @@ export default function HomePage() {
                         <stat.icon className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <p className="text-xl md:text-2xl font-bold tracking-tight">{stat.value}</p>
+                        <p className="text-xl md:text-2xl font-bold tracking-tight">
+                          <AnimatedCounter target={stat.target} startOnView formatter={(v) => formatStatValue(i, v)} />
+                        </p>
                         <p className="text-xs text-muted-foreground">{stat.label}</p>
                       </div>
                     </CardContent>
@@ -227,10 +277,32 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-          </div>
+          </FadeInSection>
         </section>
 
+        {/* Section Divider */}
+        <div className="section-divider" />
+
+        {/* ==================== RATE CALCULATOR ==================== */}
+        <RateCalculator paymentTypes={paymentTypes} />
+
         {/* ==================== PAYMENT TYPES — Running Text Cards ==================== */}
+        {paymentTypes.length === 0 && (
+          <section className="relative py-12 md:py-20">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-8">
+                <Skeleton className="h-4 w-32 mx-auto mb-3" />
+                <Skeleton className="h-9 w-64 mx-auto mb-4" />
+                <Skeleton className="h-4 w-80 mx-auto" />
+              </div>
+              <div className="flex gap-3 justify-center">
+                {[1,2,3,4].map(i => (
+                  <Skeleton key={i} className="h-12 w-44 rounded-2xl" />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
         {paymentTypes.length > 0 && (
           <section className="relative py-12 md:py-20" id="payment-types">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -312,9 +384,12 @@ export default function HomePage() {
           </section>
         )}
 
+        {/* Section Divider */}
+        <div className="section-divider" />
+
         {/* ==================== SERVICES — Desktop: Feature Cards Row ==================== */}
         <section className="relative py-12 md:py-20">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeInSection className="container mx-auto px-4 sm:px-6 lg:px-8">
             {/* Section Header */}
             <div className="text-center mb-10">
               <p className="text-sm font-medium text-primary mb-3">Layanan Kami</p>
@@ -414,7 +489,7 @@ export default function HomePage() {
                   tagStyle: 'bg-emerald-500/5 text-emerald-500/80 border border-emerald-500/10',
                 },
               ].map((f, i) => (
-                <Card key={i} className="border-border/50 py-0 gap-0 bg-background">
+                <Card key={i} className="border-border/50 py-0 gap-0 bg-background active:scale-[0.98] transition-transform duration-150">
                   <CardContent className="p-5 space-y-3">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-xl ${f.iconBg} flex items-center justify-center flex-shrink-0`}>
@@ -434,12 +509,15 @@ export default function HomePage() {
                 </Card>
               ))}
             </div>
-          </div>
+          </FadeInSection>
         </section>
+
+        {/* Section Divider */}
+        <div className="section-divider" />
 
         {/* ==================== HOW IT WORKS — Number Pipeline ==================== */}
         <section className="relative py-12 md:py-20">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeInSection className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-10">
               <p className="text-sm font-medium text-primary mb-3">Cara Kerja</p>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
@@ -515,13 +593,29 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-          </div>
+          </FadeInSection>
         </section>
 
         {/* ==================== TESTIMONIALS SECTION ==================== */}
         <TestimonialsSection />
 
         {/* ==================== FAQ SECTION ==================== */}
+        {faqs.length === 0 && (
+          <section className="relative py-12 md:py-20 bg-muted/30">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-10">
+                <Skeleton className="h-4 w-16 mx-auto mb-3" />
+                <Skeleton className="h-9 w-72 mx-auto mb-4" />
+                <Skeleton className="h-4 w-80 mx-auto" />
+              </div>
+              <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-4">
+                {[1,2,3,4].map(i => (
+                  <Skeleton key={i} className="h-14 rounded-lg" />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
         {faqs.length > 0 && (
           <section className="relative py-12 md:py-20 bg-muted/30">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -593,9 +687,12 @@ export default function HomePage() {
           </section>
         )}
 
+        {/* Section Divider */}
+        <div className="section-divider" />
+
         {/* ==================== PARTNER SECTION — Modern Gradient Card ==================== */}
         <section className="relative py-12 md:py-20">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeInSection className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="relative overflow-hidden rounded-2xl md:rounded-3xl">
               {/* Background */}
               <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-950" />
@@ -683,12 +780,12 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-          </div>
+          </FadeInSection>
         </section>
 
         {/* ==================== CTA SECTION — Clean & Different from Partner ==================== */}
-        <section className="relative py-12 md:py-20">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="relative py-12 md:py-20 bg-gradient-to-b from-background via-primary/[0.02] to-background">
+          <FadeInSection className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
               {/* Top accent line */}
               <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/30 to-transparent mb-8" />
@@ -733,10 +830,14 @@ export default function HomePage() {
                 </div>
               </div>
 
+              {/* Bottom accent line */}
+              <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/30 to-transparent mt-8" />
             </div>
-          </div>
+          </FadeInSection>
         </section>
 
+        <WhatsAppFab />
+        <SocialProofToast />
       </div>
     </>
   );

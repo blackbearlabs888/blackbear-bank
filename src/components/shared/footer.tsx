@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MessageCircle, ArrowUp, Heart, ExternalLink, Shield, Zap, Clock } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
@@ -232,10 +232,21 @@ export function Footer() {
 }
 
 function ScrollToTop() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     <button
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      className="fixed bottom-20 right-4 w-10 h-10 rounded-lg gradient-primary text-white shadow-md flex items-center justify-center z-40 md:hidden hover:opacity-90 transition-opacity active:scale-95"
+      className={cn(
+        "fixed bottom-36 right-4 w-10 h-10 rounded-lg gradient-primary text-white shadow-md flex items-center justify-center z-40 md:hidden active:scale-95 transition-all duration-300",
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
+      )}
       aria-label="Scroll to top"
     >
       <ArrowUp className="w-4 h-4" />

@@ -129,6 +129,7 @@
 
 /* Global Minimalist Scrollbar */
 html {
+  scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
   overflow-y: scroll;
@@ -613,19 +614,187 @@ html:active::-webkit-scrollbar-thumb {
   background: linear-gradient(
     105deg,
     transparent 20%,
-    rgba(255, 255, 255, 0.1) 40%,
-    rgba(255, 255, 255, 0.25) 50%,
-    rgba(255, 255, 255, 0.1) 60%,
+    rgba(255, 255, 255, 0.08) 40%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.08) 60%,
     transparent 80%
   );
   transform: translateX(-100%);
-  transition: transform 0.6s ease;
+  transition: transform 0.8s ease;
   pointer-events: none;
   border-radius: inherit;
+  z-index: 5;
 }
 
-.credit-card:hover .credit-card-shine {
+.group\/card-inner:hover .credit-card-shine {
   transform: translateX(100%);
+}
+
+/* Hero Card 2.0 — Premium Holographic Design */
+@keyframes heroCardBorderRotate {
+  0% { --angle: 0deg; }
+  100% { --angle: 360deg; }
+}
+
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes heroCardGlow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+@keyframes heroCardShimmer {
+  0% { background-position: -200% -200%; }
+  100% { background-position: 200% 200%; }
+}
+
+@keyframes heroCardParticle {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-80px) scale(0); opacity: 0; }
+}
+
+@keyframes heroCardFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-6px) rotate(1deg); }
+  75% { transform: translateY(4px) rotate(-0.5deg); }
+}
+
+.hero-card-wrapper {
+  animation: heroCardFloat 6s ease-in-out infinite;
+}
+
+.hero-card-border {
+  position: relative;
+  border-radius: 1.5rem;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--angle, 0deg),
+    oklch(0.55 0.25 295),
+    oklch(0.7 0.2 310),
+    oklch(0.6 0.22 330),
+    oklch(0.55 0.25 295),
+    oklch(0.45 0.2 280),
+    oklch(0.55 0.25 295)
+  );
+  animation: heroCardBorderRotate 4s linear infinite;
+}
+
+.hero-card-border::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 1.75rem;
+  background: conic-gradient(
+    from var(--angle, 0deg),
+    oklch(0.55 0.25 295 / 0.3),
+    oklch(0.7 0.2 310 / 0.2),
+    oklch(0.6 0.22 330 / 0.3),
+    oklch(0.55 0.25 295 / 0.2),
+    oklch(0.45 0.2 280 / 0.3),
+    oklch(0.55 0.25 295 / 0.2)
+  );
+  filter: blur(12px);
+  z-index: -1;
+}
+
+.hero-card-inner {
+  border-radius: calc(1.5rem - 2px);
+  background: linear-gradient(135deg, #0f0a1a 0%, #1a1030 25%, #0d0d1f 50%, #1a0e2e 75%, #0f0a1a 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-card-holographic {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, oklch(0.55 0.25 295 / 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, oklch(0.65 0.2 310 / 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, oklch(0.6 0.22 300 / 0.05) 0%, transparent 70%);
+  background-size: 200% 200%;
+  animation: heroCardShimmer 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.hero-card-light-streak {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    oklch(0.7 0.15 300 / 0.03) 45%,
+    oklch(0.8 0.2 310 / 0.06) 50%,
+    oklch(0.7 0.15 300 / 0.03) 55%,
+    transparent 60%
+  );
+  background-size: 200% 200%;
+  animation: heroCardShimmer 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.hero-card-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(oklch(0.7 0.2 295 / 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.7 0.2 295 / 0.03) 1px, transparent 1px);
+  background-size: 30px 30px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  pointer-events: none;
+}
+
+.hero-card-particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: oklch(0.75 0.2 300);
+  animation: heroCardParticle 3s ease-out infinite;
+  pointer-events: none;
+}
+
+/* Announcement bar cross-fade */
+@keyframes announcementFade {
+  0% { opacity: 0; transform: translateY(4px); }
+  10% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+
+/* Safe area bottom for sticky CTA */
+.safe-area-bottom {
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+/* Section divider gradient line */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, oklch(0.55 0.25 295 / 0.15), transparent);
+}
+
+.dark .section-divider {
+  background: linear-gradient(to right, transparent, oklch(0.7 0.22 295 / 0.1), transparent);
+}
+
+/* Rate calculator input */
+input[type="text"][inputmode="numeric"] {
+  -moz-appearance: textfield;
+}
+
+input[type="text"][inputmode="numeric"]::-webkit-outer-spin-button,
+input[type="text"][inputmode="numeric"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 @keyframes float {
@@ -651,9 +820,10 @@ html:active::-webkit-scrollbar-thumb {
 /* Chip icon styling */
 .credit-chip {
   background: linear-gradient(135deg, #d4af37 0%, #f5d742 50%, #d4af37 100%);
-  border-radius: 6px;
+  border-radius: 8px;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3);
 }
 
 .credit-chip::before {
@@ -661,7 +831,7 @@ html:active::-webkit-scrollbar-thumb {
   position: absolute;
   inset: 2px;
   background: linear-gradient(135deg, #c9a227 0%, #e5c835 50%, #c9a227 100%);
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .credit-chip::after {
@@ -671,7 +841,34 @@ html:active::-webkit-scrollbar-thumb {
   left: 4px;
   right: 4px;
   height: 1px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.credit-chip-lines {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.credit-chip-lines::before {
+  content: '';
+  position: absolute;
+  top: 33%;
+  left: 3px;
+  right: 3px;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.credit-chip-lines::after {
+  content: '';
+  position: absolute;
+  bottom: 33%;
+  left: 3px;
+  right: 3px;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.12);
 }
 
 /* Contactless icon */
