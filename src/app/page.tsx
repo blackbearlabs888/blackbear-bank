@@ -71,7 +71,7 @@ export default function HomePage() {
             <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-fuchsia-500/5 rounded-full blur-[100px]" />
           </div>
 
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 md:pt-32 md:pb-24 flex flex-col min-h-dvh">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-8 md:pt-24 md:pb-16 flex flex-col min-h-dvh">
             <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center flex-1">
               {/* Left: Text Content */}
               <div className="text-center lg:text-left space-y-5">
@@ -103,7 +103,7 @@ export default function HomePage() {
                   >
                     <Link href="/order">
                       <Zap className="w-4 h-4" />
-                      <span className="sm:inline hidden">Order </span>Sekarang
+                      <span className="sm:inline hidden">Order Sekarang</span>
                     </Link>
                   </Button>
                   <Button
@@ -114,7 +114,7 @@ export default function HomePage() {
                   >
                     <Link href="/track">
                       <Truck className="w-4 h-4" />
-                      <span className="sm:inline hidden">Track </span>Order
+                      <span className="sm:inline hidden">Track Order</span>
                     </Link>
                   </Button>
                 </div>
@@ -189,11 +189,11 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Floating badges */}
-                  <div className="absolute -top-2 -right-2 w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-xl backdrop-blur-sm flex items-center justify-center animate-bounce-soft">
+                  {/* Floating badges — hidden on mobile to prevent overflow */}
+                  <div className="hidden sm:block absolute -top-2 -right-2 w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-xl backdrop-blur-sm flex items-center justify-center animate-bounce-soft">
                     <TrendingUp className="w-5 h-5 text-emerald-500" />
                   </div>
-                  <div className="absolute -bottom-2 -left-2 w-10 h-10 bg-primary/10 border border-primary/20 rounded-xl backdrop-blur-sm flex items-center justify-center animate-bounce-soft" style={{ animationDelay: '1s' }}>
+                  <div className="hidden sm:block absolute -bottom-2 -left-2 w-10 h-10 bg-primary/10 border border-primary/20 rounded-xl backdrop-blur-sm flex items-center justify-center animate-bounce-soft" style={{ animationDelay: '1s' }}>
                     <Wallet className="w-4 h-4 text-primary" />
                   </div>
                 </div>
@@ -203,7 +203,7 @@ export default function HomePage() {
         </section>
 
         {/* ==================== STATS SECTION ==================== */}
-        <section className="relative pb-16">
+        <section className="relative pb-8">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
@@ -232,10 +232,10 @@ export default function HomePage() {
 
         {/* ==================== PAYMENT TYPES — Running Text Cards ==================== */}
         {paymentTypes.length > 0 && (
-          <section className="relative py-20 md:py-24" id="payment-types">
+          <section className="relative py-12 md:py-20" id="payment-types">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               {/* Section Header */}
-              <div className="text-center mb-10">
+              <div className="text-center mb-8">
                 <p className="text-sm font-medium text-primary mb-3">Jenis Pembayaran</p>
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
                   Metode Pembayaran Tersedia
@@ -313,10 +313,10 @@ export default function HomePage() {
         )}
 
         {/* ==================== SERVICES — Desktop: Feature Cards Row ==================== */}
-        <section className="relative py-20 md:py-24">
+        <section className="relative py-12 md:py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             {/* Section Header */}
-            <div className="text-center mb-14">
+            <div className="text-center mb-10">
               <p className="text-sm font-medium text-primary mb-3">Layanan Kami</p>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
                 Layanan Lengkap untuk Anda
@@ -438,9 +438,9 @@ export default function HomePage() {
         </section>
 
         {/* ==================== HOW IT WORKS — Number Pipeline ==================== */}
-        <section className="relative py-20 md:py-24">
+        <section className="relative py-12 md:py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-14">
+            <div className="text-center mb-10">
               <p className="text-sm font-medium text-primary mb-3">Cara Kerja</p>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
                 Semudah 3 Langkah
@@ -523,10 +523,10 @@ export default function HomePage() {
 
         {/* ==================== FAQ SECTION ==================== */}
         {faqs.length > 0 && (
-          <section className="relative py-20 md:py-24 bg-muted/30">
+          <section className="relative py-12 md:py-20 bg-muted/30">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               {/* Section Header */}
-              <div className="text-center mb-14">
+              <div className="text-center mb-10">
                 <p className="text-sm font-medium text-primary mb-3">FAQ</p>
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
                   Pertanyaan yang Sering Diajukan
@@ -583,7 +583,7 @@ export default function HomePage() {
               </div>
 
               {/* Bottom help text */}
-              <div className="mt-10 text-center">
+              <div className="mt-6 text-center">
                 <p className="text-sm text-muted-foreground">
                   Masih ada pertanyaan?{' '}
                   <span className="font-medium text-primary">Hubungi kami via WhatsApp</span>
@@ -594,7 +594,7 @@ export default function HomePage() {
         )}
 
         {/* ==================== PARTNER SECTION — Modern Gradient Card ==================== */}
-        <section className="relative py-20 md:py-24">
+        <section className="relative py-12 md:py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="relative overflow-hidden rounded-2xl md:rounded-3xl">
               {/* Background */}
@@ -687,11 +687,11 @@ export default function HomePage() {
         </section>
 
         {/* ==================== CTA SECTION — Clean & Different from Partner ==================== */}
-        <section className="relative py-20 md:py-24">
+        <section className="relative py-12 md:py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
               {/* Top accent line */}
-              <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/30 to-transparent mb-12" />
+              <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/30 to-transparent mb-8" />
 
               <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16">
                 {/* Left — Text */}
@@ -733,36 +733,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Bottom accent line */}
-              <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/30 to-transparent mt-12" />
-            </div>
-          </div>
-        </section>
-
-        {/* ==================== FOOTER NOTE ==================== */}
-        <section className="relative py-10 border-t border-border/50">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <div className="flex flex-col items-center gap-3">
-              {config.logoUrl && !logoError ? (
-                <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center p-1 dark:bg-transparent dark:border-transparent">
-                  <img
-                    src={config.logoUrl}
-                    alt={config.websiteTitle}
-                    className="w-full h-full object-contain"
-                    onError={() => setLogoError(true)}
-                  />
-                </div>
-              ) : (
-                <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">{getInitials()}</span>
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                © {new Date().getFullYear()} {config.websiteTitle}. Semua hak dilindungi.
-              </p>
-              <p className="text-[11px] text-muted-foreground/60">
-                Layanan tarik tunai kartu kredit & paylater terpercaya di Indonesia.
-              </p>
             </div>
           </div>
         </section>
