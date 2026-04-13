@@ -58,6 +58,9 @@ import {
   PieChart as PieChartIcon,
   Calculator,
   LayoutDashboard,
+  Handshake,
+  UserCheck,
+  Store,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -957,13 +960,25 @@ export default function OwnerDashboardPage() {
             <CardHeader className="pb-0 px-5 pt-4">
               <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Performance</p>
             </CardHeader>
-            <div className="px-5 overflow-x-auto hide-scrollbar">
-              <TabsList className="h-8 bg-muted/50 w-max min-w-full">
-                <TabsTrigger value="partners" className="text-[11px] h-6 px-3">Partner</TabsTrigger>
-                <TabsTrigger value="customers" className="text-[11px] h-6 px-3">Pelanggan</TabsTrigger>
-                <TabsTrigger value="payments" className="text-[11px] h-6 px-3">Pembayaran</TabsTrigger>
+            <div className="px-5">
+              <TabsList className="h-8 bg-muted/50 w-full">
+                <TabsTrigger value="partners" className="text-[11px] h-6 px-2 sm:px-3 gap-1">
+                  <Handshake className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Partner</span>
+                </TabsTrigger>
+                <TabsTrigger value="customers" className="text-[11px] h-6 px-2 sm:px-3 gap-1">
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Pelanggan</span>
+                </TabsTrigger>
+                <TabsTrigger value="payments" className="text-[11px] h-6 px-2 sm:px-3 gap-1">
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Pembayaran</span>
+                </TabsTrigger>
                 {analytics?.marketplaceAnalysis && analytics.marketplaceAnalysis.length > 0 && (
-                  <TabsTrigger value="marketplace" className="text-[11px] h-6 px-3">Marketplace</TabsTrigger>
+                  <TabsTrigger value="marketplace" className="text-[11px] h-6 px-2 sm:px-3 gap-1">
+                    <Store className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Marketplace</span>
+                  </TabsTrigger>
                 )}
               </TabsList>
             </div>
