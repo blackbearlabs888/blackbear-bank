@@ -1049,7 +1049,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   variant="outline"
                   className="rounded-xl px-6 h-10 text-sm font-medium border-primary/30 text-primary hover:bg-primary hover:text-white transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <a href="https://wa.me/6281234567890" target="_blank" rel="noopener noreferrer">
+                  <a href={config.footerWhatsapp ? `https://wa.me/${config.footerWhatsapp}` : '#'} target="_blank" rel="noopener noreferrer">
                     <MessageCircle className="w-4 h-4" />
                     Tanyakan via WhatsApp
                   </a>

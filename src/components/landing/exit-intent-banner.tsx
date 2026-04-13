@@ -4,8 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Zap, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useSiteConfig } from '@/hooks/use-site-config';
 
 export default function ExitIntentBanner() {
+  const { config } = useSiteConfig();
   const [isVisible, setIsVisible] = useState(false);
   const lastScrollY = useRef(0);
   const hasShown = useRef(false);
@@ -37,6 +39,10 @@ export default function ExitIntentBanner() {
 
   if (!isVisible) return null;
 
+  const waUrl = config.footerWhatsapp
+    ? `https://wa.me/${config.footerWhatsapp}?text=${encodeURIComponent('Halo, saya ingin bertanya tentang layanan gestun.')}`
+    : '#';
+
   return (
     <div className="fixed bottom-20 md:bottom-8 left-4 right-4 md:left-auto md:right-4 md:w-80 z-50 animate-slide-up">
       <div className="rounded-2xl border border-border/50 bg-background/95 backdrop-blur-xl shadow-2xl shadow-black/10 p-4 space-y-3">
@@ -60,7 +66,7 @@ export default function ExitIntentBanner() {
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="flex-1 h-9 text-xs rounded-lg">
-            <a href="https://wa.me/" target="_blank" rel="noopener noreferrer">
+            <a href={waUrl} target="_blank" rel="noopener noreferrer">
               <MessageCircle className="w-3 h-3" />
               Chat WA
             </a>
