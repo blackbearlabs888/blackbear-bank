@@ -142,7 +142,7 @@ export function DesktopNavbar() {
             </Link>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-0.5">
               {!isAuthenticated ? (
                 publicLinks.map((link) => {
                   const isActive = pathname === link.href;
@@ -151,7 +151,7 @@ export function DesktopNavbar() {
                       key={link.href}
                       href={link.href}
                       className={cn(
-                        'px-3 py-1.5 rounded-lg text-sm transition-colors duration-200',
+                        'inline-flex items-center h-8 px-3 rounded-lg text-sm transition-colors duration-200',
                         isActive
                           ? 'text-foreground font-medium'
                           : 'text-muted-foreground hover:text-foreground'
@@ -162,11 +162,11 @@ export function DesktopNavbar() {
                   );
                 })
               ) : user?.role === 'owner' ? (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
                   <Link
                     href="/owner/dashboard"
                     className={cn(
-                      'px-3 py-1.5 rounded-lg text-sm transition-colors duration-200',
+                      'inline-flex items-center h-8 px-3 rounded-lg text-sm transition-colors duration-200',
                       pathname === '/owner/dashboard'
                         ? 'text-foreground font-medium'
                         : 'text-muted-foreground hover:text-foreground'
@@ -178,7 +178,7 @@ export function DesktopNavbar() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className={cn(
-                        'px-3 py-1.5 rounded-lg text-sm transition-colors duration-200 flex items-center gap-1',
+                        'inline-flex items-center h-8 px-3 rounded-lg text-sm transition-colors duration-200 gap-0.5',
                         isGroupActive(ownerMenuGroups.pengguna.items)
                           ? 'text-foreground font-medium'
                           : 'text-muted-foreground hover:text-foreground'
@@ -209,7 +209,7 @@ export function DesktopNavbar() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className={cn(
-                        'px-3 py-1.5 rounded-lg text-sm transition-colors duration-200 flex items-center gap-1',
+                        'inline-flex items-center h-8 px-3 rounded-lg text-sm transition-colors duration-200 gap-0.5',
                         isGroupActive(ownerMenuGroups.transaksi.items)
                           ? 'text-foreground font-medium'
                           : 'text-muted-foreground hover:text-foreground'
@@ -240,7 +240,7 @@ export function DesktopNavbar() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className={cn(
-                        'px-3 py-1.5 rounded-lg text-sm transition-colors duration-200 flex items-center gap-1',
+                        'inline-flex items-center h-8 px-3 rounded-lg text-sm transition-colors duration-200 gap-0.5',
                         isGroupActive(ownerMenuGroups.pengaturan.items) || isGroupActive(seoMenuItems) || pathname === '/owner/dashboard/settings'
                           ? 'text-foreground font-medium'
                           : 'text-muted-foreground hover:text-foreground'
