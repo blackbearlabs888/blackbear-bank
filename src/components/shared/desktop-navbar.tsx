@@ -314,7 +314,7 @@ export function DesktopNavbar() {
                       key={link.href}
                       href={link.href}
                       className={cn(
-                        'px-3 py-1.5 rounded-lg text-sm transition-colors duration-200',
+                        'inline-flex items-center h-8 px-3 rounded-lg text-sm transition-colors duration-200',
                         isActive
                           ? 'text-foreground font-medium'
                           : 'text-muted-foreground hover:text-foreground'
