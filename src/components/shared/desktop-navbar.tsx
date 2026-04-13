@@ -36,7 +36,7 @@ import {
   Bell,
   Star,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useSiteConfig } from '@/hooks/use-site-config';
 
@@ -89,11 +89,20 @@ const partnerLinks = [
 
 export function DesktopNavbar() {
   const pathname = usePathname();
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const { user, isAuthenticated, logout } = useAuthStore();
   const { config, getInitials } = useSiteConfig();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoError, setLogoError] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const isAuthPage = pathname === '/login' || pathname === '/register';
   const isDashboardPage = pathname?.startsWith('/owner/') || pathname?.startsWith('/partner/') || pathname?.startsWith('/dashboard');
@@ -104,7 +113,12 @@ export function DesktopNavbar() {
   return (
     <>
       <header className="sticky top-0 z-50 w-full ios-safe-top">
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-xl border-b border-border/50" />
+        <div className={cn(
+          "absolute inset-0 transition-all duration-300",
+          isScrolled
+            ? "bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm"
+            : "bg-transparent"
+        )} />
 
         <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
@@ -315,19 +329,20 @@ export function DesktopNavbar() {
 
             {/* Right side */}
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              <button
+                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
                 className={cn(
-                  "rounded-lg h-9 w-9 transition-colors duration-200 hover:bg-muted",
+                  "w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center hover:bg-muted transition-colors",
                   isDashboardPage && "md:hidden hidden"
                 )}
+                aria-label="Toggle theme"
               >
-                <Sun className="h-4 w-4 rotate-0 scale-100 transition-all duration-300 dark:-rotate-90 dark:scale-0" />
-                <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all duration-300 dark:rotate-0 dark:scale-100" />
-                <span className="sr-only">Toggle theme</span>
-              </Button>
+                {resolvedTheme === 'dark' ? (
+                  <Sun className="h-4 w-4 text-foreground" />
+                ) : (
+                  <Moon className="h-4 w-4 text-foreground" />
+                )}
+              </button>
 
               {isAuthenticated ? (
                 <DropdownMenu>

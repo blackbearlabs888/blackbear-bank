@@ -119,11 +119,41 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
   }
   
   /* Mobile-first touch targets */
   button, a, input, select, textarea {
     min-height: 44px;
+  }
+
+  /* Smooth transition for all interactive elements */
+  button, a, [role="button"], input, select, textarea, [tabindex] {
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.2s ease,
+                background-color 0.2s ease,
+                border-color 0.2s ease;
+  }
+
+  /* Text selection color */
+  ::selection {
+    background-color: oklch(0.55 0.25 295 / 0.2);
+    color: inherit;
+  }
+
+  ::-moz-selection {
+    background-color: oklch(0.55 0.25 295 / 0.2);
+    color: inherit;
+  }
+
+  .dark ::selection {
+    background-color: oklch(0.7 0.22 295 / 0.25);
+    color: inherit;
+  }
+
+  .dark ::-moz-selection {
+    background-color: oklch(0.7 0.22 295 / 0.25);
+    color: inherit;
   }
 }
 
@@ -133,6 +163,7 @@ html {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
   overflow-y: scroll;
+  overflow-x: hidden;
 }
 
 html:hover,
@@ -151,12 +182,17 @@ html::-webkit-scrollbar-track {
 html::-webkit-scrollbar-thumb {
   background-color: transparent;
   border-radius: 4px;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, width 0.2s ease;
 }
 
 html:hover::-webkit-scrollbar-thumb,
 html:active::-webkit-scrollbar-thumb {
   background-color: oklch(0.75 0.1 300);
+  border-radius: 4px;
+}
+
+html:hover::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.65 0.12 295);
 }
 
 .dark html {
@@ -419,6 +455,11 @@ html:active::-webkit-scrollbar-thumb {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
@@ -673,6 +714,10 @@ html:active::-webkit-scrollbar-thumb {
   position: relative;
   border-radius: 1.5rem;
   padding: 2px;
+  transform-style: preserve-3d;
+  overflow: clip;
+  min-width: 0;
+  transition: transform 0.1s ease-out;
   background: conic-gradient(
     from var(--angle, 0deg),
     oklch(0.55 0.25 295),
@@ -683,6 +728,7 @@ html:active::-webkit-scrollbar-thumb {
     oklch(0.55 0.25 295)
   );
   animation: heroCardBorderRotate 4s linear infinite;
+  box-shadow: 0 20px 60px -12px oklch(0.55 0.25 295 / 0.15);
 }
 
 .hero-card-border::before {
@@ -707,7 +753,33 @@ html:active::-webkit-scrollbar-thumb {
   border-radius: calc(1.5rem - 2px);
   background: linear-gradient(135deg, #0f0a1a 0%, #1a1030 25%, #0d0d1f 50%, #1a0e2e 75%, #0f0a1a 100%);
   position: relative;
-  overflow: hidden;
+  overflow: clip;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.dark .hero-card-inner {
+  background: linear-gradient(135deg, #1a1025 0%, #251835 25%, #18122a 50%, #201530 75%, #1a1025 100%);
+}
+
+.dark .hero-card-border::before {
+  background: conic-gradient(
+    from var(--angle, 0deg),
+    oklch(0.7 0.25 295 / 0.4),
+    oklch(0.8 0.22 310 / 0.3),
+    oklch(0.7 0.24 330 / 0.4),
+    oklch(0.65 0.25 295 / 0.3),
+    oklch(0.6 0.22 280 / 0.4),
+    oklch(0.65 0.25 295 / 0.3)
+  );
+  filter: blur(16px);
+}
+
+.dark .hero-card-holographic {
+  background:
+    radial-gradient(ellipse at 20% 20%, oklch(0.65 0.28 295 / 0.2) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, oklch(0.75 0.22 310 / 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, oklch(0.7 0.25 300 / 0.08) 0%, transparent 70%);
 }
 
 .hero-card-holographic {
@@ -720,25 +792,35 @@ html:active::-webkit-scrollbar-thumb {
   background-size: 200% 200%;
   animation: heroCardShimmer 8s ease-in-out infinite;
   pointer-events: none;
+  contain: strict;
 }
 
 .hero-card-light-streak {
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    oklch(0.7 0.15 300 / 0.04) 45%,
+    oklch(0.8 0.2 310 / 0.08) 50%,
+    oklch(0.7 0.15 300 / 0.04) 55%,
+    transparent 70%
+  );
+  animation: heroCardShimmer 6s ease-in-out infinite;
+  pointer-events: none;
+  overflow: clip;
+  border-radius: inherit;
+}
+
+.dark .hero-card-light-streak {
   background: linear-gradient(
     45deg,
     transparent 40%,
-    oklch(0.7 0.15 300 / 0.03) 45%,
-    oklch(0.8 0.2 310 / 0.06) 50%,
-    oklch(0.7 0.15 300 / 0.03) 55%,
+    oklch(0.75 0.18 300 / 0.05) 45%,
+    oklch(0.85 0.22 310 / 0.08) 50%,
+    oklch(0.75 0.18 300 / 0.05) 55%,
     transparent 60%
   );
-  background-size: 200% 200%;
-  animation: heroCardShimmer 6s ease-in-out infinite;
-  pointer-events: none;
 }
 
 .hero-card-grid {
@@ -776,14 +858,33 @@ html:active::-webkit-scrollbar-thumb {
   padding-bottom: max(12px, env(safe-area-inset-bottom));
 }
 
-/* Section divider gradient line */
+/* Section divider gradient line with centered dot accent */
 .section-divider {
+  position: relative;
   height: 1px;
   background: linear-gradient(to right, transparent, oklch(0.55 0.25 295 / 0.15), transparent);
 }
 
+.section-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: oklch(0.55 0.25 295 / 0.2);
+  border: 1px solid oklch(0.55 0.25 295 / 0.3);
+}
+
 .dark .section-divider {
   background: linear-gradient(to right, transparent, oklch(0.7 0.22 295 / 0.1), transparent);
+}
+
+.dark .section-divider::before {
+  background: oklch(0.7 0.22 295 / 0.15);
+  border-color: oklch(0.7 0.22 295 / 0.2);
 }
 
 /* Rate calculator input */
@@ -900,4 +1001,768 @@ input[type="text"][inputmode="numeric"]::-webkit-inner-spin-button {
   top: 50%;
   right: -3px;
   transform: translateY(-50%) rotate(-45deg);
+}
+
+/* Animated CTA gradient background */
+@keyframes ctaGradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.cta-animated-bg {
+  background: linear-gradient(
+    -45deg,
+    oklch(0.99 0.005 300),
+    oklch(0.95 0.04 310),
+    oklch(0.97 0.06 295),
+    oklch(0.99 0.005 300)
+  );
+  background-size: 400% 400%;
+  animation: ctaGradientShift 8s ease infinite;
+}
+
+.dark .cta-animated-bg {
+  background: linear-gradient(
+    -45deg,
+    oklch(0.12 0.02 295),
+    oklch(0.17 0.04 310),
+    oklch(0.14 0.06 295),
+    oklch(0.12 0.02 295)
+  );
+  background-size: 400% 400%;
+  animation: ctaGradientShift 8s ease infinite;
+}
+
+/* Loading bar animation */
+@keyframes loadingBar {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(0%); }
+  100% { transform: translateX(200%); }
+}
+
+.animate-loading-bar {
+  animation: loadingBar 1.5s ease-in-out infinite;
+}
+
+/* ===== Micro-animations ===== */
+
+/* Shimmer border animation for cards */
+@keyframes borderShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-border-shimmer {
+  background-size: 200% 200%;
+  animation: borderShimmer 3s ease infinite;
+}
+
+/* Float in animation for new sections */
+@keyframes floatIn {
+  0% { opacity: 0; transform: translateY(20px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-float-in {
+  animation: floatIn 0.6s ease-out forwards;
+}
+
+/* Shimmer gradient bar for rate calculator */
+@keyframes shimmerGradient {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer-gradient-bar {
+  background: linear-gradient(
+    90deg,
+    oklch(0.55 0.25 295) 0%,
+    oklch(0.65 0.2 310) 25%,
+    oklch(0.7 0.18 320) 50%,
+    oklch(0.65 0.2 310) 75%,
+    oklch(0.55 0.25 295) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerGradient 3s ease-in-out infinite;
+}
+
+.dark .shimmer-gradient-bar {
+  background: linear-gradient(
+    90deg,
+    oklch(0.7 0.22 295) 0%,
+    oklch(0.75 0.2 310) 25%,
+    oklch(0.8 0.18 320) 50%,
+    oklch(0.75 0.2 310) 75%,
+    oklch(0.7 0.22 295) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerGradient 3s ease-in-out infinite;
+}
+
+/* ===== Section Header Entrance Animations ===== */
+@keyframes sectionHeaderFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-section-header {
+  opacity: 0;
+  animation: sectionHeaderFadeIn 0.5s ease-out forwards;
+}
+
+.animate-section-header.stagger-1 { animation-delay: 0ms; }
+.animate-section-header.stagger-2 { animation-delay: 100ms; }
+.animate-section-header.stagger-3 { animation-delay: 200ms; }
+
+/* ===== Mobile Tap Ripple Effect ===== */
+@keyframes ripple {
+  0% { transform: scale(0); opacity: 0.5; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+.tap-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.tap-ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, var(--color-primary) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tap-ripple:active::after {
+  opacity: 0.1;
+}
+
+/* ===== CTA Shimmer Hover Effect ===== */
+.cta-shimmer-hover {
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-shimmer-hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.9 0.1 310 / 0.2),
+    transparent
+  );
+  transition: none;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.cta-shimmer-hover:hover::before {
+  animation: ctaShimmerSweep 0.6s ease-out forwards;
+}
+
+@keyframes ctaShimmerSweep {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+/* Announcement bar shimmer sweep */
+.announcement-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.announcement-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.05),
+    transparent
+  );
+  animation: announcementSweep 4s ease-in-out infinite;
+}
+
+@keyframes announcementSweep {
+  0%, 100% { left: -100%; }
+  50% { left: 200%; }
+}
+
+/* Payment card hover glow */
+.payment-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.payment-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px -4px rgba(139, 92, 246, 0.15),
+              0 2px 8px -2px rgba(139, 92, 246, 0.1);
+}
+
+.dark .payment-card-hover:hover {
+  box-shadow: 0 4px 20px -4px rgba(139, 92, 246, 0.25),
+              0 2px 8px -2px rgba(139, 92, 246, 0.15);
+}
+
+/* Section header animated underline — grows from center on scroll into view */
+.section-header-underline {
+  position: relative;
+  display: inline-block;
+}
+.section-header-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary), #d946ef, var(--color-primary));
+  background-size: 200% 100%;
+  border-radius: 9999px;
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.section-header-underline.in-view::after {
+  width: 80px;
+  animation: underlineShimmer 3s ease-in-out infinite 0.8s;
+}
+
+@keyframes underlineShimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ===== Stats Section Enhancements ===== */
+
+/* Stat card enhanced hover lift */
+.stat-card-hover {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.35s ease;
+}
+
+.stat-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px -8px oklch(0.55 0.25 295 / 0.12),
+              0 4px 12px -4px oklch(0.55 0.25 295 / 0.08);
+}
+
+.dark .stat-card-hover:hover {
+  box-shadow: 0 12px 32px -8px oklch(0.7 0.22 295 / 0.2),
+              0 4px 12px -4px oklch(0.7 0.22 295 / 0.12);
+}
+
+/* Stat icon pulse animation when counter finishes */
+@keyframes statIconPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.stat-icon-animated {
+  animation: statIconPulse 0.5s ease-out;
+}
+
+/* Stat card divider (vertical, between cards) */
+.stat-card-divider {
+  position: relative;
+}
+.stat-card-divider::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: 25%;
+  bottom: 25%;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, oklch(0.55 0.25 295 / 0.15), transparent);
+}
+
+/* ===== How It Works Enhancements ===== */
+
+/* Pulsing glow on step circles */
+@keyframes stepGlow {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.55 0.25 295 / 0.2), 0 4px 16px -4px oklch(0.55 0.25 295 / 0.15); }
+  50% { box-shadow: 0 0 0 8px oklch(0.55 0.25 295 / 0), 0 4px 20px -4px oklch(0.55 0.25 295 / 0.2); }
+}
+
+.step-circle-glow {
+  animation: stepGlow 2.5s ease-in-out infinite;
+}
+
+/* Connecting line flowing dots animation */
+@keyframes flowingDots {
+  0% { background-position: 0 0; }
+  100% { background-position: 24px 0; }
+}
+
+.step-connector {
+  position: relative;
+}
+
+.step-connector::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    oklch(0.55 0.25 295 / 0.4) 0px,
+    oklch(0.55 0.25 295 / 0.4) 3px,
+    transparent 3px,
+    transparent 8px
+  );
+  background-size: 24px 1px;
+  animation: flowingDots 1.5s linear infinite;
+  mask-image: linear-gradient(90deg, oklch(0.55 0.25 295 / 0.1), oklch(0.55 0.25 295 / 0.6), oklch(0.55 0.25 295 / 0.1));
+  -webkit-mask-image: linear-gradient(90deg, oklch(0.55 0.25 295 / 0.1), oklch(0.55 0.25 295 / 0.6), oklch(0.55 0.25 295 / 0.1));
+}
+
+/* Vertical flowing dots for mobile */
+@keyframes flowingDotsVertical {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 24px; }
+}
+
+.step-connector-vertical::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    180deg,
+    oklch(0.55 0.25 295 / 0.4) 0px,
+    oklch(0.55 0.25 295 / 0.4) 3px,
+    transparent 3px,
+    transparent 8px
+  );
+  background-size: 1px 24px;
+  animation: flowingDotsVertical 1.5s linear infinite;
+  mask-image: linear-gradient(180deg, oklch(0.55 0.25 295 / 0.1), oklch(0.55 0.25 295 / 0.6), oklch(0.55 0.25 295 / 0.1));
+  -webkit-mask-image: linear-gradient(180deg, oklch(0.55 0.25 295 / 0.1), oklch(0.55 0.25 295 / 0.6), oklch(0.55 0.25 295 / 0.1));
+}
+
+/* Step 3 "Done!" checkmark animation on hover */
+@keyframes checkmarkPop {
+  0% { transform: scale(0) rotate(-45deg); opacity: 0; }
+  50% { transform: scale(1.2) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.step-done-check {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.step-done-container:hover .step-done-check {
+  opacity: 1;
+  animation: checkmarkPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.step-done-container:hover .step-done-icon {
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.2s ease;
+}
+
+.step-done-container .step-done-icon {
+  opacity: 1;
+  transform: scale(1);
+  transition: all 0.3s ease;
+}
+
+/* ===== Micro-interactions Polish ===== */
+
+/* Smooth hover scale on all shadcn Cards */
+[role="article"].group,
+.card.hover-lift {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.3s ease;
+}
+
+/* Input focus border glow */
+input:focus,
+textarea:focus,
+select:focus {
+  box-shadow: 0 0 0 3px oklch(0.55 0.25 295 / 0.12),
+              0 0 12px -2px oklch(0.55 0.25 295 / 0.08);
+}
+
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  box-shadow: 0 0 0 3px oklch(0.7 0.22 295 / 0.15),
+              0 0 12px -2px oklch(0.7 0.22 295 / 0.1);
+}
+
+/* Gradient text effect on section headings hover */
+.section-heading-gradient:hover {
+  background: linear-gradient(135deg, var(--color-primary), #d946ef, var(--color-primary));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: underlineShimmer 2s ease-in-out infinite;
+}
+
+/* FAQ toggle button */
+.faq-toggle {
+  @apply text-sm text-muted-foreground hover:text-primary transition-colors duration-200;
+  @apply flex items-center gap-1 cursor-pointer select-none;
+}
+
+.faq-toggle:hover {
+  @apply underline underline-offset-2;
+}
+
+/* ===== Typewriter Cursor Blink ===== */
+@keyframes typewriterBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-typewriter-blink {
+  animation: typewriterBlink 0.8s step-end infinite;
+}
+
+/* ===== Trust Badge Pulse ===== */
+@keyframes trustPulse {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.6 0.18 160 / 0.3); }
+  50% { box-shadow: 0 0 0 6px oklch(0.6 0.18 160 / 0); }
+}
+
+.animate-trust-pulse {
+  animation: trustPulse 2.5s ease-in-out infinite;
+}
+
+/* ===== Result Reveal Animation (fade-in + slide-up) ===== */
+@keyframes resultReveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-result-reveal {
+  animation: resultReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ===== FAQ Card Hover ===== */
+.faq-card-hover {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.faq-card-hover:hover {
+  border-color: oklch(0.55 0.25 295 / 0.25);
+  box-shadow: 0 2px 12px -2px oklch(0.55 0.25 295 / 0.08);
+}
+
+.dark .faq-card-hover:hover {
+  border-color: oklch(0.7 0.22 295 / 0.2);
+  box-shadow: 0 2px 12px -2px oklch(0.7 0.22 295 / 0.12);
+}
+
+/* ===== Pulse Glow Animation ===== */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 oklch(0.55 0.25 295 / 0.25),
+                0 0 20px -4px oklch(0.55 0.25 295 / 0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 6px oklch(0.55 0.25 295 / 0),
+                0 0 28px -4px oklch(0.55 0.25 295 / 0.18);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+.dark .animate-pulse-glow {
+  animation-name: pulseGlowDark;
+}
+
+@keyframes pulseGlowDark {
+  0%, 100% {
+    box-shadow: 0 0 0 0 oklch(0.7 0.22 295 / 0.3),
+                0 0 20px -4px oklch(0.7 0.22 295 / 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 6px oklch(0.7 0.22 295 / 0),
+                0 0 28px -4px oklch(0.7 0.22 295 / 0.22);
+  }
+}
+
+/* ===== Glass Card Light ===== */
+.glass-card-light {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark .glass-card-light {
+  background: rgba(30, 20, 40, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ===== Comparison Table Highlight Cell ===== */
+.compare-highlight-cell {
+  position: relative;
+  overflow: hidden;
+}
+
+.compare-highlight-cell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, oklch(0.55 0.25 295 / 0.06), oklch(0.65 0.2 310 / 0.06));
+  border-radius: inherit;
+  z-index: -1;
+}
+
+.dark .compare-highlight-cell::before {
+  background: linear-gradient(135deg, oklch(0.7 0.22 295 / 0.08), oklch(0.75 0.2 310 / 0.06));
+}
+
+/* ===== Improved Section Divider — More Subtle ===== */
+.section-divider {
+  position: relative;
+  height: 1px;
+  background: linear-gradient(to right, transparent, oklch(0.55 0.25 295 / 0.08), transparent);
+}
+
+.section-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: oklch(0.55 0.25 295 / 0.12);
+  border: 1px solid oklch(0.55 0.25 295 / 0.18);
+}
+
+.dark .section-divider {
+  background: linear-gradient(to right, transparent, oklch(0.7 0.22 295 / 0.06), transparent);
+}
+
+.dark .section-divider::before {
+  background: oklch(0.7 0.22 295 / 0.1);
+  border-color: oklch(0.7 0.22 295 / 0.14);
+}
+
+/* ===== Payment Card Glow ===== */
+.payment-card-glow {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.payment-card-glow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px -4px oklch(0.55 0.25 295 / 0.12),
+              0 2px 8px -2px oklch(0.55 0.25 295 / 0.08);
+}
+
+.dark .payment-card-glow:hover {
+  box-shadow: 0 4px 20px -4px oklch(0.7 0.22 295 / 0.2),
+              0 2px 8px -2px oklch(0.7 0.22 295 / 0.12);
+}
+
+/* ===== Hero Gradient Text ===== */
+.hero-gradient-text {
+  background: linear-gradient(135deg, var(--color-primary), oklch(0.65 0.2 310), var(--color-primary));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: heroGradientShift 4s ease-in-out infinite;
+}
+
+@keyframes heroGradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Reduced motion: disable new animations */
+@media (prefers-reduced-motion: reduce) {
+  .animate-trust-pulse {
+    animation: none;
+  }
+  .animate-typewriter-blink {
+    animation: none;
+    opacity: 1;
+  }
+  .animate-result-reveal {
+    animation: none;
+    opacity: 1;
+  }
+  .animate-pulse-glow {
+    animation: none;
+  }
+  .hero-gradient-text {
+    animation: none;
+  }
+}
+
+/* ===== FAQ Chevron Smooth Rotation ===== */
+.faq-trigger svg {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== Payment Card Glow Hover ===== */
+.payment-card-glow {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.payment-card-glow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 24px -4px oklch(0.55 0.25 295 / 0.2),
+              0 2px 8px -2px oklch(0.55 0.25 295 / 0.12);
+}
+
+.dark .payment-card-glow:hover {
+  box-shadow: 0 4px 24px -4px oklch(0.7 0.22 295 / 0.3),
+              0 2px 8px -2px oklch(0.7 0.22 295 / 0.18);
+}
+
+/* ===== Performance Optimizations ===== */
+
+/* Below-fold sections: skip rendering when off-screen */
+.below-fold-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+}
+
+/* Hero card: containment for animated border */
+.hero-card-border {
+  will-change: transform;
+}
+
+/* Hero gradient text animation */
+@keyframes heroGradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.hero-gradient-text {
+  background: linear-gradient(
+    -45deg,
+    oklch(0.55 0.25 295),
+    oklch(0.65 0.2 310),
+    oklch(0.6 0.22 330),
+    oklch(0.55 0.25 295)
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: heroGradientShift 6s ease infinite;
+}
+
+/* CTA Section Animated Border */
+@property --cta-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes ctaBorderRotate {
+  0% { --cta-angle: 0deg; }
+  100% { --cta-angle: 360deg; }
+}
+
+.cta-section-border {
+  position: relative;
+  border-radius: 1.5rem;
+  padding: 2px;
+  background: conic-gradient(from var(--cta-angle), oklch(0.55 0.25 295 / 0.3), oklch(0.6 0.22 310 / 0.15), oklch(0.55 0.25 295 / 0.1), oklch(0.6 0.22 310 / 0.25));
+  animation: ctaBorderRotate 6s linear infinite;
+}
+
+.dark .cta-section-border {
+  background: conic-gradient(from var(--cta-angle), oklch(0.7 0.22 295 / 0.3), oklch(0.65 0.2 310 / 0.15), oklch(0.7 0.22 295 / 0.1), oklch(0.65 0.2 310 / 0.25));
+}
+
+/* Reduced motion: disable heavy animations for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .hero-card-wrapper {
+    animation: none;
+  }
+
+  .hero-card-border {
+    animation: none;
+  }
+
+  .hero-card-particle {
+    display: none;
+  }
+
+  .hero-card-holographic,
+  .hero-card-light-streak {
+    animation: none;
+  }
+
+  .cta-animated-bg {
+    animation: none;
+  }
+
+  .cta-section-border {
+    animation: none;
+  }
+
+  .animate-pulse-soft,
+  .animate-bounce-soft,
+  .animate-shimmer {
+    animation: none;
+  }
+
+  .animate-section-header {
+    opacity: 1;
+    animation: none;
+  }
+
+  .tap-ripple::after {
+    transition: none;
+  }
+
+  .cta-shimmer-hover::before {
+    animation: none;
+  }
+
+  .hero-gradient-text {
+    animation: none;
+  }
+
+  .below-fold-auto {
+    content-visibility: visible;
+  }
 }

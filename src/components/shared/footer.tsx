@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MessageCircle, ArrowUp, Heart, ExternalLink, Shield, Zap, Clock } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
+import { useCookieBannerVisible } from '@/hooks/use-cookie-banner-visible';
 import { cn } from '@/lib/utils';
 
 function SocialIcon({ href, icon, label, hoverColor }: {
@@ -90,9 +91,11 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="relative border-t border-border/50 mt-auto">
-      <div className="container mx-auto px-4 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+    <footer className="relative bg-background mt-auto">
+      {/* Gradient top border */}
+      <div className="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center max-w-5xl mx-auto">
           {/* Brand */}
           <div className="flex flex-col items-center md:items-start gap-2.5">
             <Link href="/" className="flex items-center gap-2.5 group">
@@ -214,14 +217,16 @@ export function Footer() {
         </div>
 
         {/* Bottom */}
-        <div className="mt-8 pt-6 border-t border-border/50">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+        <div className="mt-8 pt-6 border-t border-border/30">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left max-w-5xl mx-auto">
             <p className="text-xs text-muted-foreground">
-              © {currentYear} <span className="font-medium text-foreground">{siteName}</span>. All rights reserved.
+              © {currentYear} <span className="font-medium text-foreground/80">{siteName}</span>. All rights reserved.
             </p>
-            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-              Crafted with <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" /> in Indonesia
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                Crafted with <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" /> in Indonesia
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -233,23 +238,75 @@ export function Footer() {
 
 function ScrollToTop() {
   const [visible, setVisible] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const cookieBannerVisible = useCookieBannerVisible();
 
   useEffect(() => {
-    const onScroll = () => setVisible(window.scrollY > 400);
+    let ticking = false;
+    const onScroll = () => {
+      const scrollY = window.scrollY;
+      setVisible(scrollY > 400);
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+          setProgress(docHeight > 0 ? scrollY / docHeight : 0);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  const shouldShow = visible && !cookieBannerVisible;
+
+  // SVG circle properties
+  const size = 44;
+  const strokeWidth = 2.5;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - progress * circumference;
 
   return (
     <button
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       className={cn(
-        "fixed bottom-36 right-4 w-10 h-10 rounded-lg gradient-primary text-white shadow-md flex items-center justify-center z-40 md:hidden active:scale-95 transition-all duration-300",
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
+        "fixed bottom-36 right-4 w-11 h-11 rounded-full gradient-primary text-white shadow-lg flex items-center justify-center z-40 md:hidden active:scale-90 transition-all duration-300",
+        shouldShow ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
       )}
       aria-label="Scroll to top"
     >
-      <ArrowUp className="w-4 h-4" />
+      {/* Progress Ring */}
+      <svg
+        className="absolute inset-0 w-full h-full -rotate-90"
+        width={size}
+        height={size}
+      >
+        {/* Background track */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="rgba(255,255,255,0.15)"
+          strokeWidth={strokeWidth}
+        />
+        {/* Progress arc */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="rgba(255,255,255,0.6)"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className="transition-[stroke-dashoffset] duration-200 ease-out"
+        />
+      </svg>
+      <ArrowUp className="w-4 h-4 relative z-10" />
     </button>
   );
 }

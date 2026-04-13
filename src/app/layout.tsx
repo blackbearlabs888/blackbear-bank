@@ -8,11 +8,13 @@ import { MobileBottomNav } from "@/components/shared/mobile-nav";
 import { DashboardMobileNav } from "@/components/shared/dashboard-mobile-nav";
 import { ConditionalFooter } from "@/components/shared/conditional-footer";
 import { MaintenanceWrapper } from "@/components/shared/maintenance-wrapper";
+import PageLoader from "@/components/shared/page-loader";
 import { db } from "@/lib/db";
 
 const inter = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 // Generate dynamic metadata from database
@@ -164,6 +166,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <PageLoader />
           <MaintenanceWrapper>
             <div className="min-h-screen flex flex-col">
               <DesktopNavbar />

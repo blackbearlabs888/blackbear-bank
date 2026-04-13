@@ -59,7 +59,7 @@ export function MobileBottomNav() {
         {/* Floating indicator for iOS-style */}
         <div className="absolute -top-1 left-0 right-0 h-1 bg-gradient-to-b from-transparent to-black/5" />
         
-        <div className="flex items-center justify-around h-16 px-1">
+        <div className="flex items-center justify-around h-[70px] px-1">
           {items.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
@@ -69,18 +69,18 @@ export function MobileBottomNav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-2xl transition-smooth tap-highlight active-scale min-w-[56px]',
+                  'flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-2xl transition-smooth tap-highlight active-scale min-w-[64px]',
                   isActive 
                     ? 'text-primary' 
                     : 'text-muted-foreground active:text-foreground'
                 )}
               >
                 <div className={cn(
-                  'p-2 rounded-xl transition-smooth',
+                  'p-2.5 rounded-xl transition-smooth',
                   isActive && 'bg-primary/15'
                 )}>
                   <Icon className={cn(
-                    'w-5 h-5',
+                    'w-[22px] h-[22px]',
                     isActive && 'stroke-[2.5px]'
                   )} />
                 </div>
