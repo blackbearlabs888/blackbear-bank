@@ -321,7 +321,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   >
                     <Link href="/order">
                       <Zap className="w-4 h-4" />
-                      <span className="sm:inline hidden">Order </span>Sekarang
+                      <span className="sm:inline hidden"></span>Order Sekarang
                     </Link>
                   </Button>
                   <Button
@@ -332,7 +332,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   >
                     <Link href="/track">
                       <Truck className="w-4 h-4" />
-                      <span className="sm:inline hidden">Track </span>Order
+                      <span className="sm:inline hidden"></span>Track Order
                     </Link>
                   </Button>
                 </div>
