@@ -150,11 +150,25 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Fetch site config for page loader logo
+  let siteLogoUrl: string | null = null;
+  let siteTitle: string = 'Black Bear';
+  try {
+    const profile = await db.ownerProfile.findFirst({
+      select: { logoUrl: true, websiteTitle: true },
+    });
+    if (profile) {
+      siteLogoUrl = profile.logoUrl;
+      siteTitle = profile.websiteTitle || 'Black Bear';
+    }
+  } catch {
+    // Fallback to defaults
+  }
   return (
     <html lang="id" suppressHydrationWarning>
       <body
@@ -166,7 +180,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <PageLoader />
+          <PageLoader logoUrl={siteLogoUrl} siteTitle={siteTitle} />
           <MaintenanceWrapper>
             <div className="min-h-screen flex flex-col">
               <DesktopNavbar />
