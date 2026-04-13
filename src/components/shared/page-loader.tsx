@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 
 interface PageLoaderProps {
   logoUrl?: string | null;
@@ -11,6 +10,7 @@ interface PageLoaderProps {
 export default function PageLoader({ logoUrl, siteTitle = 'Black Bear' }: PageLoaderProps) {
   const [isVisible, setIsVisible] = useState(true);
   const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   // Get initials from site title for fallback
   const initials = siteTitle
@@ -20,12 +20,26 @@ export default function PageLoader({ logoUrl, siteTitle = 'Black Bear' }: PageLo
     .join('')
     .toUpperCase();
 
+  // If there's a logo image, wait for it to load before starting dismiss timer
+  // Otherwise use a shorter timer
   useEffect(() => {
+    const showImage = logoUrl && !imgError;
+
+    if (showImage && !imgLoaded) {
+      // Wait for image to load, with a max timeout of 3s
+      const imgTimeout = setTimeout(() => {
+        setImgLoaded(true); // force proceed even if image fails to load
+      }, 3000);
+      return () => clearTimeout(imgTimeout);
+    }
+
+    // Once image is loaded (or no image needed), wait before hiding
+    const delay = showImage ? 1200 : 800;
     const timer = setTimeout(() => {
       setIsVisible(false);
-    }, 800);
+    }, delay);
     return () => clearTimeout(timer);
-  }, []);
+  }, [logoUrl, imgError, imgLoaded]);
 
   const showImage = logoUrl && !imgError;
 
@@ -40,20 +54,19 @@ export default function PageLoader({ logoUrl, siteTitle = 'Black Bear' }: PageLo
         <div className="relative mb-6">
           {/* Subtle glow behind logo */}
           <div className="absolute inset-0 scale-150 blur-2xl bg-primary/15 rounded-full animate-pulse" />
-          <div className="relative w-16 h-16 rounded-2xl overflow-hidden border border-border/50 shadow-lg shadow-primary/10 animate-pulse flex items-center justify-center bg-muted">
+          <div className="relative w-20 h-20 rounded-2xl overflow-hidden border border-border/50 shadow-lg shadow-primary/10 flex items-center justify-center bg-muted p-1.5">
             <img
               src={logoUrl}
               alt={siteTitle}
-              fill
-              className="object-contain p-1.5"
-              priority
+              className="w-full h-full object-contain"
+              onLoad={() => setImgLoaded(true)}
               onError={() => setImgError(true)}
             />
           </div>
         </div>
       ) : (
-        <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mb-6 animate-pulse shadow-lg shadow-primary/15">
-          <span className="text-white font-bold text-xl">{initials}</span>
+        <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center mb-6 animate-pulse shadow-lg shadow-primary/15">
+          <span className="text-white font-bold text-2xl">{initials}</span>
         </div>
       )}
 
