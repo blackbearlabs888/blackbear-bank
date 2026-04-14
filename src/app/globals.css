@@ -717,6 +717,9 @@ html:hover::-webkit-scrollbar-thumb:hover {
 
 .hero-card-wrapper {
   animation: heroCardFloat 6s ease-in-out infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .hero-card-border {
@@ -1655,15 +1658,17 @@ select:focus {
 
 /* ===== Performance Optimizations ===== */
 
-/* Below-fold sections: skip rendering when off-screen */
+/* Below-fold sections: GPU-accelerated scroll rendering */
 .below-fold-auto {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 500px;
+  contain: layout style;
+  will-change: auto;
 }
 
 /* Hero card: containment for animated border */
 .hero-card-border {
-  will-change: transform;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* Hero gradient text animation */
