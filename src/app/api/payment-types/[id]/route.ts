@@ -28,6 +28,7 @@ export async function PATCH(
       threshold,
       discountPercent,
       discountNominal,
+      minTransaction,
       isActive,
     } = body;
 
@@ -55,6 +56,7 @@ export async function PATCH(
         ...(threshold !== undefined && { threshold: parseFloat(threshold) || 0 }),
         ...(discountPercent !== undefined && { discountPercent: parseFloat(discountPercent) || 0 }),
         ...(discountNominal !== undefined && { discountNominal: parseFloat(discountNominal) || 0 }),
+        ...(minTransaction !== undefined && { minTransaction: parseFloat(minTransaction) || 0 }),
         ...(isActive !== undefined && { isActive }),
       },
     });

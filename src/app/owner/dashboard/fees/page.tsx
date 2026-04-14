@@ -49,6 +49,7 @@ interface PaymentType {
   threshold: number;
   discountPercent: number;
   discountNominal: number;
+  minTransaction: number;
   logoUrl: string | null;
   isActive: boolean;
 }
@@ -63,6 +64,7 @@ interface PaymentTypeStats {
   threshold: number;
   discountPercent: number;
   discountNominal: number;
+  minTransaction: number;
   logoUrl: string | null;
   isActive: boolean;
   transactionCount: number;
@@ -840,6 +842,13 @@ function PaymentTypeGridCard({
                 </Badge>
               )}
 
+              {/* Min transaction indicator */}
+              {hasDiscount && paymentType.minTransaction > 0 && (
+                <p className="text-[8px] sm:text-[9px] text-muted-foreground mt-0.5">
+                  Min. {formatCurrency(paymentType.minTransaction)}
+                </p>
+              )}
+
               {/* Active/Inactive indicator */}
               <div className="flex items-center gap-1 mt-1">
                 <div className={cn(
@@ -1065,6 +1074,7 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
     threshold: 1000000,
     discountPercent: 0,
     discountNominal: 0,
+    minTransaction: 0,
     logoUrl: '',
   });
 
@@ -1078,6 +1088,7 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
       threshold: 1000000,
       discountPercent: 0,
       discountNominal: 0,
+      minTransaction: 0,
       logoUrl: '',
     });
     setDiscountType('percent');
@@ -1295,6 +1306,28 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
                 <p className="text-[10px] text-muted-foreground">Potongan nominal tetap dari fee</p>
               </div>
             )}
+
+            {/* Min Transaction for Discount */}
+            {(formData.discountPercent > 0 || formData.discountNominal > 0) && (
+              <div className="space-y-1">
+                <Label className="text-xs sm:text-sm flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5" />
+                  Min. Nominal Transaksi
+                </Label>
+                <Input
+                  type="number"
+                  step="10000"
+                  min="0"
+                  placeholder="0 (tanpa minimum)"
+                  value={formData.minTransaction || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, minTransaction: parseFloat(e.target.value) || 0 }))}
+                  className="h-9"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Diskon hanya berlaku jika nominal transaksi ≥ {formData.minTransaction > 0 ? formatCurrency(formData.minTransaction) : 'Rp 0'}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2 pt-2">
@@ -1338,6 +1371,7 @@ function EditPaymentTypeDialog({
     threshold: paymentType.threshold,
     discountPercent: paymentType.discountPercent || 0,
     discountNominal: paymentType.discountNominal || 0,
+    minTransaction: paymentType.minTransaction || 0,
     logoUrl: paymentType.logoUrl || '',
   });
 
@@ -1351,6 +1385,7 @@ function EditPaymentTypeDialog({
       threshold: paymentType.threshold,
       discountPercent: paymentType.discountPercent || 0,
       discountNominal: paymentType.discountNominal || 0,
+      minTransaction: paymentType.minTransaction || 0,
       logoUrl: paymentType.logoUrl || '',
     });
     setDiscountType(paymentType.discountPercent > 0 ? 'percent' : 'nominal');
@@ -1551,6 +1586,28 @@ function EditPaymentTypeDialog({
                   className="h-9"
                 />
                 <p className="text-[10px] text-muted-foreground">Potongan nominal tetap dari fee</p>
+              </div>
+            )}
+
+            {/* Min Transaction for Discount */}
+            {(formData.discountPercent > 0 || formData.discountNominal > 0) && (
+              <div className="space-y-1">
+                <Label className="text-xs sm:text-sm flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5" />
+                  Min. Nominal Transaksi
+                </Label>
+                <Input
+                  type="number"
+                  step="10000"
+                  min="0"
+                  placeholder="0 (tanpa minimum)"
+                  value={formData.minTransaction || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, minTransaction: parseFloat(e.target.value) || 0 }))}
+                  className="h-9"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Diskon hanya berlaku jika nominal transaksi ≥ {formData.minTransaction > 0 ? formatCurrency(formData.minTransaction) : 'Rp 0'}
+                </p>
               </div>
             )}
           </div>

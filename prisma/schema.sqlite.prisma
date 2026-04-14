@@ -132,7 +132,10 @@ model Transaction {
   partnerId       String?
   
   nominal         Float     // nominal gestun
-  paymentFee      Float     // calculated fee
+  paymentFee      Float     // calculated fee (after discount)
+  originalFee     Float     @default(0) // fee before discount
+  discountPercent Float     @default(0) // discount percentage applied
+  discountAmount  Float     @default(0) // actual discount amount deducted
   platformFee     Float     @default(0) // marketplace fee
   netMargin       Float     // paymentFee - platformFee
   partnerProfit    Float     @default(0)
@@ -144,7 +147,8 @@ model Transaction {
   marketplaceId   String?   // for platform fee deduction
   
   status          String    @default("pending") // pending, verification, process, success, failed
-  notes           String?
+  notes           String?   // catatan dari owner
+  transactionLink String?   // link untuk transaksi dari owner
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -166,11 +170,15 @@ model Transaction {
 model PaymentType {
   id              String    @id @default(cuid())
   name            String    @unique  // e.g., "Kartu Kredit", "Paylater"
+  logoUrl         String?   // logo image URL
   onlineFeePercent Float    @default(0) // percentage
   onlineFeeFlat    Float    @default(0) // flat fee under threshold
   codFeePercent    Float    @default(0)
   codFeeFlat       Float    @default(0)
   threshold        Float    @default(1000000) // threshold for percentage vs flat
+  discountPercent  Float    @default(0) // default discount percentage
+  discountNominal  Float    @default(0) // default discount nominal
+  minTransaction   Float    @default(0) // minimum transaction amount for discount eligibility (0 = no minimum)
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -184,6 +192,7 @@ model PaymentType {
 model Marketplace {
   id              String    @id @default(cuid())
   name            String    @unique  // e.g., "Tokopedia", "Shopee"
+  logoUrl         String?   // logo image URL
   feePercent      Float     @default(0) // deduction from margin (percentage)
   feeFlat         Float     @default(0) // flat fee deduction
   description     String?   // notes about the marketplace
@@ -253,9 +262,13 @@ model OwnerProfile {
   faviconUrl      String?
   metaTitle       String?
   metaDescription String?
+  footerEmail     String?
   footerWhatsapp  String?
   footerInstagram String?
   footerFacebook  String?
+  footerTiktok    String?
+  footerYoutube   String?
+  footerThreads   String?
   maintenanceMode Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

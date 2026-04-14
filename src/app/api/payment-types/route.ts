@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
       threshold: toNumber(pt.threshold),
       discountPercent: toNumber(pt.discountPercent),
       discountNominal: toNumber(pt.discountNominal),
+      minTransaction: toNumber(pt.minTransaction),
     }));
 
     return NextResponse.json({
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
       threshold,
       discountPercent,
       discountNominal,
+      minTransaction,
       isActive,
     } = body;
 
@@ -100,6 +102,7 @@ export async function POST(request: NextRequest) {
         threshold: parseFloat(threshold) || 1000000,
         discountPercent: parseFloat(discountPercent) || 0,
         discountNominal: parseFloat(discountNominal) || 0,
+        minTransaction: parseFloat(minTransaction) || 0,
         isActive: isActive ?? true,
       },
     });

@@ -184,6 +184,7 @@ model PaymentType {
   threshold         Decimal   @default(1000000) // threshold for percentage vs flat
   discountPercent   Decimal   @default(0) // default discount percentage for this payment type
   discountNominal   Decimal   @default(0) // default discount nominal for this payment type
+  minTransaction    Decimal   @default(0) // minimum transaction amount for discount eligibility (0 = no minimum)
   isActive          Boolean   @default(true)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

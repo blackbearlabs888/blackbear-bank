@@ -948,238 +948,259 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
   };
 
   return (
-    <div className="space-y-2.5 p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between -mx-4 -mt-4 mb-0 px-4 py-2.5 pr-12 bg-gradient-to-r from-violet-600 to-fuchsia-500 rounded-t-lg">
+    <div className="p-4 space-y-3">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between -mx-4 -mt-4 mb-0 px-4 py-2.5 pr-12 bg-card border-b">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/20">
-            <StatusIcon className={cn("w-4 h-4 text-white", tx.status === 'process' && "animate-spin")} />
-          </div>
-          <div>
-            <p className="text-[9px] text-white/70 uppercase">Status</p>
-            <p className="text-sm font-bold text-white capitalize">{tx.status}</p>
-          </div>
+          <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium capitalize", config.color)}>
+            <StatusIcon className={cn("w-3 h-3", tx.status === 'process' && "animate-spin")} />
+            {tx.status}
+          </span>
         </div>
         <div className="text-right">
-          <p className="text-[9px] text-white/70">ID</p>
           <div className="flex items-center justify-end gap-1">
-            <p className="text-[10px] font-mono text-white bg-white/20 px-1.5 py-0.5 rounded truncate max-w-[120px]">{tx.orderId}</p>
+            <p className="text-[10px] font-mono text-muted-foreground truncate max-w-[120px]">{tx.orderId}</p>
             <button
               type="button"
               onClick={() => {
                 navigator.clipboard.writeText(tx.orderId);
                 toast.success('Order ID disalin');
               }}
-              className="p-1 hover:bg-white/20 rounded transition-colors"
+              className="p-1 hover:bg-muted rounded transition-colors"
             >
-              <Copy className="w-3 h-3 text-white/80" />
+              <Copy className="w-3 h-3 text-muted-foreground" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Amount & Profit Row */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg border bg-muted/30 p-2.5">
-          <div className="flex items-center justify-between mb-0.5">
-            <p className="text-[9px] text-muted-foreground">Nominal</p>
+      {/* ── 1. Financial Card ── */}
+      <div className="rounded-xl bg-slate-900 text-white p-4 space-y-3">
+        {/* Nominal */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[11px] text-muted-foreground">Nominal</p>
             {canEditNominal ? (
               <button
                 type="button"
                 onClick={() => setEditNominal(!editNominal)}
-                className={cn("p-1 rounded transition-colors", editNominal ? "bg-violet-100 text-violet-600" : "hover:bg-muted text-muted-foreground")}
+                className={cn(
+                  "p-1 rounded-md transition-colors",
+                  editNominal ? "bg-muted text-foreground" : "hover:bg-muted text-muted-foreground"
+                )}
                 title={editNominal ? 'Batal edit' : 'Edit nominal'}
               >
-                <Edit3 className="w-3 h-3" />
+                <Edit3 className="w-3.5 h-3.5" />
               </button>
             ) : (
-              <span className="text-[8px] text-muted-foreground/60 flex items-center gap-0.5">
-                <AlertCircle className="w-2.5 h-2.5" />
+              <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
                 Terkunci
               </span>
             )}
           </div>
+
           {editNominal && canEditNominal ? (
-            <Input
-              type="number"
-              value={nominal}
-              onChange={(e) => setNominal(e.target.value)}
-              className="h-7 text-xs font-bold text-violet-600"
-              placeholder="Masukkan nominal"
-            />
+            <div className="space-y-1.5">
+              <Input
+                type="number"
+                value={nominal}
+                onChange={(e) => setNominal(e.target.value)}
+                className="h-9 text-sm font-bold bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:ring-white/30"
+                placeholder="Masukkan nominal"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Hanya bisa diubah saat pending/verifikasi
+              </p>
+            </div>
           ) : (
-            <p className="text-base font-bold text-violet-600">{formatCurrency(tx.nominal)}</p>
+            <p className="text-xl font-bold text-foreground tracking-tight">{formatCurrency(tx.nominal)}</p>
           )}
-          {!canEditNominal && (
-            <p className="text-[8px] text-amber-600 mt-0.5 flex items-center gap-0.5">
-              <AlertCircle className="w-2 h-2" />
+
+          {!canEditNominal && !editNominal && (
+            <p className="text-[11px] text-amber-400 mt-1 flex items-center gap-1">
+              <AlertCircle className="w-2.5 h-2.5" />
               Hanya bisa diubah saat pending/verifikasi
             </p>
           )}
-          <div className="text-[9px] text-muted-foreground mt-1 space-y-0.5">
-            <div className="flex justify-between">
-              <span>Fee</span>
-              <span className="text-red-500">-{formatCurrency(previewCalc?.paymentFee ?? tx.paymentFee)}</span>
-            </div>
-            {(previewCalc?.platformFee ?? tx.platformFee) > 0 && (
-              <div className="flex justify-between">
-                <span>Platform</span>
-                <span className="text-red-500">-{formatCurrency(previewCalc?.platformFee ?? tx.platformFee)}</span>
-              </div>
-            )}
-          </div>
         </div>
-        <div className="rounded-lg bg-slate-900 p-2.5 text-white">
-          <p className="text-[9px] text-white/70 mb-0.5">Profit Anda</p>
-          <p className="text-base font-bold text-fuchsia-400">+{formatCurrency(previewCalc?.partnerProfit ?? tx.partnerProfit)}</p>
-          {previewCalc && (
-            <p className="text-[8px] text-fuchsia-300 mt-1">*Preview</p>
+
+        {/* Fee breakdown */}
+        <div className="text-[11px] text-muted-foreground space-y-1">
+          <div className="flex justify-between">
+            <span>Fee</span>
+            <span className="text-red-400">-{formatCurrency(previewCalc?.paymentFee ?? tx.paymentFee)}</span>
+          </div>
+          {(previewCalc?.platformFee ?? tx.platformFee) > 0 && (
+            <div className="flex justify-between">
+              <span>Platform</span>
+              <span className="text-red-400">-{formatCurrency(previewCalc?.platformFee ?? tx.platformFee)}</span>
+            </div>
           )}
         </div>
+
+        {/* Separator */}
+        <div className="border-t border-white/10" />
+
+        {/* Profit */}
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-[11px] text-muted-foreground mb-0.5">Profit Anda</p>
+            <p className="text-lg font-bold text-emerald-400">+{formatCurrency(previewCalc?.partnerProfit ?? tx.partnerProfit)}</p>
+          </div>
+          {previewCalc && (
+            <span className="text-[11px] text-emerald-400/70 bg-emerald-400/10 px-2 py-0.5 rounded-full">Preview</span>
+          )}
+        </div>
+
+        {/* Save button inside card */}
+        {editNominal && canEditNominal && (
+          <Button
+            onClick={handleSaveNominal}
+            disabled={saving || !nominal || parseFloat(nominal) <= 0 || parseFloat(nominal) === tx.nominal}
+            className="w-full h-9 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium gap-1.5 mt-1"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Menyimpan...
+              </>
+            ) : (
+              <>
+                <Save className="w-3.5 h-3.5" />
+                Simpan Perubahan
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
-      {/* Customer & Payment Row */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg border bg-muted/30 p-2.5">
-          <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
-            <User className="w-2.5 h-2.5" /> Customer
-          </p>
-          <p className="text-xs font-semibold truncate">{tx.customer?.name}</p>
-          <div className="flex items-center gap-1 mt-0.5">
-            <p className="text-[9px] text-muted-foreground">{tx.customer?.phone}</p>
-            <div className="flex items-center gap-0.5 ml-auto">
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(tx.customer?.phone || '');
-                  toast.success('No. WA disalin');
-                }}
-                className="p-1 hover:bg-muted rounded transition-colors"
-              >
-                <Copy className="w-3 h-3 text-muted-foreground" />
-              </button>
-              <a
-                href={`https://wa.me/${tx.customer?.phone?.replace(/^0/, '62')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors"
-              >
-                <MessageSquare className="w-3 h-3 text-green-600" />
-              </a>
+      {/* ── 2. Transaction Info ── */}
+      <div className="space-y-1">
+        {/* Customer */}
+        <div className="flex items-start gap-2.5 py-1.5">
+          <User className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] text-muted-foreground">Customer</p>
+            <p className="text-sm font-semibold truncate">{tx.customer?.name}</p>
+            <div className="flex items-center gap-1 mt-1">
+              <p className="text-xs text-muted-foreground">{tx.customer?.phone}</p>
+              <div className="flex items-center gap-0.5 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(tx.customer?.phone || '');
+                    toast.success('No. WA disalin');
+                  }}
+                  className="p-1.5 hover:bg-muted rounded-md transition-colors"
+                >
+                  <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+                <a
+                  href={`https://wa.me/${tx.customer?.phone?.replace(/^0/, '62')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 hover:bg-muted rounded-md transition-colors"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-green-600" />
+                </a>
+              </div>
             </div>
           </div>
         </div>
-        <div className="rounded-lg border bg-muted/30 p-2.5">
-          <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
-            <CreditCard className="w-2.5 h-2.5" /> Payment
-          </p>
-          <p className="text-xs font-semibold">{tx.paymentType?.name}</p>
-          <p className="text-[9px] text-muted-foreground">{tx.methodTransaction}</p>
-        </div>
-      </div>
 
-      {/* Bank Account */}
-      {tx.customer?.bankName && tx.customer?.bankAccount && (
-        <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20 p-2.5">
-          <div className="flex items-center justify-between">
+        {/* Payment */}
+        <div className="flex items-start gap-2.5 py-1.5">
+          <CreditCard className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] text-muted-foreground">Payment</p>
+            <p className="text-sm font-semibold">{tx.paymentType?.name}</p>
+            <p className="text-xs text-muted-foreground">{tx.methodTransaction}</p>
+          </div>
+        </div>
+
+        {/* Bank Account (conditional) */}
+        {tx.customer?.bankName && tx.customer?.bankAccount && (
+          <div className="flex items-start gap-2.5 py-1.5">
+            <Building2 className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
             <div className="min-w-0 flex-1">
-              <p className="text-[9px] text-muted-foreground">{tx.customer.bankName}</p>
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-mono font-bold">{tx.customer.bankAccount}</p>
+              <p className="text-[11px] text-muted-foreground">Rekening</p>
+              <p className="text-sm font-semibold">{tx.customer.bankName}</p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <p className="text-xs font-mono text-muted-foreground">{tx.customer.bankAccount}</p>
                 <button
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(tx.customer.bankAccount || '');
                     toast.success('Disalin');
                   }}
-                  className="p-1 hover:bg-blue-100 dark:hover:bg-blue-800 rounded"
+                  className="p-1.5 hover:bg-muted rounded-md transition-colors"
                 >
-                  <Copy className="w-3 h-3 text-blue-600" />
+                  <Copy className="w-3 h-3 text-muted-foreground" />
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Notes */}
-      {tx.notes && (
-        <div className="rounded-lg border bg-muted/30 p-2.5">
-          <p className="text-[9px] text-muted-foreground mb-1">Catatan</p>
-          <p className="text-xs">{tx.notes}</p>
-        </div>
-      )}
-
-      {/* Marketplace Info */}
-      {tx.marketplace && (
-        <div className="flex items-center justify-between text-[9px] p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
-          <div className="flex items-center gap-1">
-            <Store className="w-3 h-3 text-orange-600" />
-            <span className="text-orange-700 dark:text-orange-400">{tx.marketplace.name}</span>
+        {/* Marketplace (conditional) */}
+        {tx.marketplace && (
+          <div className="flex items-start gap-2.5 py-1.5">
+            <Store className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] text-muted-foreground">Marketplace</p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">{tx.marketplace.name}</p>
+                <span className="text-xs text-red-500 font-medium">-{formatCurrency(tx.platformFee)}</span>
+              </div>
+            </div>
           </div>
-          <span className="text-red-600 font-medium">-{formatCurrency(tx.platformFee)}</span>
-        </div>
-      )}
+        )}
 
-      {/* Save Controls - Only show when editing nominal and can edit */}
-      {editNominal && canEditNominal && (
-        <div className="p-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg border border-violet-200 dark:border-violet-800">
-          <Button
-            onClick={handleSaveNominal}
-            disabled={saving || !nominal || parseFloat(nominal) <= 0 || parseFloat(nominal) === tx.nominal}
-            className="w-full h-8 gradient-primary text-white text-xs gap-1.5"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Menyimpan...
-              </>
-            ) : (
-              <>
-                <Save className="w-3 h-3" />
-                Simpan Perubahan
-              </>
-            )}
-          </Button>
-        </div>
-      )}
+        {/* Notes (conditional) */}
+        {tx.notes && (
+          <div className="flex items-start gap-2.5 py-1.5">
+            <MessageSquare className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] text-muted-foreground">Catatan</p>
+              <p className="text-xs text-foreground/80 leading-relaxed">{tx.notes}</p>
+            </div>
+          </div>
+        )}
 
-      {/* Kirim Pesan ke Owner */}
-      <div className="space-y-2 p-3 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900/50 dark:to-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
-        <div className="flex items-center gap-1.5">
-          <MessageSquare className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
-          <p className="text-[10px] font-medium text-slate-700 dark:text-slate-300">Kirim Pesan ke Owner</p>
+        {/* Date */}
+        <div className="flex items-start gap-2.5 py-1.5">
+          <Clock className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] text-muted-foreground">Tanggal</p>
+            <p className="text-sm font-semibold">{formatDate(tx.createdAt)}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Profit partner dapat berubah tergantung marketplace yang akan digunakan
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Contoh: Mohon diproses ya..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            className="h-8 text-xs flex-1"
-          />
-          <Button
-            onClick={handleSendMessage}
-            disabled={sendingMessage || !message.trim()}
-            size="sm"
-            className="h-8 px-3 gap-1"
-          >
-            {sendingMessage ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <Send className="w-3 h-3" />
-            )}
-            <span className="text-xs">Kirim</span>
-          </Button>
-        </div>
-        <p className="text-[9px] text-muted-foreground">
-          Pesan akan dikirim sebagai notifikasi ke Owner untuk transaksi ini
-        </p>
       </div>
 
-      {/* Info */}
-      <div className="text-center text-[10px] text-muted-foreground pt-2">
-        <p>Profit partner dapat berubah tergantung marketplace yang akan digunakan</p>
-        <p className="mt-1">Dibuat: {formatDate(tx.createdAt)}</p>
+      {/* ── 3. Message to Owner (compact) ── */}
+      <div className="flex items-center gap-2">
+        <Input
+          placeholder="Kirim pesan ke Owner..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          className="h-9 text-xs flex-1"
+        />
+        <Button
+          onClick={handleSendMessage}
+          disabled={sendingMessage || !message.trim()}
+          size="sm"
+          className="h-9 w-9 p-0 flex-shrink-0"
+        >
+          {sendingMessage ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Send className="w-4 h-4" />
+          )}
+        </Button>
       </div>
     </div>
   );

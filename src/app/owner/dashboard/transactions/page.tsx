@@ -91,7 +91,7 @@ interface Transaction {
   partner?: { id: string; name: string; tier: string; commission?: number; } | null;
 }
 
-interface PaymentType { id: string; name: string; onlineFeePercent: number; onlineFeeFlat: number; codFeePercent: number; codFeeFlat: number; threshold: number; isActive: boolean; }
+interface PaymentType { id: string; name: string; onlineFeePercent: number; onlineFeeFlat: number; codFeePercent: number; codFeeFlat: number; threshold: number; discountPercent?: number; discountNominal?: number; minTransaction?: number; isActive: boolean; }
 interface Partner { id: string; name: string; commission: number; tier: string; status: string; }
 interface Customer { id: string; name: string; phone: string; city?: string; bankName?: string; bankAccount?: string; bankHolder?: string; totalTransactions: number; }
 interface Marketplace { id: string; name: string; feePercent: number; feeFlat?: number; isActive: boolean; }
@@ -1528,54 +1528,49 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
 
   return (
     <Tabs value={discountTab} onValueChange={setDiscountTab} className="w-full">
-      {/* Gradient Header with Tabs */}
-      <div className="bg-gradient-to-r from-violet-600 to-fuchsia-500 rounded-t-lg">
+      {/* Clean Header with Status + Order ID */}
+      <div className="bg-card rounded-t-lg border-b">
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/20">
-              <StatusIcon className={cn("w-4 h-4 text-white", tx.status === 'process' && "animate-spin")} />
-            </div>
-            <div>
-              <p className="text-[9px] text-white/70 uppercase">Status</p>
-              <p className="text-sm font-bold text-white capitalize">{tx.status}</p>
-            </div>
+          <div className="flex items-center gap-2.5">
+            <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium", config.color)}>
+              <StatusIcon className={cn("w-3 h-3", tx.status === 'process' && "animate-spin")} />
+              <span className="capitalize">{tx.status}</span>
+            </span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="flex items-center justify-end gap-1">
-              <p className="text-[10px] font-mono text-white bg-white/20 px-1.5 py-0.5 rounded truncate max-w-[100px]">{tx.orderId}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(tx.orderId);
-                  toast.success('Order ID disalin');
-                }}
-                className="p-1 hover:bg-white/20 rounded transition-colors"
-                title="Salin Order ID"
-              >
-                <Copy className="w-3 h-3 text-white/80" />
-              </button>
-            </div>
+            <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded truncate max-w-[100px]">{tx.orderId}</span>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(tx.orderId);
+                toast.success('Order ID disalin');
+              }}
+              className="p-1 hover:bg-muted rounded transition-colors"
+              title="Salin Order ID"
+            >
+              <Copy className="w-3 h-3 text-muted-foreground" />
+            </button>
           </div>
         </div>
-        {/* Tab Triggers */}
+        {/* Tab Triggers - underline style */}
         <TabsList className="w-full bg-transparent h-auto p-0 gap-0 rounded-none">
           <TabsTrigger
             value="detail"
-            className="flex-1 h-9 text-[11px] font-semibold tracking-wide data-[state=active]:bg-white/25 data-[state=active]:text-white data-[state=active]:shadow-none text-white/60 border-b-[3px] border-transparent data-[state=active]:border-b-white rounded-none transition-all duration-200 hover:text-white/90 data-[state=active]:rounded-t-lg data-[state=active]:border-t data-[state=active]:border-x data-[state=active]:border-t-white/20"
+            className="flex-1 py-2 text-xs font-medium text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none transition-colors border-b-2 border-transparent"
           >
             <Info className="w-3.5 h-3.5 mr-1" /> Detail
           </TabsTrigger>
           <TabsTrigger
             value="aksi"
-            className="flex-1 h-9 text-[11px] font-semibold tracking-wide data-[state=active]:bg-white/25 data-[state=active]:text-white data-[state=active]:shadow-none text-white/60 border-b-[3px] border-transparent data-[state=active]:border-b-white rounded-none transition-all duration-200 hover:text-white/90 data-[state=active]:rounded-t-lg data-[state=active]:border-t data-[state=active]:border-x data-[state=active]:border-t-white/20"
+            className="flex-1 py-2 text-xs font-medium text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none transition-colors border-b-2 border-transparent"
           >
             <Zap className="w-3.5 h-3.5 mr-1" /> Aksi
           </TabsTrigger>
           <TabsTrigger
             value="diskon"
             className={cn(
-              "flex-1 h-9 text-[11px] font-semibold tracking-wide data-[state=active]:bg-white/25 data-[state=active]:text-white data-[state=active]:shadow-none border-b-[3px] border-transparent data-[state=active]:border-b-white rounded-none transition-all duration-200 hover:text-white/90 data-[state=active]:rounded-t-lg data-[state=active]:border-t data-[state=active]:border-x data-[state=active]:border-t-white/20",
-              canDiscount ? "text-white/60" : "text-white/25 cursor-not-allowed"
+              "flex-1 py-2 text-xs font-medium data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none transition-colors border-b-2 border-transparent",
+              canDiscount ? "text-muted-foreground" : "text-muted-foreground/40 cursor-not-allowed"
             )}
             disabled={!canDiscount}
           >
@@ -1593,7 +1588,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
             {/* Nominal */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] uppercase tracking-wider text-white/50 font-medium">Nominal</span>
+                <span className="text-[11px] text-muted-foreground">Nominal</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -1605,8 +1600,8 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
                   className={cn(
                     "p-1.5 rounded-lg transition-colors",
                     editNominal
-                      ? "bg-fuchsia-500/20 text-fuchsia-400"
-                      : "hover:bg-white/10 text-white/40 hover:text-white/70"
+                      ? "bg-emerald-500/20 text-emerald-400"
+                      : "hover:bg-white/10 text-muted-foreground hover:text-foreground"
                   )}
                   title={editNominal ? 'Batal edit' : 'Edit nominal'}
                 >
@@ -1618,22 +1613,22 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
                   type="number"
                   value={nominal}
                   onChange={(e) => setNominal(e.target.value)}
-                  className="h-8 text-sm font-bold text-fuchsia-400 bg-white/10 border-white/20 focus:border-fuchsia-500"
+                  className="h-8 text-sm font-bold text-emerald-400 bg-white/10 border-white/20 focus:border-emerald-500"
                   placeholder="Masukkan nominal"
                 />
               ) : (
-                <p className="text-xl font-bold text-white">{formatCurrency(tx.nominal)}</p>
+                <p className="text-xl font-bold text-foreground">{formatCurrency(tx.nominal)}</p>
               )}
             </div>
 
             {/* Fee breakdown */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-[11px]">
-                <span className="text-white/40">Payment Fee</span>
+                <span className="text-muted-foreground">Payment Fee</span>
                 <span className="text-red-400">
                   {previewCalc && previewCalc.paymentFee !== tx.paymentFee ? (
                     <>
-                      <span className="line-through text-white/25 mr-1.5">{formatCurrency(tx.paymentFee)}</span>
+                      <span className="line-through text-muted-foreground/50 mr-1.5">{formatCurrency(tx.paymentFee)}</span>
                       -{formatCurrency(previewCalc.paymentFee)}
                     </>
                   ) : (
@@ -1643,11 +1638,11 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
               </div>
               {(previewCalc?.platformFee ?? tx.platformFee) > 0 && (
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-white/40">Platform Fee</span>
+                  <span className="text-muted-foreground">Platform Fee</span>
                   <span className="text-red-400">
                     {previewCalc && previewCalc.platformFee !== tx.platformFee ? (
                       <>
-                        <span className="line-through text-white/25 mr-1.5">{formatCurrency(tx.platformFee)}</span>
+                        <span className="line-through text-muted-foreground/50 mr-1.5">{formatCurrency(tx.platformFee)}</span>
                         -{formatCurrency(previewCalc.platformFee)}
                       </>
                     ) : (
@@ -1663,22 +1658,22 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
 
             {/* Profit */}
             <div>
-              <span className="text-[10px] uppercase tracking-wider text-white/50 font-medium">Profit Anda</span>
+              <span className="text-[11px] text-muted-foreground">Profit Anda</span>
               {previewCalc && previewCalc.ownerProfit !== tx.ownerProfit ? (
                 <div className="mt-0.5">
-                  <p className="text-[10px] text-white/30 line-through">{formatCurrency(tx.ownerProfit)}</p>
-                  <p className="text-lg font-bold text-fuchsia-400">+{formatCurrency(previewCalc.ownerProfit)}</p>
+                  <p className="text-[11px] text-muted-foreground/50 line-through">{formatCurrency(tx.ownerProfit)}</p>
+                  <p className="text-lg font-bold text-emerald-400">+{formatCurrency(previewCalc.ownerProfit)}</p>
                 </div>
               ) : (
-                <p className="text-lg font-bold text-fuchsia-400 mt-0.5">+{formatCurrency(previewCalc?.ownerProfit ?? tx.ownerProfit)}</p>
+                <p className="text-lg font-bold text-emerald-400 mt-0.5">+{formatCurrency(previewCalc?.ownerProfit ?? tx.ownerProfit)}</p>
               )}
               {tx.partner && (
-                <p className="text-[10px] text-white/40 mt-1">
+                <p className="text-[11px] text-muted-foreground mt-1">
                   {tx.partner.name}{' '}
-                  <span className="text-violet-400">
+                  <span className="text-emerald-300">
                     {previewCalc && previewCalc.partnerProfit !== tx.partnerProfit ? (
                       <>
-                        <span className="line-through text-white/20 mr-1">{formatCurrency(tx.partnerProfit)}</span>
+                        <span className="line-through text-muted-foreground/50 mr-1">{formatCurrency(tx.partnerProfit)}</span>
                         +{formatCurrency(previewCalc.partnerProfit)}
                       </>
                     ) : (
@@ -1688,118 +1683,104 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
                 </p>
               )}
               {previewCalc && previewCalc.ownerProfit !== tx.ownerProfit && (
-                <p className="text-[9px] text-fuchsia-300/70 mt-1 italic">*Preview kalkulasi</p>
+                <p className="text-[10px] text-muted-foreground/50 mt-1 italic">*Preview kalkulasi</p>
               )}
             </div>
           </div>
 
-          {/* ── Transaction Info (borderless flow) ── */}
-          <div className="space-y-0">
+          {/* ── Transaction Info (clean minimal) ── */}
+          <div className="space-y-2.5">
             {/* Customer */}
-            <div className="flex gap-3 py-3">
-              <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
-                <User className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-              </div>
+            <div className="flex items-start gap-2.5 py-1">
+              <User className="w-3.5 h-3.5 text-muted-foreground/60 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Customer</p>
-                <p className="text-sm font-semibold truncate">{tx.customer?.name}</p>
+                <p className="text-[11px] text-muted-foreground">Customer</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-sm font-semibold truncate">{tx.customer?.name}</p>
                   <p className="text-xs text-muted-foreground">{tx.customer?.phone}</p>
-                  <div className="flex items-center gap-0.5 ml-auto">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(tx.customer?.phone || '');
-                        toast.success('No. WA disalin');
-                      }}
-                      className="p-1 hover:bg-muted rounded-md transition-colors"
-                      title="Salin No. WA"
-                    >
-                      <Copy className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-                    <a
-                      href={`https://wa.me/${tx.customer?.phone?.replace(/^0/, '62')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-md transition-colors"
-                      title="Buka WhatsApp"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
-                    </a>
-                  </div>
+                </div>
+                <div className="flex items-center gap-0.5 mt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(tx.customer?.phone || '');
+                      toast.success('No. WA disalin');
+                    }}
+                    className="p-1 hover:bg-muted rounded-md transition-colors"
+                    title="Salin No. WA"
+                  >
+                    <Copy className="w-3 h-3 text-muted-foreground" />
+                  </button>
+                  <a
+                    href={`https://wa.me/${tx.customer?.phone?.replace(/^0/, '62')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1 hover:bg-muted rounded-md transition-colors"
+                    title="Buka WhatsApp"
+                  >
+                    <MessageSquare className="w-3 h-3 text-muted-foreground" />
+                  </a>
                 </div>
               </div>
             </div>
-            <Separator />
 
             {/* Payment */}
-            <div className="flex gap-3 py-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-                <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              </div>
+            <div className="flex items-start gap-2.5 py-1">
+              <CreditCard className="w-3.5 h-3.5 text-muted-foreground/60 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Payment</p>
-                <p className="text-sm font-semibold">{tx.paymentType?.name}</p>
-                <p className="text-xs text-muted-foreground">{tx.methodTransaction}</p>
+                <p className="text-[11px] text-muted-foreground">Payment</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-sm font-semibold">{tx.paymentType?.name}</p>
+                  <p className="text-xs text-muted-foreground">{tx.methodTransaction}</p>
+                </div>
               </div>
             </div>
-            <Separator />
 
             {/* Bank Account */}
             {tx.customer?.bankName && tx.customer?.bankAccount && (
-              <>
-                <div className="flex gap-3 py-3">
-                  <div className="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center shrink-0">
-                    <Banknote className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Rekening</p>
+              <div className="flex items-start gap-2.5 py-1">
+                <Banknote className="w-3.5 h-3.5 text-muted-foreground/60 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] text-muted-foreground">Rekening</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
                     <p className="text-sm font-semibold">{tx.customer.bankName}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <p className="text-xs text-muted-foreground font-mono">{tx.customer.bankAccount}</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(tx.customer.bankAccount || '');
-                          toast.success('Disalin');
-                        }}
-                        className="p-1 hover:bg-muted rounded-md transition-colors"
-                        title="Salin nomor rekening"
-                      >
-                        <Copy className="w-3.5 h-3.5 text-muted-foreground" />
-                      </button>
-                    </div>
+                    <p className="text-xs text-muted-foreground font-mono">{tx.customer.bankAccount}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(tx.customer.bankAccount || '');
+                        toast.success('Disalin');
+                      }}
+                      className="p-1 hover:bg-muted rounded-md transition-colors"
+                      title="Salin nomor rekening"
+                    >
+                      <Copy className="w-3 h-3 text-muted-foreground" />
+                    </button>
                   </div>
                 </div>
-                <Separator />
-              </>
+              </div>
             )}
 
             {/* Marketplace */}
             {tx.marketplace && (
-              <>
-                <div className="flex gap-3 py-3">
-                  <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-                    <Store className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Marketplace</p>
+              <div className="flex items-start gap-2.5 py-1">
+                <Store className="w-3.5 h-3.5 text-muted-foreground/60 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] text-muted-foreground">Marketplace</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
                     <p className="text-sm font-semibold">{tx.marketplace.name}</p>
                     <p className="text-xs text-muted-foreground">Fee: {tx.marketplace.feePercent}%</p>
                   </div>
                 </div>
-                <Separator />
-              </>
+              </div>
             )}
 
             {/* Date */}
-            <div className="flex gap-3 py-3">
-              <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center shrink-0">
-                <Calendar className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-              </div>
+            <div className="flex items-start gap-2.5 py-1">
+              <Calendar className="w-3.5 h-3.5 text-muted-foreground/60 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Tanggal</p>
-                <p className="text-sm font-semibold">{formatDate(tx.createdAt)}</p>
+                <p className="text-[11px] text-muted-foreground">Tanggal</p>
+                <p className="text-sm font-semibold mt-0.5">{formatDate(tx.createdAt)}</p>
               </div>
             </div>
           </div>
@@ -1809,7 +1790,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
             href={`https://wa.me/?text=${encodeURIComponent(`🛒 Detail Transaksi\n\nOrder ID: ${tx.orderId}\nNominal: ${formatCurrency(tx.nominal)}\nPayment: ${tx.paymentType?.name}\nStatus: ${tx.status.toUpperCase()}\nCustomer: ${tx.customer?.name}\nTanggal: ${formatDate(tx.createdAt)}`)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-800 transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
@@ -2067,25 +2048,36 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
             </div>
           ) : (
             <>
+              {/* Min Transaction Warning */}
+              {(tx.paymentType?.minTransaction ?? 0) > 0 && tx.nominal < (tx.paymentType?.minTransaction ?? 0) && (
+                <div className="flex items-start gap-2 p-2.5 bg-amber-50 dark:bg-amber-900/10 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div className="text-[11px] text-amber-700 dark:text-amber-400">
+                    <p className="font-medium">Nominal di bawah minimum</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Diskon {tx.paymentType?.name} hanya berlaku untuk transaksi ≥ {formatCurrency(tx.paymentType?.minTransaction ?? 0)}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Current Fee Info */}
-              <div className="rounded-lg border bg-muted/30 p-2.5 space-y-1.5">
-                <p className="text-[9px] font-medium text-muted-foreground uppercase">Info Fee Saat Ini</p>
-                <div className="space-y-1 text-[10px]">
+              <div className="rounded-lg bg-muted/50 p-2.5 space-y-1.5">
+                <p className="text-[11px] text-muted-foreground">Info Fee Saat Ini</p>
+                <div className="space-y-1 text-[11px]">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Payment Fee</span>
-                    <span className="font-semibold text-red-500">-{formatCurrency(tx.paymentFee)}</span>
+                    <span className="font-semibold text-red-400">-{formatCurrency(tx.paymentFee)}</span>
                   </div>
                   {tx.platformFee > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Platform Fee ({tx.marketplace?.name})</span>
-                      <span className="font-semibold text-red-500">-{formatCurrency(tx.platformFee)}</span>
+                      <span className="font-semibold text-red-400">-{formatCurrency(tx.platformFee)}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total Fee</span>
-                    <span className="font-semibold text-red-600">-{formatCurrency(tx.paymentFee + tx.platformFee)}</span>
+                    <span className="font-semibold text-red-500">-{formatCurrency(tx.paymentFee + tx.platformFee)}</span>
                   </div>
-                  <Separator className="my-1" />
+                  <div className="border-t border-border my-1" />
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Net Margin</span>
                     <span className="font-semibold">{formatCurrency(tx.paymentFee - tx.platformFee)}</span>
@@ -2099,7 +2091,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
 
               {/* Discount Type Toggle */}
               <div>
-                <p className="text-[9px] font-medium text-muted-foreground mb-1.5 uppercase">Tipe Diskon</p>
+                <p className="text-[11px] text-muted-foreground mb-1.5">Tipe Diskon</p>
                 <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
                   <button
                     type="button"
@@ -2130,7 +2122,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
 
               {/* Discount Input */}
               <div>
-                <p className="text-[9px] font-medium text-muted-foreground mb-1.5">
+                <p className="text-[11px] text-muted-foreground mb-1.5">
                   {discountType === 'percent' ? 'Diskon (%)' : 'Diskon (Rp)'}
                 </p>
                 <div className="relative">
@@ -2158,10 +2150,10 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
               {/* Live Preview */}
               {discountPreview && (
                 <div className="space-y-2 animate-fade-in">
-                  <p className="text-[9px] font-medium text-muted-foreground uppercase">Preview Perhitungan</p>
+                  <p className="text-[11px] text-muted-foreground">Preview Perhitungan</p>
                   
-                  <div className="rounded-lg border bg-emerald-50/50 dark:bg-emerald-900/10 p-2.5 space-y-1.5">
-                    <div className="text-[10px] space-y-1">
+                  <div className="rounded-lg bg-muted/50 p-2.5 space-y-1.5">
+                    <div className="text-[11px] space-y-1">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Original Fee</span>
                         <span className="font-medium">{formatCurrency(discountPreview.originalPaymentFee)}</span>
@@ -2170,7 +2162,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
                         <span>Diskon ({discountPreview.effectiveDiscountPercent.toFixed(1)}%)</span>
                         <span className="font-bold">-{formatCurrency(discountPreview.discountAmount)}</span>
                       </div>
-                      <Separator className="my-1" />
+                      <div className="border-t border-border my-1" />
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">New Fee</span>
                         <span className="font-bold text-orange-600">{formatCurrency(discountPreview.newPaymentFee)}</span>
@@ -2178,27 +2170,27 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
                     </div>
                   </div>
 
-                  <div className="rounded-lg border bg-blue-50/50 dark:bg-blue-900/10 p-2.5 space-y-1.5">
-                    <p className="text-[9px] font-medium text-blue-700 dark:text-blue-400 uppercase">Hasil Setelah Diskon</p>
-                    <div className="text-[10px] space-y-1">
+                  <div className="rounded-lg bg-muted/50 p-2.5 space-y-1.5">
+                    <p className="text-[11px] text-muted-foreground">Hasil Setelah Diskon</p>
+                    <div className="text-[11px] space-y-1">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Customer Receives</span>
                         <div className="text-right">
-                          <span className="line-through text-muted-foreground mr-1 text-[9px]">{formatCurrency(discountPreview.originalTotalReceived)}</span>
-                          <span className="font-bold text-blue-600">{formatCurrency(discountPreview.newTotalReceived)}</span>
+                          <span className="line-through text-muted-foreground mr-1">{formatCurrency(discountPreview.originalTotalReceived)}</span>
+                          <span className="font-bold">{formatCurrency(discountPreview.newTotalReceived)}</span>
                         </div>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Net Margin</span>
                         <div className="text-right">
-                          <span className="line-through text-muted-foreground mr-1 text-[9px]">{formatCurrency(discountPreview.originalNetMargin)}</span>
+                          <span className="line-through text-muted-foreground mr-1">{formatCurrency(discountPreview.originalNetMargin)}</span>
                           <span className="font-bold">{formatCurrency(discountPreview.newNetMargin)}</span>
                         </div>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Owner Profit</span>
                         <div className="text-right">
-                          <span className="line-through text-muted-foreground mr-1 text-[9px]">{formatCurrency(discountPreview.originalOwnerProfit)}</span>
+                          <span className="line-through text-muted-foreground mr-1">{formatCurrency(discountPreview.originalOwnerProfit)}</span>
                           <span className={cn(
                             "font-bold",
                             discountPreview.newOwnerProfit >= discountPreview.originalOwnerProfit ? "text-emerald-600" : "text-red-600"
@@ -2209,7 +2201,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Partner Profit ({tx.partner.name})</span>
                           <div className="text-right">
-                            <span className="line-through text-muted-foreground mr-1 text-[9px]">{formatCurrency(discountPreview.originalPartnerProfit)}</span>
+                            <span className="line-through text-muted-foreground mr-1">{formatCurrency(discountPreview.originalPartnerProfit)}</span>
                             <span className={cn(
                               "font-bold",
                               discountPreview.newPartnerProfit >= discountPreview.originalPartnerProfit ? "text-emerald-600" : "text-red-600"
