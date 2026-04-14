@@ -1,13 +1,13 @@
-// This is your Prisma schema file,
+// This is your Prisma schema file for PostgreSQL (Neon)
 // Black Bear WebApp - Gestun Management System
-// Default: SQLite for local development
+// Uses Decimal for monetary values (exact precision)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -46,34 +46,36 @@ model Session {
 // ==================== PARTNER ====================
 
 model Partner {
-  id              String    @id @default(cuid())
-  userId          String    @unique
-  name            String
-  email           String    @unique
-  phone           String
-  bankName        String
-  bankAccount     String
-  bankHolder      String
-  city            String
-  commission      Float     @default(30) // percentage
-  target          Float     @default(5000000) // monthly target
-  tier            String    @default("Bronze") // Bronze, Silver, Gold, Platinum
-  badge           String    @default("Newbie") // Newbie, Rising Star, Champion, Legend
-  status          String    @default("active") // active, suspended
-  totalProfit     Float     @default(0)
-  totalVolume     Float     @default(0)
-  totalTransactions Int     @default(0)
-  notes           String?   // additional notes from owner
-  joinedAt        DateTime  @default(now())
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  name              String
+  email             String    @unique
+  phone             String
+  bankName          String
+  bankAccount       String
+  bankHolder        String
+  city              String
+  commission        Decimal   @default(30) // percentage
+  target            Decimal   @default(5000000) // monthly target
+  tier              String    @default("Bronze") // Bronze, Silver, Gold, Platinum
+  badge             String    @default("Newbie") // Newbie, Rising Star, Champion, Legend
+  status            String    @default("active") // active, suspended
+  totalProfit       Decimal   @default(0)
+  totalVolume       Decimal   @default(0)
+  totalTransactions Int       @default(0)
+  notes             String?   // additional notes from owner
+  joinedAt          DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   
   // Relations
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions    Transaction[]
-  customers       Customer[]
-  rankingHistory  MonthlyRankingHistory[]
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions      Transaction[]
+  customers         Customer[]
+  rankingHistory    MonthlyRankingHistory[]
   
+  @@index([status])
+  @@index([tier])
   @@map("partners")
 }
 
@@ -81,8 +83,8 @@ model MonthlyRankingHistory {
   id              String    @id @default(cuid())
   partnerId       String
   month           String    // format: YYYY-MM
-  profit          Float     @default(0)
-  volume          Float     @default(0)
+  profit          Decimal   @default(0)
+  volume          Decimal   @default(0)
   transactions    Int       @default(0)
   rank            Int?
   badge           String?
@@ -98,26 +100,26 @@ model MonthlyRankingHistory {
 // ==================== CUSTOMER ====================
 
 model Customer {
-  id              String    @id @default(cuid())
-  name            String
-  phone           String
-  bankName        String?
-  bankAccount     String?
-  bankHolder      String?
-  city            String?
-  label           String    @default("Regular") // VIP, Regular, New, Blacklist
-  totalVolume     Float     @default(0)
-  totalTransactions Int     @default(0)
-  partnerId       String?   // nullable - can be added by partner
-  addedBy         String    @default("owner") // owner, partner, public - who added this customer
-  notes           String?   // additional notes
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  name              String
+  phone             String
+  bankName          String?
+  bankAccount       String?
+  bankHolder        String?
+  city              String?
+  label             String    @default("Regular") // VIP, Regular, New, Blacklist
+  totalVolume       Decimal   @default(0)
+  totalTransactions Int       @default(0)
+  partnerId         String?   // nullable - can be added by partner
+  addedBy           String    @default("owner") // owner, partner, public - who added this customer
+  notes             String?   // additional notes
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   
   // Relations
-  partner         Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
-  transactions    Transaction[]
-  testimonials    Testimonial[]
+  partner           Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  transactions      Transaction[]
+  testimonials      Testimonial[]
   
   @@index([phone])
   @@index([city])
@@ -128,63 +130,60 @@ model Customer {
 // ==================== TRANSACTION ====================
 
 model Transaction {
-  id              String    @id @default(cuid())
-  orderId         String    @unique // public order ID
-  customerId      String
-  partnerId       String?
+  id                String    @id @default(cuid())
+  orderId           String    @unique // public order ID
+  customerId        String
+  partnerId         String?
   
-  nominal         Float     // nominal gestun
-  paymentFee      Float     // calculated fee (after discount)
-  originalFee     Float     @default(0) // fee before discount
-  discountPercent Float     @default(0) // discount percentage applied
-  discountAmount  Float     @default(0) // actual discount amount deducted
-  platformFee     Float     @default(0) // marketplace fee
-  netMargin       Float     // paymentFee - platformFee
-  partnerProfit   Float     @default(0)
-  ownerProfit     Float     @default(0)
-  totalReceived   Float     // nominal - paymentFee
+  nominal           Decimal   // nominal gestun
+  paymentFee        Decimal   // calculated fee
+  platformFee       Decimal   @default(0) // marketplace fee
+  netMargin         Decimal   // paymentFee - platformFee
+  partnerProfit     Decimal   @default(0)
+  ownerProfit       Decimal   @default(0)
+  totalReceived     Decimal   // nominal - paymentFee
   
-  paymentTypeId   String
-  methodTransaction String  @default("Online") // Online, COD
-  marketplaceId   String?   // for platform fee deduction
+  paymentTypeId     String
+  methodTransaction String    @default("Online") // Online, COD
+  marketplaceId     String?   // for platform fee deduction
   
-  status          String    @default("pending") // pending, verification, process, success, failed
-  notes           String?   // catatan dari owner
-  transactionLink String?   // link untuk transaksi dari owner
+  status            String    @default("pending") // pending, verification, process, success, failed
+  notes             String?   // catatan dari owner
+  transactionLink   String?   // link untuk transaksi dari owner
   
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   
   // Relations
-  customer        Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  partner         Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
-  paymentType     PaymentType @relation(fields: [paymentTypeId], references: [id])
-  marketplace     Marketplace? @relation(fields: [marketplaceId], references: [id], onDelete: SetNull)
-  testimonial     Testimonial?
+  customer          Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  partner           Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  paymentType       PaymentType @relation(fields: [paymentTypeId], references: [id])
+  marketplace       Marketplace? @relation(fields: [marketplaceId], references: [id], onDelete: SetNull)
+  testimonial       Testimonial?
   
   @@index([customerId])
   @@index([partnerId])
   @@index([status])
+  @@index([createdAt])
   @@map("transactions")
 }
 
 // ==================== PAYMENT & FEE MANAGEMENT ====================
 
 model PaymentType {
-  id              String    @id @default(cuid())
-  name            String    @unique  // e.g., "Kartu Kredit", "Paylater"
-  onlineFeePercent Float    @default(0) // percentage
-  onlineFeeFlat    Float    @default(0) // flat fee under threshold
-  codFeePercent    Float    @default(0)
-  codFeeFlat       Float    @default(0)
-  threshold        Float    @default(1000000) // threshold for percentage vs flat
-  discountPercent  Float    @default(0) // default discount percentage for this payment type
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  name              String    @unique  // e.g., "Kartu Kredit", "Paylater"
+  onlineFeePercent  Decimal   @default(0) // percentage
+  onlineFeeFlat     Decimal   @default(0) // flat fee under threshold
+  codFeePercent     Decimal   @default(0)
+  codFeeFlat        Decimal   @default(0)
+  threshold         Decimal   @default(1000000) // threshold for percentage vs flat
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   
   // Relations
-  transactions    Transaction[]
+  transactions      Transaction[]
   
   @@map("payment_types")
 }
@@ -192,8 +191,8 @@ model PaymentType {
 model Marketplace {
   id              String    @id @default(cuid())
   name            String    @unique  // e.g., "Tokopedia", "Shopee"
-  feePercent      Float     @default(0) // deduction from margin (percentage)
-  feeFlat         Float     @default(0) // flat fee deduction
+  feePercent      Decimal   @default(0) // deduction from margin (percentage)
+  feeFlat         Decimal   @default(0) // flat fee deduction
   description     String?   // notes about the marketplace
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
@@ -220,6 +219,7 @@ model Announcement {
   updatedAt       DateTime  @updatedAt
   
   @@index([type])
+  @@index([isActive])
   @@map("announcements")
 }
 
