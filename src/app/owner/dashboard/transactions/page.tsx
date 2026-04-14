@@ -202,13 +202,13 @@ export default function OwnerTransactionsPage() {
     finally { setAnalyticsLoading(false); }
   };
 
-  const updateStatus = async (id: string, status: string, notes?: string, marketplaceId?: string, transactionLink?: string, nominal?: number, recalculate?: boolean, partnerId?: string, discountPercent?: number) => {
+  const updateStatus = async (id: string, status: string, notes?: string, marketplaceId?: string, transactionLink?: string, nominal?: number, recalculate?: boolean, partnerId?: string, discountPercent?: number, discountNominal?: number) => {
     setUpdatingStatus(true);
     try {
       const res = await fetch(`/api/transactions/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, notes, marketplaceId, transactionLink, nominal, recalculate, partnerId, discountPercent }),
+        body: JSON.stringify({ status, notes, marketplaceId, transactionLink, nominal, recalculate, partnerId, discountPercent, discountNominal }),
       });
       const data = await res.json();
       if (data.success) {
@@ -1257,7 +1257,7 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
 }
 
 // Transaction Detail Dialog Content (uses key pattern for reset)
-function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Transaction; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean, partnerId?: string, discountPercent?: number) => void; onDelete: (id: string) => void; updating: boolean }) {
+function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Transaction; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean, partnerId?: string, discountPercent?: number, discountNominal?: number) => void; onDelete: (id: string) => void; updating: boolean }) {
   const [notes, setNotes] = useState(tx.notes || '');
   const [transactionLink, setTransactionLink] = useState(tx.transactionLink || '');
   const [status, setStatus] = useState(tx.status);
@@ -1420,36 +1420,21 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
 
     // Send 'none' explicitly so backend knows to clear marketplace
     const effectivePartnerId = partnerChanged ? selectedPartnerId : undefined;
-    // Calculate discount percent if discount tab was used
+    // Calculate discount values if discount tab was used
     let discountPercent: number | undefined;
+    let discountNominal: number | undefined;
     if (discountValue) {
       const val = parseFloat(discountValue);
       if (!isNaN(val) && val > 0) {
         if (discountType === 'percent') {
           discountPercent = Math.min(val, 100);
         } else {
-          // Convert nominal discount to percent
-          const isOnline = tx.methodTransaction === 'Online';
-          let feePercent = isOnline ? (tx.paymentType?.onlineFeePercent || 0) : (tx.paymentType?.codFeePercent || 0);
-          const feeFlat = isOnline ? (tx.paymentType?.onlineFeeFlat || 0) : (tx.paymentType?.codFeeFlat || 0);
-          const threshold = tx.paymentType?.threshold || 1000000;
-          if (feePercent > 100) feePercent = feePercent / 1000;
-          let paymentFee = tx.nominal >= threshold ? tx.nominal * (feePercent / 100) : feeFlat;
-          let platformFee = 0;
-          if (tx.marketplace) {
-            let mpFeePercent = tx.marketplace.feePercent || 0;
-            const mpFeeFlat = tx.marketplace.feeFlat || 0;
-            if (mpFeePercent > 100) mpFeePercent = mpFeePercent / 1000;
-            platformFee = tx.nominal * (mpFeePercent / 100) + mpFeeFlat;
-          }
-          const originalFee = paymentFee;
-          if (originalFee > 0) {
-            discountPercent = Math.min((val / originalFee) * 100, 100);
-          }
+          // Send nominal discount directly
+          discountNominal = val;
         }
       }
     }
-    onUpdate(tx.id, status, notes, marketplace, transactionLink, newNominal, nominalChanged, effectivePartnerId, discountPercent);
+    onUpdate(tx.id, status, notes, marketplace, transactionLink, newNominal, nominalChanged, effectivePartnerId, discountPercent, discountNominal);
   };
 
   const config = STATUS_CONFIG[tx.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
@@ -1576,25 +1561,25 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
         <TabsList className="w-full bg-transparent h-auto p-0 gap-0 rounded-none">
           <TabsTrigger
             value="detail"
-            className="flex-1 h-8 text-[11px] font-medium rounded-none data-[state=active]:bg-white/20 data-[state=active]:text-white data-[state=active]:shadow-none text-white/70 border-b-2 border-transparent data-[state=active]:border-white/60 data-[state=active]:rounded-none"
+            className="flex-1 h-9 text-[11px] font-semibold tracking-wide data-[state=active]:bg-white/25 data-[state=active]:text-white data-[state=active]:shadow-none text-white/60 border-b-[3px] border-transparent data-[state=active]:border-b-white rounded-none transition-all duration-200 hover:text-white/90 data-[state=active]:rounded-t-lg data-[state=active]:border-t data-[state=active]:border-x data-[state=active]:border-t-white/20"
           >
-            <Info className="w-3 h-3 mr-1" /> Detail
+            <Info className="w-3.5 h-3.5 mr-1" /> Detail
           </TabsTrigger>
           <TabsTrigger
             value="aksi"
-            className="flex-1 h-8 text-[11px] font-medium rounded-none data-[state=active]:bg-white/20 data-[state=active]:text-white data-[state=active]:shadow-none text-white/70 border-b-2 border-transparent data-[state=active]:border-white/60 data-[state=active]:rounded-none"
+            className="flex-1 h-9 text-[11px] font-semibold tracking-wide data-[state=active]:bg-white/25 data-[state=active]:text-white data-[state=active]:shadow-none text-white/60 border-b-[3px] border-transparent data-[state=active]:border-b-white rounded-none transition-all duration-200 hover:text-white/90 data-[state=active]:rounded-t-lg data-[state=active]:border-t data-[state=active]:border-x data-[state=active]:border-t-white/20"
           >
-            <Zap className="w-3 h-3 mr-1" /> Aksi
+            <Zap className="w-3.5 h-3.5 mr-1" /> Aksi
           </TabsTrigger>
           <TabsTrigger
             value="diskon"
             className={cn(
-              "flex-1 h-8 text-[11px] font-medium rounded-none data-[state=active]:bg-white/20 data-[state=active]:text-white data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-white/60 data-[state=active]:rounded-none",
-              canDiscount ? "text-white/70" : "text-white/30 cursor-not-allowed"
+              "flex-1 h-9 text-[11px] font-semibold tracking-wide data-[state=active]:bg-white/25 data-[state=active]:text-white data-[state=active]:shadow-none border-b-[3px] border-transparent data-[state=active]:border-b-white rounded-none transition-all duration-200 hover:text-white/90 data-[state=active]:rounded-t-lg data-[state=active]:border-t data-[state=active]:border-x data-[state=active]:border-t-white/20",
+              canDiscount ? "text-white/60" : "text-white/25 cursor-not-allowed"
             )}
             disabled={!canDiscount}
           >
-            <Percent className="w-3 h-3 mr-1" /> Diskon
+            <Percent className="w-3.5 h-3.5 mr-1" /> Diskon
           </TabsTrigger>
         </TabsList>
       </div>
@@ -2225,7 +2210,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
 }
 
 // Transaction Detail Dialog Wrapper
-function TxDetailDialog({ open, onOpenChange, tx, onUpdate, onDelete, updating }: { open: boolean; onOpenChange: (v: boolean) => void; tx: Transaction | null; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean, partnerId?: string, discountPercent?: number) => void; onDelete: (id: string) => void; updating: boolean }) {
+function TxDetailDialog({ open, onOpenChange, tx, onUpdate, onDelete, updating }: { open: boolean; onOpenChange: (v: boolean) => void; tx: Transaction | null; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean, partnerId?: string, discountPercent?: number, discountNominal?: number) => void; onDelete: (id: string) => void; updating: boolean }) {
   if (!tx) return null;
 
   return (
