@@ -24,7 +24,7 @@ import {
   RefreshCw, Eye, Zap, Filter, Calendar, ArrowRightLeft, Sparkles,
   Store, DollarSign, PiggyBank, Building2, ArrowRight, MinusCircle, Copy,
   BarChart3, PieChart, LineChart, Activity, Layers, Users, MessageSquare,
-  ExternalLink,
+  ExternalLink, Banknote,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart as RePieChart, Pie, Cell,
@@ -1587,12 +1587,13 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
       {/* Tab Contents */}
       <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(85vh - 140px)' }}>
         {/* TAB 1: Detail */}
-        <TabsContent value="detail" className="mt-0 p-4 space-y-2.5">
-          {/* Amount & Profit Row */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-lg border bg-muted/30 p-2.5">
-              <div className="flex items-center justify-between mb-0.5">
-                <p className="text-[9px] text-muted-foreground">Nominal</p>
+        <TabsContent value="detail" className="mt-0 p-4 space-y-4">
+          {/* ── Financial Card ── */}
+          <div className="rounded-xl bg-slate-900 p-4 text-white space-y-3">
+            {/* Nominal */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] uppercase tracking-wider text-white/50 font-medium">Nominal</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -1601,10 +1602,15 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
                       setNominal(tx.nominal.toString());
                     }
                   }}
-                  className={cn("p-1 rounded transition-colors", editNominal ? "bg-violet-100 text-violet-600" : "hover:bg-muted text-muted-foreground")}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-colors",
+                    editNominal
+                      ? "bg-fuchsia-500/20 text-fuchsia-400"
+                      : "hover:bg-white/10 text-white/40 hover:text-white/70"
+                  )}
                   title={editNominal ? 'Batal edit' : 'Edit nominal'}
                 >
-                  <Edit3 className="w-3 h-3" />
+                  <Edit3 className="w-3.5 h-3.5" />
                 </button>
               </div>
               {editNominal ? (
@@ -1612,62 +1618,69 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
                   type="number"
                   value={nominal}
                   onChange={(e) => setNominal(e.target.value)}
-                  className="h-7 text-xs font-bold text-violet-600"
+                  className="h-8 text-sm font-bold text-fuchsia-400 bg-white/10 border-white/20 focus:border-fuchsia-500"
                   placeholder="Masukkan nominal"
                 />
               ) : (
-                <p className="text-base font-bold text-violet-600">{formatCurrency(tx.nominal)}</p>
+                <p className="text-xl font-bold text-white">{formatCurrency(tx.nominal)}</p>
               )}
-              <div className="text-[9px] text-muted-foreground mt-1 space-y-0.5">
-                <div className="flex justify-between">
-                  <span>Fee</span>
-                  <span className="text-red-500">
-                    {previewCalc && previewCalc.paymentFee !== tx.paymentFee ? (
-                      <span>
-                        <span className="line-through text-muted-foreground mr-1">{formatCurrency(tx.paymentFee)}</span>
-                        <span>-{formatCurrency(previewCalc.paymentFee)}</span>
-                      </span>
+            </div>
+
+            {/* Fee breakdown */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-white/40">Payment Fee</span>
+                <span className="text-red-400">
+                  {previewCalc && previewCalc.paymentFee !== tx.paymentFee ? (
+                    <>
+                      <span className="line-through text-white/25 mr-1.5">{formatCurrency(tx.paymentFee)}</span>
+                      -{formatCurrency(previewCalc.paymentFee)}
+                    </>
+                  ) : (
+                    <span>-{formatCurrency(previewCalc?.paymentFee ?? tx.paymentFee)}</span>
+                  )}
+                </span>
+              </div>
+              {(previewCalc?.platformFee ?? tx.platformFee) > 0 && (
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-white/40">Platform Fee</span>
+                  <span className="text-red-400">
+                    {previewCalc && previewCalc.platformFee !== tx.platformFee ? (
+                      <>
+                        <span className="line-through text-white/25 mr-1.5">{formatCurrency(tx.platformFee)}</span>
+                        -{formatCurrency(previewCalc.platformFee)}
+                      </>
                     ) : (
-                      <span>-{formatCurrency(previewCalc?.paymentFee ?? tx.paymentFee)}</span>
+                      <span>-{formatCurrency(previewCalc?.platformFee ?? tx.platformFee)}</span>
                     )}
                   </span>
                 </div>
-                {(previewCalc?.platformFee ?? tx.platformFee) > 0 && (
-                  <div className="flex justify-between">
-                    <span>Platform</span>
-                    <span className="text-red-500">
-                      {previewCalc && previewCalc.platformFee !== tx.platformFee ? (
-                        <span>
-                          <span className="line-through text-muted-foreground mr-1">{formatCurrency(tx.platformFee)}</span>
-                          <span>-{formatCurrency(previewCalc.platformFee)}</span>
-                        </span>
-                      ) : (
-                        <span>-{formatCurrency(previewCalc?.platformFee ?? tx.platformFee)}</span>
-                      )}
-                    </span>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
-            <div className="rounded-lg bg-slate-900 p-2.5 text-white">
-              <p className="text-[9px] text-white/70 mb-0.5">Profit Anda</p>
+
+            {/* Separator */}
+            <div className="border-t border-white/10" />
+
+            {/* Profit */}
+            <div>
+              <span className="text-[10px] uppercase tracking-wider text-white/50 font-medium">Profit Anda</span>
               {previewCalc && previewCalc.ownerProfit !== tx.ownerProfit ? (
-                <div>
-                  <p className="text-[9px] text-white/50 line-through">{formatCurrency(tx.ownerProfit)}</p>
-                  <p className="text-base font-bold text-fuchsia-400">+{formatCurrency(previewCalc.ownerProfit)}</p>
-                  <p className="text-[8px] text-fuchsia-300">*Preview</p>
+                <div className="mt-0.5">
+                  <p className="text-[10px] text-white/30 line-through">{formatCurrency(tx.ownerProfit)}</p>
+                  <p className="text-lg font-bold text-fuchsia-400">+{formatCurrency(previewCalc.ownerProfit)}</p>
                 </div>
               ) : (
-                <p className="text-base font-bold text-fuchsia-400">+{formatCurrency(previewCalc?.ownerProfit ?? tx.ownerProfit)}</p>
+                <p className="text-lg font-bold text-fuchsia-400 mt-0.5">+{formatCurrency(previewCalc?.ownerProfit ?? tx.ownerProfit)}</p>
               )}
               {tx.partner && (
-                <p className="text-[9px] text-white/60 mt-1">
-                  {tx.partner.name}: <span className="text-violet-400">
+                <p className="text-[10px] text-white/40 mt-1">
+                  {tx.partner.name}{' '}
+                  <span className="text-violet-400">
                     {previewCalc && previewCalc.partnerProfit !== tx.partnerProfit ? (
-                      <span>
-                        <span className="line-through text-white/40 mr-1">{formatCurrency(tx.partnerProfit)}</span>
+                      <>
+                        <span className="line-through text-white/20 mr-1">{formatCurrency(tx.partnerProfit)}</span>
                         +{formatCurrency(previewCalc.partnerProfit)}
-                      </span>
+                      </>
                     ) : (
                       <span>+{formatCurrency(previewCalc?.partnerProfit ?? tx.partnerProfit)}</span>
                     )}
@@ -1675,102 +1688,128 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
                 </p>
               )}
               {previewCalc && previewCalc.ownerProfit !== tx.ownerProfit && (
-                <p className="text-[8px] text-fuchsia-300 mt-1">*Preview</p>
+                <p className="text-[9px] text-fuchsia-300/70 mt-1 italic">*Preview kalkulasi</p>
               )}
             </div>
           </div>
 
-          {/* Customer & Payment Row */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-lg border bg-muted/30 p-2.5">
-              <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
-                <User className="w-2.5 h-2.5" /> Customer
-              </p>
-              <p className="text-xs font-semibold truncate">{tx.customer?.name}</p>
-              <div className="flex items-center gap-1 mt-0.5">
-                <p className="text-[9px] text-muted-foreground">{tx.customer?.phone}</p>
-                <div className="flex items-center gap-0.5 ml-auto">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(tx.customer?.phone || '');
-                      toast.success('No. WA disalin');
-                    }}
-                    className="p-1 hover:bg-muted rounded transition-colors"
-                    title="Salin No. WA"
-                  >
-                    <Copy className="w-3 h-3 text-muted-foreground" />
-                  </button>
-                  <a
-                    href={`https://wa.me/${tx.customer?.phone?.replace(/^0/, '62')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors"
-                    title="Buka WhatsApp"
-                  >
-                    <MessageSquare className="w-3 h-3 text-green-600" />
-                  </a>
-                </div>
+          {/* ── Transaction Info (borderless flow) ── */}
+          <div className="space-y-0">
+            {/* Customer */}
+            <div className="flex gap-3 py-3">
+              <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
+                <User className="w-4 h-4 text-violet-600 dark:text-violet-400" />
               </div>
-            </div>
-            <div className="rounded-lg border bg-muted/30 p-2.5">
-              <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
-                <CreditCard className="w-2.5 h-2.5" /> Payment
-              </p>
-              <p className="text-xs font-semibold">{tx.paymentType?.name}</p>
-              <p className="text-[9px] text-muted-foreground">{tx.methodTransaction}</p>
-            </div>
-          </div>
-
-          {/* Bank Account - Compact */}
-          {tx.customer?.bankName && tx.customer?.bankAccount && (
-            <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20 p-2.5">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[9px] text-muted-foreground">{tx.customer.bankName}</p>
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-mono font-bold">{tx.customer.bankAccount}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Customer</p>
+                <p className="text-sm font-semibold truncate">{tx.customer?.name}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-xs text-muted-foreground">{tx.customer?.phone}</p>
+                  <div className="flex items-center gap-0.5 ml-auto">
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard.writeText(tx.customer.bankAccount || '');
-                        toast.success('Disalin');
+                        navigator.clipboard.writeText(tx.customer?.phone || '');
+                        toast.success('No. WA disalin');
                       }}
-                      className="p-1 hover:bg-blue-100 dark:hover:bg-blue-800 rounded"
+                      className="p-1 hover:bg-muted rounded-md transition-colors"
+                      title="Salin No. WA"
                     >
-                      <Copy className="w-3 h-3 text-blue-600" />
+                      <Copy className="w-3.5 h-3.5 text-muted-foreground" />
                     </button>
+                    <a
+                      href={`https://wa.me/${tx.customer?.phone?.replace(/^0/, '62')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-md transition-colors"
+                      title="Buka WhatsApp"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                    </a>
                   </div>
                 </div>
               </div>
             </div>
-          )}
+            <Separator />
 
-          {/* Timestamp & Marketplace info */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-lg border bg-muted/30 p-2.5">
-              <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
-                <Calendar className="w-2.5 h-2.5" /> Tanggal
-              </p>
-              <p className="text-xs font-semibold">{formatDate(tx.createdAt)}</p>
-            </div>
-            {tx.marketplace && (
-              <div className="rounded-lg border bg-muted/30 p-2.5">
-                <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
-                  <Store className="w-2.5 h-2.5" /> Marketplace
-                </p>
-                <p className="text-xs font-semibold">{tx.marketplace.name}</p>
-                <p className="text-[9px] text-muted-foreground">Fee: {tx.marketplace.feePercent}%</p>
+            {/* Payment */}
+            <div className="flex gap-3 py-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Payment</p>
+                <p className="text-sm font-semibold">{tx.paymentType?.name}</p>
+                <p className="text-xs text-muted-foreground">{tx.methodTransaction}</p>
+              </div>
+            </div>
+            <Separator />
+
+            {/* Bank Account */}
+            {tx.customer?.bankName && tx.customer?.bankAccount && (
+              <>
+                <div className="flex gap-3 py-3">
+                  <div className="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center shrink-0">
+                    <Banknote className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Rekening</p>
+                    <p className="text-sm font-semibold">{tx.customer.bankName}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <p className="text-xs text-muted-foreground font-mono">{tx.customer.bankAccount}</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(tx.customer.bankAccount || '');
+                          toast.success('Disalin');
+                        }}
+                        className="p-1 hover:bg-muted rounded-md transition-colors"
+                        title="Salin nomor rekening"
+                      >
+                        <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <Separator />
+              </>
             )}
+
+            {/* Marketplace */}
+            {tx.marketplace && (
+              <>
+                <div className="flex gap-3 py-3">
+                  <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                    <Store className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Marketplace</p>
+                    <p className="text-sm font-semibold">{tx.marketplace.name}</p>
+                    <p className="text-xs text-muted-foreground">Fee: {tx.marketplace.feePercent}%</p>
+                  </div>
+                </div>
+                <Separator />
+              </>
+            )}
+
+            {/* Date */}
+            <div className="flex gap-3 py-3">
+              <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center shrink-0">
+                <Calendar className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Tanggal</p>
+                <p className="text-sm font-semibold">{formatDate(tx.createdAt)}</p>
+              </div>
+            </div>
           </div>
 
-          {/* WhatsApp Share Button */}
+          {/* ── WhatsApp Share (compact) ── */}
           <a
             href={`https://wa.me/?text=${encodeURIComponent(`🛒 Detail Transaksi\n\nOrder ID: ${tx.orderId}\nNominal: ${formatCurrency(tx.nominal)}\nPayment: ${tx.paymentType?.name}\nStatus: ${tx.status.toUpperCase()}\nCustomer: ${tx.customer?.name}\nTanggal: ${formatDate(tx.createdAt)}`)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-2.5 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors text-xs font-medium"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-800 transition-colors"
           >
             <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>

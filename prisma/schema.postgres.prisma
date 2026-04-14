@@ -136,7 +136,10 @@ model Transaction {
   partnerId         String?
   
   nominal           Decimal   // nominal gestun
-  paymentFee        Decimal   // calculated fee
+  paymentFee        Decimal   // calculated fee (after discount)
+  originalFee       Decimal   @default(0) // fee before discount
+  discountPercent   Decimal   @default(0) // discount percentage applied
+  discountAmount    Decimal   @default(0) // actual discount amount deducted
   platformFee       Decimal   @default(0) // marketplace fee
   netMargin         Decimal   // paymentFee - platformFee
   partnerProfit     Decimal   @default(0)
@@ -173,11 +176,14 @@ model Transaction {
 model PaymentType {
   id                String    @id @default(cuid())
   name              String    @unique  // e.g., "Kartu Kredit", "Paylater"
+  logoUrl           String?   // logo image URL
   onlineFeePercent  Decimal   @default(0) // percentage
   onlineFeeFlat     Decimal   @default(0) // flat fee under threshold
   codFeePercent     Decimal   @default(0)
   codFeeFlat        Decimal   @default(0)
   threshold         Decimal   @default(1000000) // threshold for percentage vs flat
+  discountPercent   Decimal   @default(0) // default discount percentage for this payment type
+  discountNominal   Decimal   @default(0) // default discount nominal for this payment type
   isActive          Boolean   @default(true)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -191,6 +197,7 @@ model PaymentType {
 model Marketplace {
   id              String    @id @default(cuid())
   name            String    @unique  // e.g., "Tokopedia", "Shopee"
+  logoUrl         String?   // logo image URL
   feePercent      Decimal   @default(0) // deduction from margin (percentage)
   feeFlat         Decimal   @default(0) // flat fee deduction
   description     String?   // notes about the marketplace
