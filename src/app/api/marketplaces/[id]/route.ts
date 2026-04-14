@@ -18,7 +18,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, feePercent, feeFlat, description, isActive } = body;
+    const { name, logoUrl, feePercent, feeFlat, description, isActive } = body;
 
     // Check if marketplace exists
     const existingMarketplace = await db.marketplace.findUnique({
@@ -35,6 +35,7 @@ export async function PATCH(
     const updateData: Record<string, unknown> = {};
 
     if (name !== undefined) updateData.name = name;
+    if (logoUrl !== undefined) updateData.logoUrl = logoUrl || null;
     if (isActive !== undefined) updateData.isActive = isActive;
     if (feePercent !== undefined) updateData.feePercent = parseFloat(feePercent) || 0;
     if (feeFlat !== undefined) updateData.feeFlat = parseFloat(feeFlat) || 0;

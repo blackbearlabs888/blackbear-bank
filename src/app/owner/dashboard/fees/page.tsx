@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -30,6 +30,10 @@ import {
   Settings2,
   Wallet,
   Target,
+  Sparkles,
+  Search,
+  ImageIcon,
+  Store,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -43,6 +47,9 @@ interface PaymentType {
   codFeePercent: number;
   codFeeFlat: number;
   threshold: number;
+  discountPercent: number;
+  discountNominal: number;
+  logoUrl: string | null;
   isActive: boolean;
 }
 
@@ -54,6 +61,9 @@ interface PaymentTypeStats {
   codFeePercent: number;
   codFeeFlat: number;
   threshold: number;
+  discountPercent: number;
+  discountNominal: number;
+  logoUrl: string | null;
   isActive: boolean;
   transactionCount: number;
   onlineCount: number;
@@ -68,6 +78,7 @@ interface Marketplace {
   feePercent: number;
   feeFlat: number;
   description: string | null;
+  logoUrl: string | null;
   isActive: boolean;
 }
 
@@ -77,11 +88,14 @@ interface MarketplaceStats {
   feePercent: number;
   feeFlat: number;
   description: string | null;
+  logoUrl: string | null;
   isActive: boolean;
   transactionCount: number;
   totalVolume: number;
   totalFees: number;
 }
+
+type DiscountType = 'percent' | 'nominal';
 
 const COLORS = {
   primary: 'from-primary to-primary/70',
@@ -101,6 +115,7 @@ export default function OwnerFeesPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [mainTab, setMainTab] = useState<'payment' | 'marketplace'>('payment');
+  const [searchQuery, setSearchQuery] = useState('');
   const redirectAttempted = useRef(false);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -124,6 +139,11 @@ export default function OwnerFeesPage() {
       fetchData();
     }
   }, [isAuthenticated, hasHydrated, user]);
+
+  // Reset search on tab change
+  useEffect(() => {
+    setSearchQuery('');
+  }, [mainTab]);
 
   // Auto-refresh every 1 minute
   useEffect(() => {
@@ -214,6 +234,19 @@ export default function OwnerFeesPage() {
       console.error('Failed to toggle marketplace:', err);
     }
   };
+
+  // Filtered lists based on search
+  const filteredPaymentTypes = useMemo(() => {
+    if (!searchQuery.trim()) return paymentTypes;
+    const q = searchQuery.toLowerCase();
+    return paymentTypes.filter(pt => pt.name.toLowerCase().includes(q));
+  }, [paymentTypes, searchQuery]);
+
+  const filteredMarketplaces = useMemo(() => {
+    if (!searchQuery.trim()) return marketplaces;
+    const q = searchQuery.toLowerCase();
+    return marketplaces.filter(mp => mp.name.toLowerCase().includes(q));
+  }, [marketplaces, searchQuery]);
 
   if (isLoading || !hasHydrated) {
     return (
@@ -360,20 +393,31 @@ export default function OwnerFeesPage() {
             </Card>
           )}
 
-          {/* Payment Type List */}
-          <div className="flex items-center justify-between">
-            <p className="text-xs sm:text-sm font-medium">Tipe Pembayaran</p>
+          {/* Search + New Button */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Cari payment type..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 pl-8 text-xs sm:text-sm rounded-lg"
+              />
+            </div>
             <NewPaymentTypeDialog onCreated={() => fetchData()} />
           </div>
 
+          {/* Payment Type Grid */}
           {loading ? (
-            [...Array(3)].map((_, i) => <Skeleton key={i} className="h-28 sm:h-32 rounded-lg sm:rounded-xl" />)
-          ) : paymentTypes.length > 0 ? (
-            <div className="space-y-2">
-              {paymentTypes.map((pt) => {
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-44 sm:h-48 rounded-lg sm:rounded-xl" />)}
+            </div>
+          ) : filteredPaymentTypes.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+              {filteredPaymentTypes.map((pt) => {
                 const stats = paymentTypeStats.find(s => s.id === pt.id);
                 return (
-                  <PaymentTypeCard
+                  <PaymentTypeGridCard
                     key={pt.id}
                     paymentType={pt}
                     stats={stats}
@@ -386,7 +430,9 @@ export default function OwnerFeesPage() {
           ) : (
             <div className="text-center py-12">
               <CreditCard className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
-              <p className="text-xs sm:text-sm text-muted-foreground">Belum ada tipe pembayaran</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                {searchQuery ? 'Tidak ditemukan' : 'Belum ada tipe pembayaran'}
+              </p>
             </div>
           )}
         </div>
@@ -417,20 +463,31 @@ export default function OwnerFeesPage() {
             </Card>
           )}
 
-          {/* Marketplace List */}
-          <div className="flex items-center justify-between">
-            <p className="text-xs sm:text-sm font-medium">Marketplace</p>
+          {/* Search + New Button */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Cari marketplace..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 pl-8 text-xs sm:text-sm rounded-lg"
+              />
+            </div>
             <NewMarketplaceDialog onCreated={() => fetchData()} />
           </div>
 
+          {/* Marketplace Grid */}
           {loading ? (
-            [...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 sm:h-28 rounded-lg sm:rounded-xl" />)
-          ) : marketplaces.length > 0 ? (
-            <div className="space-y-2">
-              {marketplaces.map((mp) => {
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-40 sm:h-44 rounded-lg sm:rounded-xl" />)}
+            </div>
+          ) : filteredMarketplaces.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+              {filteredMarketplaces.map((mp) => {
                 const stats = marketplaceStats.find(s => s.id === mp.id);
                 return (
-                  <MarketplaceCard
+                  <MarketplaceGridCard
                     key={mp.id}
                     marketplace={mp}
                     stats={stats}
@@ -443,7 +500,9 @@ export default function OwnerFeesPage() {
           ) : (
             <div className="text-center py-12">
               <Globe className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
-              <p className="text-xs sm:text-sm text-muted-foreground">Belum ada marketplace</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                {searchQuery ? 'Tidak ditemukan' : 'Belum ada marketplace'}
+              </p>
             </div>
           )}
         </div>
@@ -529,10 +588,30 @@ function FeeCalculatorCard({
       : feeFlat;
   }
 
+  // Apply discount - support both percent and nominal
+  let discountAmount = 0;
+  let originalPaymentFee = paymentFee;
+  let discountLabel = '';
+  const hasPercentDiscount = selectedPaymentType && selectedPaymentType.discountPercent > 0 && paymentFee > 0;
+  const hasNominalDiscount = selectedPaymentType && selectedPaymentType.discountNominal > 0 && paymentFee > 0;
+  const hasDiscount = hasPercentDiscount || hasNominalDiscount;
+  
+  if (hasDiscount && selectedPaymentType) {
+    if (hasPercentDiscount) {
+      discountAmount = paymentFee * (selectedPaymentType.discountPercent / 100);
+      discountLabel = `${selectedPaymentType.discountPercent}%`;
+    } else if (hasNominalDiscount) {
+      discountAmount = selectedPaymentType.discountNominal;
+      discountLabel = formatCurrency(selectedPaymentType.discountNominal);
+    }
+    // Don't let discount exceed the fee
+    discountAmount = Math.min(discountAmount, paymentFee);
+    paymentFee = paymentFee - discountAmount;
+  }
+
   // Calculate platform fee
   let platformFee = 0;
   if (selectedMarketplace && nominalNum > 0) {
-    // Safety: ensure numeric values and normalize fee percent if > 100
     let mpFeePercent = Number(selectedMarketplace.feePercent) || 0;
     const mpFeeFlat = Number(selectedMarketplace.feeFlat) || 0;
     if (mpFeePercent > 100) {
@@ -624,6 +703,21 @@ function FeeCalculatorCard({
                 </div>
                 <span className="font-medium text-violet-600">-{formatCurrency(paymentFee)}</span>
               </div>
+              {hasDiscount && (
+                <>
+                  <div className="flex items-center justify-between text-[10px] sm:text-xs">
+                    <div className="flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-amber-500" />
+                      <span className="text-amber-600 dark:text-amber-400">Diskon {discountLabel}</span>
+                    </div>
+                    <span className="font-medium text-green-600">+{formatCurrency(discountAmount)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-muted-foreground">
+                    <span>Fee sebelum diskon</span>
+                    <span className="line-through">{formatCurrency(originalPaymentFee)}</span>
+                  </div>
+                </>
+              )}
               <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-muted-foreground">
                 <span>Customer receives</span>
                 <span>{formatCurrency(customerReceives)}</span>
@@ -677,8 +771,10 @@ function FeeCalculatorCard({
   );
 }
 
-// Payment Type Card
-function PaymentTypeCard({ 
+// ============================================================
+// Payment Type Grid Card (compact card in grid layout)
+// ============================================================
+function PaymentTypeGridCard({ 
   paymentType, 
   stats, 
   onToggle, 
@@ -691,74 +787,105 @@ function PaymentTypeCard({
 }) {
   const [showEdit, setShowEdit] = useState(false);
 
+  const hasDiscount = paymentType.discountPercent > 0 || paymentType.discountNominal > 0;
+  const discountBadgeLabel = paymentType.discountPercent > 0 
+    ? `Diskon: ${paymentType.discountPercent}%` 
+    : `Diskon: ${formatCurrency(paymentType.discountNominal)}`;
+
   return (
     <>
-      <Card className={cn("glass-card tap-highlight", !paymentType.isActive && "opacity-60")}>
-        <CardContent className="p-2.5 sm:p-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className={cn(
-                "w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0",
-                paymentType.isActive ? "bg-primary/10" : "bg-muted"
-              )}>
-                <CreditCard className={cn("w-4 h-4 sm:w-5 sm:h-5", paymentType.isActive ? "text-primary" : "text-muted-foreground")} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] sm:text-sm font-medium truncate">{paymentType.name}</p>
-                <p className="text-[9px] sm:text-xs text-muted-foreground">
-                  Threshold: {formatCurrency(paymentType.threshold)}
-                </p>
-              </div>
+      <Card className={cn(
+        "glass-card tap-highlight flex flex-col overflow-hidden",
+        !paymentType.isActive && "opacity-60"
+      )}>
+        <CardContent className="p-2.5 sm:p-3 flex flex-col flex-1 gap-2">
+          {/* Top row: Logo + Name + Actions */}
+          <div className="flex items-start gap-2">
+            {/* Logo */}
+            <div className={cn(
+              "w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden",
+              paymentType.isActive ? "bg-primary/10" : "bg-muted"
+            )}>
+              {paymentType.logoUrl ? (
+                <img 
+                  src={paymentType.logoUrl} 
+                  alt={paymentType.name}
+                  className="w-full h-full object-cover rounded-lg sm:rounded-xl"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+              ) : (
+                <CreditCard className={cn("w-5 h-5 sm:w-6 sm:h-6", paymentType.isActive ? "text-primary" : "text-muted-foreground")} />
+              )}
+              {/* Hidden fallback icon for error state */}
+              <CreditCard className={cn("w-5 h-5 sm:w-6 sm:h-6 hidden absolute", paymentType.isActive ? "text-primary" : "text-muted-foreground")} />
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                onClick={() => setShowEdit(true)}
-              >
-                <Settings2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </Button>
-              <Switch
-                checked={paymentType.isActive}
-                onCheckedChange={onToggle}
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t">
-            <div className="flex items-center gap-1.5">
-              <Globe className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground" />
-              <div className="text-[9px] sm:text-xs">
-                <p className="text-muted-foreground">Online</p>
-                <p className="font-medium">{paymentType.onlineFeePercent}% + {formatCurrency(paymentType.onlineFeeFlat)}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Truck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground" />
-              <div className="text-[9px] sm:text-xs">
-                <p className="text-muted-foreground">COD</p>
-                <p className="font-medium">{paymentType.codFeePercent}% + {formatCurrency(paymentType.codFeeFlat)}</p>
+
+            <div className="min-w-0 flex-1">
+              {/* Name */}
+              <p className="text-[11px] sm:text-sm font-semibold truncate leading-tight">{paymentType.name}</p>
+              
+              {/* Fee display */}
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 truncate">
+                {paymentType.onlineFeePercent}% + {formatCurrency(paymentType.onlineFeeFlat)}
+              </p>
+
+              {/* Discount badge */}
+              {hasDiscount && (
+                <Badge className="mt-1 text-[8px] h-4 px-1.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100">
+                  <Sparkles className="w-2.5 h-2.5 mr-0.5" />
+                  {discountBadgeLabel}
+                </Badge>
+              )}
+
+              {/* Active/Inactive indicator */}
+              <div className="flex items-center gap-1 mt-1">
+                <div className={cn(
+                  "w-1.5 h-1.5 rounded-full",
+                  paymentType.isActive ? "bg-green-500" : "bg-muted-foreground/40"
+                )} />
+                <span className="text-[8px] sm:text-[9px] text-muted-foreground">
+                  {paymentType.isActive ? 'Aktif' : 'Nonaktif'}
+                </span>
               </div>
             </div>
           </div>
 
+          {/* Stats row */}
           {stats && (
-            <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t">
+            <div className="grid grid-cols-3 gap-1 mt-auto pt-2 border-t">
               <div className="text-center">
-                <p className="text-[9px] text-muted-foreground">Trx</p>
-                <p className="text-[10px] sm:text-xs font-medium">{stats.transactionCount}</p>
+                <p className="text-[8px] sm:text-[9px] text-muted-foreground">Trx</p>
+                <p className="text-[9px] sm:text-[10px] font-medium">{stats.transactionCount}</p>
               </div>
               <div className="text-center">
-                <p className="text-[9px] text-muted-foreground">Volume</p>
-                <p className="text-[10px] sm:text-xs font-medium">{formatCurrency(stats.totalVolume)}</p>
+                <p className="text-[8px] sm:text-[9px] text-muted-foreground">Volume</p>
+                <p className="text-[9px] sm:text-[10px] font-medium">{formatCurrency(stats.totalVolume)}</p>
               </div>
               <div className="text-center">
-                <p className="text-[9px] text-muted-foreground">Fee</p>
-                <p className="text-[10px] sm:text-xs font-medium">{formatCurrency(stats.totalFees)}</p>
+                <p className="text-[8px] sm:text-[9px] text-muted-foreground">Fee</p>
+                <p className="text-[9px] sm:text-[10px] font-medium">{formatCurrency(stats.totalFees)}</p>
               </div>
             </div>
           )}
+
+          {/* Bottom row: Settings + Toggle */}
+          <div className="flex items-center justify-between pt-1 mt-auto">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setShowEdit(true)}
+            >
+              <Settings2 className="w-3.5 h-3.5" />
+            </Button>
+            <Switch
+              checked={paymentType.isActive}
+              onCheckedChange={onToggle}
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -772,8 +899,10 @@ function PaymentTypeCard({
   );
 }
 
-// Marketplace Card
-function MarketplaceCard({ 
+// ============================================================
+// Marketplace Grid Card (compact card in grid layout)
+// ============================================================
+function MarketplaceGridCard({ 
   marketplace, 
   stats, 
   onToggle, 
@@ -788,68 +917,103 @@ function MarketplaceCard({
 
   return (
     <>
-      <Card className={cn("glass-card tap-highlight", !marketplace.isActive && "opacity-60")}>
-        <CardContent className="p-2.5 sm:p-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className={cn(
-                "w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0",
-                marketplace.isActive ? "bg-green-100 dark:bg-green-900/30" : "bg-muted"
-              )}>
-                <Globe className={cn("w-4 h-4 sm:w-5 sm:h-5", marketplace.isActive ? "text-green-600" : "text-muted-foreground")} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] sm:text-sm font-medium truncate">{marketplace.name}</p>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <Badge variant="outline" className="text-[9px] h-4 px-1">
-                    {marketplace.feePercent}%
-                  </Badge>
-                  {marketplace.feeFlat > 0 && (
-                    <Badge variant="outline" className="text-[9px] h-4 px-1">
-                      +{formatCurrency(marketplace.feeFlat)}
-                    </Badge>
-                  )}
-                </div>
-              </div>
+      <Card className={cn(
+        "glass-card tap-highlight flex flex-col overflow-hidden",
+        !marketplace.isActive && "opacity-60"
+      )}>
+        <CardContent className="p-2.5 sm:p-3 flex flex-col flex-1 gap-2">
+          {/* Top row: Logo + Name + Actions */}
+          <div className="flex items-start gap-2">
+            {/* Logo */}
+            <div className={cn(
+              "w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden",
+              marketplace.isActive ? "bg-green-100 dark:bg-green-900/30" : "bg-muted"
+            )}>
+              {marketplace.logoUrl ? (
+                <img 
+                  src={marketplace.logoUrl} 
+                  alt={marketplace.name}
+                  className="w-full h-full object-cover rounded-lg sm:rounded-xl"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+              ) : (
+                <Store className={cn("w-5 h-5 sm:w-6 sm:h-6", marketplace.isActive ? "text-green-600" : "text-muted-foreground")} />
+              )}
+              <Store className={cn("w-5 h-5 sm:w-6 sm:h-6 hidden absolute", marketplace.isActive ? "text-green-600" : "text-muted-foreground")} />
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                onClick={() => setShowEdit(true)}
-              >
-                <Settings2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </Button>
-              <Switch
-                checked={marketplace.isActive}
-                onCheckedChange={onToggle}
-              />
+
+            <div className="min-w-0 flex-1">
+              {/* Name */}
+              <p className="text-[11px] sm:text-sm font-semibold truncate leading-tight">{marketplace.name}</p>
+              
+              {/* Fee display */}
+              <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                <Badge variant="outline" className="text-[8px] h-4 px-1">
+                  {marketplace.feePercent}%
+                </Badge>
+                {marketplace.feeFlat > 0 && (
+                  <span className="text-[8px] sm:text-[9px] text-muted-foreground">
+                    +{formatCurrency(marketplace.feeFlat)}
+                  </span>
+                )}
+              </div>
+
+              {/* Active/Inactive indicator */}
+              <div className="flex items-center gap-1 mt-1">
+                <div className={cn(
+                  "w-1.5 h-1.5 rounded-full",
+                  marketplace.isActive ? "bg-green-500" : "bg-muted-foreground/40"
+                )} />
+                <span className="text-[8px] sm:text-[9px] text-muted-foreground">
+                  {marketplace.isActive ? 'Aktif' : 'Nonaktif'}
+                </span>
+              </div>
             </div>
           </div>
 
+          {/* Description */}
           {marketplace.description && (
-            <p className="text-[9px] sm:text-xs text-muted-foreground mt-2 pt-2 border-t">
+            <p className="text-[8px] sm:text-[9px] text-muted-foreground line-clamp-2 leading-tight">
               {marketplace.description}
             </p>
           )}
 
+          {/* Stats row */}
           {stats && (
-            <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t">
+            <div className="grid grid-cols-3 gap-1 mt-auto pt-2 border-t">
               <div className="text-center">
-                <p className="text-[9px] text-muted-foreground">Trx</p>
-                <p className="text-[10px] sm:text-xs font-medium">{stats.transactionCount}</p>
+                <p className="text-[8px] sm:text-[9px] text-muted-foreground">Trx</p>
+                <p className="text-[9px] sm:text-[10px] font-medium">{stats.transactionCount}</p>
               </div>
               <div className="text-center">
-                <p className="text-[9px] text-muted-foreground">Volume</p>
-                <p className="text-[10px] sm:text-xs font-medium">{formatCurrency(stats.totalVolume)}</p>
+                <p className="text-[8px] sm:text-[9px] text-muted-foreground">Volume</p>
+                <p className="text-[9px] sm:text-[10px] font-medium">{formatCurrency(stats.totalVolume)}</p>
               </div>
               <div className="text-center">
-                <p className="text-[9px] text-muted-foreground">Fee</p>
-                <p className="text-[10px] sm:text-xs font-medium">{formatCurrency(stats.totalFees)}</p>
+                <p className="text-[8px] sm:text-[9px] text-muted-foreground">Fee</p>
+                <p className="text-[9px] sm:text-[10px] font-medium">{formatCurrency(stats.totalFees)}</p>
               </div>
             </div>
           )}
+
+          {/* Bottom row: Settings + Toggle */}
+          <div className="flex items-center justify-between pt-1 mt-auto">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setShowEdit(true)}
+            >
+              <Settings2 className="w-3.5 h-3.5" />
+            </Button>
+            <Switch
+              checked={marketplace.isActive}
+              onCheckedChange={onToggle}
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -863,10 +1027,35 @@ function MarketplaceCard({
   );
 }
 
+// ============================================================
+// Logo Preview Helper
+// ============================================================
+function LogoPreview({ url, fallbackIcon }: { url: string | null | undefined; fallbackIcon: React.ReactNode }) {
+  if (!url) return null;
+  return (
+    <div className="flex items-center gap-2 mt-1.5">
+      <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+        <img 
+          src={url} 
+          alt="Logo preview" 
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
+      </div>
+      <span className="text-[9px] text-muted-foreground truncate max-w-[160px]">{url}</span>
+    </div>
+  );
+}
+
+// ============================================================
 // New Payment Type Dialog
+// ============================================================
 function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [discountType, setDiscountType] = useState<DiscountType>('percent');
   const [formData, setFormData] = useState({
     name: '',
     onlineFeePercent: 0,
@@ -874,31 +1063,50 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
     codFeePercent: 0,
     codFeeFlat: 0,
     threshold: 1000000,
+    discountPercent: 0,
+    discountNominal: 0,
+    logoUrl: '',
   });
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      onlineFeePercent: 0,
+      onlineFeeFlat: 0,
+      codFeePercent: 0,
+      codFeeFlat: 0,
+      threshold: 1000000,
+      discountPercent: 0,
+      discountNominal: 0,
+      logoUrl: '',
+    });
+    setDiscountType('percent');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+    // Clear the other discount field based on type
+    const submitData = { ...formData };
+    if (discountType === 'percent') {
+      submitData.discountNominal = 0;
+    } else {
+      submitData.discountPercent = 0;
+    }
+
     try {
       const response = await fetch('/api/payment-types', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       const result = await response.json();
       if (result.success) {
         setOpen(false);
         onCreated();
-        setFormData({
-          name: '',
-          onlineFeePercent: 0,
-          onlineFeeFlat: 0,
-          codFeePercent: 0,
-          codFeeFlat: 0,
-          threshold: 1000000,
-        });
+        resetForm();
         toast.success('Payment type berhasil dibuat');
       } else {
         toast.error(result.error || 'Gagal membuat payment type');
@@ -925,6 +1133,7 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
           <DialogDescription>Tambahkan tipe pembayaran dengan pengaturan fee</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Name */}
           <div className="space-y-1.5">
             <Label className="text-xs sm:text-sm">Nama</Label>
             <Input
@@ -935,7 +1144,24 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
               className="h-9 sm:h-10"
             />
           </div>
+
+          {/* Logo URL */}
+          <div className="space-y-1.5">
+            <Label className="text-xs sm:text-sm flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5" />
+              Logo URL
+            </Label>
+            <Input
+              placeholder="https://..."
+              value={formData.logoUrl}
+              onChange={(e) => setFormData(prev => ({ ...prev, logoUrl: e.target.value }))}
+              className="h-9"
+            />
+            <p className="text-[10px] text-muted-foreground">Masukkan URL gambar logo (https://...)</p>
+            <LogoPreview url={formData.logoUrl} fallbackIcon={<CreditCard className="w-4 h-4 text-primary" />} />
+          </div>
           
+          {/* Fee Online */}
           <div className="space-y-2">
             <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5" /> Fee Online
@@ -965,6 +1191,7 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
             </div>
           </div>
 
+          {/* Fee COD */}
           <div className="space-y-2">
             <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
               <Truck className="w-3.5 h-3.5" /> Fee COD
@@ -994,6 +1221,7 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
             </div>
           </div>
 
+          {/* Threshold */}
           <div className="space-y-1.5">
             <Label className="text-xs sm:text-sm">Threshold (diatas nominal ini pakai %)</Label>
             <Input
@@ -1003,6 +1231,70 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
               onChange={(e) => setFormData(prev => ({ ...prev, threshold: parseFloat(e.target.value) || 0 }))}
               className="h-9"
             />
+          </div>
+
+          {/* Discount */}
+          <div className="space-y-2">
+            <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              Diskon Default
+            </p>
+            {/* Discount type toggle */}
+            <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setDiscountType('percent')}
+                className={cn(
+                  "flex-1 py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all",
+                  discountType === 'percent'
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Persentase (%)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiscountType('nominal')}
+                className={cn(
+                  "flex-1 py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all",
+                  discountType === 'nominal'
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Nominal (Rp)
+              </button>
+            </div>
+
+            {discountType === 'percent' ? (
+              <div className="space-y-1">
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  placeholder="0"
+                  value={formData.discountPercent || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, discountPercent: parseFloat(e.target.value) || 0 }))}
+                  className="h-9"
+                />
+                <p className="text-[10px] text-muted-foreground">Diskon otomatis diterapkan saat transaksi baru</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Input
+                  type="number"
+                  step="1000"
+                  min="0"
+                  placeholder="0"
+                  value={formData.discountNominal || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, discountNominal: parseFloat(e.target.value) || 0 }))}
+                  className="h-9"
+                />
+                <p className="text-[10px] text-muted-foreground">Potongan nominal tetap dari fee</p>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2 pt-2">
@@ -1019,7 +1311,9 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
   );
 }
 
+// ============================================================
 // Edit Payment Type Dialog
+// ============================================================
 function EditPaymentTypeDialog({ 
   paymentType, 
   open, 
@@ -1032,6 +1326,9 @@ function EditPaymentTypeDialog({
   onUpdated: () => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const [discountType, setDiscountType] = useState<DiscountType>(
+    paymentType.discountPercent > 0 ? 'percent' : 'nominal'
+  );
   const [formData, setFormData] = useState({
     name: paymentType.name,
     onlineFeePercent: paymentType.onlineFeePercent,
@@ -1039,6 +1336,9 @@ function EditPaymentTypeDialog({
     codFeePercent: paymentType.codFeePercent,
     codFeeFlat: paymentType.codFeeFlat,
     threshold: paymentType.threshold,
+    discountPercent: paymentType.discountPercent || 0,
+    discountNominal: paymentType.discountNominal || 0,
+    logoUrl: paymentType.logoUrl || '',
   });
 
   useEffect(() => {
@@ -1049,18 +1349,29 @@ function EditPaymentTypeDialog({
       codFeePercent: paymentType.codFeePercent,
       codFeeFlat: paymentType.codFeeFlat,
       threshold: paymentType.threshold,
+      discountPercent: paymentType.discountPercent || 0,
+      discountNominal: paymentType.discountNominal || 0,
+      logoUrl: paymentType.logoUrl || '',
     });
+    setDiscountType(paymentType.discountPercent > 0 ? 'percent' : 'nominal');
   }, [paymentType, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+    const submitData = { ...formData };
+    if (discountType === 'percent') {
+      submitData.discountNominal = 0;
+    } else {
+      submitData.discountPercent = 0;
+    }
+
     try {
       const response = await fetch(`/api/payment-types/${paymentType.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       const result = await response.json();
@@ -1087,6 +1398,7 @@ function EditPaymentTypeDialog({
           <DialogDescription>Edit pengaturan fee untuk {paymentType.name}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Name */}
           <div className="space-y-1.5">
             <Label className="text-xs sm:text-sm">Nama</Label>
             <Input
@@ -1096,7 +1408,24 @@ function EditPaymentTypeDialog({
               className="h-9"
             />
           </div>
-          
+
+          {/* Logo URL */}
+          <div className="space-y-1.5">
+            <Label className="text-xs sm:text-sm flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5" />
+              Logo URL
+            </Label>
+            <Input
+              placeholder="https://..."
+              value={formData.logoUrl}
+              onChange={(e) => setFormData(prev => ({ ...prev, logoUrl: e.target.value }))}
+              className="h-9"
+            />
+            <p className="text-[10px] text-muted-foreground">Masukkan URL gambar logo (https://...)</p>
+            <LogoPreview url={formData.logoUrl || paymentType.logoUrl} fallbackIcon={<CreditCard className="w-4 h-4 text-primary" />} />
+          </div>
+
+          {/* Fee Online */}
           <div className="space-y-2">
             <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5" /> Fee Online
@@ -1124,6 +1453,7 @@ function EditPaymentTypeDialog({
             </div>
           </div>
 
+          {/* Fee COD */}
           <div className="space-y-2">
             <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
               <Truck className="w-3.5 h-3.5" /> Fee COD
@@ -1151,6 +1481,7 @@ function EditPaymentTypeDialog({
             </div>
           </div>
 
+          {/* Threshold */}
           <div className="space-y-1.5">
             <Label className="text-xs sm:text-sm">Threshold</Label>
             <Input
@@ -1159,6 +1490,69 @@ function EditPaymentTypeDialog({
               onChange={(e) => setFormData(prev => ({ ...prev, threshold: parseFloat(e.target.value) || 0 }))}
               className="h-9"
             />
+          </div>
+
+          {/* Discount */}
+          <div className="space-y-2">
+            <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              Diskon Default
+            </p>
+            <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setDiscountType('percent')}
+                className={cn(
+                  "flex-1 py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all",
+                  discountType === 'percent'
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Persentase (%)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiscountType('nominal')}
+                className={cn(
+                  "flex-1 py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all",
+                  discountType === 'nominal'
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Nominal (Rp)
+              </button>
+            </div>
+
+            {discountType === 'percent' ? (
+              <div className="space-y-1">
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  placeholder="0"
+                  value={formData.discountPercent || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, discountPercent: parseFloat(e.target.value) || 0 }))}
+                  className="h-9"
+                />
+                <p className="text-[10px] text-muted-foreground">Diskon otomatis diterapkan saat transaksi baru</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Input
+                  type="number"
+                  step="1000"
+                  min="0"
+                  placeholder="0"
+                  value={formData.discountNominal || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, discountNominal: parseFloat(e.target.value) || 0 }))}
+                  className="h-9"
+                />
+                <p className="text-[10px] text-muted-foreground">Potongan nominal tetap dari fee</p>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2 pt-2">
@@ -1175,7 +1569,9 @@ function EditPaymentTypeDialog({
   );
 }
 
+// ============================================================
 // New Marketplace Dialog
+// ============================================================
 function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -1184,7 +1580,12 @@ function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
     feePercent: 0,
     feeFlat: 0,
     description: '',
+    logoUrl: '',
   });
+
+  const resetForm = () => {
+    setFormData({ name: '', feePercent: 0, feeFlat: 0, description: '', logoUrl: '' });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1201,7 +1602,7 @@ function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
       if (result.success) {
         setOpen(false);
         onCreated();
-        setFormData({ name: '', feePercent: 0, feeFlat: 0, description: '' });
+        resetForm();
         toast.success('Marketplace berhasil dibuat');
       } else {
         toast.error(result.error || 'Gagal membuat marketplace');
@@ -1222,12 +1623,13 @@ function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
           Baru
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base sm:text-lg">Marketplace Baru</DialogTitle>
           <DialogDescription>Tambahkan marketplace dengan pengaturan fee</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Name */}
           <div className="space-y-1.5">
             <Label className="text-xs sm:text-sm">Nama</Label>
             <Input
@@ -1238,6 +1640,24 @@ function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
               className="h-9"
             />
           </div>
+
+          {/* Logo URL */}
+          <div className="space-y-1.5">
+            <Label className="text-xs sm:text-sm flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5" />
+              Logo URL
+            </Label>
+            <Input
+              placeholder="https://..."
+              value={formData.logoUrl}
+              onChange={(e) => setFormData(prev => ({ ...prev, logoUrl: e.target.value }))}
+              className="h-9"
+            />
+            <p className="text-[10px] text-muted-foreground">Masukkan URL gambar logo (https://...)</p>
+            <LogoPreview url={formData.logoUrl} fallbackIcon={<Store className="w-4 h-4 text-green-600" />} />
+          </div>
+
+          {/* Fee */}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <Label className="text-[10px] sm:text-xs">Fee Persentase (%)</Label>
@@ -1261,6 +1681,8 @@ function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
               />
             </div>
           </div>
+
+          {/* Description */}
           <div className="space-y-1.5">
             <Label className="text-xs sm:text-sm">Deskripsi (opsional)</Label>
             <Textarea
@@ -1271,6 +1693,7 @@ function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
               className="text-sm"
             />
           </div>
+
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="outline" className="flex-1 h-9" onClick={() => setOpen(false)}>
               Batal
@@ -1285,7 +1708,9 @@ function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
   );
 }
 
+// ============================================================
 // Edit Marketplace Dialog
+// ============================================================
 function EditMarketplaceDialog({ 
   marketplace, 
   open, 
@@ -1303,6 +1728,7 @@ function EditMarketplaceDialog({
     feePercent: marketplace.feePercent,
     feeFlat: marketplace.feeFlat,
     description: marketplace.description || '',
+    logoUrl: marketplace.logoUrl || '',
   });
 
   useEffect(() => {
@@ -1311,6 +1737,7 @@ function EditMarketplaceDialog({
       feePercent: marketplace.feePercent,
       feeFlat: marketplace.feeFlat,
       description: marketplace.description || '',
+      logoUrl: marketplace.logoUrl || '',
     });
   }, [marketplace, open]);
 
@@ -1343,12 +1770,13 @@ function EditMarketplaceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base sm:text-lg">Edit Marketplace</DialogTitle>
           <DialogDescription>Edit pengaturan untuk {marketplace.name}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Name */}
           <div className="space-y-1.5">
             <Label className="text-xs sm:text-sm">Nama</Label>
             <Input
@@ -1358,6 +1786,24 @@ function EditMarketplaceDialog({
               className="h-9"
             />
           </div>
+
+          {/* Logo URL */}
+          <div className="space-y-1.5">
+            <Label className="text-xs sm:text-sm flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5" />
+              Logo URL
+            </Label>
+            <Input
+              placeholder="https://..."
+              value={formData.logoUrl}
+              onChange={(e) => setFormData(prev => ({ ...prev, logoUrl: e.target.value }))}
+              className="h-9"
+            />
+            <p className="text-[10px] text-muted-foreground">Masukkan URL gambar logo (https://...)</p>
+            <LogoPreview url={formData.logoUrl || marketplace.logoUrl} fallbackIcon={<Store className="w-4 h-4 text-green-600" />} />
+          </div>
+
+          {/* Fee */}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <Label className="text-[10px]">Fee %</Label>
@@ -1379,6 +1825,8 @@ function EditMarketplaceDialog({
               />
             </div>
           </div>
+
+          {/* Description */}
           <div className="space-y-1.5">
             <Label className="text-xs sm:text-sm">Deskripsi</Label>
             <Textarea
@@ -1388,6 +1836,7 @@ function EditMarketplaceDialog({
               className="text-sm"
             />
           </div>
+
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="outline" className="flex-1 h-9" onClick={() => onOpenChange(false)}>
               Batal

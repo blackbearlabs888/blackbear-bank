@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     // Convert Decimal values to numbers for frontend compatibility
     const serializedMarketplaces = marketplaces.map(mp => ({
       ...mp,
+      logoUrl: mp.logoUrl || null,
       feePercent: toNumber(mp.feePercent),
       feeFlat: toNumber(mp.feeFlat),
     }));
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, feePercent, feeFlat, description, isActive, shippingFee } = body;
+    const { name, logoUrl, feePercent, feeFlat, description, isActive, shippingFee } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -78,6 +79,7 @@ export async function POST(request: NextRequest) {
     const marketplace = await db.marketplace.create({
       data: {
         name,
+        logoUrl: logoUrl || null,
         feePercent: parseFloat(fee) || 0,
         feeFlat: parseFloat(feeFlat) || 0,
         description: description || null,

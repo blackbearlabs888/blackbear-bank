@@ -44,6 +44,7 @@ export async function GET() {
         feePercent: toNumber(mp.feePercent),
         feeFlat: toNumber(mp.feeFlat),
         description: mp.description,
+        logoUrl: mp.logoUrl,
         isActive: mp.isActive,
         transactionCount,
         totalVolume,

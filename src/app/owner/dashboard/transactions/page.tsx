@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SimplePagination } from '@/components/ui/pagination';
 import { CitySearch } from '@/components/ui/city-search';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Plus, Search, Loader2, ChevronRight, ArrowUp, ArrowDown, Target,
   Percent, AlertCircle, X, Check, User, Clock, Hash, Trash2, Edit3,
@@ -201,13 +202,13 @@ export default function OwnerTransactionsPage() {
     finally { setAnalyticsLoading(false); }
   };
 
-  const updateStatus = async (id: string, status: string, notes?: string, marketplaceId?: string, transactionLink?: string, nominal?: number, recalculate?: boolean, partnerId?: string) => {
+  const updateStatus = async (id: string, status: string, notes?: string, marketplaceId?: string, transactionLink?: string, nominal?: number, recalculate?: boolean, partnerId?: string, discountPercent?: number) => {
     setUpdatingStatus(true);
     try {
       const res = await fetch(`/api/transactions/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, notes, marketplaceId, transactionLink, nominal, recalculate, partnerId }),
+        body: JSON.stringify({ status, notes, marketplaceId, transactionLink, nominal, recalculate, partnerId, discountPercent }),
       });
       const data = await res.json();
       if (data.success) {
@@ -477,10 +478,8 @@ export default function OwnerTransactionsPage() {
   );
 }
 
-// Modern Analytics Dashboard Component
+// Minimalist Modern Analytics Dashboard Component
 function ModernAnalyticsDashboard({ analytics, loading }: { analytics: AnalyticsData | null; loading: boolean }) {
-  const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
-  
   // Prepare data for charts
   const statusChartData = analytics ? [
     { name: 'Berhasil', value: analytics.statusCounts.success, color: '#22c55e' },
@@ -490,88 +489,95 @@ function ModernAnalyticsDashboard({ analytics, loading }: { analytics: Analytics
     { name: 'Gagal', value: analytics.statusCounts.failed, color: '#ef4444' },
   ].filter(d => d.value > 0) : [];
 
-  const paymentTypePieData = analytics?.paymentTypes.slice(0, 6).map((pt, i) => ({
-    name: pt.name,
-    value: pt.transactionCount,
-    volume: pt.totalVolume,
-    fill: COLORS[i % COLORS.length],
-  })) || [];
-
   if (loading) {
     return (
-      <div className="space-y-2 sm:space-y-3">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
-          {[1,2,3,4].map(i => <Skeleton key={i} className="h-16 sm:h-24 rounded-lg sm:rounded-xl" />)}
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-[88px] sm:h-28 rounded-2xl" />)}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
-          <Skeleton className="h-48 sm:h-64 rounded-lg sm:rounded-xl" />
-          <Skeleton className="h-48 sm:h-64 rounded-lg sm:rounded-xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+          <Skeleton className="h-64 rounded-2xl" />
+          <Skeleton className="h-64 rounded-2xl" />
         </div>
       </div>
     );
   }
 
+  const feeRows = analytics ? [
+    { label: 'Total Payment Fee', value: analytics.feeAnalysis.totalPaymentFee, color: 'text-emerald-600 dark:text-emerald-400' },
+    { label: 'Total Platform Fee', value: analytics.feeAnalysis.totalPlatformFee, color: 'text-orange-600 dark:text-orange-400' },
+    { label: 'Net Margin', value: analytics.feeAnalysis.totalNetMargin, color: 'text-blue-600 dark:text-blue-400' },
+    { label: 'Total Profit Owner', value: analytics.feeAnalysis.totalOwnerProfit, color: 'text-violet-600 dark:text-violet-400' },
+    { label: 'Avg Payment Fee / Trx', value: analytics.feeAnalysis.avgPaymentFee, color: 'text-muted-foreground' },
+    { label: 'Avg Margin', value: `${analytics.feeAnalysis.avgMarginPercent.toFixed(2)}%`, isText: true, color: 'text-muted-foreground' },
+  ] : [];
+
   return (
-    <div className="space-y-2 sm:space-y-3">
+    <div className="space-y-4">
       {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <ModernKPICard
           title="Proyeksi Profit"
           value={analytics?.forecast.projectedProfit || 0}
           subtitle={`Sisa ${analytics?.forecast.daysRemaining} hari`}
           change={analytics?.forecast.profitChange}
-          icon={<Target className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
-          color="emerald"
+          icon={<Target className="w-4 h-4 sm:w-5 sm:h-5" />}
+          accentColor="border-l-emerald-500"
+          iconColor="text-emerald-500"
         />
         <ModernKPICard
           title="Profit Bulan Ini"
           value={analytics?.forecast.currentMonthProfit || 0}
           subtitle={`${analytics?.forecast.daysPassed}/${analytics?.forecast.daysInMonth} hari`}
-          icon={<TrendingUp className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
-          color="blue"
+          icon={<TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />}
+          accentColor="border-l-blue-500"
+          iconColor="text-blue-500"
         />
         <ModernKPICard
           title="Volume Bulan Ini"
           value={analytics?.forecast.currentMonthVolume || 0}
           subtitle={`${analytics?.feeAnalysis.totalTransactions} transaksi`}
-          icon={<Wallet className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
-          color="amber"
+          icon={<Wallet className="w-4 h-4 sm:w-5 sm:h-5" />}
+          accentColor="border-l-amber-500"
+          iconColor="text-amber-500"
         />
         <ModernKPICard
           title="Net Margin"
           value={`${(analytics?.feeAnalysis.avgMarginPercent || 0).toFixed(2)}%`}
           subtitle="Rata-rata margin"
-          icon={<Percent className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
-          color="purple"
+          icon={<Percent className="w-4 h-4 sm:w-5 sm:h-5" />}
+          accentColor="border-l-violet-500"
+          iconColor="text-violet-500"
           isPercent
         />
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         {/* Profit Trend Chart */}
-        <Card className="glass-card">
-          <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
-            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
-              <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-              Tren 7 Hari Terakhir
+        <Card className="rounded-2xl border bg-card shadow-none">
+          <CardHeader className="pb-0 pt-5 px-5">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Activity className="w-4 h-4 text-muted-foreground" />
+              Tren Profit 7 Hari
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
+          <CardContent className="px-5 pb-5 pt-2">
             {analytics && analytics.dailyTrends.length > 0 ? (
-              <ResponsiveContainer width="100%" height={160} className="sm:h-[200px]">
+              <ResponsiveContainer width="100%" height={180} className="sm:h-[220px]">
                 <AreaChart data={analytics.dailyTrends}>
                   <defs>
                     <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.15}/>
                       <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-                  <XAxis dataKey="day" tick={{ fontSize: 9 }} stroke="#9ca3af" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
+                  <XAxis dataKey="day" tick={{ fontSize: 11 }} stroke="#d1d5db" axisLine={false} tickLine={false} />
                   <YAxis 
-                    tick={{ fontSize: 9 }} 
-                    stroke="#9ca3af" 
+                    tick={{ fontSize: 11 }} 
+                    stroke="#d1d5db" 
+                    axisLine={false} tickLine={false}
                     tickFormatter={(v) => {
                       if (v >= 1000000000000) return `${(v/1000000000000).toFixed(0)}T`;
                       if (v >= 1000000000) return `${(v/1000000000).toFixed(0)}M`;
@@ -579,173 +585,137 @@ function ModernAnalyticsDashboard({ analytics, loading }: { analytics: Analytics
                       if (v >= 1000) return `${(v/1000).toFixed(0)}rb`;
                       return v.toString();
                     }} 
-                    width={35} 
+                    width={40} 
                   />
                   <Tooltip 
                     formatter={(value: number) => formatCurrency(value)}
-                    labelStyle={{ fontSize: 11 }}
-                    contentStyle={{ fontSize: 10, borderRadius: 6 }}
+                    labelStyle={{ fontSize: 12, fontWeight: 600 }}
+                    contentStyle={{ fontSize: 11, borderRadius: 10, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
                   />
                   <Area type="monotone" dataKey="profit" stroke="#22c55e" strokeWidth={2} fillOpacity={1} fill="url(#colorProfit)" name="Profit" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[160px] sm:h-[200px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
-                Belum ada data
+              <div className="h-[180px] sm:h-[220px] flex flex-col items-center justify-center text-muted-foreground gap-2">
+                <Activity className="w-8 h-8 opacity-20" />
+                <p className="text-sm">Belum ada data</p>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Status Distribution */}
-        <Card className="glass-card">
-          <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
-            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
-              <PieChart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+        <Card className="rounded-2xl border bg-card shadow-none">
+          <CardHeader className="pb-0 pt-5 px-5">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <PieChart className="w-4 h-4 text-muted-foreground" />
               Distribusi Status
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
+          <CardContent className="px-5 pb-5 pt-2">
             {statusChartData.length > 0 ? (
-              <div className="flex items-center gap-2 sm:gap-4">
-                <ResponsiveContainer width="45%" height={140} className="sm:h-[180px]">
+              <div className="flex items-center gap-4">
+                <ResponsiveContainer width="48%" height={160} className="sm:h-[200px]">
                   <RePieChart>
                     <Pie
                       data={statusChartData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={30}
-                      outerRadius={55}
-                      paddingAngle={2}
+                      innerRadius={32}
+                      outerRadius={58}
+                      paddingAngle={3}
                       dataKey="value"
+                      strokeWidth={0}
                     >
                       {statusChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => `${value} trx`} />
+                    <Tooltip formatter={(value: number) => `${value} trx`} contentStyle={{ fontSize: 11, borderRadius: 10, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
                   </RePieChart>
                 </ResponsiveContainer>
-                <div className="flex-1 space-y-1 sm:space-y-1.5">
+                <div className="flex-1 space-y-2.5">
                   {statusChartData.map((item) => (
-                    <div key={item.name} className="flex items-center justify-between text-[10px] sm:text-xs">
-                      <div className="flex items-center gap-1 sm:gap-2">
-                        <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-muted-foreground">{item.name}</span>
+                    <div key={item.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="text-sm text-muted-foreground">{item.name}</span>
                       </div>
-                      <span className="font-medium">{item.value}</span>
+                      <span className="text-sm font-semibold tabular-nums">{item.value}</span>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
-                Belum ada data
+              <div className="h-[160px] sm:h-[200px] flex flex-col items-center justify-center text-muted-foreground gap-2">
+                <PieChart className="w-8 h-8 opacity-20" />
+                <p className="text-sm">Belum ada data</p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Payment Types & Volume Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
-        {/* Payment Type Distribution */}
-        <Card className="glass-card">
-          <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
-            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
-              <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-              Payment Type (30 Hari)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
-            {paymentTypePieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={140} className="sm:h-[180px]">
-                <BarChart data={paymentTypePieData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 9 }} stroke="#9ca3af" />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} stroke="#9ca3af" width={55} />
-                  <Tooltip formatter={(value: number) => `${value} trx`} contentStyle={{ fontSize: 10, borderRadius: 6 }} />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                    {paymentTypePieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
-                Belum ada data
+      {/* Fee Summary Card */}
+      <Card className="rounded-2xl border bg-card shadow-none">
+        <CardHeader className="pb-0 pt-5 px-5">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-muted-foreground" />
+            Ringkasan Fee
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-5 pb-5 pt-3">
+          <div className="rounded-xl border overflow-hidden">
+            {feeRows.map((row, i) => (
+              <div
+                key={row.label}
+                className={cn(
+                  'flex items-center justify-between px-4 py-3',
+                  i < feeRows.length - 1 && 'border-b',
+                  i === feeRows.length - 1 && 'bg-muted/30'
+                )}
+              >
+                <span className="text-sm text-muted-foreground">{row.label}</span>
+                <span className={cn('text-sm font-semibold tabular-nums', row.color)}>
+                  {row.isText ? row.value : formatCurrency(row.value as number)}
+                </span>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Quick Stats Grid */}
-        <Card className="glass-card">
-          <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
-            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
-              <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-              Ringkasan Fee
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-3">
-              <div className="p-2 sm:p-3 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg sm:rounded-xl">
-                <p className="text-[9px] sm:text-[10px] text-muted-foreground">Total Payment Fee</p>
-                <p className="text-xs sm:text-sm font-bold text-green-600 truncate">{formatCurrency(analytics?.feeAnalysis.totalPaymentFee || 0)}</p>
-              </div>
-              <div className="p-2 sm:p-3 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-lg sm:rounded-xl">
-                <p className="text-[9px] sm:text-[10px] text-muted-foreground">Total Platform Fee</p>
-                <p className="text-xs sm:text-sm font-bold text-orange-600 truncate">{formatCurrency(analytics?.feeAnalysis.totalPlatformFee || 0)}</p>
-              </div>
-              <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg sm:rounded-xl">
-                <p className="text-[9px] sm:text-[10px] text-muted-foreground">Net Margin</p>
-                <p className="text-xs sm:text-sm font-bold text-blue-600 truncate">{formatCurrency(analytics?.feeAnalysis.totalNetMargin || 0)}</p>
-              </div>
-              <div className="p-2 sm:p-3 bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-lg sm:rounded-xl">
-                <p className="text-[9px] sm:text-[10px] text-muted-foreground">Total Profit</p>
-                <p className="text-xs sm:text-sm font-bold text-purple-600 truncate">{formatCurrency(analytics?.feeAnalysis.totalOwnerProfit || 0)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Action Required Row */}
+      {/* Action Required */}
       {(analytics?.statusCounts.pending || 0) > 0 || (analytics?.statusCounts.verification || 0) > 0 ? (
-        <Card className="glass-card border-amber-200 dark:border-amber-800/50 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
-          <CardContent className="p-2.5 sm:p-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
-                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm font-medium">Perlu Tindakan</p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                    {(analytics?.statusCounts.pending || 0) > 0 && `${analytics?.statusCounts.pending} pending`}
-                    {(analytics?.statusCounts.pending || 0) > 0 && (analytics?.statusCounts.verification || 0) > 0 && ' • '}
-                    {(analytics?.statusCounts.verification || 0) > 0 && `${analytics?.statusCounts.verification} verifikasi`}
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
-                {(analytics?.statusCounts.pending || 0) > 0 && (
-                  <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200 text-[9px] sm:text-[10px] px-1.5 sm:px-2">
-                    <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
-                    {analytics?.statusCounts.pending}
-                  </Badge>
-                )}
-                {(analytics?.statusCounts.verification || 0) > 0 && (
-                  <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200 text-[9px] sm:text-[10px] px-1.5 sm:px-2">
-                    <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
-                    {analytics?.statusCounts.verification}
-                  </Badge>
-                )}
+        <div className="rounded-2xl border border-amber-200/60 dark:border-amber-800/30 bg-amber-50/50 dark:bg-amber-950/20 px-4 py-3 sm:px-5 sm:py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Perlu Tindakan</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {(analytics?.statusCounts.pending || 0) > 0 && `${analytics?.statusCounts.pending} pending`}
+                  {(analytics?.statusCounts.pending || 0) > 0 && (analytics?.statusCounts.verification || 0) > 0 && ' · '}
+                  {(analytics?.statusCounts.verification || 0) > 0 && `${analytics?.statusCounts.verification} verifikasi`}
+                </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {(analytics?.statusCounts.pending || 0) > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-orange-400" />
+                  <span className="text-xs font-medium text-orange-600 dark:text-orange-400">{analytics?.statusCounts.pending}</span>
+                </div>
+              )}
+              {(analytics?.statusCounts.verification || 0) > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-blue-400" />
+                  <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{analytics?.statusCounts.verification}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );
@@ -760,37 +730,17 @@ function formatCompactCurrency(value: number): string {
   return `Rp ${value}`;
 }
 
-// Modern KPI Card Component
-function ModernKPICard({ title, value, subtitle, change, icon, color, isPercent }: {
+// Minimalist KPI Card Component
+function ModernKPICard({ title, value, subtitle, change, icon, accentColor, iconColor, isPercent }: {
   title: string;
   value: number | string;
   subtitle?: string;
   change?: number;
   icon: React.ReactNode;
-  color: 'emerald' | 'blue' | 'amber' | 'purple';
+  accentColor: string;
+  iconColor: string;
   isPercent?: boolean;
 }) {
-  const colorClasses = {
-    emerald: 'from-emerald-500 to-teal-600',
-    blue: 'from-blue-500 to-cyan-600',
-    amber: 'from-amber-500 to-orange-600',
-    purple: 'from-purple-500 to-violet-600',
-  };
-
-  const bgColorClasses = {
-    emerald: 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20',
-    blue: 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20',
-    amber: 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20',
-    purple: 'bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20',
-  };
-
-  const textColorClasses = {
-    emerald: 'text-emerald-600',
-    blue: 'text-blue-600',
-    amber: 'text-amber-600',
-    purple: 'text-purple-600',
-  };
-
   // Format value safely
   const formatValue = (val: number | string): string => {
     if (typeof val === 'string') return val;
@@ -799,26 +749,25 @@ function ModernKPICard({ title, value, subtitle, change, icon, color, isPercent 
   };
 
   return (
-    <Card className={cn("glass-card overflow-hidden", bgColorClasses[color])}>
-      <div className={cn("h-0.5 sm:h-1 bg-gradient-to-r", colorClasses[color])} />
-      <CardContent className="p-2 sm:p-3">
-        <div className="flex items-start justify-between gap-1">
-          <div className="min-w-0 flex-1">
-            <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{title}</p>
-            <p className={cn("text-sm sm:text-lg font-bold truncate", textColorClasses[color])}>
+    <Card className={cn('rounded-2xl border bg-card shadow-none border-l-[3px]', accentColor)}>
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-xs text-muted-foreground truncate font-medium">{title}</p>
+            <p className="text-lg sm:text-xl font-bold truncate tracking-tight">
               {isPercent ? value : formatValue(value)}
             </p>
             {subtitle && (
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{subtitle}</p>
+              <p className="text-[11px] text-muted-foreground/70 truncate">{subtitle}</p>
             )}
             {change !== undefined && !isNaN(change) && (
-              <div className={cn("flex items-center gap-0.5 text-[9px] sm:text-[10px]", change >= 0 ? 'text-green-600' : 'text-red-600')}>
-                {change >= 0 ? <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+              <div className={cn('flex items-center gap-1 text-[11px] font-medium', change >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
+                {change >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                 <span>{change >= 0 ? '+' : ''}{change.toFixed(1)}%</span>
               </div>
             )}
           </div>
-          <div className={cn("w-7 h-7 sm:w-9 sm:h-9 rounded-md sm:rounded-lg bg-gradient-to-br flex items-center justify-center text-white flex-shrink-0", colorClasses[color])}>
+          <div className={cn('w-9 h-9 sm:w-10 sm:h-10 rounded-xl border flex items-center justify-center flex-shrink-0', iconColor, 'bg-muted/40')}>
             {icon}
           </div>
         </div>
@@ -1308,7 +1257,7 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
 }
 
 // Transaction Detail Dialog Content (uses key pattern for reset)
-function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Transaction; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean, partnerId?: string) => void; onDelete: (id: string) => void; updating: boolean }) {
+function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Transaction; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean, partnerId?: string, discountPercent?: number) => void; onDelete: (id: string) => void; updating: boolean }) {
   const [notes, setNotes] = useState(tx.notes || '');
   const [transactionLink, setTransactionLink] = useState(tx.transactionLink || '');
   const [status, setStatus] = useState(tx.status);
@@ -1320,6 +1269,9 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
   const [selectedPartnerId, setSelectedPartnerId] = useState(tx.partner?.id || 'none');
   const [searchPartner, setSearchPartner] = useState('');
   const [partnerChanged, setPartnerChanged] = useState(false);
+  const [discountType, setDiscountType] = useState<'percent' | 'nominal'>('percent');
+  const [discountValue, setDiscountValue] = useState('');
+  const [discountTab, setDiscountTab] = useState('detail');
 
   // Load partners always, marketplaces when verification
   useEffect(() => {
@@ -1468,7 +1420,36 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
 
     // Send 'none' explicitly so backend knows to clear marketplace
     const effectivePartnerId = partnerChanged ? selectedPartnerId : undefined;
-    onUpdate(tx.id, status, notes, marketplace, transactionLink, newNominal, nominalChanged, effectivePartnerId);
+    // Calculate discount percent if discount tab was used
+    let discountPercent: number | undefined;
+    if (discountValue) {
+      const val = parseFloat(discountValue);
+      if (!isNaN(val) && val > 0) {
+        if (discountType === 'percent') {
+          discountPercent = Math.min(val, 100);
+        } else {
+          // Convert nominal discount to percent
+          const isOnline = tx.methodTransaction === 'Online';
+          let feePercent = isOnline ? (tx.paymentType?.onlineFeePercent || 0) : (tx.paymentType?.codFeePercent || 0);
+          const feeFlat = isOnline ? (tx.paymentType?.onlineFeeFlat || 0) : (tx.paymentType?.codFeeFlat || 0);
+          const threshold = tx.paymentType?.threshold || 1000000;
+          if (feePercent > 100) feePercent = feePercent / 1000;
+          let paymentFee = tx.nominal >= threshold ? tx.nominal * (feePercent / 100) : feeFlat;
+          let platformFee = 0;
+          if (tx.marketplace) {
+            let mpFeePercent = tx.marketplace.feePercent || 0;
+            const mpFeeFlat = tx.marketplace.feeFlat || 0;
+            if (mpFeePercent > 100) mpFeePercent = mpFeePercent / 1000;
+            platformFee = tx.nominal * (mpFeePercent / 100) + mpFeeFlat;
+          }
+          const originalFee = paymentFee;
+          if (originalFee > 0) {
+            discountPercent = Math.min((val / originalFee) * 100, 100);
+          }
+        }
+      }
+    }
+    onUpdate(tx.id, status, notes, marketplace, transactionLink, newNominal, nominalChanged, effectivePartnerId, discountPercent);
   };
 
   const config = STATUS_CONFIG[tx.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
@@ -1478,398 +1459,535 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
   // For verification status, always allow save (it's a confirmation action)
   const originalMarketplace = tx.marketplace?.id || 'none';
   const nominalChanged = editNominal && parseFloat(nominal) !== tx.nominal;
+  const hasDiscount = discountValue && parseFloat(discountValue) > 0;
   const hasChanges = status !== tx.status ||
     marketplace !== originalMarketplace ||
     notes !== (tx.notes || '') ||
     transactionLink !== (tx.transactionLink || '') ||
     nominalChanged ||
     partnerChanged ||
+    hasDiscount ||
     status === 'verification'; // Always allow save when status is verification
 
+  // Discount preview calculation
+  const discountPreview = useMemo(() => {
+    const val = parseFloat(discountValue);
+    if (isNaN(val) || val <= 0) return null;
+
+    // Calculate original fee
+    const isOnline = tx.methodTransaction === 'Online';
+    let feePercent = isOnline ? (tx.paymentType?.onlineFeePercent || 0) : (tx.paymentType?.codFeePercent || 0);
+    const feeFlat = isOnline ? (tx.paymentType?.onlineFeeFlat || 0) : (tx.paymentType?.codFeeFlat || 0);
+    const threshold = tx.paymentType?.threshold || 1000000;
+    if (feePercent > 100) feePercent = feePercent / 1000;
+
+    const originalPaymentFee = tx.nominal >= threshold ? tx.nominal * (feePercent / 100) : feeFlat;
+
+    let originalPlatformFee = 0;
+    if (tx.marketplace) {
+      let mpFeePercent = tx.marketplace.feePercent || 0;
+      const mpFeeFlat = tx.marketplace.feeFlat || 0;
+      if (mpFeePercent > 100) mpFeePercent = mpFeePercent / 1000;
+      originalPlatformFee = tx.nominal * (mpFeePercent / 100) + mpFeeFlat;
+    }
+
+    const originalTotalFee = originalPaymentFee + originalPlatformFee;
+    const originalNetMargin = originalPaymentFee - originalPlatformFee;
+    const originalTotalReceived = tx.nominal - originalPaymentFee;
+
+    let discountAmount = 0;
+    let effectiveDiscountPercent = 0;
+
+    if (discountType === 'percent') {
+      effectiveDiscountPercent = Math.min(val, 100);
+      discountAmount = originalPaymentFee * (effectiveDiscountPercent / 100);
+    } else {
+      discountAmount = Math.min(val, originalPaymentFee);
+      if (originalPaymentFee > 0) {
+        effectiveDiscountPercent = (discountAmount / originalPaymentFee) * 100;
+      }
+    }
+
+    const newPaymentFee = originalPaymentFee - discountAmount;
+    const newTotalFee = newPaymentFee + originalPlatformFee;
+    const newNetMargin = newPaymentFee - originalPlatformFee;
+
+    const partnerRate = tx.partner?.commission || 0;
+    const originalPartnerProfit = originalNetMargin * (partnerRate / 100);
+    const originalOwnerProfit = originalNetMargin - originalPartnerProfit;
+
+    const newPartnerProfit = newNetMargin * (partnerRate / 100);
+    const newOwnerProfit = newNetMargin - newPartnerProfit;
+    const newTotalReceived = tx.nominal - newPaymentFee;
+
+    return {
+      originalPaymentFee,
+      originalPlatformFee,
+      originalTotalFee,
+      originalNetMargin,
+      originalTotalReceived,
+      originalOwnerProfit,
+      originalPartnerProfit,
+      discountAmount,
+      effectiveDiscountPercent,
+      newPaymentFee,
+      newTotalFee,
+      newNetMargin,
+      newTotalReceived,
+      newOwnerProfit,
+      newPartnerProfit,
+    };
+  }, [discountValue, discountType, tx]);
+
+  const canDiscount = tx.status === 'pending' || tx.status === 'verification';
+
   return (
-    <div className="space-y-2.5 p-4">
-      {/* Compact Header */}
-      <div className="flex items-center justify-between -mx-4 -mt-4 mb-0 px-4 py-2.5 pr-12 bg-gradient-to-r from-violet-600 to-fuchsia-500 rounded-t-lg">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/20">
-            <StatusIcon className={cn("w-4 h-4 text-white", tx.status === 'process' && "animate-spin")} />
-          </div>
-          <div>
-            <p className="text-[9px] text-white/70 uppercase">Status</p>
-            <p className="text-sm font-bold text-white capitalize">{tx.status}</p>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-[9px] text-white/70">ID</p>
-          <div className="flex items-center justify-end gap-1">
-            <p className="text-[10px] font-mono text-white bg-white/20 px-1.5 py-0.5 rounded truncate max-w-[120px]">{tx.orderId}</p>
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText(tx.orderId);
-                toast.success('Order ID disalin');
-              }}
-              className="p-1 hover:bg-white/20 rounded transition-colors"
-              title="Salin Order ID"
-            >
-              <Copy className="w-3 h-3 text-white/80" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Amount & Profit Row */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg border bg-muted/30 p-2.5">
-          <div className="flex items-center justify-between mb-0.5">
-            <p className="text-[9px] text-muted-foreground">Nominal</p>
-            <button
-              type="button"
-              onClick={() => {
-                setEditNominal(!editNominal);
-                if (editNominal) {
-                  // Reset to original when canceling edit
-                  setNominal(tx.nominal.toString());
-                }
-              }}
-              className={cn("p-1 rounded transition-colors", editNominal ? "bg-violet-100 text-violet-600" : "hover:bg-muted text-muted-foreground")}
-              title={editNominal ? 'Batal edit' : 'Edit nominal'}
-            >
-              <Edit3 className="w-3 h-3" />
-            </button>
-          </div>
-          {editNominal ? (
-            <Input
-              type="number"
-              value={nominal}
-              onChange={(e) => setNominal(e.target.value)}
-              className="h-7 text-xs font-bold text-violet-600"
-              placeholder="Masukkan nominal"
-            />
-          ) : (
-            <p className="text-base font-bold text-violet-600">{formatCurrency(tx.nominal)}</p>
-          )}
-          <div className="text-[9px] text-muted-foreground mt-1 space-y-0.5">
-            <div className="flex justify-between">
-              <span>Fee</span>
-              <span className="text-red-500">
-                {previewCalc && previewCalc.paymentFee !== tx.paymentFee ? (
-                  <span>
-                    <span className="line-through text-muted-foreground mr-1">{formatCurrency(tx.paymentFee)}</span>
-                    <span>-{formatCurrency(previewCalc.paymentFee)}</span>
-                  </span>
-                ) : (
-                  <span>-{formatCurrency(previewCalc?.paymentFee ?? tx.paymentFee)}</span>
-                )}
-              </span>
+    <Tabs value={discountTab} onValueChange={setDiscountTab} className="w-full">
+      {/* Gradient Header with Tabs */}
+      <div className="bg-gradient-to-r from-violet-600 to-fuchsia-500 rounded-t-lg">
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/20">
+              <StatusIcon className={cn("w-4 h-4 text-white", tx.status === 'process' && "animate-spin")} />
             </div>
-            {(previewCalc?.platformFee ?? tx.platformFee) > 0 && (
-              <div className="flex justify-between">
-                <span>Platform</span>
-                <span className="text-red-500">
-                  {previewCalc && previewCalc.platformFee !== tx.platformFee ? (
-                    <span>
-                      <span className="line-through text-muted-foreground mr-1">{formatCurrency(tx.platformFee)}</span>
-                      <span>-{formatCurrency(previewCalc.platformFee)}</span>
-                    </span>
-                  ) : (
-                    <span>-{formatCurrency(previewCalc?.platformFee ?? tx.platformFee)}</span>
-                  )}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="rounded-lg bg-slate-900 p-2.5 text-white">
-          <p className="text-[9px] text-white/70 mb-0.5">Profit Anda</p>
-          {previewCalc && previewCalc.ownerProfit !== tx.ownerProfit ? (
             <div>
-              <p className="text-[9px] text-white/50 line-through">{formatCurrency(tx.ownerProfit)}</p>
-              <p className="text-base font-bold text-fuchsia-400">+{formatCurrency(previewCalc.ownerProfit)}</p>
-              <p className="text-[8px] text-fuchsia-300">*Preview</p>
+              <p className="text-[9px] text-white/70 uppercase">Status</p>
+              <p className="text-sm font-bold text-white capitalize">{tx.status}</p>
             </div>
-          ) : (
-            <p className="text-base font-bold text-fuchsia-400">+{formatCurrency(previewCalc?.ownerProfit ?? tx.ownerProfit)}</p>
-          )}
-          {tx.partner && (
-            <p className="text-[9px] text-white/60 mt-1">
-              {tx.partner.name}: <span className="text-violet-400">
-                {previewCalc && previewCalc.partnerProfit !== tx.partnerProfit ? (
-                  <span>
-                    <span className="line-through text-white/40 mr-1">{formatCurrency(tx.partnerProfit)}</span>
-                    +{formatCurrency(previewCalc.partnerProfit)}
-                  </span>
-                ) : (
-                  <span>+{formatCurrency(previewCalc?.partnerProfit ?? tx.partnerProfit)}</span>
-                )}
-              </span>
-            </p>
-          )}
-          {previewCalc && previewCalc.ownerProfit !== tx.ownerProfit && (
-            <p className="text-[8px] text-fuchsia-300 mt-1">*Preview</p>
-          )}
-        </div>
-      </div>
-
-      {/* Partner Selector */}
-      <div className="rounded-lg border bg-muted/30 p-2.5">
-        <div className="flex items-center justify-between mb-1.5">
-          <p className="text-[9px] text-muted-foreground flex items-center gap-1">
-            <Users className="w-2.5 h-2.5" /> Partner
-          </p>
-          {selectedPartnerId !== 'none' && (
-            <Button type="button" variant="ghost" size="sm" className="h-5 text-[9px] text-red-500 px-1.5" onClick={() => { setSelectedPartnerId('none'); setPartnerChanged(true); }}>
-              <X className="w-2.5 h-2.5" />
-            </Button>
-          )}
-        </div>
-        {selectedPartnerId !== 'none' ? (
-          (() => {
-            const p = partners.find(x => x.id === selectedPartnerId) || tx.partner;
-            return p ? (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold">{p.name}</p>
-                  <p className="text-[9px] text-muted-foreground">{p.tier} &middot; Komisi {p.commission}%</p>
-                </div>
-                <Button type="button" variant="ghost" size="sm" className="h-5 text-[9px] px-1.5" onClick={() => { setSelectedPartnerId('none'); setPartnerChanged(true); }}>Ganti</Button>
-              </div>
-            ) : <p className="text-[9px] text-muted-foreground">Partner tidak ditemukan</p>;
-          })()
-        ) : (
-          <div className="space-y-1.5">
-            <Input placeholder="Cari partner..." value={searchPartner} onChange={e => setSearchPartner(e.target.value)} className="h-7 text-[10px]" />
-            {searchPartner.length >= 1 ? (
-              <div className="max-h-24 overflow-y-auto space-y-0.5">
-                {partners.filter(p => p.name.toLowerCase().includes(searchPartner.toLowerCase())).slice(0, 5).map(p => (
-                  <button key={p.id} type="button" onClick={() => { setSelectedPartnerId(p.id); setPartnerChanged(true); setSearchPartner(''); }} className="w-full text-left flex items-center justify-between px-2 py-1 rounded hover:bg-muted/50 transition-colors">
-                    <div>
-                      <p className="text-[10px] font-medium">{p.name}</p>
-                      <p className="text-[8px] text-muted-foreground">{p.tier} &middot; {p.commission}%</p>
-                    </div>
-                    <Check className="w-3 h-3 text-muted-foreground" />
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-[9px] text-muted-foreground text-center py-1">Ketik nama partner untuk mencari...</p>
-            )}
           </div>
-        )}
-      </div>
-
-      {/* Customer & Payment Row */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg border bg-muted/30 p-2.5">
-          <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
-            <User className="w-2.5 h-2.5" /> Customer
-          </p>
-          <p className="text-xs font-semibold truncate">{tx.customer?.name}</p>
-          <div className="flex items-center gap-1 mt-0.5">
-            <p className="text-[9px] text-muted-foreground">{tx.customer?.phone}</p>
-            <div className="flex items-center gap-0.5 ml-auto">
+          <div className="flex items-center gap-1">
+            <div className="flex items-center justify-end gap-1">
+              <p className="text-[10px] font-mono text-white bg-white/20 px-1.5 py-0.5 rounded truncate max-w-[100px]">{tx.orderId}</p>
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard.writeText(tx.customer?.phone || '');
-                  toast.success('No. WA disalin');
+                  navigator.clipboard.writeText(tx.orderId);
+                  toast.success('Order ID disalin');
                 }}
-                className="p-1 hover:bg-muted rounded transition-colors"
-                title="Salin No. WA"
+                className="p-1 hover:bg-white/20 rounded transition-colors"
+                title="Salin Order ID"
               >
-                <Copy className="w-3 h-3 text-muted-foreground" />
+                <Copy className="w-3 h-3 text-white/80" />
               </button>
-              <a
-                href={`https://wa.me/${tx.customer?.phone?.replace(/^0/, '62')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors"
-                title="Buka WhatsApp"
-              >
-                <MessageSquare className="w-3 h-3 text-green-600" />
-              </a>
             </div>
           </div>
         </div>
-        <div className="rounded-lg border bg-muted/30 p-2.5">
-          <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
-            <CreditCard className="w-2.5 h-2.5" /> Payment
-          </p>
-          <p className="text-xs font-semibold">{tx.paymentType?.name}</p>
-          <p className="text-[9px] text-muted-foreground">{tx.methodTransaction}</p>
-        </div>
+        {/* Tab Triggers */}
+        <TabsList className="w-full bg-transparent h-auto p-0 gap-0 rounded-none">
+          <TabsTrigger
+            value="detail"
+            className="flex-1 h-8 text-[11px] font-medium rounded-none data-[state=active]:bg-white/20 data-[state=active]:text-white data-[state=active]:shadow-none text-white/70 border-b-2 border-transparent data-[state=active]:border-white/60 data-[state=active]:rounded-none"
+          >
+            <Info className="w-3 h-3 mr-1" /> Detail
+          </TabsTrigger>
+          <TabsTrigger
+            value="aksi"
+            className="flex-1 h-8 text-[11px] font-medium rounded-none data-[state=active]:bg-white/20 data-[state=active]:text-white data-[state=active]:shadow-none text-white/70 border-b-2 border-transparent data-[state=active]:border-white/60 data-[state=active]:rounded-none"
+          >
+            <Zap className="w-3 h-3 mr-1" /> Aksi
+          </TabsTrigger>
+          <TabsTrigger
+            value="diskon"
+            className={cn(
+              "flex-1 h-8 text-[11px] font-medium rounded-none data-[state=active]:bg-white/20 data-[state=active]:text-white data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-white/60 data-[state=active]:rounded-none",
+              canDiscount ? "text-white/70" : "text-white/30 cursor-not-allowed"
+            )}
+            disabled={!canDiscount}
+          >
+            <Percent className="w-3 h-3 mr-1" /> Diskon
+          </TabsTrigger>
+        </TabsList>
       </div>
 
-      {/* Bank Account - Compact */}
-      {tx.customer?.bankName && tx.customer?.bankAccount && (
-        <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20 p-2.5">
-          <div className="flex items-center justify-between">
-            <div className="min-w-0 flex-1">
-              <p className="text-[9px] text-muted-foreground">{tx.customer.bankName}</p>
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-mono font-bold">{tx.customer.bankAccount}</p>
+      {/* Tab Contents */}
+      <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(85vh - 140px)' }}>
+        {/* TAB 1: Detail */}
+        <TabsContent value="detail" className="mt-0 p-4 space-y-2.5">
+          {/* Amount & Profit Row */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg border bg-muted/30 p-2.5">
+              <div className="flex items-center justify-between mb-0.5">
+                <p className="text-[9px] text-muted-foreground">Nominal</p>
                 <button
                   type="button"
                   onClick={() => {
-                    navigator.clipboard.writeText(tx.customer.bankAccount || '');
-                    toast.success('Disalin');
+                    setEditNominal(!editNominal);
+                    if (editNominal) {
+                      setNominal(tx.nominal.toString());
+                    }
                   }}
-                  className="p-1 hover:bg-blue-100 dark:hover:bg-blue-800 rounded"
+                  className={cn("p-1 rounded transition-colors", editNominal ? "bg-violet-100 text-violet-600" : "hover:bg-muted text-muted-foreground")}
+                  title={editNominal ? 'Batal edit' : 'Edit nominal'}
                 >
-                  <Copy className="w-3 h-3 text-blue-600" />
+                  <Edit3 className="w-3 h-3" />
                 </button>
               </div>
+              {editNominal ? (
+                <Input
+                  type="number"
+                  value={nominal}
+                  onChange={(e) => setNominal(e.target.value)}
+                  className="h-7 text-xs font-bold text-violet-600"
+                  placeholder="Masukkan nominal"
+                />
+              ) : (
+                <p className="text-base font-bold text-violet-600">{formatCurrency(tx.nominal)}</p>
+              )}
+              <div className="text-[9px] text-muted-foreground mt-1 space-y-0.5">
+                <div className="flex justify-between">
+                  <span>Fee</span>
+                  <span className="text-red-500">
+                    {previewCalc && previewCalc.paymentFee !== tx.paymentFee ? (
+                      <span>
+                        <span className="line-through text-muted-foreground mr-1">{formatCurrency(tx.paymentFee)}</span>
+                        <span>-{formatCurrency(previewCalc.paymentFee)}</span>
+                      </span>
+                    ) : (
+                      <span>-{formatCurrency(previewCalc?.paymentFee ?? tx.paymentFee)}</span>
+                    )}
+                  </span>
+                </div>
+                {(previewCalc?.platformFee ?? tx.platformFee) > 0 && (
+                  <div className="flex justify-between">
+                    <span>Platform</span>
+                    <span className="text-red-500">
+                      {previewCalc && previewCalc.platformFee !== tx.platformFee ? (
+                        <span>
+                          <span className="line-through text-muted-foreground mr-1">{formatCurrency(tx.platformFee)}</span>
+                          <span>-{formatCurrency(previewCalc.platformFee)}</span>
+                        </span>
+                      ) : (
+                        <span>-{formatCurrency(previewCalc?.platformFee ?? tx.platformFee)}</span>
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="rounded-lg bg-slate-900 p-2.5 text-white">
+              <p className="text-[9px] text-white/70 mb-0.5">Profit Anda</p>
+              {previewCalc && previewCalc.ownerProfit !== tx.ownerProfit ? (
+                <div>
+                  <p className="text-[9px] text-white/50 line-through">{formatCurrency(tx.ownerProfit)}</p>
+                  <p className="text-base font-bold text-fuchsia-400">+{formatCurrency(previewCalc.ownerProfit)}</p>
+                  <p className="text-[8px] text-fuchsia-300">*Preview</p>
+                </div>
+              ) : (
+                <p className="text-base font-bold text-fuchsia-400">+{formatCurrency(previewCalc?.ownerProfit ?? tx.ownerProfit)}</p>
+              )}
+              {tx.partner && (
+                <p className="text-[9px] text-white/60 mt-1">
+                  {tx.partner.name}: <span className="text-violet-400">
+                    {previewCalc && previewCalc.partnerProfit !== tx.partnerProfit ? (
+                      <span>
+                        <span className="line-through text-white/40 mr-1">{formatCurrency(tx.partnerProfit)}</span>
+                        +{formatCurrency(previewCalc.partnerProfit)}
+                      </span>
+                    ) : (
+                      <span>+{formatCurrency(previewCalc?.partnerProfit ?? tx.partnerProfit)}</span>
+                    )}
+                  </span>
+                </p>
+              )}
+              {previewCalc && previewCalc.ownerProfit !== tx.ownerProfit && (
+                <p className="text-[8px] text-fuchsia-300 mt-1">*Preview</p>
+              )}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Status Change */}
-      <div className="pt-2 border-t">
-        <p className="text-[9px] font-medium text-muted-foreground mb-2">UBAH STATUS</p>
-        <div className="grid grid-cols-5 gap-1.5">
-          {[
-            { v: 'pending', l: 'Pending', icon: Clock, color: 'bg-orange-500' },
-            { v: 'verification', l: 'Verif', icon: AlertCircle, color: 'bg-violet-500' },
-            { v: 'process', l: 'Proses', icon: Loader2, color: 'bg-cyan-500' },
-            { v: 'success', l: 'Sukses', icon: CheckCircle, color: 'bg-emerald-500' },
-            { v: 'failed', l: 'Gagal', icon: XCircle, color: 'bg-red-500' },
-          ].map(s => {
-            const Icon = s.icon;
-            const isSelected = status === s.v;
-            return (
-              <button 
-                key={s.v} 
-                type="button" 
-                onClick={() => handleStatus(s.v)} 
-                disabled={updating} 
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all min-h-[44px]",
-                  isSelected 
-                    ? `${s.color} text-white shadow` 
-                    : "bg-muted/30 hover:bg-muted/50"
-                )}
-              >
-                <Icon className={cn("w-4 h-4", !isSelected && "text-muted-foreground", s.v === 'process' && "animate-spin")} />
-                <span className="text-[8px] font-medium">{s.l}</span>
-              </button>
-            );
-          })}
-        </div>
+          {/* Customer & Payment Row */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg border bg-muted/30 p-2.5">
+              <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
+                <User className="w-2.5 h-2.5" /> Customer
+              </p>
+              <p className="text-xs font-semibold truncate">{tx.customer?.name}</p>
+              <div className="flex items-center gap-1 mt-0.5">
+                <p className="text-[9px] text-muted-foreground">{tx.customer?.phone}</p>
+                <div className="flex items-center gap-0.5 ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(tx.customer?.phone || '');
+                      toast.success('No. WA disalin');
+                    }}
+                    className="p-1 hover:bg-muted rounded transition-colors"
+                    title="Salin No. WA"
+                  >
+                    <Copy className="w-3 h-3 text-muted-foreground" />
+                  </button>
+                  <a
+                    href={`https://wa.me/${tx.customer?.phone?.replace(/^0/, '62')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors"
+                    title="Buka WhatsApp"
+                  >
+                    <MessageSquare className="w-3 h-3 text-green-600" />
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-2.5">
+              <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
+                <CreditCard className="w-2.5 h-2.5" /> Payment
+              </p>
+              <p className="text-xs font-semibold">{tx.paymentType?.name}</p>
+              <p className="text-[9px] text-muted-foreground">{tx.methodTransaction}</p>
+            </div>
+          </div>
 
-        {/* Marketplace - Compact */}
-        {status === 'verification' && (
-          <div className="mt-2 space-y-2">
-            <Select value={marketplace} onValueChange={setMarketplace}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Pilih marketplace..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none" className="text-xs">Tanpa Marketplace</SelectItem>
-                {marketplaces.map(mp => (
-                  <SelectItem key={mp.id} value={mp.id} className="text-xs">
-                    <span className="flex items-center gap-1">
-                      {mp.name}
-                      <span className="text-muted-foreground">({mp.feePercent}%{mp.feeFlat ? ` + ${formatCurrency(mp.feeFlat)}` : ''})</span>
-                      {mp.isActive === false && <Badge variant="outline" className="text-[8px] h-3.5 text-orange-600 border-orange-300">Nonaktif</Badge>}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {profitPreview && (
-              <div className="space-y-2 text-[10px]">
-                {/* Owner Profit Comparison */}
-                <div className="p-2 rounded-lg bg-muted/30">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="font-medium text-muted-foreground flex items-center gap-1">
-                      <PiggyBank className="w-3 h-3" /> Profit Owner
-                    </p>
-                    {profitPreview.profitChange !== 0 && (
-                      <span className={cn(
-                        "text-[9px] font-bold px-1.5 py-0.5 rounded",
-                        profitPreview.profitChange >= 0 
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" 
-                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                      )}>
-                        {profitPreview.profitChange >= 0 ? '+' : ''}{formatCurrency(profitPreview.profitChange)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <p className="text-[9px] text-muted-foreground">Saat ini</p>
-                      <p className="font-bold text-sm">{formatCurrency(profitPreview.currentOwnerProfit)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-muted-foreground">Baru</p>
-                      <p className={cn(
-                        "font-bold text-sm",
-                        profitPreview.profitChange >= 0 ? "text-emerald-600" : "text-red-600"
-                      )}>{formatCurrency(profitPreview.newOwnerProfit)}</p>
-                    </div>
+          {/* Bank Account - Compact */}
+          {tx.customer?.bankName && tx.customer?.bankAccount && (
+            <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20 p-2.5">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9px] text-muted-foreground">{tx.customer.bankName}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-mono font-bold">{tx.customer.bankAccount}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(tx.customer.bankAccount || '');
+                        toast.success('Disalin');
+                      }}
+                      className="p-1 hover:bg-blue-100 dark:hover:bg-blue-800 rounded"
+                    >
+                      <Copy className="w-3 h-3 text-blue-600" />
+                    </button>
                   </div>
                 </div>
-                
-                {/* Partner Profit Comparison - only show if there's a partner */}
-                {tx.partner && profitPreview.currentPartnerProfit !== undefined && (
-                  <div className="p-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20">
+              </div>
+            </div>
+          )}
+
+          {/* Timestamp & Marketplace info */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg border bg-muted/30 p-2.5">
+              <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
+                <Calendar className="w-2.5 h-2.5" /> Tanggal
+              </p>
+              <p className="text-xs font-semibold">{formatDate(tx.createdAt)}</p>
+            </div>
+            {tx.marketplace && (
+              <div className="rounded-lg border bg-muted/30 p-2.5">
+                <p className="text-[9px] text-muted-foreground mb-0.5 flex items-center gap-1">
+                  <Store className="w-2.5 h-2.5" /> Marketplace
+                </p>
+                <p className="text-xs font-semibold">{tx.marketplace.name}</p>
+                <p className="text-[9px] text-muted-foreground">Fee: {tx.marketplace.feePercent}%</p>
+              </div>
+            )}
+          </div>
+
+          {/* WhatsApp Share Button */}
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(`🛒 Detail Transaksi\n\nOrder ID: ${tx.orderId}\nNominal: ${formatCurrency(tx.nominal)}\nPayment: ${tx.paymentType?.name}\nStatus: ${tx.status.toUpperCase()}\nCustomer: ${tx.customer?.name}\nTanggal: ${formatDate(tx.createdAt)}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-2.5 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors text-xs font-medium"
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            Share ke WhatsApp
+          </a>
+        </TabsContent>
+
+        {/* TAB 2: Aksi */}
+        <TabsContent value="aksi" className="mt-0 p-4 space-y-2.5">
+          {/* Status Change */}
+          <div>
+            <p className="text-[9px] font-medium text-muted-foreground mb-2">UBAH STATUS</p>
+            <div className="grid grid-cols-5 gap-1.5">
+              {[
+                { v: 'pending', l: 'Pending', icon: Clock, color: 'bg-orange-500' },
+                { v: 'verification', l: 'Verif', icon: AlertCircle, color: 'bg-violet-500' },
+                { v: 'process', l: 'Proses', icon: Loader2, color: 'bg-cyan-500' },
+                { v: 'success', l: 'Sukses', icon: CheckCircle, color: 'bg-emerald-500' },
+                { v: 'failed', l: 'Gagal', icon: XCircle, color: 'bg-red-500' },
+              ].map(s => {
+                const Icon = s.icon;
+                const isSelected = status === s.v;
+                return (
+                  <button 
+                    key={s.v} 
+                    type="button" 
+                    onClick={() => handleStatus(s.v)} 
+                    disabled={updating} 
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all min-h-[44px]",
+                      isSelected 
+                        ? `${s.color} text-white shadow` 
+                        : "bg-muted/30 hover:bg-muted/50"
+                    )}
+                  >
+                    <Icon className={cn("w-4 h-4", !isSelected && "text-muted-foreground", s.v === 'process' && "animate-spin")} />
+                    <span className="text-[8px] font-medium">{s.l}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Marketplace - when verification */}
+          {status === 'verification' && (
+            <div className="space-y-2">
+              <Select value={marketplace} onValueChange={setMarketplace}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Pilih marketplace..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none" className="text-xs">Tanpa Marketplace</SelectItem>
+                  {marketplaces.map(mp => (
+                    <SelectItem key={mp.id} value={mp.id} className="text-xs">
+                      <span className="flex items-center gap-1">
+                        {mp.name}
+                        <span className="text-muted-foreground">({mp.feePercent}%{mp.feeFlat ? ` + ${formatCurrency(mp.feeFlat)}` : ''})</span>
+                        {mp.isActive === false && <Badge variant="outline" className="text-[8px] h-3.5 text-orange-600 border-orange-300">Nonaktif</Badge>}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {profitPreview && (
+                <div className="space-y-2 text-[10px]">
+                  {/* Owner Profit Comparison */}
+                  <div className="p-2 rounded-lg bg-muted/30">
                     <div className="flex items-center justify-between mb-1.5">
                       <p className="font-medium text-muted-foreground flex items-center gap-1">
-                        <Users className="w-3 h-3" /> Profit Partner
-                        <span className="text-[9px] text-blue-600">({tx.partner.name})</span>
+                        <PiggyBank className="w-3 h-3" /> Profit Owner
                       </p>
-                      {profitPreview.newPartnerProfit !== undefined && (
+                      {profitPreview.profitChange !== 0 && (
                         <span className={cn(
                           "text-[9px] font-bold px-1.5 py-0.5 rounded",
-                          (profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit) >= 0 
+                          profitPreview.profitChange >= 0 
                             ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" 
                             : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                         )}>
-                          {(profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit) >= 0 ? '+' : ''}
-                          {formatCurrency(profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit)}
+                          {profitPreview.profitChange >= 0 ? '+' : ''}{formatCurrency(profitPreview.profitChange)}
                         </span>
                       )}
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <p className="text-[9px] text-muted-foreground">Saat ini</p>
-                        <p className="font-bold text-sm text-blue-600">{formatCurrency(profitPreview.currentPartnerProfit)}</p>
+                        <p className="font-bold text-sm">{formatCurrency(profitPreview.currentOwnerProfit)}</p>
                       </div>
                       <div>
                         <p className="text-[9px] text-muted-foreground">Baru</p>
                         <p className={cn(
                           "font-bold text-sm",
-                          profitPreview.newPartnerProfit !== undefined && 
-                          (profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit) >= 0 
-                            ? "text-emerald-600" 
-                            : "text-red-600"
-                        )}>
-                          {profitPreview.newPartnerProfit !== undefined ? formatCurrency(profitPreview.newPartnerProfit) : '-'}
-                        </p>
+                          profitPreview.profitChange >= 0 ? "text-emerald-600" : "text-red-600"
+                        )}>{formatCurrency(profitPreview.newOwnerProfit)}</p>
                       </div>
                     </div>
                   </div>
-                )}
-                
-                {/* Platform Fee Info */}
-                {profitPreview.newPlatformFee > 0 && profitPreview.selectedMp && (
-                  <div className="flex items-center justify-between text-[9px] p-1.5 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
-                    <div className="flex items-center gap-1">
-                      <Store className="w-3 h-3 text-orange-600" />
-                      <span className="text-orange-700 dark:text-orange-400">{profitPreview.selectedMp.name}</span>
+                  
+                  {/* Partner Profit Comparison */}
+                  {tx.partner && profitPreview.currentPartnerProfit !== undefined && (
+                    <div className="p-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="font-medium text-muted-foreground flex items-center gap-1">
+                          <Users className="w-3 h-3" /> Profit Partner
+                          <span className="text-[9px] text-blue-600">({tx.partner.name})</span>
+                        </p>
+                        {profitPreview.newPartnerProfit !== undefined && (
+                          <span className={cn(
+                            "text-[9px] font-bold px-1.5 py-0.5 rounded",
+                            (profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit) >= 0 
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" 
+                              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          )}>
+                            {(profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit) >= 0 ? '+' : ''}
+                            {formatCurrency(profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-[9px] text-muted-foreground">Saat ini</p>
+                          <p className="font-bold text-sm text-blue-600">{formatCurrency(profitPreview.currentPartnerProfit)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-muted-foreground">Baru</p>
+                          <p className={cn(
+                            "font-bold text-sm",
+                            profitPreview.newPartnerProfit !== undefined && 
+                            (profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit) >= 0 
+                              ? "text-emerald-600" 
+                              : "text-red-600"
+                          )}>
+                            {profitPreview.newPartnerProfit !== undefined ? formatCurrency(profitPreview.newPartnerProfit) : '-'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-red-600 font-medium">-{formatCurrency(profitPreview.newPlatformFee)}</span>
+                  )}
+                  
+                  {/* Platform Fee Info */}
+                  {profitPreview.newPlatformFee > 0 && profitPreview.selectedMp && (
+                    <div className="flex items-center justify-between text-[9px] p-1.5 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
+                      <div className="flex items-center gap-1">
+                        <Store className="w-3 h-3 text-orange-600" />
+                        <span className="text-orange-700 dark:text-orange-400">{profitPreview.selectedMp.name}</span>
+                      </div>
+                      <span className="text-red-600 font-medium">-{formatCurrency(profitPreview.newPlatformFee)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Partner Selector */}
+          <div className="rounded-lg border bg-muted/30 p-2.5">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[9px] text-muted-foreground flex items-center gap-1">
+                <Users className="w-2.5 h-2.5" /> Partner
+              </p>
+              {selectedPartnerId !== 'none' && (
+                <Button type="button" variant="ghost" size="sm" className="h-5 text-[9px] text-red-500 px-1.5" onClick={() => { setSelectedPartnerId('none'); setPartnerChanged(true); }}>
+                  <X className="w-2.5 h-2.5" />
+                </Button>
+              )}
+            </div>
+            {selectedPartnerId !== 'none' ? (
+              (() => {
+                const p = partners.find(x => x.id === selectedPartnerId) || tx.partner;
+                return p ? (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold">{p.name}</p>
+                      <p className="text-[9px] text-muted-foreground">{p.tier} &middot; Komisi {p.commission}%</p>
+                    </div>
+                    <Button type="button" variant="ghost" size="sm" className="h-5 text-[9px] px-1.5" onClick={() => { setSelectedPartnerId('none'); setPartnerChanged(true); }}>Ganti</Button>
                   </div>
+                ) : <p className="text-[9px] text-muted-foreground">Partner tidak ditemukan</p>;
+              })()
+            ) : (
+              <div className="space-y-1.5">
+                <Input placeholder="Cari partner..." value={searchPartner} onChange={e => setSearchPartner(e.target.value)} className="h-7 text-[10px]" />
+                {searchPartner.length >= 1 ? (
+                  <div className="max-h-24 overflow-y-auto space-y-0.5">
+                    {partners.filter(p => p.name.toLowerCase().includes(searchPartner.toLowerCase())).slice(0, 5).map(p => (
+                      <button key={p.id} type="button" onClick={() => { setSelectedPartnerId(p.id); setPartnerChanged(true); setSearchPartner(''); }} className="w-full text-left flex items-center justify-between px-2 py-1 rounded hover:bg-muted/50 transition-colors">
+                        <div>
+                          <p className="text-[10px] font-medium">{p.name}</p>
+                          <p className="text-[8px] text-muted-foreground">{p.tier} &middot; {p.commission}%</p>
+                        </div>
+                        <Check className="w-3 h-3 text-muted-foreground" />
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[9px] text-muted-foreground text-center py-1">Ketik nama partner untuk mencari...</p>
                 )}
               </div>
             )}
           </div>
-        )}
 
-        {/* Transaction Link & Notes */}
-        <div className="mt-2 space-y-2">
           {/* Transaction Link */}
           <div className="p-2 rounded-lg border border-dashed bg-violet-50/50 dark:bg-violet-900/10 border-violet-200 dark:border-violet-800">
             <p className="text-[9px] font-medium text-violet-700 dark:text-violet-400 flex items-center gap-1 mb-1.5">
@@ -1893,40 +2011,226 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
             placeholder="Catatan untuk customer/partner..." 
             className="h-10 text-xs resize-none" 
           />
-        </div>
 
-        {/* Actions */}
-        <div className="flex gap-2 mt-2">
-          <Button 
-            onClick={save} 
-            disabled={updating || !hasChanges} 
-            className="flex-1 h-8 text-xs bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600"
-          >
-            {updating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-            <span className="ml-1">Simpan</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => onDelete(tx.id)} 
-            disabled={updating} 
-            className="h-8 w-8 text-red-600 hover:bg-red-50"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </Button>
-        </div>
+          {/* Actions */}
+          <div className="flex gap-2 pt-2 border-t">
+            <Button 
+              onClick={save} 
+              disabled={updating || !hasChanges} 
+              className="flex-1 h-8 text-xs bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600"
+            >
+              {updating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+              <span className="ml-1">Simpan</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => onDelete(tx.id)} 
+              disabled={updating} 
+              className="h-8 w-8 text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* TAB 3: Diskon */}
+        <TabsContent value="diskon" className="mt-0 p-4 space-y-3">
+          {!canDiscount ? (
+            <div className="text-center py-8">
+              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+              <p className="text-xs text-muted-foreground">Diskon hanya bisa diterapkan saat status <span className="font-medium">Pending</span> atau <span className="font-medium">Verifikasi</span></p>
+            </div>
+          ) : (
+            <>
+              {/* Current Fee Info */}
+              <div className="rounded-lg border bg-muted/30 p-2.5 space-y-1.5">
+                <p className="text-[9px] font-medium text-muted-foreground uppercase">Info Fee Saat Ini</p>
+                <div className="space-y-1 text-[10px]">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Payment Fee</span>
+                    <span className="font-semibold text-red-500">-{formatCurrency(tx.paymentFee)}</span>
+                  </div>
+                  {tx.platformFee > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Platform Fee ({tx.marketplace?.name})</span>
+                      <span className="font-semibold text-red-500">-{formatCurrency(tx.platformFee)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Fee</span>
+                    <span className="font-semibold text-red-600">-{formatCurrency(tx.paymentFee + tx.platformFee)}</span>
+                  </div>
+                  <Separator className="my-1" />
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Net Margin</span>
+                    <span className="font-semibold">{formatCurrency(tx.paymentFee - tx.platformFee)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Customer Receives</span>
+                    <span className="font-semibold">{formatCurrency(tx.totalReceived)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Discount Type Toggle */}
+              <div>
+                <p className="text-[9px] font-medium text-muted-foreground mb-1.5 uppercase">Tipe Diskon</p>
+                <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => { setDiscountType('percent'); setDiscountValue(''); }}
+                    className={cn(
+                      "flex-1 py-2 rounded-md text-[11px] font-medium transition-all",
+                      discountType === 'percent' 
+                        ? "bg-background text-foreground shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Persentase (%)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDiscountType('nominal'); setDiscountValue(''); }}
+                    className={cn(
+                      "flex-1 py-2 rounded-md text-[11px] font-medium transition-all",
+                      discountType === 'nominal' 
+                        ? "bg-background text-foreground shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Nominal (Rp)
+                  </button>
+                </div>
+              </div>
+
+              {/* Discount Input */}
+              <div>
+                <p className="text-[9px] font-medium text-muted-foreground mb-1.5">
+                  {discountType === 'percent' ? 'Diskon (%)' : 'Diskon (Rp)'}
+                </p>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    {discountType === 'percent' ? '%' : 'Rp'}
+                  </span>
+                  <Input
+                    type="number"
+                    value={discountValue}
+                    onChange={e => setDiscountValue(e.target.value)}
+                    placeholder={discountType === 'percent' ? '0' : '0'}
+                    className="h-10 text-sm font-semibold pl-10"
+                    min="0"
+                    max={discountType === 'percent' ? '100' : undefined}
+                  />
+                </div>
+                {discountType === 'percent' && discountValue && parseFloat(discountValue) > 100 && (
+                  <p className="text-[9px] text-red-500 mt-1">Maksimal 100%</p>
+                )}
+                {discountType === 'nominal' && discountPreview && parseFloat(discountValue) > discountPreview.originalPaymentFee && (
+                  <p className="text-[9px] text-red-500 mt-1">Maksimal {formatCurrency(discountPreview.originalPaymentFee)}</p>
+                )}
+              </div>
+
+              {/* Live Preview */}
+              {discountPreview && (
+                <div className="space-y-2 animate-fade-in">
+                  <p className="text-[9px] font-medium text-muted-foreground uppercase">Preview Perhitungan</p>
+                  
+                  <div className="rounded-lg border bg-emerald-50/50 dark:bg-emerald-900/10 p-2.5 space-y-1.5">
+                    <div className="text-[10px] space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Original Fee</span>
+                        <span className="font-medium">{formatCurrency(discountPreview.originalPaymentFee)}</span>
+                      </div>
+                      <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                        <span>Diskon ({discountPreview.effectiveDiscountPercent.toFixed(1)}%)</span>
+                        <span className="font-bold">-{formatCurrency(discountPreview.discountAmount)}</span>
+                      </div>
+                      <Separator className="my-1" />
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">New Fee</span>
+                        <span className="font-bold text-orange-600">{formatCurrency(discountPreview.newPaymentFee)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border bg-blue-50/50 dark:bg-blue-900/10 p-2.5 space-y-1.5">
+                    <p className="text-[9px] font-medium text-blue-700 dark:text-blue-400 uppercase">Hasil Setelah Diskon</p>
+                    <div className="text-[10px] space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Customer Receives</span>
+                        <div className="text-right">
+                          <span className="line-through text-muted-foreground mr-1 text-[9px]">{formatCurrency(discountPreview.originalTotalReceived)}</span>
+                          <span className="font-bold text-blue-600">{formatCurrency(discountPreview.newTotalReceived)}</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Net Margin</span>
+                        <div className="text-right">
+                          <span className="line-through text-muted-foreground mr-1 text-[9px]">{formatCurrency(discountPreview.originalNetMargin)}</span>
+                          <span className="font-bold">{formatCurrency(discountPreview.newNetMargin)}</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Owner Profit</span>
+                        <div className="text-right">
+                          <span className="line-through text-muted-foreground mr-1 text-[9px]">{formatCurrency(discountPreview.originalOwnerProfit)}</span>
+                          <span className={cn(
+                            "font-bold",
+                            discountPreview.newOwnerProfit >= discountPreview.originalOwnerProfit ? "text-emerald-600" : "text-red-600"
+                          )}>{formatCurrency(discountPreview.newOwnerProfit)}</span>
+                        </div>
+                      </div>
+                      {tx.partner && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Partner Profit ({tx.partner.name})</span>
+                          <div className="text-right">
+                            <span className="line-through text-muted-foreground mr-1 text-[9px]">{formatCurrency(discountPreview.originalPartnerProfit)}</span>
+                            <span className={cn(
+                              "font-bold",
+                              discountPreview.newPartnerProfit >= discountPreview.originalPartnerProfit ? "text-emerald-600" : "text-red-600"
+                            )}>{formatCurrency(discountPreview.newPartnerProfit)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Apply Discount Button */}
+                  <Button
+                    onClick={() => {
+                      save();
+                    }}
+                    disabled={updating || !discountValue || parseFloat(discountValue) <= 0}
+                    className="w-full h-9 text-xs font-semibold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-md"
+                  >
+                    {updating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Percent className="w-3 h-3" />}
+                    <span className="ml-1">Terapkan Diskon & Simpan</span>
+                  </Button>
+                </div>
+              )}
+
+              {/* No discount entered hint */}
+              {!discountPreview && (
+                <p className="text-[10px] text-muted-foreground text-center py-4">
+                  Masukkan nilai diskon untuk melihat preview perhitungan
+                </p>
+              )}
+            </>
+          )}
+        </TabsContent>
       </div>
-    </div>
+    </Tabs>
   );
 }
 
 // Transaction Detail Dialog Wrapper
-function TxDetailDialog({ open, onOpenChange, tx, onUpdate, onDelete, updating }: { open: boolean; onOpenChange: (v: boolean) => void; tx: Transaction | null; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean, partnerId?: string) => void; onDelete: (id: string) => void; updating: boolean }) {
+function TxDetailDialog({ open, onOpenChange, tx, onUpdate, onDelete, updating }: { open: boolean; onOpenChange: (v: boolean) => void; tx: Transaction | null; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean, partnerId?: string, discountPercent?: number) => void; onDelete: (id: string) => void; updating: boolean }) {
   if (!tx) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 gap-0">
+      <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0">
         <DialogHeader className="sr-only">
           <DialogTitle>Detail Transaksi {tx.orderId}</DialogTitle>
         </DialogHeader>

@@ -173,12 +173,14 @@ model Transaction {
 model PaymentType {
   id              String    @id @default(cuid())
   name            String    @unique  // e.g., "Kartu Kredit", "Paylater"
+  logoUrl         String?   // logo image URL
   onlineFeePercent Float    @default(0) // percentage
   onlineFeeFlat    Float    @default(0) // flat fee under threshold
   codFeePercent    Float    @default(0)
   codFeeFlat       Float    @default(0)
   threshold        Float    @default(1000000) // threshold for percentage vs flat
   discountPercent  Float    @default(0) // default discount percentage for this payment type
+  discountNominal  Float    @default(0) // default discount nominal for this payment type
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -192,6 +194,7 @@ model PaymentType {
 model Marketplace {
   id              String    @id @default(cuid())
   name            String    @unique  // e.g., "Tokopedia", "Shopee"
+  logoUrl         String?   // logo image URL
   feePercent      Float     @default(0) // deduction from margin (percentage)
   feeFlat         Float     @default(0) // flat fee deduction
   description     String?   // notes about the marketplace

@@ -353,6 +353,15 @@ html:hover::-webkit-scrollbar-thumb:hover {
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  /* Completely hide scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
   
   /* Safe area for cards */
   .safe-card {

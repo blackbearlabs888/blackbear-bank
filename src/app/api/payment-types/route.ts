@@ -21,11 +21,14 @@ export async function GET(request: NextRequest) {
     // Convert Decimal values to numbers for frontend compatibility
     const serializedPaymentTypes = paymentTypes.map(pt => ({
       ...pt,
+      logoUrl: pt.logoUrl || null,
       onlineFeePercent: toNumber(pt.onlineFeePercent),
       onlineFeeFlat: toNumber(pt.onlineFeeFlat),
       codFeePercent: toNumber(pt.codFeePercent),
       codFeeFlat: toNumber(pt.codFeeFlat),
       threshold: toNumber(pt.threshold),
+      discountPercent: toNumber(pt.discountPercent),
+      discountNominal: toNumber(pt.discountNominal),
     }));
 
     return NextResponse.json({
@@ -56,11 +59,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       name,
+      logoUrl,
       onlineFeePercent,
       onlineFeeFlat,
       codFeePercent,
       codFeeFlat,
       threshold,
+      discountPercent,
+      discountNominal,
       isActive,
     } = body;
 
@@ -86,11 +92,14 @@ export async function POST(request: NextRequest) {
     const paymentType = await db.paymentType.create({
       data: {
         name,
+        logoUrl: logoUrl || null,
         onlineFeePercent: parseFloat(onlineFeePercent) || 0,
         onlineFeeFlat: parseFloat(onlineFeeFlat) || 0,
         codFeePercent: parseFloat(codFeePercent) || 0,
         codFeeFlat: parseFloat(codFeeFlat) || 0,
         threshold: parseFloat(threshold) || 1000000,
+        discountPercent: parseFloat(discountPercent) || 0,
+        discountNominal: parseFloat(discountNominal) || 0,
         isActive: isActive ?? true,
       },
     });

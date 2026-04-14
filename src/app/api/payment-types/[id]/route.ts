@@ -20,11 +20,14 @@ export async function PATCH(
     const body = await request.json();
     const {
       name,
+      logoUrl,
       onlineFeePercent,
       onlineFeeFlat,
       codFeePercent,
       codFeeFlat,
       threshold,
+      discountPercent,
+      discountNominal,
       isActive,
     } = body;
 
@@ -44,11 +47,14 @@ export async function PATCH(
       where: { id },
       data: {
         ...(name !== undefined && { name }),
+        ...(logoUrl !== undefined && { logoUrl: logoUrl || null }),
         ...(onlineFeePercent !== undefined && { onlineFeePercent: parseFloat(onlineFeePercent) || 0 }),
         ...(onlineFeeFlat !== undefined && { onlineFeeFlat: parseFloat(onlineFeeFlat) || 0 }),
         ...(codFeePercent !== undefined && { codFeePercent: parseFloat(codFeePercent) || 0 }),
         ...(codFeeFlat !== undefined && { codFeeFlat: parseFloat(codFeeFlat) || 0 }),
         ...(threshold !== undefined && { threshold: parseFloat(threshold) || 0 }),
+        ...(discountPercent !== undefined && { discountPercent: parseFloat(discountPercent) || 0 }),
+        ...(discountNominal !== undefined && { discountNominal: parseFloat(discountNominal) || 0 }),
         ...(isActive !== undefined && { isActive }),
       },
     });

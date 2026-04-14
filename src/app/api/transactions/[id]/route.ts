@@ -10,6 +10,9 @@ function serializeTransaction(tx: Record<string, unknown>) {
     ...tx,
     nominal: toNumber(tx.nominal),
     paymentFee: toNumber(tx.paymentFee),
+    originalFee: toNumber(tx.originalFee),
+    discountPercent: toNumber(tx.discountPercent),
+    discountAmount: toNumber(tx.discountAmount),
     platformFee: toNumber(tx.platformFee),
     netMargin: toNumber(tx.netMargin),
     partnerProfit: toNumber(tx.partnerProfit),
@@ -118,7 +121,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status, notes, marketplaceId, transactionLink, nominal, recalculate, sendNotification, partnerId } = body;
+    const { status, notes, marketplaceId, transactionLink, nominal, recalculate, sendNotification, partnerId, discountPercent, discountNominal } = body;
 
     // Get existing transaction
     const existingTransaction = await db.transaction.findUnique({
@@ -441,6 +444,84 @@ export async function PATCH(
         updateData.partnerProfit = newNetMargin * (partnerRate / 100);
         updateData.ownerProfit = newNetMargin - (updateData.partnerProfit as number);
       }
+    }
+
+    // Handle discount (percentage or nominal)
+    if (discountPercent !== undefined || discountNominal !== undefined) {
+      // Only allow discount when status is pending or verification
+      const allowedDiscountStatuses = ['pending', 'verification'];
+      if (!allowedDiscountStatuses.includes(existingTransaction.status)) {
+        return NextResponse.json(
+          { success: false, error: 'Diskon hanya dapat diterapkan saat status pending atau verifikasi' },
+          { status: 400 }
+        );
+      }
+
+      // Get the effective nominal (might have been updated by nominal block)
+      const nominalForCalc = updateData.nominal !== undefined ? Number(updateData.nominal) : toNumber(existingTransaction.nominal);
+
+      // Calculate the base payment fee (original fee before discount)
+      let originalFee: number;
+      if (updateData.paymentFee !== undefined) {
+        // Payment fee was already recalculated (from nominal/marketplace change) — this is the base fee
+        originalFee = Number(updateData.paymentFee);
+      } else {
+        // Calculate base fee from scratch using current nominal and payment type rates
+        const paymentType = existingTransaction.paymentType;
+        if (!paymentType) {
+          return NextResponse.json(
+            { success: false, error: 'Payment type tidak ditemukan' },
+            { status: 400 }
+          );
+        }
+        const isOnline = existingTransaction.methodTransaction === 'Online';
+        let feePercent = isOnline ? toNumber(paymentType.onlineFeePercent) : toNumber(paymentType.codFeePercent);
+        const feeFlat = isOnline ? toNumber(paymentType.onlineFeeFlat) : toNumber(paymentType.codFeeFlat);
+        const threshold = toNumber(paymentType.threshold);
+        if (feePercent > 100) {
+          feePercent = feePercent / 1000;
+        }
+        originalFee = nominalForCalc >= threshold
+          ? nominalForCalc * (feePercent / 100)
+          : feeFlat;
+      }
+
+      // Calculate discount amount
+      let discountAmount = 0;
+      let effectivePercent = 0;
+      const effectiveNominal = discountNominal !== undefined ? Math.max(0, Number(discountNominal)) : 0;
+
+      if (discountPercent !== undefined && Number(discountPercent) > 0) {
+        // Percentage discount
+        effectivePercent = Math.max(0, Math.min(Number(discountPercent), 100));
+        discountAmount = originalFee * (effectivePercent / 100);
+      } else if (effectiveNominal > 0) {
+        // Nominal discount (capped at original fee)
+        discountAmount = Math.min(effectiveNominal, originalFee);
+      }
+
+      const discountedPaymentFee = originalFee - discountAmount;
+
+      // Get platform fee (might have been updated by marketplace block)
+      const currentPlatformFee = updateData.platformFee !== undefined
+        ? Number(updateData.platformFee)
+        : toNumber(existingTransaction.platformFee);
+
+      // Recalculate all margin fields with discounted payment fee
+      const netMargin = discountedPaymentFee - currentPlatformFee;
+      const partnerRate = existingTransaction.partner ? toNumber(existingTransaction.partner.commission) : 0;
+      const partnerProfit = netMargin * (partnerRate / 100);
+      const ownerProfit = netMargin - partnerProfit;
+      const totalReceived = nominalForCalc - discountedPaymentFee;
+
+      updateData.originalFee = originalFee;
+      updateData.discountPercent = effectivePercent;
+      updateData.discountAmount = discountAmount;
+      updateData.paymentFee = discountedPaymentFee;
+      updateData.netMargin = netMargin;
+      updateData.partnerProfit = partnerProfit;
+      updateData.ownerProfit = ownerProfit;
+      updateData.totalReceived = totalReceived;
     }
 
     // Update transaction
