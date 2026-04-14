@@ -17,11 +17,7 @@ export async function GET() {
   try {
     const testimonials = await db.testimonial.findMany({
       where: { isApproved: true },
-      select: {
-        rating: true,
-        review: true,
-        customerName: true,
-        createdAt: true,
+      include: {
         transaction: {
           select: {
             nominal: true,
@@ -39,8 +35,8 @@ export async function GET() {
       review: t.review,
       customerName: maskName(t.customerName),
       createdAt: t.createdAt,
-      nominal: t.transaction.nominal,
-      paymentType: t.transaction.paymentType.name,
+      nominal: t.transaction?.nominal ?? 0,
+      paymentType: t.transaction?.paymentType?.name ?? null,
     }));
 
     return NextResponse.json({
@@ -50,8 +46,8 @@ export async function GET() {
   } catch (error) {
     console.error('Get public testimonials error:', error);
     return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
-      { status: 500 }
+      { success: true, data: [] },
+      { status: 200 }
     );
   }
 }

@@ -29,6 +29,9 @@ function serializeTransaction(tx: Record<string, unknown>) {
       codFeePercent: toNumber((tx.paymentType as Record<string, unknown>).codFeePercent),
       codFeeFlat: toNumber((tx.paymentType as Record<string, unknown>).codFeeFlat),
       threshold: toNumber((tx.paymentType as Record<string, unknown>).threshold),
+      discountPercent: toNumber((tx.paymentType as Record<string, unknown>).discountPercent),
+      discountNominal: toNumber((tx.paymentType as Record<string, unknown>).discountNominal),
+      minTransaction: toNumber((tx.paymentType as Record<string, unknown>).minTransaction),
     } : null,
     marketplace: tx.marketplace ? {
       ...tx.marketplace as object,

@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
         paymentType: transaction.paymentType.name,
         methodTransaction: transaction.methodTransaction,
         partner: transaction.partner?.name || null,
-        canContact: !!(transaction.partner?.phone && transaction.partner?.active) || !!ownerProfile?.footerWhatsapp,
+        canContact: !!(transaction.partner?.phone && transaction.partner?.status === 'active') || !!ownerProfile?.footerWhatsapp,
         transactionLink: transaction.transactionLink || null,
         createdAt: transaction.createdAt,
         updatedAt: transaction.updatedAt,

@@ -12,11 +12,15 @@ async function getPaymentTypes() {
     return paymentTypes.map(pt => ({
       id: pt.id,
       name: pt.name,
+      logoUrl: pt.logoUrl ?? null,
       onlineFeePercent: Number(pt.onlineFeePercent),
       onlineFeeFlat: Number(pt.onlineFeeFlat),
       codFeePercent: Number(pt.codFeePercent),
       codFeeFlat: Number(pt.codFeeFlat),
       threshold: Number(pt.threshold),
+      discountPercent: Number(pt.discountPercent),
+      discountNominal: Number(pt.discountNominal),
+      minTransaction: Number(pt.minTransaction),
     }));
   } catch {
     return [];

@@ -123,11 +123,15 @@ const CitiesSection = dynamic(
 interface PaymentType {
   id: string;
   name: string;
+  logoUrl?: string | null;
   onlineFeePercent: number;
   onlineFeeFlat: number;
   codFeePercent: number;
   codFeeFlat: number;
   threshold: number;
+  discountPercent: number;
+  discountNominal: number;
+  minTransaction: number;
 }
 
 interface FAQ {
@@ -167,6 +171,7 @@ function formatStatValue(index: number, raw: number): string {
 export default function LandingPage({ paymentTypes, faqs, announcements }: LandingPageProps) {
   const { config, getInitials } = useSiteConfig();
   const [logoError, setLogoError] = useState(false);
+  const [ptLogoErrors, setPtLogoErrors] = useState<Set<string>>(new Set());
   const [cardSpotlight, setCardSpotlight] = useState<React.CSSProperties>({});
   const [cardTilt, setCardTilt] = useState<React.CSSProperties>({});
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -250,6 +255,10 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
     return icons[index % icons.length];
   };
 
+  const handlePtLogoError = useCallback((ptId: string) => {
+    setPtLogoErrors(prev => new Set(prev).add(ptId));
+  }, []);
+
   return (
     <>
       <OrganizationJsonLd />
@@ -265,7 +274,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         }}
       />
 
-      <div className="relative animate-fade-in overflow-x-hidden">
+      <div className="relative animate-fade-in overflow-hidden">
 
         {/* ==================== ANNOUNCEMENT BAR ==================== */}
         <AnnouncementBar announcements={announcements} />
@@ -555,6 +564,8 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                     {[...paymentTypes, ...paymentTypes].map((pt, index) => {
                       const Icon = getPaymentIcon(index % paymentTypes.length);
                       const isFirstOriginal = index < paymentTypes.length && index === 0;
+                      const hasLogo = pt.logoUrl && !ptLogoErrors.has(pt.id);
+                      const hasDiscount = pt.discountPercent > 0 || pt.discountNominal > 0;
                       return (
                         <Link
                           key={`${pt.id}-${index}`}
@@ -566,12 +577,23 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                               Rate terbaik!
                             </span>
                           )}
-                          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
-                            <Icon className="w-4 h-4 text-white" />
-                          </div>
+                          {hasLogo ? (
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-background/50 border border-border/30">
+                              <img src={pt.logoUrl} alt={pt.name} className="w-full h-full object-contain" onError={() => handlePtLogoError(pt.id)} />
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
+                              <Icon className="w-4 h-4 text-white" />
+                            </div>
+                          )}
                           <span className="text-sm font-medium whitespace-nowrap group-hover/card:text-primary transition-colors overflow-hidden text-ellipsis max-w-[140px] sm:max-w-none">
                             {pt.name}
                           </span>
+                          {hasDiscount && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold whitespace-nowrap flex-shrink-0">
+                              ★ Diskon{pt.discountPercent > 0 ? ` ${pt.discountPercent}%` : ''}
+                            </span>
+                          )}
                           <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover/card:text-primary group-hover/card:translate-x-0.5 transition-all" />
                         </Link>
                       );
@@ -598,18 +620,31 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                     >
                       {[...paymentTypes, ...paymentTypes].map((pt, index) => {
                         const Icon = getPaymentIcon(index % paymentTypes.length);
+                        const hasLogo = pt.logoUrl && !ptLogoErrors.has(pt.id);
+                        const hasDiscount = pt.discountPercent > 0 || pt.discountNominal > 0;
                         return (
                           <Link
                             key={`rev-${pt.id}-${index}`}
                             href="/order"
                             className="payment-card-glow flex items-center gap-2.5 px-5 py-3 rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm hover:border-primary/30 hover:bg-background transition-all duration-300 flex-shrink-0 group/card"
                           >
-                            <div className="w-8 h-8 rounded-lg bg-fuchsia-500/10 flex items-center justify-center flex-shrink-0">
-                              <Icon className="w-4 h-4 text-fuchsia-500" />
-                            </div>
+                            {hasLogo ? (
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-background/50 border border-border/30">
+                                <img src={pt.logoUrl} alt={pt.name} className="w-full h-full object-contain" onError={() => handlePtLogoError(pt.id)} />
+                              </div>
+                            ) : (
+                              <div className="w-8 h-8 rounded-lg bg-fuchsia-500/10 flex items-center justify-center flex-shrink-0">
+                                <Icon className="w-4 h-4 text-fuchsia-500" />
+                              </div>
+                            )}
                             <span className="text-sm font-medium whitespace-nowrap group-hover/card:text-fuchsia-500 transition-colors">
                               {pt.name}
                             </span>
+                            {hasDiscount && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold whitespace-nowrap flex-shrink-0">
+                                ★ Diskon{pt.discountPercent > 0 ? ` ${pt.discountPercent}%` : ''}
+                              </span>
+                            )}
                             <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover/card:text-fuchsia-500 group-hover/card:translate-x-0.5 transition-all" />
                           </Link>
                         );

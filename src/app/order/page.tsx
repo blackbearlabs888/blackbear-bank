@@ -62,6 +62,9 @@ interface PaymentType {
   codFeePercent: number;
   codFeeFlat: number;
   threshold: number;
+  discountPercent?: number;
+  discountNominal?: number;
+  minTransaction?: number;
 }
 
 const banks = [
@@ -570,6 +573,20 @@ function StepTransaction({
   const selectedPayment = paymentTypes.find((p) => p.id === formData.paymentTypeId);
   const isValid = formData.nominal && formData.paymentTypeId;
 
+  // Sort payment types: ones with active discounts first
+  const sortedPaymentTypes = useMemo(() => {
+    return [...paymentTypes].sort((a, b) => {
+      const aDiscount = (a.discountPercent > 0 || a.discountNominal > 0) ? 0 : 1;
+      const bDiscount = (b.discountPercent > 0 || b.discountNominal > 0) ? 0 : 1;
+      return aDiscount - bDiscount;
+    });
+  }, [paymentTypes]);
+
+  // Get payment types with active discounts for recommendation bar
+  const discountedPaymentTypes = useMemo(() => {
+    return paymentTypes.filter((pt) => pt.discountPercent > 0 || pt.discountNominal > 0);
+  }, [paymentTypes]);
+
   return (
     <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-2xl shadow-primary/5">
       <div className="h-1.5 bg-gradient-to-r from-fuchsia-500 via-pink-500 to-rose-500" />
@@ -585,6 +602,19 @@ function StepTransaction({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Discount Recommendations Bar */}
+        {discountedPaymentTypes.length > 0 && (
+          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-500/20 animate-fade-in">
+            <Sparkles className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Promo Aktif!</p>
+              <p className="text-[11px] text-muted-foreground">
+                {discountedPaymentTypes.map(pt => pt.name).join(', ')} sedang diskon
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Step Tip */}
         <div className="flex items-start gap-3 p-3 rounded-xl bg-gradient-to-r from-fuchsia-500/10 to-pink-500/10 border border-fuchsia-500/20 animate-fade-in">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center shadow-lg shadow-fuchsia-500/20 flex-shrink-0">
@@ -630,13 +660,16 @@ function StepTransaction({
               <SelectValue placeholder="Pilih tipe pembayaran" />
             </SelectTrigger>
             <SelectContent>
-              {paymentTypes.map((pt) => (
+              {sortedPaymentTypes.map((pt) => (
                 <SelectItem key={pt.id} value={pt.id}>
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{pt.name}</span>
                     <span className="text-xs text-muted-foreground">
                       ({pt.onlineFeePercent}% / {pt.codFeePercent}% COD)
                     </span>
+                    {(pt.discountPercent > 0 || pt.discountNominal > 0) && (
+                      <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">⭐ Diskon</span>
+                    )}
                   </div>
                 </SelectItem>
               ))}
@@ -646,7 +679,7 @@ function StepTransaction({
 
         {/* Payment Type Info */}
         {selectedPayment && (
-          <div className="p-4 rounded-xl bg-gradient-to-r from-primary/5 to-fuchsia-500/5 border border-primary/20 animate-fade-in">
+          <div className="p-4 rounded-xl bg-gradient-to-r from-primary/5 to-fuchsia-500/5 border border-primary/20 animate-fade-in space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="flex items-center justify-between p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
                 <div className="flex items-center gap-2">
@@ -663,9 +696,27 @@ function StepTransaction({
                 <span className="text-lg font-bold text-amber-600 dark:text-amber-400">{selectedPayment.codFeePercent}%</span>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-3 text-center">
+            <p className="text-xs text-muted-foreground text-center">
               Threshold: {formatCurrency(selectedPayment.threshold)}
             </p>
+            {/* Discount Info */}
+            {(selectedPayment.discountPercent > 0 || selectedPayment.discountNominal > 0) && (
+              <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-500/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <Sparkles className="w-4 h-4 text-emerald-500" />
+                  <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Promo Diskon</span>
+                </div>
+                {selectedPayment.discountPercent > 0 && (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400">Diskon {selectedPayment.discountPercent}% dari biaya layanan</p>
+                )}
+                {selectedPayment.discountNominal > 0 && (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400">Potongan biaya {formatCurrency(selectedPayment.discountNominal)}</p>
+                )}
+                {selectedPayment.minTransaction > 0 && (
+                  <p className="text-[11px] text-muted-foreground mt-1">Minimal transaksi {formatCurrency(selectedPayment.minTransaction)}</p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -756,7 +807,7 @@ function StepCalculation({
 }: { 
   formData: Record<string, string>;
   paymentTypes: PaymentType[];
-  calculation: { paymentFee: number; totalReceived: number };
+  calculation: { paymentFee: number; totalReceived: number; originalFee: number; discountAmount: number; appliedDiscountPercent: number; hasDiscount: boolean; meetsMin: boolean; ptMinTransaction: number };
   loading: boolean;
   partnerInfo: { id: string; name: string; tier: string } | null;
   onBack: () => void;
@@ -813,8 +864,52 @@ function StepCalculation({
                 <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
                 <span className="text-muted-foreground">Biaya Layanan</span>
               </div>
-              <span className="font-bold text-red-500 text-base sm:text-lg">- {formatCurrency(calculation.paymentFee)}</span>
+              <div className="text-right">
+                {calculation.hasDiscount && (
+                  <span className="block text-xs text-muted-foreground line-through">{formatCurrency(calculation.originalFee)}</span>
+                )}
+                <span className="font-bold text-red-500 text-base sm:text-lg">- {formatCurrency(calculation.paymentFee)}</span>
+              </div>
             </div>
+            {calculation.hasDiscount && (
+              <div className="flex justify-between items-center py-2 px-3 sm:py-3 bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-xl border border-emerald-500/20">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
+                  <span className="text-emerald-700 dark:text-emerald-400 font-medium text-sm">Diskon {calculation.appliedDiscountPercent.toFixed(1)}%</span>
+                </div>
+                <span className="font-bold text-emerald-600 text-base sm:text-lg">+ {formatCurrency(calculation.discountAmount)}</span>
+              </div>
+            )}
+            {!calculation.meetsMin && calculation.ptMinTransaction > 0 && (() => {
+              const pt = paymentTypes.find((p) => p.id === formData.paymentTypeId);
+              if (!pt) return null;
+              const feePercent = formData.methodTransaction === 'Online' ? pt.onlineFeePercent : pt.codFeePercent;
+              const feeAtMin = (calculation.ptMinTransaction * feePercent) / 100;
+              let discountedFee = feeAtMin;
+              if (pt.discountPercent) {
+                discountedFee -= (feeAtMin * pt.discountPercent) / 100;
+              }
+              if (pt.discountNominal) {
+                discountedFee -= pt.discountNominal;
+              }
+              discountedFee = Math.max(0, discountedFee);
+              const extraNeeded = calculation.ptMinTransaction - nominal;
+              const potentialSavings = feeAtMin - discountedFee;
+              return (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 px-3 py-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>Tambah nominal minimal <strong>{formatCurrency(calculation.ptMinTransaction)}</strong> untuk mendapat diskon</span>
+                  </div>
+                  {extraNeeded > 0 && potentialSavings > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-2 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                      <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>Tambah nominal ke <strong>{formatCurrency(calculation.ptMinTransaction)}</strong> untuk hemat <strong>{formatCurrency(potentialSavings)}</strong> lebih banyak!</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             <Separator />
             <div className="flex justify-between items-center py-3 px-3 sm:py-4 sm:px-4 bg-gradient-to-r from-primary/10 via-purple-500/10 to-fuchsia-500/10 rounded-xl border border-primary/20">
               <div className="flex items-center gap-2">
@@ -1112,16 +1207,42 @@ function OrderPage() {
         ? paymentType.onlineFeeFlat 
         : paymentType.codFeeFlat;
 
-      const fee = nominal >= paymentType.threshold 
+      const originalFee = nominal >= paymentType.threshold 
         ? nominal * (feePercent / 100) 
         : feeFlat;
 
+      // Apply discount from payment type
+      const ptDiscountPercent = paymentType.discountPercent || 0;
+      const ptDiscountNominal = paymentType.discountNominal || 0;
+      const ptMinTransaction = paymentType.minTransaction || 0;
+      const meetsMin = ptMinTransaction <= 0 || nominal >= ptMinTransaction;
+
+      let discountAmount = 0;
+      let appliedDiscountPercent = 0;
+      if (meetsMin && (ptDiscountPercent > 0 || ptDiscountNominal > 0)) {
+        if (ptDiscountPercent > 0) {
+          discountAmount = originalFee * (ptDiscountPercent / 100);
+          appliedDiscountPercent = ptDiscountPercent;
+        } else if (ptDiscountNominal > 0) {
+          discountAmount = Math.min(ptDiscountNominal, originalFee);
+          appliedDiscountPercent = originalFee > 0 ? (discountAmount / originalFee) * 100 : 0;
+        }
+      }
+
+      const paymentFee = Math.max(0, originalFee - discountAmount);
+
       return {
-        paymentFee: fee,
-        totalReceived: nominal - fee,
+        paymentFee,
+        originalFee,
+        discountAmount,
+        appliedDiscountPercent,
+        totalReceived: nominal - paymentFee,
+        hasDiscount: discountAmount > 0,
+        meetsMin,
+        ptMinTransaction,
       };
     }
-    return { paymentFee: 0, totalReceived: 0 };
+    return { paymentFee: 0, originalFee: 0, discountAmount: 0, appliedDiscountPercent: 0, totalReceived: 0, hasDiscount: false, meetsMin: true, ptMinTransaction: 0 };
   }, [formData.nominal, formData.paymentTypeId, formData.methodTransaction, paymentTypes]);
 
   const handleChange = (field: string, value: string) => {

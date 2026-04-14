@@ -12,6 +12,9 @@ function serializeTransaction(tx: Record<string, unknown>) {
     ...tx,
     nominal: toNumber(tx.nominal),
     paymentFee: toNumber(tx.paymentFee),
+    originalFee: toNumber(tx.originalFee),
+    discountPercent: toNumber(tx.discountPercent),
+    discountAmount: toNumber(tx.discountAmount),
     platformFee: toNumber(tx.platformFee),
     netMargin: toNumber(tx.netMargin),
     partnerProfit: toNumber(tx.partnerProfit),
@@ -28,6 +31,9 @@ function serializeTransaction(tx: Record<string, unknown>) {
       codFeePercent: toNumber((tx.paymentType as Record<string, unknown>).codFeePercent),
       codFeeFlat: toNumber((tx.paymentType as Record<string, unknown>).codFeeFlat),
       threshold: toNumber((tx.paymentType as Record<string, unknown>).threshold),
+      discountPercent: toNumber((tx.paymentType as Record<string, unknown>).discountPercent),
+      discountNominal: toNumber((tx.paymentType as Record<string, unknown>).discountNominal),
+      minTransaction: toNumber((tx.paymentType as Record<string, unknown>).minTransaction),
     } : null,
     marketplace: tx.marketplace ? {
       ...tx.marketplace as object,
@@ -238,7 +244,11 @@ export async function POST(request: NextRequest) {
 
     // Calculate fees
     // Convert Decimal values to numbers for PostgreSQL compatibility
-    const paymentFee = calculatePaymentFee(
+    const ptDiscountPercent = toNumber(paymentType.discountPercent) || 0;
+    const ptDiscountNominal = toNumber(paymentType.discountNominal) || 0;
+    const ptMinTransaction = toNumber(paymentType.minTransaction) || 0;
+
+    const originalFee = calculatePaymentFee(
       toNumber(nominal),
       {
         onlineFeePercent: toNumber(paymentType.onlineFeePercent),
@@ -249,6 +259,24 @@ export async function POST(request: NextRequest) {
       },
       methodTransaction
     );
+
+    // Apply discount from payment type if eligible
+    let discountAmount = 0;
+    let appliedDiscountPercent = 0;
+    const nominalNum = toNumber(nominal);
+    const meetsMinTransaction = ptMinTransaction <= 0 || nominalNum >= ptMinTransaction;
+
+    if (meetsMinTransaction && (ptDiscountPercent > 0 || ptDiscountNominal > 0)) {
+      if (ptDiscountPercent > 0) {
+        discountAmount = originalFee * (ptDiscountPercent / 100);
+        appliedDiscountPercent = ptDiscountPercent;
+      } else if (ptDiscountNominal > 0) {
+        discountAmount = Math.min(ptDiscountNominal, originalFee);
+        appliedDiscountPercent = (discountAmount / originalFee) * 100;
+      }
+    }
+
+    const paymentFee = Math.max(0, originalFee - discountAmount);
     const { netMargin, partnerProfit, ownerProfit } = calculateMarginBreakdown(
       paymentFee,
       platformFee,
@@ -316,6 +344,9 @@ export async function POST(request: NextRequest) {
         partnerId: actualPartnerId,
         nominal,
         paymentFee,
+        originalFee,
+        discountPercent: appliedDiscountPercent,
+        discountAmount,
         platformFee,
         netMargin,
         partnerProfit,

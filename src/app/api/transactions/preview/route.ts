@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       partnerRate
     );
 
-    const totalReceived = nominal - paymentFee;
+    const totalReceived = toNumber(nominal) - paymentFee;
 
     return NextResponse.json({
       success: true,

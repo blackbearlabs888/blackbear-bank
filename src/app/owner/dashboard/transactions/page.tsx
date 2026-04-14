@@ -912,46 +912,50 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
     if (!pt) return null;
 
     // Get fee values with safety checks
-    // Fee percent should be between 0-100, if higher it might be stored incorrectly
     let feePercent = form.methodTransaction === 'Online' ? pt.onlineFeePercent : pt.codFeePercent;
     const feeFlat = form.methodTransaction === 'Online' ? pt.onlineFeeFlat : pt.codFeeFlat;
     
     // Safety: if feePercent > 100, it's likely stored incorrectly (e.g., 8000 instead of 8%)
-    // This can happen due to database precision issues or incorrect input
     if (feePercent > 100) {
-      console.warn('[WARN] Fee percent > 100%, normalizing. Original:', feePercent);
-      feePercent = feePercent / 1000; // Normalize: 8000 -> 8
+      feePercent = feePercent / 1000;
     }
-    
-    // Debug log for production troubleshooting
-    console.log('[DEBUG] Payment calculation:', {
-      nominal,
-      feePercent,
-      feeFlat,
-      threshold: pt.threshold,
-      feePercentType: typeof feePercent,
-      ptRaw: pt,
-    });
     
     // Use threshold logic: if nominal >= threshold, use percentage; otherwise use flat fee
-    let paymentFee: number;
+    let originalFee: number;
     if (nominal >= (pt.threshold || 0)) {
-      paymentFee = nominal * (feePercent / 100);
+      originalFee = nominal * (feePercent / 100);
     } else {
-      paymentFee = feeFlat;
+      originalFee = feeFlat;
     }
+
+    // Apply discount from payment type
+    const ptDiscountPercent = pt.discountPercent || 0;
+    const ptDiscountNominal = pt.discountNominal || 0;
+    const ptMinTransaction = pt.minTransaction || 0;
+    const meetsMin = ptMinTransaction <= 0 || nominal >= ptMinTransaction;
+
+    let discountAmount = 0;
+    let appliedDiscountPercent = 0;
+    if (meetsMin && (ptDiscountPercent > 0 || ptDiscountNominal > 0)) {
+      if (ptDiscountPercent > 0) {
+        discountAmount = originalFee * (ptDiscountPercent / 100);
+        appliedDiscountPercent = ptDiscountPercent;
+      } else if (ptDiscountNominal > 0) {
+        discountAmount = Math.min(ptDiscountNominal, originalFee);
+        appliedDiscountPercent = originalFee > 0 ? (discountAmount / originalFee) * 100 : 0;
+      }
+    }
+
+    const paymentFee = Math.max(0, originalFee - discountAmount);
 
     let platformFee = 0;
     let selectedMp: Marketplace | null = null;
     if (form.marketplaceId && form.marketplaceId !== 'none') {
       const mp = marketplaces.find(m => m.id === form.marketplaceId);
       if (mp) {
-        // Safety: ensure numeric values and normalize marketplace fee percent if > 100
         let mpFeePercent = Number(mp.feePercent) || 0;
         const mpFeeFlat = Number(mp.feeFlat) || 0;
-        if (mpFeePercent > 100) {
-          mpFeePercent = mpFeePercent / 1000;
-        }
+        if (mpFeePercent > 100) { mpFeePercent = mpFeePercent / 1000; }
         platformFee = nominal * (mpFeePercent / 100) + mpFeeFlat;
         selectedMp = mp;
       }
@@ -963,7 +967,7 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
     const ownerProfit = netMargin - partnerProfit;
     const totalReceived = nominal - paymentFee;
 
-    return { paymentFee, platformFee, netMargin, partnerProfit, ownerProfit, totalReceived, feePercent, selectedMp, threshold: pt.threshold };
+    return { paymentFee, originalFee, discountAmount, appliedDiscountPercent, platformFee, netMargin, partnerProfit, ownerProfit, totalReceived, feePercent, selectedMp, threshold: pt.threshold, meetsMin, ptMinTransaction, hasDiscount: discountAmount > 0 };
   }, [form, paymentTypes, marketplaces, selectedPartner]);
 
   useEffect(() => { if (open) { fetchPT(); fetchMP(); fetchP(); } }, [open]);
@@ -1205,9 +1209,26 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Fee ({calc.feePercent}%):</span>
-                    <span className="text-red-600">-{formatCurrency(calc.paymentFee)}</span>
+                    <span className="text-red-600">{calc.hasDiscount ? <><s className="text-muted-foreground/50 mr-0.5">{formatCurrency(calc.originalFee)}</s>{formatCurrency(calc.paymentFee)}</> : `-${formatCurrency(calc.paymentFee)}`}</span>
                   </div>
                 </div>
+                
+                {calc.hasDiscount && (
+                  <div className="flex items-center justify-between text-[10px] p-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded border border-emerald-200 dark:border-emerald-800">
+                    <div className="flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-emerald-600" />
+                      <span className="text-emerald-700 dark:text-emerald-400">Diskon {calc.appliedDiscountPercent.toFixed(1)}%</span>
+                    </div>
+                    <span className="text-emerald-600 font-medium">-{formatCurrency(calc.discountAmount)}</span>
+                  </div>
+                )}
+                
+                {!calc.meetsMin && calc.ptMinTransaction > 0 && (
+                  <div className="text-[9px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <Info className="w-2.5 h-2.5" />
+                    Min. {formatCurrency(calc.ptMinTransaction)} untuk diskon
+                  </div>
+                )}
                 
                 {calc.platformFee > 0 && calc.selectedMp && (
                   <div className="flex items-center justify-between text-[10px] p-1.5 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">

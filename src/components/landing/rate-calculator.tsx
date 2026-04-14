@@ -3,18 +3,23 @@
 import { useState, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calculator, ArrowRight, Wallet, Info, RotateCcw } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calculator, ArrowRight, Wallet, Info, RotateCcw, CreditCard, Sparkles } from 'lucide-react';
 import { FadeInSection } from '@/components/landing/fade-in-section';
 import Link from 'next/link';
 
 interface PaymentTypeOption {
   id: string;
   name: string;
+  logoUrl?: string | null;
   onlineFeePercent: number;
   onlineFeeFlat: number;
   codFeePercent: number;
   codFeeFlat: number;
   threshold: number;
+  discountPercent: number;
+  discountNominal: number;
+  minTransaction: number;
 }
 
 interface RateCalculatorProps {
@@ -27,6 +32,11 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
   const [amount, setAmount] = useState<string>('1000000');
   const [isCalculated, setIsCalculated] = useState(false);
   const [showResults, setShowResults] = useState(false);
+
+  const useDropdown = paymentTypes.length > 3;
+
+  const hasDiscount = (pt: PaymentTypeOption) =>
+    pt.discountPercent > 0 || pt.discountNominal > 0;
 
   const parseAmount = (val: string) => {
     const num = val.replace(/\D/g, '');
@@ -63,18 +73,69 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
     if (!effectiveSelectedType || !amount) return null;
 
     const nominal = parseAmount(amount);
+    const pt = effectiveSelectedType;
+
+    // Online fee calculation
     const onlineFee = Math.max(
-      Math.floor(nominal * (effectiveSelectedType.onlineFeePercent / 100)) + effectiveSelectedType.onlineFeeFlat,
+      Math.floor(nominal * (pt.onlineFeePercent / 100)) + pt.onlineFeeFlat,
       0
     );
     const codFee = Math.max(
-      Math.floor(nominal * (effectiveSelectedType.codFeePercent / 100)) + effectiveSelectedType.codFeeFlat,
+      Math.floor(nominal * (pt.codFeePercent / 100)) + pt.codFeeFlat,
       0
     );
     const onlineReceive = nominal - onlineFee;
     const codReceive = nominal - codFee;
 
-    return { nominal, onlineFee, codFee, onlineReceive, codReceive };
+    // Discount calculation
+    const meetsMinTransaction = pt.minTransaction <= 0 || nominal >= pt.minTransaction;
+    let onlineDiscountAmount = 0;
+    let codDiscountAmount = 0;
+    let onlineDiscountedFee = onlineFee;
+    let codDiscountedFee = codFee;
+    let onlineDiscountedReceive = onlineReceive;
+    let codDiscountedReceive = codReceive;
+    let discountLabel = '';
+
+    if (hasDiscount(pt)) {
+      if (pt.discountPercent > 0) {
+        onlineDiscountAmount = Math.floor(onlineFee * (pt.discountPercent / 100));
+        codDiscountAmount = Math.floor(codFee * (pt.discountPercent / 100));
+        discountLabel = `${pt.discountPercent}%`;
+      }
+      if (pt.discountNominal > 0) {
+        onlineDiscountAmount += pt.discountNominal;
+        codDiscountAmount += pt.discountNominal;
+        if (discountLabel) {
+          discountLabel = `${pt.discountPercent}% + Rp${formatCurrency(pt.discountNominal)}`;
+        } else {
+          discountLabel = `Rp${formatCurrency(pt.discountNominal)}`;
+        }
+      }
+
+      onlineDiscountedFee = Math.max(onlineFee - onlineDiscountAmount, 0);
+      codDiscountedFee = Math.max(codFee - codDiscountAmount, 0);
+      onlineDiscountedReceive = nominal - onlineDiscountedFee;
+      codDiscountedReceive = nominal - codDiscountedFee;
+    }
+
+    return {
+      nominal,
+      onlineFee,
+      codFee,
+      onlineReceive,
+      codReceive,
+      meetsMinTransaction,
+      hasDiscount: hasDiscount(pt),
+      discountLabel,
+      onlineDiscountAmount,
+      codDiscountAmount,
+      onlineDiscountedFee,
+      codDiscountedFee,
+      onlineDiscountedReceive,
+      codDiscountedReceive,
+      minTransaction: pt.minTransaction,
+    };
   };
 
   const results = getResults();
@@ -115,32 +176,107 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                   <label className="text-sm font-semibold text-foreground">
                     Pilih Jenis Pembayaran
                   </label>
-                  <div className="flex flex-wrap gap-2">
-                    {paymentTypes.map((pt) => {
-                      const isSelected = selectedType?.id === pt.id;
-                      return (
-                        <button
-                          key={pt.id}
-                          onClick={() => {
-                            setSelectedType(pt);
-                            setIsCalculated(false);
-                            setShowResults(false);
-                          }}
-                          className={`relative px-4 py-2 rounded-xl text-sm font-medium border transition-all duration-200 ${
-                            isSelected
-                              ? 'gradient-primary text-white border-transparent shadow-md'
-                              : 'border-border/60 bg-background text-muted-foreground hover:border-primary/30 hover:text-foreground'
-                          }`}
-                        >
-                          {/* Glow effect for selected button */}
-                          {isSelected && (
-                            <span className="absolute inset-0 rounded-xl shadow-[0_0_12px_2px_var(--color-primary)/30] pointer-events-none" />
-                          )}
-                          <span className="relative">{pt.name}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+
+                  {useDropdown ? (
+                    /* Dropdown for >3 payment types */
+                    <Select
+                      value={effectiveSelectedType?.id ?? ''}
+                      onValueChange={(val) => {
+                        const pt = paymentTypes.find((p) => p.id === val) ?? null;
+                        setSelectedType(pt);
+                        setIsCalculated(false);
+                        setShowResults(false);
+                      }}
+                    >
+                      <SelectTrigger className="w-full h-12 rounded-xl border-2 border-border/60 bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                        <SelectValue placeholder="Pilih jenis pembayaran..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-64 overflow-y-auto">
+                        {paymentTypes.map((pt) => {
+                          const isSelected = effectiveSelectedType?.id === pt.id;
+                          const discount = hasDiscount(pt);
+                          return (
+                            <SelectItem
+                              key={pt.id}
+                              value={pt.id}
+                              className={`py-2.5 cursor-pointer ${isSelected ? 'bg-primary/5' : ''}`}
+                            >
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                                  {pt.logoUrl ? (
+                                    <img
+                                      src={pt.logoUrl}
+                                      alt={pt.name}
+                                      className="w-4 h-4 object-contain"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = 'none';
+                                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                      }}
+                                    />
+                                  ) : null}
+                                  <CreditCard className={`w-3.5 h-3.5 text-muted-foreground ${pt.logoUrl ? 'hidden' : ''}`} />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-medium truncate">{pt.name}</span>
+                                    {discount && (
+                                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold whitespace-nowrap">
+                                        <Sparkles className="w-2.5 h-2.5" />
+                                        Diskon
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[11px] text-muted-foreground leading-tight">
+                                    Online {pt.onlineFeePercent}% + Rp{formatCurrency(pt.onlineFeeFlat)} · COD {pt.codFeePercent}% + Rp{formatCurrency(pt.codFeeFlat)}
+                                  </span>
+                                </div>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    /* Button style for ≤3 payment types */
+                    <div className="flex flex-wrap gap-2">
+                      {paymentTypes.map((pt) => {
+                        const isSelected = selectedType?.id === pt.id;
+                        const discount = hasDiscount(pt);
+                        return (
+                          <button
+                            key={pt.id}
+                            onClick={() => {
+                              setSelectedType(pt);
+                              setIsCalculated(false);
+                              setShowResults(false);
+                            }}
+                            className={`relative px-4 py-2 rounded-xl text-sm font-medium border transition-all duration-200 ${
+                              isSelected
+                                ? 'gradient-primary text-white border-transparent shadow-md'
+                                : 'border-border/60 bg-background text-muted-foreground hover:border-primary/30 hover:text-foreground'
+                            }`}
+                          >
+                            {/* Glow effect for selected button */}
+                            {isSelected && (
+                              <span className="absolute inset-0 rounded-xl shadow-[0_0_12px_2px_var(--color-primary)/30] pointer-events-none" />
+                            )}
+                            <span className="relative flex items-center gap-1.5">
+                              {pt.name}
+                              {discount && (
+                                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold whitespace-nowrap ${
+                                  isSelected
+                                    ? 'bg-white/20 text-white'
+                                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                }`}>
+                                  <Sparkles className="w-2.5 h-2.5" />
+                                </span>
+                              )}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Amount Input */}
@@ -207,6 +343,22 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                       </p>
                     </div>
 
+                    {/* Discount recommendation when min not met */}
+                    {results.hasDiscount && !results.meetsMinTransaction && (
+                      <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-amber-500/8 border border-amber-500/20">
+                        <span className="text-base leading-none mt-0.5">💡</span>
+                        <p className="text-xs text-amber-700 dark:text-amber-400 font-medium leading-relaxed">
+                          Tambah nominal ke{' '}
+                          <span className="font-bold">Rp{formatCurrency(results.minTransaction)}</span>{' '}
+                          untuk hemat{' '}
+                          <span className="font-bold">
+                            Rp{formatCurrency(Math.max(results.onlineDiscountAmount, results.codDiscountAmount))}
+                          </span>{' '}
+                          lebih banyak!
+                        </p>
+                      </div>
+                    )}
+
                     {/* Mobile: stack vertically, Desktop: side by side */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {/* Online */}
@@ -220,12 +372,48 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                         <div className="space-y-1.5">
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Biaya Fee</span>
-                            <span className="font-semibold text-destructive">-{formatCurrency(results.onlineFee)}</span>
+                            {results.hasDiscount && results.meetsMinTransaction ? (
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-muted-foreground line-through text-xs">
+                                  Rp{formatCurrency(results.onlineFee)}
+                                </span>
+                                <span className="font-semibold text-destructive">
+                                  -Rp{formatCurrency(results.onlineDiscountedFee)}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="font-semibold text-destructive">-Rp{formatCurrency(results.onlineFee)}</span>
+                            )}
                           </div>
+
+                          {/* Discount row for online */}
+                          {results.hasDiscount && results.meetsMinTransaction && results.onlineDiscountAmount > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                                <Sparkles className="w-3.5 h-3.5" />
+                                Diskon {results.discountLabel}
+                              </span>
+                              <span className="font-semibold text-emerald-500">
+                                +Rp{formatCurrency(results.onlineDiscountAmount)}
+                              </span>
+                            </div>
+                          )}
+
                           <div className="h-px bg-border/50" />
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Dana Diterima</span>
-                            <span className="font-bold text-emerald-500">{formatCurrency(results.onlineReceive)}</span>
+                            <span className="font-bold text-emerald-500">
+                              {results.hasDiscount && results.meetsMinTransaction && results.onlineDiscountAmount > 0 ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-muted-foreground line-through">
+                                    Rp{formatCurrency(results.onlineReceive)}
+                                  </span>
+                                  Rp{formatCurrency(results.onlineDiscountedReceive)}
+                                </div>
+                              ) : (
+                                `Rp${formatCurrency(results.onlineReceive)}`
+                              )}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -241,16 +429,66 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                         <div className="space-y-1.5">
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Biaya Fee</span>
-                            <span className="font-semibold text-destructive">-{formatCurrency(results.codFee)}</span>
+                            {results.hasDiscount && results.meetsMinTransaction ? (
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-muted-foreground line-through text-xs">
+                                  Rp{formatCurrency(results.codFee)}
+                                </span>
+                                <span className="font-semibold text-destructive">
+                                  -Rp{formatCurrency(results.codDiscountedFee)}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="font-semibold text-destructive">-Rp{formatCurrency(results.codFee)}</span>
+                            )}
                           </div>
+
+                          {/* Discount row for COD */}
+                          {results.hasDiscount && results.meetsMinTransaction && results.codDiscountAmount > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                                <Sparkles className="w-3.5 h-3.5" />
+                                Diskon {results.discountLabel}
+                              </span>
+                              <span className="font-semibold text-emerald-500">
+                                +Rp{formatCurrency(results.codDiscountAmount)}
+                              </span>
+                            </div>
+                          )}
+
                           <div className="h-px bg-border/50" />
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Dana Diterima</span>
-                            <span className="font-bold text-emerald-500">{formatCurrency(results.codReceive)}</span>
+                            <span className="font-bold text-emerald-500">
+                              {results.hasDiscount && results.meetsMinTransaction && results.codDiscountAmount > 0 ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-muted-foreground line-through">
+                                    Rp{formatCurrency(results.codReceive)}
+                                  </span>
+                                  Rp{formatCurrency(results.codDiscountedReceive)}
+                                </div>
+                              ) : (
+                                `Rp${formatCurrency(results.codReceive)}`
+                              )}
+                            </span>
                           </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Discount savings summary */}
+                    {results.hasDiscount && results.meetsMinTransaction && (
+                      <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-500/8 border border-emerald-500/20">
+                        <span className="text-base leading-none mt-0.5">⭐</span>
+                        <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium leading-relaxed">
+                          Hemat lebih banyak dengan diskon! Anda menghemat hingga{' '}
+                          <span className="font-bold">
+                            Rp{formatCurrency(Math.max(results.onlineDiscountAmount, results.codDiscountAmount))}
+                          </span>{' '}
+                          dari biaya fee.
+                        </p>
+                      </div>
+                    )}
 
                     {/* CTA */}
                     <Button

@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('orderId');
     const approved = searchParams.get('approved'); // 'true' or 'false'
-    const featured = searchParams.get('featured'); // 'true' or 'false'
+    const featured = searchParams.get('featured');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
 

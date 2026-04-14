@@ -18,7 +18,7 @@ import {
   Wallet, ArrowRightLeft, Search, RefreshCw,
   Loader2, AlertCircle, CheckCircle, XCircle, User, CreditCard, Store,
   MessageSquare, Copy, Edit3, Clock, ArrowUp, ArrowDown, Plus,
-  Sparkles, Calculator, Building2, Save, Send, TrendingUp, Activity,
+  Sparkles, Calculator, Building2, Save, Send, TrendingUp, Activity, Info,
   DollarSign, ShoppingBag, BarChart3, PieChart,
 } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
@@ -571,12 +571,32 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
     
     if (feePercent > 100) feePercent = feePercent / 1000;
     
-    let paymentFee: number;
+    let originalFee: number;
     if (nominal >= (pt.threshold || 0)) {
-      paymentFee = nominal * (feePercent / 100);
+      originalFee = nominal * (feePercent / 100);
     } else {
-      paymentFee = feeFlat;
+      originalFee = feeFlat;
     }
+
+    // Apply discount from payment type
+    const ptDiscountPercent = pt.discountPercent || 0;
+    const ptDiscountNominal = pt.discountNominal || 0;
+    const ptMinTransaction = pt.minTransaction || 0;
+    const meetsMin = ptMinTransaction <= 0 || nominal >= ptMinTransaction;
+
+    let discountAmount = 0;
+    let appliedDiscountPercent = 0;
+    if (meetsMin && (ptDiscountPercent > 0 || ptDiscountNominal > 0)) {
+      if (ptDiscountPercent > 0) {
+        discountAmount = originalFee * (ptDiscountPercent / 100);
+        appliedDiscountPercent = ptDiscountPercent;
+      } else if (ptDiscountNominal > 0) {
+        discountAmount = Math.min(ptDiscountNominal, originalFee);
+        appliedDiscountPercent = originalFee > 0 ? (discountAmount / originalFee) * 100 : 0;
+      }
+    }
+
+    const paymentFee = Math.max(0, originalFee - discountAmount);
 
     let platformFee = 0;
 
@@ -585,7 +605,7 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
     const ownerProfit = netMargin - partnerProfit;
     const totalReceived = nominal - paymentFee;
 
-    return { paymentFee, platformFee, netMargin, partnerProfit, ownerProfit, totalReceived, feePercent, threshold: pt.threshold };
+    return { paymentFee, originalFee, discountAmount, appliedDiscountPercent, platformFee, netMargin, partnerProfit, ownerProfit, totalReceived, feePercent, threshold: pt.threshold, meetsMin, ptMinTransaction, hasDiscount: discountAmount > 0 };
   }, [form, paymentTypes, commission]);
 
   useEffect(() => { if (open) { fetchPT(); } }, [open]);
@@ -759,9 +779,26 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Fee ({calc.feePercent}%):</span>
-                    <span className="text-red-600">-{formatCurrency(calc.paymentFee)}</span>
+                    <span className="text-red-600">{calc.hasDiscount ? <><s className="text-muted-foreground/50 mr-0.5">{formatCurrency(calc.originalFee)}</s>{formatCurrency(calc.paymentFee)}</> : `-${formatCurrency(calc.paymentFee)}`}</span>
                   </div>
                 </div>
+                
+                {calc.hasDiscount && (
+                  <div className="flex items-center justify-between text-[10px] p-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded border border-emerald-200 dark:border-emerald-800">
+                    <div className="flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-emerald-600" />
+                      <span className="text-emerald-700 dark:text-emerald-400">Diskon {calc.appliedDiscountPercent.toFixed(1)}%</span>
+                    </div>
+                    <span className="text-emerald-600 font-medium">-{formatCurrency(calc.discountAmount)}</span>
+                  </div>
+                )}
+                
+                {!calc.meetsMin && calc.ptMinTransaction > 0 && (
+                  <div className="text-[9px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <Info className="w-2.5 h-2.5" />
+                    Min. {formatCurrency(calc.ptMinTransaction)} untuk diskon
+                  </div>
+                )}
                 
                 <Separator className="my-1" />
                 
