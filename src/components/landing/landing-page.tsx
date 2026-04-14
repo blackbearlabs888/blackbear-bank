@@ -274,7 +274,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         }}
       />
 
-      <div className="relative animate-fade-in overflow-x-hidden">
+      <div className="relative animate-fade-in overflow-hidden">
 
         {/* ==================== ANNOUNCEMENT BAR ==================== */}
         <AnnouncementBar announcements={announcements} />
@@ -282,12 +282,12 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         {/* ==================== HERO SECTION ==================== */}
         <section className="relative overflow-hidden min-h-dvh">
           {/* Background gradient blobs */}
-          <div className="absolute inset-0 -z-10 overflow-hidden will-change-transform" style={{ transform: 'translate3d(0,0,0)' }}>
+          <div className="absolute inset-0 -z-10 overflow-hidden">
             <div className="absolute top-10 -left-32 w-[500px] h-[400px] bg-primary/8 rounded-full blur-[100px] animate-pulse-soft" />
             <div className="absolute top-1/3 -right-20 w-[400px] h-[400px] bg-fuchsia-500/6 rounded-full blur-[100px] animate-pulse-soft" style={{ animationDelay: '3s' }} />
             <div className="absolute -bottom-10 left-1/3 w-[300px] h-[300px] bg-purple-500/5 rounded-full blur-[80px] animate-pulse-soft" style={{ animationDelay: '6s' }} />
-            {/* Noise texture overlay (CSS-only, lightweight) */}
-            <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '3px 3px' }} />
+            {/* Noise texture overlay */}
+            <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }} />
           </div>
 
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-24 md:pt-24 md:pb-16 flex flex-col min-h-dvh">
@@ -489,8 +489,8 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         <section className="relative py-8">
           {/* Radial gradient background behind stats grid */}
           <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.06] via-primary/[0.02] to-fuchsia-500/[0.04]" />
-          {/* Radial glow accent — GPU isolated */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-primary/[0.04] rounded-full blur-[80px] pointer-events-none will-change-transform" style={{ transform: 'translate3d(-50%,-50%,0)' }} />
+          {/* Radial glow accent */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-primary/[0.04] rounded-full blur-[80px] pointer-events-none" />
           {/* Bottom fade edge */}
           <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent z-[1]" />
           <FadeInSection className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-[2] py-4">

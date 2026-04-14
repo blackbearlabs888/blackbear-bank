@@ -708,6 +708,9 @@ html:hover::-webkit-scrollbar-thumb:hover {
 
 .hero-card-wrapper {
   animation: heroCardFloat 6s ease-in-out infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .hero-card-border {
@@ -718,6 +721,7 @@ html:hover::-webkit-scrollbar-thumb:hover {
   overflow: clip;
   min-width: 0;
   transition: transform 0.1s ease-out;
+  will-change: transform;
   background: conic-gradient(
     from var(--angle, 0deg),
     oklch(0.55 0.25 295),
