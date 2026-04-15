@@ -681,6 +681,30 @@ function TrackOrderContent() {
 
   return (
     <div className="max-w-lg mx-auto space-y-5 sm:space-y-6">
+      {/* Trust Indicators - shown when no order is being loaded */}
+      {!order && !loading && !error && (
+        <div className="grid grid-cols-3 gap-3 py-1 animate-fade-in">
+          <div className="text-center">
+            <div className="w-10 h-10 mx-auto rounded-xl bg-green-500/10 flex items-center justify-center mb-1.5">
+              <Shield className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">Aman<br/><span className="text-foreground/80">100%</span></p>
+          </div>
+          <div className="text-center">
+            <div className="w-10 h-10 mx-auto rounded-xl bg-primary/10 flex items-center justify-center mb-1.5">
+              <Zap className="w-5 h-5 text-primary" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">Cepat<br/><span className="text-foreground/80">Real-time</span></p>
+          </div>
+          <div className="text-center">
+            <div className="w-10 h-10 mx-auto rounded-xl bg-amber-500/10 flex items-center justify-center mb-1.5">
+              <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">24/7<br/><span className="text-foreground/80">Support</span></p>
+          </div>
+        </div>
+      )}
+
       {/* Search Card */}
       <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-xl shadow-primary/10">
         <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-fuchsia-500" />
@@ -1356,14 +1380,49 @@ function TrackOrderContent() {
 
 function TrackOrderSkeleton() {
   return (
-    <div className="max-w-lg mx-auto space-y-4">
+    <div className="max-w-lg mx-auto space-y-5">
+      {/* Trust indicators skeleton */}
+      <div className="grid grid-cols-3 gap-3 py-1">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="text-center">
+            <Skeleton className="w-10 h-10 mx-auto rounded-xl mb-1.5" />
+            <Skeleton className="h-4 w-12 mx-auto" />
+          </div>
+        ))}
+      </div>
+      {/* Search card skeleton */}
       <Card className="glass-card border-0 shadow-xl overflow-hidden">
         <div className="h-1 bg-gradient-to-r from-primary to-fuchsia-500" />
         <CardContent className="pt-4">
+          <Skeleton className="h-5 w-36 mb-3" />
           <div className="flex gap-2">
             <Skeleton className="h-11 flex-1 rounded-lg" />
             <Skeleton className="h-11 w-11 rounded-lg" />
           </div>
+        </CardContent>
+      </Card>
+      {/* Status card skeleton */}
+      <Card className="glass-card border-0 shadow-xl overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-amber-400 to-yellow-500" />
+        <CardContent className="p-6">
+          <div className="flex flex-col items-center gap-3">
+            <Skeleton className="w-16 h-16 rounded-2xl" />
+            <Skeleton className="h-6 w-24 rounded-full" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-12 w-full rounded-xl mt-4" />
+        </CardContent>
+      </Card>
+      {/* Details card skeleton */}
+      <Card className="glass-card border-0 shadow-xl overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-violet-500 to-fuchsia-500" />
+        <CardContent className="p-4 space-y-4">
+          <Skeleton className="h-10 w-full rounded-lg" />
+          <div className="grid grid-cols-2 gap-2">
+            <Skeleton className="h-16 rounded-lg" />
+            <Skeleton className="h-16 rounded-lg" />
+          </div>
+          <Skeleton className="h-12 w-full rounded-lg" />
         </CardContent>
       </Card>
     </div>
@@ -1376,7 +1435,7 @@ export default function TrackOrderPage() {
       <AnimatedBackground />
       
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-white/20 dark:border-white/5">
+      <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-white/20 dark:border-white/5">
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-2.5 h-14">
             <Button 
@@ -1390,7 +1449,10 @@ export default function TrackOrderPage() {
               </Link>
             </Button>
             <div className="flex-1">
-              <h1 className="font-bold text-base">Track Order</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="font-bold text-base">Track Order</h1>
+                <span className="text-sm font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent hidden sm:inline">BlackBear</span>
+              </div>
               <p className="text-[10px] text-muted-foreground">Cek status transaksi Anda</p>
             </div>
             <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20">
@@ -1399,13 +1461,31 @@ export default function TrackOrderPage() {
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="container mx-auto px-4 py-4">
+      <main className="container mx-auto px-4 py-4">
         <Suspense fallback={<TrackOrderSkeleton />}>
           <TrackOrderContent />
         </Suspense>
-      </div>
+
+        {/* Footer */}
+        <footer className="mt-8 text-center space-y-2 pb-6">
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-sm font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
+              BlackBear
+            </span>
+          </div>
+          <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+            <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
+            <Link href="/order" className="hover:text-foreground transition-colors">Order Gestun</Link>
+            <Link href="/track" className="hover:text-foreground transition-colors">Track Order</Link>
+            <Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
+          </div>
+          <p className="text-[10px] text-muted-foreground/60">
+            © {new Date().getFullYear()} BlackBear. All rights reserved.
+          </p>
+        </footer>
+      </main>
     </div>
   );
 }

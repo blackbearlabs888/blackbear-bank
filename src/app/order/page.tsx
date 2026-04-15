@@ -72,6 +72,30 @@ const banks = [
   'Panin', 'OCBC NISP', 'Jenius', 'Seabank', 'Bank Jago', 'Lainnya'
 ];
 
+// Pre-computed particle positions to avoid hydration mismatch & re-render jitter
+const particles = [
+  { left: 12, top: 8, dur: 7, delay: 0 },
+  { left: 45, top: 15, dur: 9, delay: 1.2 },
+  { left: 78, top: 22, dur: 6, delay: 2.5 },
+  { left: 23, top: 38, dur: 11, delay: 0.8 },
+  { left: 67, top: 45, dur: 8, delay: 3.1 },
+  { left: 5, top: 55, dur: 10, delay: 1.5 },
+  { left: 88, top: 60, dur: 7.5, delay: 4 },
+  { left: 34, top: 72, dur: 9.5, delay: 0.3 },
+  { left: 56, top: 80, dur: 6.5, delay: 2.8 },
+  { left: 91, top: 90, dur: 8.5, delay: 1.8 },
+  { left: 15, top: 48, dur: 12, delay: 3.5 },
+  { left: 72, top: 5, dur: 8, delay: 0.5 },
+  { left: 38, top: 62, dur: 7, delay: 2.2 },
+  { left: 82, top: 35, dur: 10, delay: 1.8 },
+  { left: 50, top: 28, dur: 9, delay: 4.2 },
+  { left: 8, top: 85, dur: 11, delay: 0.7 },
+  { left: 60, top: 55, dur: 6, delay: 3.8 },
+  { left: 95, top: 42, dur: 8, delay: 1.1 },
+  { left: 28, top: 18, dur: 10, delay: 2.9 },
+  { left: 42, top: 92, dur: 7, delay: 0.4 },
+];
+
 // Animated Background Component
 function AnimatedBackground() {
   return (
@@ -84,17 +108,17 @@ function AnimatedBackground() {
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-to-br from-pink-400/30 to-rose-400/30 dark:from-pink-600/20 dark:to-rose-600/20 rounded-full blur-3xl animate-pulse delay-1000" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-primary/10 to-fuchsia-500/10 dark:from-primary/5 dark:to-fuchsia-500/5 rounded-full blur-3xl" />
       
-      {/* Floating Particles */}
+      {/* Floating Particles (pre-computed, no Math.random) */}
       <div className="absolute inset-0 overflow-hidden">
-        {[...Array(20)].map((_, i) => (
+        {particles.map((p, i) => (
           <div
             key={i}
-            className="absolute w-2 h-2 rounded-full bg-primary/20 dark:bg-primary/10"
+            className="absolute w-2 h-2 rounded-full bg-primary/20 dark:bg-primary/10 will-change-transform"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animation: `float ${5 + Math.random() * 10}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 5}s`,
+              left: `${p.left}%`,
+              top: `${p.top}%`,
+              animation: `float ${p.dur}s ease-in-out infinite`,
+              animationDelay: `${p.delay}s`,
             }}
           />
         ))}
@@ -1356,7 +1380,7 @@ function OrderPage() {
       <AnimatedBackground />
       
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-white/20 dark:border-white/5">
+      <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-white/20 dark:border-white/5">
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-3 h-16 sm:h-20">
             <Button 
@@ -1370,7 +1394,10 @@ function OrderPage() {
               </Link>
             </Button>
             <div className="flex-1">
-              <h1 className="font-bold text-lg sm:text-xl">Order Gestun</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="font-bold text-lg sm:text-xl">Order Gestun</h1>
+                <span className="text-sm font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent hidden sm:inline">BlackBear</span>
+              </div>
               <p className="text-xs sm:text-sm text-muted-foreground">
                 {partnerInfo ? `Order via ${partnerInfo.name}` : 'Buat order tarik tunai baru'}
               </p>
@@ -1381,7 +1408,7 @@ function OrderPage() {
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
       <div className="container mx-auto px-4 py-4 sm:py-8">
         <div className="max-w-lg mx-auto space-y-4 sm:space-y-5">
@@ -1391,14 +1418,25 @@ function OrderPage() {
           {/* Panduan Gestun */}
           <GestunGuide />
 
-          {/* Quick Info */}
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-primary/5 via-purple-500/5 to-fuchsia-500/5 border border-primary/10 backdrop-blur-xl animate-fade-in">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 flex items-center justify-center shadow-lg shadow-primary/30 flex-shrink-0">
-              <Sparkles className="w-7 h-7 text-white" />
+          {/* Trust Indicators */}
+          <div className="grid grid-cols-3 gap-3 py-1 animate-fade-in">
+            <div className="text-center">
+              <div className="w-10 h-10 mx-auto rounded-xl bg-green-500/10 flex items-center justify-center mb-1.5">
+                <Shield className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+              <p className="text-[10px] font-medium text-muted-foreground">Aman<br/><span className="text-foreground/80">100%</span></p>
             </div>
-            <div>
-              <p className="font-semibold">Proses Cepat & Aman</p>
-              <p className="text-sm text-muted-foreground">Dana dikirim langsung ke rekening Anda dalam hitungan menit</p>
+            <div className="text-center">
+              <div className="w-10 h-10 mx-auto rounded-xl bg-primary/10 flex items-center justify-center mb-1.5">
+                <Zap className="w-5 h-5 text-primary" />
+              </div>
+              <p className="text-[10px] font-medium text-muted-foreground">Cepat<br/><span className="text-foreground/80">Real-time</span></p>
+            </div>
+            <div className="text-center">
+              <div className="w-10 h-10 mx-auto rounded-xl bg-amber-500/10 flex items-center justify-center mb-1.5">
+                <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <p className="text-[10px] font-medium text-muted-foreground">24/7<br/><span className="text-foreground/80">Support</span></p>
             </div>
           </div>
 
@@ -1490,6 +1528,24 @@ function OrderPage() {
               autoComplete="off"
             />
           </div>
+
+          {/* Footer */}
+          <footer className="mt-8 text-center space-y-2 pb-6">
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-sm font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
+                BlackBear
+              </span>
+            </div>
+            <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+              <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
+              <Link href="/order" className="hover:text-foreground transition-colors">Order Gestun</Link>
+              <Link href="/track" className="hover:text-foreground transition-colors">Track Order</Link>
+              <Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
+            </div>
+            <p className="text-[10px] text-muted-foreground/60">
+              © {new Date().getFullYear()} BlackBear. All rights reserved.
+            </p>
+          </footer>
         </div>
       </div>
     </div>
