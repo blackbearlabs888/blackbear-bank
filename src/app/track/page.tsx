@@ -1467,24 +1467,6 @@ export default function TrackOrderPage() {
         <Suspense fallback={<TrackOrderSkeleton />}>
           <TrackOrderContent />
         </Suspense>
-
-        {/* Footer */}
-        <footer className="mt-8 text-center space-y-2 pb-6">
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-sm font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
-              BlackBear
-            </span>
-          </div>
-          <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-            <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-            <Link href="/order" className="hover:text-foreground transition-colors">Order Gestun</Link>
-            <Link href="/track" className="hover:text-foreground transition-colors">Track Order</Link>
-            <Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
-          </div>
-          <p className="text-[10px] text-muted-foreground/60">
-            © {new Date().getFullYear()} BlackBear. All rights reserved.
-          </p>
-        </footer>
       </main>
     </div>
   );

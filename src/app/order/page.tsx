@@ -1077,7 +1077,7 @@ function SuccessScreen({ orderId }: { orderId: string }) {
           
           {/* Next Steps */}
           <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-cyan-500/5 border border-emerald-500/20 animate-fade-in">
-            <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+            <p className="text-sm font-semibold mb-3 flex items-left gap-2">
               <ClipboardList className="w-4 h-4 text-emerald-500" />
               Langkah Selanjutnya:
             </p>
@@ -1528,24 +1528,6 @@ function OrderPage() {
               autoComplete="off"
             />
           </div>
-
-          {/* Footer */}
-          <footer className="mt-8 text-center space-y-2 pb-6">
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-sm font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
-                BlackBear
-              </span>
-            </div>
-            <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-              <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-              <Link href="/order" className="hover:text-foreground transition-colors">Order Gestun</Link>
-              <Link href="/track" className="hover:text-foreground transition-colors">Track Order</Link>
-              <Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
-            </div>
-            <p className="text-[10px] text-muted-foreground/60">
-              © {new Date().getFullYear()} BlackBear. All rights reserved.
-            </p>
-          </footer>
         </div>
       </div>
     </div>
