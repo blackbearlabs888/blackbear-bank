@@ -290,12 +290,17 @@ export default function LocationManagementPage() {
   const inactiveCount = locations.filter(l => !l.isActive).length;
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
+    <div className="min-h-screen bg-background dashboard-mesh">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">SEO</span>
+          </div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Manajemen Lokasi</h1>
-          <p className="text-sm text-muted-foreground">Kelola halaman lokasi untuk SEO</p>
+          <p className="text-xs text-muted-foreground">Kelola halaman lokasi untuk SEO</p>
         </div>
         <div className="flex items-center gap-2">
           <Button 
@@ -320,7 +325,7 @@ export default function LocationManagementPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="glass-card">
+        <Card className="rounded-xl dash-card overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -333,7 +338,7 @@ export default function LocationManagementPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card">
+        <Card className="rounded-xl dash-card overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-green-500/10">
@@ -346,7 +351,7 @@ export default function LocationManagementPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card">
+        <Card className="rounded-xl dash-card overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-muted">
@@ -359,7 +364,7 @@ export default function LocationManagementPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card">
+        <Card className="rounded-xl dash-card overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-500/10">
@@ -604,6 +609,7 @@ export default function LocationManagementPage() {
               <Switch
                 checked={formData.isActive}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
+                size="md"
               />
             </div>
           </div>
@@ -641,13 +647,15 @@ export default function LocationManagementPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 }
 
 function LocationSkeleton() {
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4">
+    <div className="min-h-screen bg-background dashboard-mesh">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
       <Skeleton className="h-10 w-48" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
@@ -656,6 +664,7 @@ function LocationSkeleton() {
       </div>
       <Skeleton className="h-16" />
       <Skeleton className="h-64" />
+      </div>
     </div>
   );
 }

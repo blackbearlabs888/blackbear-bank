@@ -288,7 +288,7 @@ export default function PartnerSettingsPage() {
 
   if (isLoading || !hasHydrated) {
     return (
-      <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
+      <div className="container mx-auto px-4 py-4 sm:px-6 sm:py-6 space-y-4 pb-20 md:pb-6 max-w-4xl">
         <Skeleton className="h-10 w-32" />
         <Skeleton className="h-32 rounded-xl" />
         <div className="space-y-3">
@@ -305,16 +305,21 @@ export default function PartnerSettingsPage() {
   const progressPercent = Math.min(((partner?.totalProfit || 0) / (partner?.target || 1)) * 100, 100);
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
-      {/* Header */}
+    <div className="min-h-screen bg-background dashboard-mesh">
+  <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+      {/* ── Page Header ── */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold">Pengaturan</h1>
-        <p className="text-sm text-muted-foreground">Kelola profil & preferensi</p>
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+          <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Pengaturan</span>
+        </div>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Pengaturan</h1>
+        <p className="text-xs text-muted-foreground">Kelola profil & preferensi</p>
       </div>
 
-      {/* Profile Card */}
-      <Card className="glass-card overflow-hidden">
-        <div className="h-1 gradient-primary" />
+      {/* ── Profile Card ── */}
+      <Card className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
+        <div className="h-1 bg-primary" />
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <div className="relative group">
@@ -322,11 +327,11 @@ export default function PartnerSettingsPage() {
                 <img 
                   src={user.avatar} 
                   alt={`${user.name}'s avatar`}
-                  className="w-16 h-16 rounded-2xl object-cover shadow-lg"
+                  className="w-16 h-16 rounded-2xl object-cover"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center shadow-lg">
-                  <span className="text-white font-bold text-2xl">
+                <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center">
+                  <span className="text-primary-foreground font-bold text-2xl">
                     {user?.name?.charAt(0).toUpperCase()}
                   </span>
                 </div>
@@ -342,20 +347,20 @@ export default function PartnerSettingsPage() {
               <p className="font-semibold truncate">{user?.name}</p>
               <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
               <div className="flex items-center gap-2 mt-1">
-                <Badge className="gradient-primary text-white text-xs">{partner?.tier}</Badge>
+                <Badge className="bg-primary text-primary-foreground text-xs">{partner?.tier}</Badge>
                 <Badge variant="outline" className="text-xs">{partner?.commission}% Komisi</Badge>
               </div>
             </div>
           </div>
 
           {/* Target Progress */}
-          <div className="mt-4 pt-4 border-t">
+          <div className="mt-4 pt-4 border-t border-border/60">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-primary" />
+                <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span className="text-sm font-medium">Progress Target</span>
               </div>
-              <span className="text-sm font-bold">{progressPercent.toFixed(0)}%</span>
+              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{progressPercent.toFixed(0)}%</span>
             </div>
             <Progress value={progressPercent} className="h-2" />
             <div className="flex justify-between mt-2 text-xs text-muted-foreground">
@@ -366,35 +371,39 @@ export default function PartnerSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Account Info - Read Only */}
-      <Card className="glass-card">
+      {/* ── Section: Account Info ── */}
+      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">Informasi Akun</p>
+
+      <Card className="rounded-xl border border-border/60 shadow-none bg-card">
         <CardContent className="p-4 space-y-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <AlertCircle className="w-4 h-4" />
+          <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+            <AlertCircle className="w-3.5 h-3.5" />
             <span>Email dan nama tidak dapat diubah</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs text-muted-foreground">Email</Label>
-              <p className="font-medium truncate">{user?.email}</p>
+              <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Email</Label>
+              <p className="font-medium truncate mt-0.5">{user?.email}</p>
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Nama</Label>
-              <p className="font-medium truncate">{user?.name}</p>
+              <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Nama</Label>
+              <p className="font-medium truncate mt-0.5">{user?.name}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Settings List */}
-      <div className="space-y-2">
+      {/* ── Section: Settings ── */}
+      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">Pengaturan</p>
+
+      <div className="space-y-3">
         {/* Password */}
-        <Card className="glass-card tap-highlight active-scale cursor-pointer" onClick={() => setPasswordOpen(true)}>
+        <Card className="rounded-xl border border-border/60 shadow-none bg-card tap-highlight active-scale cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setPasswordOpen(true)}>
           <CardContent className="p-0">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                  <Lock className="w-5 h-5 text-red-600" />
+                <div className="w-9 h-9 rounded-lg bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center">
+                  <Lock className="w-4 h-4 text-red-600 dark:text-red-400" />
                 </div>
                 <div>
                   <p className="font-medium text-sm">Ubah Password</p>
@@ -407,12 +416,12 @@ export default function PartnerSettingsPage() {
         </Card>
 
         {/* Avatar */}
-        <Card className="glass-card tap-highlight active-scale cursor-pointer" onClick={() => setAvatarOpen(true)}>
+        <Card className="rounded-xl border border-border/60 shadow-none bg-card tap-highlight active-scale cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setAvatarOpen(true)}>
           <CardContent className="p-0">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <ImageIcon className="w-5 h-5 text-purple-600" />
+                <div className="w-9 h-9 rounded-lg bg-violet-500/10 dark:bg-violet-500/20 flex items-center justify-center">
+                  <ImageIcon className="w-4 h-4 text-violet-600 dark:text-violet-400" />
                 </div>
                 <div>
                   <p className="font-medium text-sm">Ganti Avatar</p>
@@ -425,12 +434,12 @@ export default function PartnerSettingsPage() {
         </Card>
 
         {/* Location */}
-        <Card className="glass-card tap-highlight active-scale cursor-pointer" onClick={() => setLocationOpen(true)}>
+        <Card className="rounded-xl border border-border/60 shadow-none bg-card tap-highlight active-scale cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setLocationOpen(true)}>
           <CardContent className="p-0">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-blue-600" />
+                <div className="w-9 h-9 rounded-lg bg-amber-500/10 dark:bg-amber-500/20 flex items-center justify-center">
+                  <MapPin className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
                   <p className="font-medium text-sm">Ganti Lokasi</p>
@@ -443,12 +452,12 @@ export default function PartnerSettingsPage() {
         </Card>
 
         {/* Bank Info */}
-        <Card className="glass-card tap-highlight active-scale cursor-pointer" onClick={() => setBankOpen(true)}>
+        <Card className="rounded-xl border border-border/60 shadow-none bg-card tap-highlight active-scale cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setBankOpen(true)}>
           <CardContent className="p-0">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-green-600" />
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center">
+                  <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
                   <p className="font-medium text-sm">Info Bank</p>
@@ -461,12 +470,12 @@ export default function PartnerSettingsPage() {
         </Card>
 
         {/* Appearance */}
-        <Card className="glass-card">
+        <Card className="rounded-xl border border-border/60 shadow-none bg-card">
           <CardContent className="p-0">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
-                  <Moon className="w-5 h-5" />
+                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                  <Moon className="w-4 h-4" />
                 </div>
                 <div>
                   <p className="font-medium text-sm">Mode Gelap</p>
@@ -476,21 +485,25 @@ export default function PartnerSettingsPage() {
               <Switch
                 checked={theme === 'dark'}
                 onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                size="md"
               />
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* ── Section: Account ── */}
+      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">Akun</p>
+
       {/* Logout */}
-      <Card className="glass-card border-destructive/20">
+      <Card className="rounded-xl border border-destructive/20 shadow-none bg-card">
         <CardContent className="p-0">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 p-4 text-destructive tap-highlight active-scale"
+            className="w-full flex items-center gap-3 p-4 text-destructive tap-highlight active-scale hover:bg-destructive/5 transition-colors"
           >
-            <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center">
-              <LogOut className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-destructive/10 flex items-center justify-center">
+              <LogOut className="w-4 h-4" />
             </div>
             <div className="text-left">
               <p className="font-medium text-sm">Keluar</p>
@@ -505,28 +518,28 @@ export default function PartnerSettingsPage() {
         Black Bear v1.0.0
       </p>
 
-      {/* Password Change Dialog */}
+      {/* ── Password Change Dialog ── */}
       <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Lock className="w-5 h-5 text-primary" />
+              <Lock className="w-5 h-5 text-red-600 dark:text-red-400" />
               Ubah Password
             </DialogTitle>
             <DialogDescription>
               Masukkan password lama dan password baru
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="space-y-2">
-              <Label>Password Saat Ini</Label>
+              <Label className="text-xs">Password Saat Ini</Label>
               <div className="relative">
                 <Input
                   type={showPasswords ? 'text' : 'password'}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="Masukkan password saat ini"
-                  className="pr-10 rounded-xl"
+                  className="pr-10 h-9 text-xs rounded-lg"
                 />
                 <Button
                   type="button"
@@ -540,35 +553,35 @@ export default function PartnerSettingsPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Password Baru</Label>
+              <Label className="text-xs">Password Baru</Label>
               <Input
                 type={showPasswords ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Min. 6 karakter"
-                className="rounded-xl"
+                className="h-9 text-xs rounded-lg"
               />
             </div>
             <div className="space-y-2">
-              <Label>Konfirmasi Password</Label>
+              <Label className="text-xs">Konfirmasi Password</Label>
               <Input
                 type={showPasswords ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Ulangi password baru"
-                className="rounded-xl"
+                className="h-9 text-xs rounded-lg"
               />
             </div>
             <div className="flex gap-3">
               <Button 
                 variant="outline" 
                 onClick={() => setPasswordOpen(false)} 
-                className="flex-1 rounded-xl"
+                className="flex-1 rounded-lg h-9 text-xs font-medium"
               >
                 Batal
               </Button>
               <Button 
-                className="flex-1 gradient-primary text-white rounded-xl"
+                className="flex-1 rounded-xl h-10 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={handlePasswordChange}
                 disabled={passwordLoading}
               >
@@ -584,19 +597,19 @@ export default function PartnerSettingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Avatar Change Dialog */}
+      {/* ── Avatar Change Dialog ── */}
       <Dialog open={avatarOpen} onOpenChange={setAvatarOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ImageIcon className="w-5 h-5 text-primary" />
+              <ImageIcon className="w-5 h-5 text-violet-600 dark:text-violet-400" />
               Ganti Avatar
             </DialogTitle>
             <DialogDescription>
               Masukkan URL gambar untuk avatar Anda
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Preview */}
             <div className="flex justify-center">
               <div className="w-24 h-24 rounded-2xl overflow-hidden bg-muted flex items-center justify-center">
@@ -616,12 +629,12 @@ export default function PartnerSettingsPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>URL Gambar</Label>
+              <Label className="text-xs">URL Gambar</Label>
               <Input
                 value={avatarUrl}
                 onChange={(e) => setAvatarUrl(e.target.value)}
                 placeholder="https://example.com/avatar.jpg"
-                className="rounded-xl"
+                className="h-9 text-xs rounded-lg"
               />
               <p className="text-xs text-muted-foreground">
                 Gunakan URL gambar dari Google Drive, Imgur, atau hosting lainnya
@@ -631,12 +644,12 @@ export default function PartnerSettingsPage() {
               <Button 
                 variant="outline" 
                 onClick={() => setAvatarOpen(false)} 
-                className="flex-1 rounded-xl"
+                className="flex-1 rounded-lg h-9 text-xs font-medium"
               >
                 Batal
               </Button>
               <Button 
-                className="flex-1 gradient-primary text-white rounded-xl"
+                className="flex-1 rounded-xl h-10 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={handleAvatarChange}
                 disabled={avatarLoading}
               >
@@ -652,38 +665,38 @@ export default function PartnerSettingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Location Change Dialog */}
+      {/* ── Location Change Dialog ── */}
       <Dialog open={locationOpen} onOpenChange={setLocationOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-primary" />
+              <MapPin className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               Ganti Lokasi
             </DialogTitle>
             <DialogDescription>
               Perbarui kota atau lokasi Anda
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="space-y-2">
-              <Label>Kota / Lokasi</Label>
+              <Label className="text-xs">Kota / Lokasi</Label>
               <CitySearch
                 value={city}
                 onChange={(value) => setCity(value)}
                 placeholder="Cari kota..."
-                className="rounded-xl"
+                className="h-9 text-xs rounded-lg"
               />
             </div>
             <div className="flex gap-3">
               <Button 
                 variant="outline" 
                 onClick={() => setLocationOpen(false)} 
-                className="flex-1 rounded-xl"
+                className="flex-1 rounded-lg h-9 text-xs font-medium"
               >
                 Batal
               </Button>
               <Button 
-                className="flex-1 gradient-primary text-white rounded-xl"
+                className="flex-1 rounded-xl h-10 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={handleLocationChange}
                 disabled={locationLoading}
               >
@@ -699,21 +712,21 @@ export default function PartnerSettingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Bank Change Dialog */}
+      {/* ── Bank Change Dialog ── */}
       <Dialog open={bankOpen} onOpenChange={setBankOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-primary" />
+              <Building2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               Info Bank Pencairan
             </DialogTitle>
             <DialogDescription>
               Rekening untuk pencairan komisi
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="space-y-2">
-              <Label>Nama Bank</Label>
+              <Label className="text-xs">Nama Bank</Label>
               {selectedBank === 'Lainnya' ? (
                 <div className="flex gap-2">
                   <div className="flex-1">
@@ -721,14 +734,14 @@ export default function PartnerSettingsPage() {
                       value={customBankName}
                       onChange={(e) => setCustomBankName(e.target.value)}
                       placeholder="Masukkan nama bank"
-                      className="rounded-xl"
+                      className="h-9 text-xs rounded-lg"
                     />
                   </div>
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="h-10 w-10 shrink-0 rounded-xl"
+                    className="h-9 w-9 shrink-0 rounded-lg"
                     onClick={() => {
                       setSelectedBank('');
                       setCustomBankName('');
@@ -747,7 +760,7 @@ export default function PartnerSettingsPage() {
                     }
                   }}
                 >
-                  <SelectTrigger className="rounded-xl">
+                  <SelectTrigger className="h-9 text-xs rounded-lg">
                     <SelectValue placeholder="Pilih bank" />
                   </SelectTrigger>
                   <SelectContent>
@@ -759,33 +772,33 @@ export default function PartnerSettingsPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label>Nomor Rekening</Label>
+              <Label className="text-xs">Nomor Rekening</Label>
               <Input
                 value={bankAccount}
                 onChange={(e) => setBankAccount(e.target.value)}
                 placeholder="1234567890"
-                className="rounded-xl"
+                className="h-9 text-xs rounded-lg"
               />
             </div>
             <div className="space-y-2">
-              <Label>Nama Pemilik Rekening</Label>
+              <Label className="text-xs">Nama Pemilik Rekening</Label>
               <Input
                 value={bankHolder}
                 onChange={(e) => setBankHolder(e.target.value)}
                 placeholder="Nama sesuai rekening"
-                className="rounded-xl"
+                className="h-9 text-xs rounded-lg"
               />
             </div>
             <div className="flex gap-3">
               <Button 
                 variant="outline" 
                 onClick={() => setBankOpen(false)} 
-                className="flex-1 rounded-xl"
+                className="flex-1 rounded-lg h-9 text-xs font-medium"
               >
                 Batal
               </Button>
               <Button 
-                className="flex-1 gradient-primary text-white rounded-xl"
+                className="flex-1 rounded-xl h-10 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={handleBankChange}
                 disabled={bankLoading}
               >
@@ -800,6 +813,7 @@ export default function PartnerSettingsPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+  </div>
+</div>
   );
 }

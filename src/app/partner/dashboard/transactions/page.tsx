@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -78,11 +78,11 @@ interface Marketplace {
 }
 
 const STATUS_CONFIG = {
-  pending: { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', icon: Clock, iconColor: 'text-orange-600', gradient: 'from-orange-500 to-amber-600' },
-  verification: { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: AlertCircle, iconColor: 'text-blue-600', gradient: 'from-blue-500 to-indigo-600' },
-  process: { color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400', icon: Loader2, iconColor: 'text-cyan-600', gradient: 'from-cyan-500 to-teal-600' },
-  success: { color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: ArrowUp, iconColor: 'text-green-600', gradient: 'from-green-500 to-emerald-600' },
-  failed: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: ArrowDown, iconColor: 'text-red-600', gradient: 'from-red-500 to-rose-600' },
+  pending: { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', icon: Clock, iconColor: 'text-orange-600', barColor: 'bg-orange-500', dotColor: 'bg-orange-500' },
+  verification: { color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400', icon: AlertCircle, iconColor: 'text-violet-600', barColor: 'bg-violet-500', dotColor: 'bg-violet-500' },
+  process: { color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400', icon: Loader2, iconColor: 'text-cyan-600', barColor: 'bg-cyan-500', dotColor: 'bg-cyan-500' },
+  success: { color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', icon: ArrowUp, iconColor: 'text-emerald-600', barColor: 'bg-emerald-500', dotColor: 'bg-emerald-500' },
+  failed: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: ArrowDown, iconColor: 'text-red-600', barColor: 'bg-red-500', dotColor: 'bg-red-500' },
 };
 
 const BANK_LIST = [
@@ -195,7 +195,7 @@ export default function PartnerTransactionsPage() {
 
     // Status distribution for pie chart
     const statusData = [
-      { name: 'Sukses', value: successCount, color: '#22c55e' },
+      { name: 'Sukses', value: successCount, color: '#10b981' },
       { name: 'Pending', value: pendingCount, color: '#f97316' },
       { name: 'Proses', value: processCount, color: '#06b6d4' },
       { name: 'Gagal', value: failedCount, color: '#ef4444' },
@@ -218,121 +218,130 @@ export default function PartnerTransactionsPage() {
   if (!isAuthenticated || user?.role !== 'partner') return null;
 
   return (
-    <div className="container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3 pb-20 md:pb-4">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2">
+    <div className="min-h-screen bg-background dashboard-mesh">
+  <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+      {/* Page Header */}
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-base sm:text-lg font-bold flex items-center gap-2">
-            <ArrowRightLeft className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
-            <span className="truncate">Transaksi Saya</span>
-          </h1>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">Riwayat transaksi partner</p>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Transaksi</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Transaksi Saya</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-xs text-muted-foreground">Riwayat transaksi partner</p>
+            {lastUpdated && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                {isRefreshing ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                )}
+              </div>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Button
             onClick={() => setNewTxOpen(true)}
             size="sm"
-            className="h-8 sm:h-9 rounded-lg gap-1 sm:gap-1.5"
+            className="bg-primary text-primary-foreground rounded-lg h-9 px-4 font-medium hover:bg-primary/90"
           >
-            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Plus className="w-4 h-4 mr-1.5" />
             <span className="hidden sm:inline">Tambah</span>
           </Button>
           <Button
             onClick={() => fetchTransactions()}
             size="sm"
-            variant="outline"
-            className="h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-lg"
+            variant="ghost"
+            className="h-9 w-9 p-0 rounded-lg"
             disabled={isRefreshing}
           >
-            <RefreshCw className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", isRefreshing && "animate-spin")} />
+            <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
           </Button>
         </div>
       </div>
 
-      {/* Stats Overview - Same Style as Customer Page */}
+      {/* Stats Overview */}
       {!loading && transactions.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-          <Card className="glass-card">
-            <CardContent className="p-2 sm:p-3">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[9px] sm:text-xs text-muted-foreground">Trx</p>
-                  <p className="text-sm sm:text-lg font-bold">{analytics.totalTransactions}</p>
-                </div>
+          <div className="rounded-lg bg-muted/30 border border-border p-3 sm:p-3.5 transition-colors hover:bg-muted/50">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-primary/15 flex items-center justify-center">
+                <ShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary" />
               </div>
-            </CardContent>
-          </Card>
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Trx</span>
+            </div>
+            <p className="text-sm sm:text-lg font-bold text-foreground tracking-tight">{analytics.totalTransactions}</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground">Total transaksi</span>
+            </div>
+          </div>
 
-          <Card className="glass-card">
-            <CardContent className="p-2 sm:p-3">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
-                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[9px] sm:text-xs text-muted-foreground">Profit</p>
-                  <p className="text-[11px] sm:text-sm font-bold truncate">{formatCurrency(analytics.totalProfit)}</p>
-                </div>
+          <div className="rounded-lg bg-muted/30 border border-border p-3 sm:p-3.5 transition-colors hover:bg-muted/50">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-emerald-500/15 flex items-center justify-center">
+                <DollarSign className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 dark:text-emerald-400" />
               </div>
-            </CardContent>
-          </Card>
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Profit</span>
+            </div>
+            <p className="text-sm sm:text-lg font-bold text-foreground tracking-tight truncate">{formatCurrency(analytics.totalProfit)}</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground">Total profit</span>
+            </div>
+          </div>
 
-          <Card className="glass-card">
-            <CardContent className="p-2 sm:p-3">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[9px] sm:text-xs text-muted-foreground">Volume</p>
-                  <p className="text-[11px] sm:text-sm font-bold truncate">{formatCurrency(analytics.totalVolume)}</p>
-                </div>
+          <div className="rounded-lg bg-muted/30 border border-border p-3 sm:p-3.5 transition-colors hover:bg-muted/50">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-violet-500/15 flex items-center justify-center">
+                <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-violet-600 dark:text-violet-400" />
               </div>
-            </CardContent>
-          </Card>
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Volume</span>
+            </div>
+            <p className="text-sm sm:text-lg font-bold text-foreground tracking-tight truncate">{formatCurrency(analytics.totalVolume)}</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground">Total volume</span>
+            </div>
+          </div>
 
-          <Card className={cn(
-            "glass-card",
+          <div className={cn(
+            "rounded-lg bg-muted/30 border border-border p-3 sm:p-3.5 transition-colors hover:bg-muted/50",
             analytics.pendingCount > 0 && "ring-2 ring-orange-300 dark:ring-orange-700"
           )}>
-            <CardContent className="p-2 sm:p-3">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className={cn(
-                  "w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0",
-                  analytics.pendingCount > 0 
-                    ? "bg-orange-100 dark:bg-orange-900/30" 
-                    : "bg-muted"
-                )}>
-                  <Clock className={cn(
-                    "w-4 h-4 sm:w-5 sm:h-5",
-                    analytics.pendingCount > 0 ? "text-orange-600" : "text-muted-foreground"
-                  )} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[9px] sm:text-xs text-muted-foreground">Pending</p>
-                  <p className="text-sm sm:text-lg font-bold">{analytics.pendingCount}</p>
-                </div>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <div className={cn(
+                "w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center",
+                analytics.pendingCount > 0 
+                  ? "bg-amber-500/15" 
+                  : "bg-muted"
+              )}>
+                <Clock className={cn(
+                  "w-3 h-3 sm:w-3.5 sm:h-3.5",
+                  analytics.pendingCount > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
+                )} />
               </div>
-            </CardContent>
-          </Card>
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Pending</span>
+            </div>
+            <p className="text-sm sm:text-lg font-bold text-foreground tracking-tight">{analytics.pendingCount}</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground">Menunggu proses</span>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Charts Section - Mobile Optimized */}
+      {/* Charts Section */}
       {!loading && transactions.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {/* Volume Chart */}
-          <Card className="glass-card">
-            <CardHeader className="pb-1 sm:pb-2 pt-3 sm:pt-4 px-3 sm:px-4">
-              <CardTitle className="text-xs sm:text-sm flex items-center gap-2">
+          <div className="rounded-xl dash-card overflow-hidden">
+            <div className="px-3 pt-3 sm:px-4 sm:pt-4">
+              <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-foreground">
                 <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                 Volume 7 Hari
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-2 sm:px-4 pb-3 sm:pb-4">
+              </h3>
+            </div>
+            <div className="px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4 sm:pt-2">
               <ResponsiveContainer width="100%" height={120}>
                 <AreaChart data={analytics.chartData}>
                   <defs>
@@ -341,17 +350,17 @@ export default function PartnerTransactionsPage() {
                       <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis 
                     dataKey="dayName" 
-                    tick={{ fontSize: 9 }} 
-                    stroke="#9ca3af" 
+                    tick={{ fontSize: 9, fill: 'var(--muted-foreground)' }} 
+                    stroke="var(--border)" 
                     tickLine={false}
                     axisLine={false}
                   />
                   <YAxis 
-                    tick={{ fontSize: 9 }} 
-                    stroke="#9ca3af" 
+                    tick={{ fontSize: 9, fill: 'var(--muted-foreground)' }} 
+                    stroke="var(--border)" 
                     width={30}
                     tickLine={false}
                     axisLine={false}
@@ -364,7 +373,7 @@ export default function PartnerTransactionsPage() {
                   <Tooltip 
                     formatter={(value: number) => formatCurrency(value)}
                     labelStyle={{ fontSize: 10 }}
-                    contentStyle={{ fontSize: 9, borderRadius: 6, border: '1px solid #e5e7eb' }}
+                    contentStyle={{ fontSize: 9, borderRadius: 6, backgroundColor: 'var(--popover)', color: 'var(--popover-foreground)', border: '1px solid var(--border)' }}
                   />
                   <Area 
                     type="monotone" 
@@ -376,18 +385,18 @@ export default function PartnerTransactionsPage() {
                   />
                 </AreaChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Status Distribution */}
-          <Card className="glass-card">
-            <CardHeader className="pb-1 sm:pb-2 pt-3 sm:pt-4 px-3 sm:px-4">
-              <CardTitle className="text-xs sm:text-sm flex items-center gap-2">
+          <div className="rounded-xl dash-card overflow-hidden">
+            <div className="px-3 pt-3 sm:px-4 sm:pt-4">
+              <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-foreground">
                 <PieChart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                 Status Transaksi
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4">
+              </h3>
+            </div>
+            <div className="px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4 sm:pt-2">
               <div className="flex items-center gap-3 sm:gap-4">
                 {/* Pie Chart */}
                 <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
@@ -411,24 +420,24 @@ export default function PartnerTransactionsPage() {
                 </div>
                 
                 {/* Legend */}
-                <div className="flex-1 space-y-1.5 sm:space-y-2">
+                <div className="flex-1 space-y-2">
                   {analytics.statusData.map((item) => (
                     <div key={item.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 sm:gap-2">
+                      <div className="flex items-center gap-2">
                         <div 
-                          className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full flex-shrink-0" 
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
                           style={{ backgroundColor: item.color }} 
                         />
-                        <span className="text-[10px] sm:text-xs text-muted-foreground">{item.name}</span>
+                        <span className="text-xs text-muted-foreground">{item.name}</span>
                       </div>
-                      <span className="text-[10px] sm:text-xs font-bold">{item.value}</span>
+                      <span className="text-xs font-bold">{item.value}</span>
                     </div>
                   ))}
                 </div>
               </div>
               
               {/* Progress Bar */}
-              <div className="h-2 sm:h-2.5 rounded-full overflow-hidden flex bg-muted mt-3">
+              <div className="h-2.5 rounded-full overflow-hidden flex bg-muted mt-3">
                 {analytics.statusData.map((item) => (
                   <div 
                     key={item.name}
@@ -440,68 +449,76 @@ export default function PartnerTransactionsPage() {
                   />
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Status Filter Pills */}
-      <div className="overflow-x-auto -mx-3 px-3 scrollbar-hide">
-        <div className="flex gap-1.5 min-w-max pb-1">
-          {[
-            { value: 'all', label: 'Semua' },
-            { value: 'pending', label: 'Pending', color: 'orange' },
-            { value: 'verification', label: 'Verif', color: 'blue' },
-            { value: 'process', label: 'Proses', color: 'cyan' },
-            { value: 'success', label: 'Sukses', color: 'green' },
-            { value: 'failed', label: 'Gagal', color: 'red' },
-          ].map(tab => (
-            <button
-              key={tab.value}
-              onClick={() => setActiveTab(tab.value)}
-              className={cn(
-                "px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-all whitespace-nowrap",
-                activeTab === tab.value
-                  ? cn(
-                      tab.color === 'orange' && "bg-orange-500 text-white shadow-sm",
-                      tab.color === 'blue' && "bg-blue-500 text-white shadow-sm",
-                      tab.color === 'cyan' && "bg-cyan-500 text-white shadow-sm",
-                      tab.color === 'green' && "bg-green-500 text-white shadow-sm",
-                      tab.color === 'red' && "bg-red-500 text-white shadow-sm",
-                      !tab.color && "bg-primary text-primary-foreground shadow-sm"
-                    )
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      {/* Status Filter Tabs */}
+      <div className="flex gap-1.5 overflow-x-auto hide-scrollbar -mx-1 px-1">
+        {[
+          { value: 'all', label: 'Semua' },
+          { value: 'pending', label: 'Pending', color: 'bg-orange-500' },
+          { value: 'verification', label: 'Verif', color: 'bg-violet-500' },
+          { value: 'process', label: 'Proses', color: 'bg-cyan-500' },
+          { value: 'success', label: 'Sukses', color: 'bg-emerald-500' },
+          { value: 'failed', label: 'Gagal', color: 'bg-red-500' },
+        ].map(tab => (
+          <button
+            key={tab.value}
+            onClick={() => setActiveTab(tab.value)}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap flex-shrink-0',
+              activeTab === tab.value
+                ? tab.color
+                  ? cn(tab.color, 'text-white shadow-sm')
+                  : 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           placeholder="Cari order ID, nama, no. WA..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 sm:pl-10 h-9 sm:h-10 rounded-xl text-sm"
+          className="pl-10 h-10 rounded-xl text-sm bg-muted/40 border-border/60 focus-visible:bg-background"
         />
       </div>
 
       {/* Transaction List */}
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {loading ? (
-          [...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 sm:h-20 rounded-xl" />)
+          [...Array(5)].map((_, i) => (
+            <div key={i} className="rounded-xl border bg-card overflow-hidden">
+              <div className="flex items-center gap-3 p-3.5">
+                <Skeleton className="w-3 h-14 rounded-full flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-3 w-48" />
+                </div>
+                <Skeleton className="h-4 w-16" />
+              </div>
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ))
         ) : filtered.length > 0 ? (
           filtered.map(tx => (
             <TxCard key={tx.id} tx={tx} onClick={() => { setSelectedTransaction(tx); setDetailOpen(true); }} />
           ))
         ) : (
-          <div className="text-center py-12">
-            <Wallet className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
-            <p className="text-xs sm:text-sm text-muted-foreground">Tidak ada transaksi</p>
+          <div className="text-center py-16">
+            <div className="w-12 h-12 rounded-full bg-muted/60 flex items-center justify-center mx-auto mb-3">
+              <Wallet className="w-6 h-6 text-muted-foreground/50" />
+            </div>
+            <p className="text-sm text-muted-foreground">Tidak ada transaksi</p>
           </div>
         )}
       </div>
@@ -533,7 +550,8 @@ export default function PartnerTransactionsPage() {
         tx={selectedTransaction}
         onUpdate={fetchTransactions}
       />
-    </div>
+  </div>
+</div>
   );
 }
 
@@ -648,182 +666,186 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Sparkles className="w-4 h-4 text-primary" />
-            Transaksi Baru
-          </DialogTitle>
-          <DialogDescription className="text-xs">Buat transaksi dengan kalkulasi real-time</DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden">
+        <div className="overflow-y-auto max-h-[85vh]">
+          <div className="p-4 sm:p-5 space-y-4">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <Sparkles className="w-4 h-4 text-primary" />
+                Transaksi Baru
+              </DialogTitle>
+              <DialogDescription className="text-xs">Buat transaksi dengan kalkulasi real-time</DialogDescription>
+            </DialogHeader>
 
-        <form onSubmit={submit} className="space-y-3">
-          {/* Customer */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs">Customer</Label>
-              <div className="flex gap-1">
-                <Button type="button" variant={!isNewCust ? 'default' : 'outline'} size="sm" className="h-6 text-[10px] px-2" onClick={() => { setIsNewCust(false); setSelectedCust(null); }}>Existing</Button>
-                <Button type="button" variant={isNewCust ? 'default' : 'outline'} size="sm" className="h-6 text-[10px] px-2" onClick={() => { setIsNewCust(true); setSelectedCust(null); }}>Baru</Button>
-              </div>
-            </div>
-            {isNewCust ? (
-              <div className="space-y-2">
-                <div className="grid grid-cols-3 gap-2">
-                  <Input placeholder="Nama" value={form.customerName} onChange={e => setForm(p => ({ ...p, customerName: e.target.value }))} required className="h-8 text-xs" />
-                  <Input placeholder="WA" value={form.customerPhone} onChange={e => setForm(p => ({ ...p, customerPhone: e.target.value }))} required className="h-8 text-xs" />
-                  <CitySearch value={form.customerCity} onChange={(value) => setForm(p => ({ ...p, customerCity: value }))} placeholder="Kota" className="h-8" />
-                </div>
-                {/* Bank Account Fields */}
-                <div className="p-2 bg-muted/50 rounded-lg space-y-2">
-                  <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                    <Building2 className="w-3 h-3" /> Rekening (Opsional)
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Select
-                      value={form.customerBankName}
-                      onValueChange={(value) => {
-                        setForm(p => ({ ...p, customerBankName: value }));
-                        if (value !== 'Lainnya') setCustomBankName('');
-                      }}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Pilih Bank" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {BANK_LIST.map((bank) => (
-                          <SelectItem key={bank} value={bank} className="text-xs">{bank}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input placeholder="No. Rekening" value={form.customerBankAccount} onChange={e => setForm(p => ({ ...p, customerBankAccount: e.target.value }))} className="h-8 text-xs" />
-                  </div>
-                  {form.customerBankName === 'Lainnya' && (
-                    <Input placeholder="Ketik Nama Bank" value={customBankName} onChange={e => setCustomBankName(e.target.value)} className="h-8 text-xs" />
-                  )}
-                  <Input placeholder="Atas Nama" value={form.customerBankHolder} onChange={e => setForm(p => ({ ...p, customerBankHolder: e.target.value }))} className="h-8 text-xs" />
-                </div>
-              </div>
-            ) : selectedCust ? (
-              <div className="p-2 bg-muted rounded-lg space-y-2">
+            <form onSubmit={submit} className="space-y-4">
+              {/* Customer */}
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium">{selectedCust.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{selectedCust.phone}</p>
+                  <Label className="text-xs font-medium">Customer</Label>
+                  <div className="flex gap-1">
+                    <Button type="button" variant={!isNewCust ? 'default' : 'outline'} size="sm" className="rounded-lg h-8 text-xs font-medium px-3" onClick={() => { setIsNewCust(false); setSelectedCust(null); }}>Existing</Button>
+                    <Button type="button" variant={isNewCust ? 'default' : 'outline'} size="sm" className="rounded-lg h-8 text-xs font-medium px-3" onClick={() => { setIsNewCust(true); setSelectedCust(null); }}>Baru</Button>
                   </div>
-                  <Button type="button" variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => { setSelectedCust(null); setForm(p => ({ ...p, customerId: '' })); }}>Ganti</Button>
                 </div>
-                {selectedCust.bankName && selectedCust.bankAccount && (
-                  <div className="flex items-center gap-2 p-2 bg-background rounded-md border">
-                    <Building2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] text-muted-foreground">{selectedCust.bankName}</p>
-                      <div className="flex items-center gap-1">
-                        <p className="text-xs font-mono font-medium truncate">{selectedCust.bankAccount}</p>
-                        <button type="button" onClick={() => { navigator.clipboard.writeText(selectedCust.bankAccount || ''); toast.success('No. rekening disalin'); }} className="p-0.5 hover:bg-muted rounded">
-                          <Copy className="w-3 h-3 text-muted-foreground" />
-                        </button>
+                {isNewCust ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-3">
+                      <Input placeholder="Nama" value={form.customerName} onChange={e => setForm(p => ({ ...p, customerName: e.target.value }))} required className="h-9 text-xs rounded-lg" />
+                      <Input placeholder="WA" value={form.customerPhone} onChange={e => setForm(p => ({ ...p, customerPhone: e.target.value }))} required className="h-9 text-xs rounded-lg" />
+                      <CitySearch value={form.customerCity} onChange={(value) => setForm(p => ({ ...p, customerCity: value }))} placeholder="Kota" className="h-9" />
+                    </div>
+                    {/* Bank Account Fields */}
+                    <div className="p-3 bg-muted/30 rounded-xl space-y-3 border border-border/60">
+                      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <Building2 className="w-3 h-3" /> Rekening (Opsional)
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Select
+                          value={form.customerBankName}
+                          onValueChange={(value) => {
+                            setForm(p => ({ ...p, customerBankName: value }));
+                            if (value !== 'Lainnya') setCustomBankName('');
+                          }}
+                        >
+                          <SelectTrigger className="h-9 text-xs rounded-lg">
+                            <SelectValue placeholder="Pilih Bank" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {BANK_LIST.map((bank) => (
+                              <SelectItem key={bank} value={bank} className="text-xs">{bank}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input placeholder="No. Rekening" value={form.customerBankAccount} onChange={e => setForm(p => ({ ...p, customerBankAccount: e.target.value }))} className="h-9 text-xs rounded-lg" />
                       </div>
-                      {selectedCust.bankHolder && <p className="text-[10px] text-muted-foreground">a.n. {selectedCust.bankHolder}</p>}
+                      {form.customerBankName === 'Lainnya' && (
+                        <Input placeholder="Ketik Nama Bank" value={customBankName} onChange={e => setCustomBankName(e.target.value)} className="h-9 text-xs rounded-lg" />
+                      )}
+                      <Input placeholder="Atas Nama" value={form.customerBankHolder} onChange={e => setForm(p => ({ ...p, customerBankHolder: e.target.value }))} className="h-9 text-xs rounded-lg" />
                     </div>
+                  </div>
+                ) : selectedCust ? (
+                  <div className="p-3 bg-muted/30 rounded-xl space-y-2 border border-border/60">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-semibold">{selectedCust.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{selectedCust.phone}</p>
+                      </div>
+                      <Button type="button" variant="ghost" size="sm" className="rounded-lg h-8 text-xs font-medium" onClick={() => { setSelectedCust(null); setForm(p => ({ ...p, customerId: '' })); }}>Ganti</Button>
+                    </div>
+                    {selectedCust.bankName && selectedCust.bankAccount && (
+                      <div className="flex items-center gap-2 p-2 bg-background rounded-lg border">
+                        <Building2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] text-muted-foreground">{selectedCust.bankName}</p>
+                          <div className="flex items-center gap-1">
+                            <p className="text-xs font-mono font-medium truncate">{selectedCust.bankAccount}</p>
+                            <button type="button" onClick={() => { navigator.clipboard.writeText(selectedCust.bankAccount || ''); toast.success('No. rekening disalin'); }} className="p-0.5 hover:bg-muted/30 rounded transition-colors">
+                              <Copy className="w-3 h-3 text-muted-foreground" />
+                            </button>
+                          </div>
+                          {selectedCust.bankHolder && <p className="text-[10px] text-muted-foreground">a.n. {selectedCust.bankHolder}</p>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <Input placeholder="Cari nama/WA..." value={searchCust} onChange={e => setSearchCust(e.target.value)} className="h-9 text-xs rounded-lg" />
+                    {customers.length > 0 && searchCust && (
+                      <div className="absolute top-full left-0 right-0 bg-background border rounded-lg shadow-lg z-10 mt-1 max-h-32 overflow-y-auto">
+                        {customers.map(c => (
+                          <button key={c.id} type="button" className="w-full text-left p-2 hover:bg-muted/30 text-xs transition-colors" onClick={() => { setSelectedCust(c); setForm(p => ({ ...p, customerId: c.id })); setSearchCust(''); setCustomers([]); }}>
+                            {c.name} <span className="text-muted-foreground">({c.phone})</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="relative">
-                <Input placeholder="Cari nama/WA..." value={searchCust} onChange={e => setSearchCust(e.target.value)} className="h-8 text-xs" />
-                {customers.length > 0 && searchCust && (
-                  <div className="absolute top-full left-0 right-0 bg-background border rounded-lg shadow-lg z-10 mt-1 max-h-32 overflow-y-auto">
-                    {customers.map(c => (
-                      <button key={c.id} type="button" className="w-full text-left p-2 hover:bg-muted text-xs" onClick={() => { setSelectedCust(c); setForm(p => ({ ...p, customerId: c.id })); setSearchCust(''); setCustomers([]); }}>
-                        {c.name} <span className="text-muted-foreground">({c.phone})</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+
+              <Separator />
+
+              {/* Nominal & Payment */}
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Nominal</Label><Input type="number" value={form.nominal} onChange={e => setForm(p => ({ ...p, nominal: e.target.value }))} required className="h-9 text-xs rounded-lg" /></div>
+                <div><Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Payment Type</Label><Select value={form.paymentTypeId} onValueChange={v => setForm(p => ({ ...p, paymentTypeId: v }))}><SelectTrigger className="h-9 text-xs rounded-lg"><SelectValue placeholder="Pilih" /></SelectTrigger><SelectContent>{paymentTypes.map(pt => <SelectItem key={pt.id} value={pt.id} className="text-xs">{pt.name}</SelectItem>)}</SelectContent></Select></div>
               </div>
-            )}
-          </div>
 
-          <Separator />
+              <div>
+                <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Metode</Label>
+                <Select value={form.methodTransaction} onValueChange={v => setForm(p => ({ ...p, methodTransaction: v }))}>
+                  <SelectTrigger className="h-9 text-xs rounded-lg"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Online">Online</SelectItem>
+                    <SelectItem value="COD">COD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* Nominal & Payment */}
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label className="text-[10px]">Nominal</Label><Input type="number" value={form.nominal} onChange={e => setForm(p => ({ ...p, nominal: e.target.value }))} required className="h-8 text-xs" /></div>
-            <div><Label className="text-[10px]">Payment Type</Label><Select value={form.paymentTypeId} onValueChange={v => setForm(p => ({ ...p, paymentTypeId: v }))}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pilih" /></SelectTrigger><SelectContent>{paymentTypes.map(pt => <SelectItem key={pt.id} value={pt.id} className="text-xs">{pt.name}</SelectItem>)}</SelectContent></Select></div>
-          </div>
-
-          <div>
-            <Label className="text-[10px]">Metode</Label>
-            <Select value={form.methodTransaction} onValueChange={v => setForm(p => ({ ...p, methodTransaction: v }))}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Online">Online</SelectItem>
-                <SelectItem value="COD">COD</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Calculation */}
-          {calc && form.nominal && (
-            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-              <CardContent className="p-3 space-y-2">
-                <div className="flex items-center gap-1.5 text-[10px] font-medium text-primary">
-                  <Calculator className="w-3 h-3" /> Kalkulasi Real-time
-                </div>
-                
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Nominal:</span>
-                    <span className="font-medium">{formatCurrency(parseFloat(form.nominal))}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Fee ({calc.feePercent}%):</span>
-                    <span className="text-red-600">{calc.hasDiscount ? <><s className="text-muted-foreground/50 mr-0.5">{formatCurrency(calc.originalFee)}</s>{formatCurrency(calc.paymentFee)}</> : `-${formatCurrency(calc.paymentFee)}`}</span>
-                  </div>
-                </div>
-                
-                {calc.hasDiscount && (
-                  <div className="flex items-center justify-between text-[10px] p-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded border border-emerald-200 dark:border-emerald-800">
-                    <div className="flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-emerald-600" />
-                      <span className="text-emerald-700 dark:text-emerald-400">Diskon {calc.appliedDiscountPercent.toFixed(1)}%</span>
+              {/* Calculation */}
+              {calc && form.nominal && (
+                <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-1.5 text-[10px] font-medium text-primary uppercase tracking-wider">
+                      <Calculator className="w-3 h-3" /> Kalkulasi Real-time
                     </div>
-                    <span className="text-emerald-600 font-medium">-{formatCurrency(calc.discountAmount)}</span>
-                  </div>
-                )}
-                
-                {!calc.meetsMin && calc.ptMinTransaction > 0 && (
-                  <div className="text-[9px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                    <Info className="w-2.5 h-2.5" />
-                    Min. {formatCurrency(calc.ptMinTransaction)} untuk diskon
-                  </div>
-                )}
-                
-                <Separator className="my-1" />
-                
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Diterima Customer:</span>
-                  <span className="font-bold text-primary">{formatCurrency(calc.totalReceived)}</span>
-                </div>
-                
-                <div className="flex justify-between text-xs p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                  <div className="flex items-center gap-1">
-                    <Wallet className="w-3.5 h-3.5 text-green-600" />
-                    <span className="font-medium text-green-700 dark:text-green-400">Profit Anda:</span>
-                  </div>
-                  <span className="font-bold text-green-600">+{formatCurrency(calc.partnerProfit)}</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Nominal:</span>
+                        <span className="font-medium">{formatCurrency(parseFloat(form.nominal))}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Fee ({calc.feePercent}%):</span>
+                        <span className="text-red-600 dark:text-red-400">{calc.hasDiscount ? <><s className="text-muted-foreground/50 mr-0.5">{formatCurrency(calc.originalFee)}</s>{formatCurrency(calc.paymentFee)}</> : `-${formatCurrency(calc.paymentFee)}`}</span>
+                      </div>
+                    </div>
+                    
+                    {calc.hasDiscount && (
+                      <div className="flex items-center justify-between text-[10px] p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                        <div className="flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-emerald-700 dark:text-emerald-400">Diskon {calc.appliedDiscountPercent.toFixed(1)}%</span>
+                        </div>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">-{formatCurrency(calc.discountAmount)}</span>
+                      </div>
+                    )}
+                    
+                    {!calc.meetsMin && calc.ptMinTransaction > 0 && (
+                      <div className="text-[9px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                        <Info className="w-2.5 h-2.5" />
+                        Min. {formatCurrency(calc.ptMinTransaction)} untuk diskon
+                      </div>
+                    )}
+                    
+                    <Separator className="my-1" />
+                    
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Diterima Customer:</span>
+                      <span className="font-bold text-primary">{formatCurrency(calc.totalReceived)}</span>
+                    </div>
+                    
+                    <div className="flex justify-between text-xs p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex items-center gap-1.5">
+                        <Wallet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <span className="font-medium text-emerald-700 dark:text-emerald-400">Profit Anda:</span>
+                      </div>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">+{formatCurrency(calc.partnerProfit)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
-          <DialogFooter>
-            <Button type="submit" className="w-full gradient-primary text-white h-9" disabled={loading || (!isNewCust && !selectedCust) || !form.nominal || !form.paymentTypeId}>
-              {loading ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Proses...</> : <><CheckCircle className="w-3 h-3 mr-1" /> Buat Transaksi</>}
-            </Button>
-          </DialogFooter>
-        </form>
+              <DialogFooter>
+                <Button type="submit" className="w-full bg-primary text-primary-foreground rounded-xl h-10 text-xs font-semibold hover:bg-primary/90" disabled={loading || (!isNewCust && !selectedCust) || !form.nominal || !form.paymentTypeId}>
+                  {loading ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Proses...</> : <><CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Buat Transaksi</>}
+                </Button>
+              </DialogFooter>
+            </form>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -832,35 +854,55 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
 // Transaction Card
 function TxCard({ tx, onClick }: { tx: Transaction; onClick: () => void }) {
   const config = STATUS_CONFIG[tx.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
-  const Icon = config.icon;
 
   return (
-    <Card className="glass-card overflow-hidden active-scale cursor-pointer hover:shadow-md transition-all tap-highlight" onClick={onClick}>
+    <Card
+      className="rounded-xl border bg-card shadow-none overflow-hidden cursor-pointer transition-shadow hover:shadow-md"
+      onClick={onClick}
+    >
       <CardContent className="p-0">
-        <div className="flex items-center gap-2 p-2 sm:gap-2.5 sm:p-2.5">
-          <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center bg-gradient-to-br flex-shrink-0", config.gradient)}>
-            <Icon className={cn("w-4 h-4 sm:w-5 sm:h-5 text-white", tx.status === 'process' && "animate-spin")} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-1">
-              <p className="font-mono text-[9px] sm:text-[10px] text-muted-foreground truncate">{tx.orderId}</p>
-              <Badge className={cn("text-[8px] sm:text-[9px] capitalize px-1.5 sm:px-2", config.color)}>{tx.status}</Badge>
+        <div className="flex items-stretch">
+          {/* Left accent bar */}
+          <div className={cn('w-[3px] flex-shrink-0 rounded-l-xl', config.barColor)} />
+
+          <div className="flex-1 min-w-0 p-3 sm:p-3.5">
+            {/* Top row: order ID + status badge */}
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <p className="font-mono text-[11px] sm:text-xs text-muted-foreground truncate">{tx.orderId}</p>
+              <Badge className={cn("text-[9px] sm:text-[10px] capitalize px-2 py-0.5 rounded-full", config.color)}>
+                {tx.status}
+              </Badge>
             </div>
-            <p className="text-[11px] sm:text-xs font-medium truncate">{tx.customer?.name}</p>
-            <div className="flex items-center justify-between gap-1 mt-0.5">
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{tx.paymentType?.name} â¢ {tx.methodTransaction}</p>
-              <p className="text-[10px] sm:text-xs font-bold text-primary flex-shrink-0">+{formatCurrency(tx.partnerProfit)}</p>
+
+            {/* Customer name */}
+            <p className="text-sm font-semibold truncate mb-1.5">{tx.customer?.name}</p>
+
+            {/* Bottom: payment type + partner profit */}
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground truncate">
+                {tx.paymentType?.name} · {tx.methodTransaction}
+              </p>
+              <p className="text-sm font-bold text-primary flex-shrink-0 tabular-nums bg-primary/5 px-2 py-0.5 rounded-md">
+                +{formatCurrency(tx.partnerProfit)}
+              </p>
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-between px-2 sm:px-2.5 py-1.5 bg-muted/30 border-t text-[9px] sm:text-[10px]">
-          <span className="text-muted-foreground truncate">{formatCurrency(tx.nominal)} â¢ {formatDate(tx.createdAt)}</span>
-          {tx.marketplace && (
-            <Badge variant="outline" className="text-[8px] sm:text-[9px] h-3.5 sm:h-4 px-1 flex items-center gap-0.5">
-              <Store className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
-              <span className="truncate max-w-[50px] sm:max-w-none">{tx.marketplace.name}</span>
-            </Badge>
-          )}
+
+        {/* Footer bar */}
+        <div className="flex items-center justify-between px-3 sm:px-3.5 py-2 bg-muted/30 border-t border-border/60 text-[10px] sm:text-[11px]">
+          <span className="text-muted-foreground truncate flex items-center gap-1.5">
+            <span className="font-semibold text-foreground/70 bg-muted/60 px-1.5 py-0.5 rounded">{formatCurrency(tx.nominal)}</span>
+            <span className="bg-muted/60 px-1.5 py-0.5 rounded">{formatDate(tx.createdAt)}</span>
+          </span>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {tx.marketplace && (
+              <Badge variant="outline" className="text-[9px] h-4 px-1.5 flex items-center gap-0.5 rounded-md">
+                <Store className="w-2.5 h-2.5" />
+                <span className="truncate max-w-[50px] sm:max-w-none">{tx.marketplace.name}</span>
+              </Badge>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -936,7 +978,7 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nominal: newNominal,
-          sendNotification: true, // Always send notification when partner changes nominal
+          sendNotification: true,
         }),
       });
       const data = await res.json();
@@ -985,33 +1027,31 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
   };
 
   return (
-    <div className="p-4 space-y-3">
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between -mx-4 -mt-4 mb-0 px-4 py-2.5 pr-12 bg-card border-b">
+    <div className="p-4 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between -mx-4 -mt-4 mb-0 px-4 py-2.5 pr-14 bg-card border-b">
         <div className="flex items-center gap-2">
           <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium capitalize", config.color)}>
             <StatusIcon className={cn("w-3 h-3", tx.status === 'process' && "animate-spin")} />
             {tx.status}
           </span>
         </div>
-        <div className="text-right">
-          <div className="flex items-center justify-end gap-1">
-            <p className="text-[10px] font-mono text-muted-foreground truncate max-w-[120px]">{tx.orderId}</p>
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText(tx.orderId);
-                toast.success('Order ID disalin');
-              }}
-              className="p-1 hover:bg-muted rounded transition-colors"
-            >
-              <Copy className="w-3 h-3 text-muted-foreground" />
-            </button>
-          </div>
+        <div className="flex items-center gap-1 min-w-0">
+          <p className="text-[10px] font-mono text-muted-foreground truncate max-w-[120px]">{tx.orderId}</p>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(tx.orderId);
+              toast.success('Order ID disalin');
+            }}
+            className="p-1 hover:bg-muted/30 rounded transition-colors shrink-0"
+          >
+            <Copy className="w-3 h-3 text-muted-foreground" />
+          </button>
         </div>
       </div>
 
-      {/* ── 1. Financial Card ── */}
+      {/* 1. Financial Card */}
       <div className="rounded-xl bg-slate-900 text-white p-4 space-y-3">
         {/* Nominal */}
         <div>
@@ -1022,8 +1062,8 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
                 type="button"
                 onClick={() => setEditNominal(!editNominal)}
                 className={cn(
-                  "p-1 rounded-md transition-colors",
-                  editNominal ? "bg-muted text-foreground" : "hover:bg-muted text-muted-foreground"
+                  "p-1 rounded-lg transition-colors",
+                  editNominal ? "bg-muted text-foreground" : "hover:bg-muted/30 text-muted-foreground"
                 )}
                 title={editNominal ? 'Batal edit' : 'Edit nominal'}
               >
@@ -1043,7 +1083,7 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
                 type="number"
                 value={nominal}
                 onChange={(e) => setNominal(e.target.value)}
-                className="h-9 text-sm font-bold bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:ring-white/30"
+                className="h-10 text-sm font-bold bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:ring-white/30 rounded-xl"
                 placeholder="Masukkan nominal"
               />
               <p className="text-[11px] text-muted-foreground">
@@ -1066,12 +1106,12 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
         <div className="text-[11px] text-muted-foreground space-y-1">
           <div className="flex justify-between">
             <span>Fee</span>
-            <span className="text-red-400">-{formatCurrency(previewCalc?.paymentFee ?? tx.paymentFee)}</span>
+            <span className="text-red-400 dark:text-red-400">-{formatCurrency(previewCalc?.paymentFee ?? tx.paymentFee)}</span>
           </div>
           {(previewCalc?.platformFee ?? tx.platformFee) > 0 && (
             <div className="flex justify-between">
               <span>Platform</span>
-              <span className="text-red-400">-{formatCurrency(previewCalc?.platformFee ?? tx.platformFee)}</span>
+              <span className="text-red-400 dark:text-red-400">-{formatCurrency(previewCalc?.platformFee ?? tx.platformFee)}</span>
             </div>
           )}
         </div>
@@ -1083,11 +1123,19 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
         <div className="flex items-end justify-between">
           <div>
             <p className="text-[11px] text-muted-foreground mb-0.5">Profit Anda</p>
-            <p className="text-lg font-bold text-emerald-400">+{formatCurrency(previewCalc?.partnerProfit ?? tx.partnerProfit)}</p>
+            <p className="text-lg font-bold text-emerald-400 dark:text-emerald-400">+{formatCurrency(previewCalc?.partnerProfit ?? tx.partnerProfit)}</p>
           </div>
           {previewCalc && (
             <span className="text-[11px] text-emerald-400/70 bg-emerald-400/10 px-2 py-0.5 rounded-full">Preview</span>
           )}
+        </div>
+
+        {/* Dana Diterima Customer */}
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-[11px] text-muted-foreground mb-0.5">Dana Diterima Customer</p>
+            <p className="text-base font-bold text-cyan-400 dark:text-cyan-400">{formatCurrency(previewCalc?.totalReceived ?? tx.totalReceived)}</p>
+          </div>
         </div>
 
         {/* Save button inside card */}
@@ -1095,7 +1143,7 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
           <Button
             onClick={handleSaveNominal}
             disabled={saving || !nominal || parseFloat(nominal) <= 0 || parseFloat(nominal) === tx.nominal}
-            className="w-full h-9 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium gap-1.5 mt-1"
+            className="w-full h-9 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium gap-1.5 mt-1 rounded-lg"
           >
             {saving ? (
               <>
@@ -1112,7 +1160,7 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
         )}
       </div>
 
-      {/* ── 2. Transaction Info ── */}
+      {/* 2. Transaction Info */}
       <div className="space-y-1">
         {/* Customer */}
         <div className="flex items-start gap-2.5 py-1.5">
@@ -1129,7 +1177,7 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
                     navigator.clipboard.writeText(tx.customer?.phone || '');
                     toast.success('No. WA disalin');
                   }}
-                  className="p-1.5 hover:bg-muted rounded-md transition-colors"
+                  className="p-1.5 hover:bg-muted/30 rounded-lg transition-colors"
                 >
                   <Copy className="w-3.5 h-3.5 text-muted-foreground" />
                 </button>
@@ -1137,9 +1185,9 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
                   href={`https://wa.me/${tx.customer?.phone?.replace(/^0/, '62')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-1.5 hover:bg-muted rounded-md transition-colors"
+                  className="p-1.5 hover:bg-muted/30 rounded-lg transition-colors"
                 >
-                  <MessageSquare className="w-3.5 h-3.5 text-green-600" />
+                  <MessageSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 </a>
               </div>
             </div>
@@ -1171,7 +1219,7 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
                     navigator.clipboard.writeText(tx.customer.bankAccount || '');
                     toast.success('Disalin');
                   }}
-                  className="p-1.5 hover:bg-muted rounded-md transition-colors"
+                  className="p-1.5 hover:bg-muted/30 rounded-lg transition-colors"
                 >
                   <Copy className="w-3 h-3 text-muted-foreground" />
                 </button>
@@ -1188,7 +1236,7 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
               <p className="text-[11px] text-muted-foreground">Marketplace</p>
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold">{tx.marketplace.name}</p>
-                <span className="text-xs text-red-500 font-medium">-{formatCurrency(tx.platformFee)}</span>
+                <span className="text-xs text-red-500 dark:text-red-400 font-medium">-{formatCurrency(tx.platformFee)}</span>
               </div>
             </div>
           </div>
@@ -1218,19 +1266,19 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
         </div>
       </div>
 
-      {/* ── 3. Message to Owner (compact) ── */}
+      {/* 3. Message to Owner */}
       <div className="flex items-center gap-2">
         <Input
           placeholder="Kirim pesan ke Owner..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          className="h-9 text-xs flex-1"
+          className="h-10 text-xs flex-1 rounded-xl"
         />
         <Button
           onClick={handleSendMessage}
           disabled={sendingMessage || !message.trim()}
           size="sm"
-          className="h-9 w-9 p-0 flex-shrink-0"
+          className="rounded-lg h-10 w-10 p-0 flex-shrink-0"
         >
           {sendingMessage ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -1249,11 +1297,13 @@ function TxDetailDialog({ open, onOpenChange, tx, onUpdate }: { open: boolean; o
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 gap-0">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Detail Transaksi {tx.orderId}</DialogTitle>
-        </DialogHeader>
-        <TxDetailDialogContent key={tx.id} tx={tx} onUpdate={onUpdate} />
+      <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden">
+        <div className="overflow-y-auto max-h-[85vh]">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Detail Transaksi {tx.orderId}</DialogTitle>
+          </DialogHeader>
+          <TxDetailDialogContent key={tx.id} tx={tx} onUpdate={onUpdate} />
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -1262,13 +1312,32 @@ function TxDetailDialog({ open, onOpenChange, tx, onUpdate }: { open: boolean; o
 // Loading State
 function LoadingState() {
   return (
-    <div className="container mx-auto px-3 py-4 space-y-3 pb-20">
-      <Skeleton className="h-8 w-32" />
-      <div className="flex gap-1.5">
-        {[1,2,3,4].map(i => <Skeleton key={i} className="h-7 w-16 rounded-full" />)}
+    <div className="container mx-auto px-4 py-4 sm:px-6 sm:py-6 space-y-4 pb-20 md:pb-6 max-w-4xl">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <Skeleton className="h-7 w-32" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-9 rounded-lg" />
+          <Skeleton className="h-9 w-20 rounded-lg" />
+        </div>
       </div>
       <Skeleton className="h-10 rounded-xl" />
-      <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
+      <div className="space-y-2.5">{[1, 2, 3].map(i => (
+        <div key={i} className="rounded-xl border bg-card overflow-hidden">
+          <div className="flex items-center gap-3 p-3.5">
+            <Skeleton className="w-3 h-14 rounded-full flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+            <Skeleton className="h-4 w-16" />
+          </div>
+          <Skeleton className="h-8 w-full" />
+        </div>
+      ))}</div>
     </div>
   );
 }

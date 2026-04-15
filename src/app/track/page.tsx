@@ -145,6 +145,20 @@ const statusConfig = {
 
 const ratingLabels = ['', 'Sangat Buruk', 'Buruk', 'Biasa', 'Bagus', 'Sangat Bagus'];
 
+// Pre-computed particle positions to avoid hydration mismatch & re-render jitter
+const particles = [
+  { left: 12, top: 8, dur: 7, delay: 0 },
+  { left: 45, top: 15, dur: 9, delay: 1.2 },
+  { left: 78, top: 22, dur: 6, delay: 2.5 },
+  { left: 23, top: 38, dur: 11, delay: 0.8 },
+  { left: 67, top: 45, dur: 8, delay: 3.1 },
+  { left: 5, top: 55, dur: 10, delay: 1.5 },
+  { left: 88, top: 60, dur: 7.5, delay: 4 },
+  { left: 34, top: 72, dur: 9.5, delay: 0.3 },
+  { left: 56, top: 80, dur: 6.5, delay: 2.8 },
+  { left: 91, top: 90, dur: 8.5, delay: 1.8 },
+];
+
 // Animated Background Component
 function AnimatedBackground() {
   return (
@@ -157,17 +171,17 @@ function AnimatedBackground() {
       <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-gradient-to-br from-pink-400/30 to-rose-400/30 dark:from-pink-600/20 dark:to-rose-600/20 rounded-full blur-3xl animate-pulse delay-1000" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-primary/10 to-fuchsia-500/10 dark:from-primary/5 dark:to-fuchsia-500/5 rounded-full blur-3xl" />
       
-      {/* Floating Particles */}
+      {/* Floating Particles (pre-computed, no Math.random) */}
       <div className="absolute inset-0 overflow-hidden">
-        {[...Array(20)].map((_, i) => (
+        {particles.map((p, i) => (
           <div
             key={i}
-            className="absolute w-2 h-2 rounded-full bg-primary/20 dark:bg-primary/10"
+            className="absolute w-2 h-2 rounded-full bg-primary/20 dark:bg-primary/10 will-change-transform"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animation: `float ${5 + Math.random() * 10}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 5}s`,
+              left: `${p.left}%`,
+              top: `${p.top}%`,
+              animation: `float ${p.dur}s ease-in-out infinite`,
+              animationDelay: `${p.delay}s`,
             }}
           />
         ))}
@@ -521,8 +535,9 @@ function TrackOrderContent() {
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState<'waiting' | 'payment' | null>(null);
+  const [modalType, setModalType] = useState<'waiting' | 'payment' | 'review' | null>(null);
   const modalShownRef = useRef<string | null>(null);
+  const testimonialSectionRef = useRef<HTMLDivElement>(null);
 
   // Auto-fill from URL param
   useEffect(() => {
@@ -542,6 +557,26 @@ function TrackOrderContent() {
       setShowTestimonialForm(false);
     }
   }, [order]);
+
+  // Auto-show review popup after testimonial check completes (success + no testimonial)
+  useEffect(() => {
+    if (!order || order.status !== 'success') return;
+    if (checkingTestimonial) return; // wait for check to finish
+
+    const reviewModalKey = `${order.orderId}-review-popup`;
+    if (modalShownRef.current === reviewModalKey) return;
+
+    if (!testimonial) {
+      // No testimonial submitted yet → show review reminder popup
+      modalShownRef.current = reviewModalKey;
+      // Small delay so the page renders first
+      const timer = setTimeout(() => {
+        setModalType('review');
+        setShowModal(true);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [order, checkingTestimonial, testimonial]);
 
   // Auto-show modal based on order status (only once per order load)
   useEffect(() => {
@@ -595,6 +630,7 @@ function TrackOrderContent() {
     setShowModal(false);
     setModalType(null);
     modalShownRef.current = null;
+    testimonialSectionRef.current = null;
 
     try {
       const response = await fetch(`/api/orders/track?orderId=${searchId}`);
@@ -625,6 +661,13 @@ function TrackOrderContent() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const scrollToTestimonial = () => {
+    setShowTestimonialForm(true);
+    setTimeout(() => {
+      testimonialSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const handleTestimonialSubmit = (newTestimonial: TestimonialData) => {
@@ -961,7 +1004,7 @@ function TrackOrderContent() {
 
           {/* Testimonial Section - Only for SUCCESS status */}
           {order.status === 'success' && (
-            <>
+            <div ref={testimonialSectionRef}>
               {/* Loading testimonial check */}
               {checkingTestimonial && (
                 <Card className="glass-card overflow-hidden border-0 shadow-xl">
@@ -1020,7 +1063,7 @@ function TrackOrderContent() {
               {!checkingTestimonial && testimonial && (
                 <TestimonialSubmitted testimonial={testimonial} />
               )}
-            </>
+            </div>
           )}
 
           {/* Action Buttons */}
@@ -1129,8 +1172,93 @@ function TrackOrderContent() {
         </Dialog>
       )}
 
-      {/* Case B: Payment Modal — verification + has transactionLink */}
-      {order && showModal && modalType === 'payment' && (
+      {/* Case C: Review Reminder Modal — success + no testimonial */}
+      {order && showModal && modalType === 'review' && (
+        <Dialog open={showModal} onOpenChange={(open) => { if (!open) setShowModal(false); }}>
+          <DialogContent
+            className="glass-card sm:max-w-md border-0 shadow-2xl p-0 overflow-hidden"
+            modal={true}
+            onPointerDownOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => e.preventDefault()}
+          >
+            {/* Gradient header */}
+            <div className="bg-gradient-to-br from-green-400 to-emerald-500 px-6 pt-6 pb-4">
+              <DialogHeader className="text-left">
+                <div className="relative w-14 h-14 mb-3">
+                  <div className="absolute inset-0 rounded-2xl bg-white/20 blur-md animate-pulse" />
+                  <div className="relative w-14 h-14 rounded-2xl bg-white/30 backdrop-blur-sm flex items-center justify-center">
+                    <CheckCircle2 className="w-8 h-8 text-white" />
+                  </div>
+                </div>
+                <DialogTitle className="text-xl font-bold text-white">
+                  Transaksi Berhasil!
+                </DialogTitle>
+                <DialogDescription className="text-green-100 text-sm mt-1">
+                  Terima kasih telah bertransaksi bersama kami
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {/* Stars decoration */}
+              <div className="flex justify-center gap-1">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Star key={i} className="w-6 h-6 text-amber-400 fill-amber-400" />
+                ))}
+              </div>
+
+              {/* Content */}
+              <div className="space-y-3">
+                <div className="flex gap-3 p-3 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-200/50 dark:border-green-800/30">
+                  <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-muted-foreground">
+                    Transaksi <span className="font-semibold font-mono text-foreground">{order.orderId}</span> telah berhasil diselesaikan dan dana telah dikirim.
+                  </p>
+                </div>
+                <div className="flex gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30">
+                  <Sparkles className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-muted-foreground">
+                    Bagaimana pengalaman Anda? Tulis ulasan atau testimoni di bawah untuk membantu kami meningkatkan layanan.
+                  </p>
+                </div>
+              </div>
+
+              {/* Success amount summary */}
+              <div className="p-3 rounded-xl bg-gradient-to-r from-primary/10 via-purple-500/10 to-fuchsia-500/10 border border-primary/20">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Total Diterima</span>
+                  <span className="text-lg font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
+                    {formatCurrency(order.totalReceived)}
+                  </span>
+                </div>
+              </div>
+
+              <DialogFooter className="flex-col gap-2 pt-2 sm:flex-col">
+                <Button
+                  onClick={() => {
+                    setShowModal(false);
+                    scrollToTestimonial();
+                  }}
+                  className="w-full h-11 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-md shadow-amber-500/20"
+                >
+                  <Star className="w-4 h-4 mr-2 fill-white" />
+                  Tulis Ulasan Sekarang
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowModal(false)}
+                  className="w-full h-10 rounded-lg"
+                >
+                  Nanti Saja
+                </Button>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Case A: Waiting Modal — pending + no transactionLink */}
+      {order && showModal && modalType === 'waiting' && (
         <Dialog open={showModal} onOpenChange={(open) => { if (!open) setShowModal(false); }}>
           <DialogContent className="glass-card sm:max-w-md border-0 shadow-2xl p-0 overflow-hidden">
             {/* Gradient header */}

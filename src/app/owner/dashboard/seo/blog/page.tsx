@@ -332,68 +332,73 @@ export default function BlogManagementPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
-      {/* Header */}
+    <div className="min-h-screen bg-background dashboard-mesh">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+      {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Manajemen Blog</h1>
-          <p className="text-sm text-muted-foreground">Kelola artikel dan konten blog</p>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">SEO</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Manajemen Blog</h1>
+          <p className="text-xs text-muted-foreground">Kelola artikel dan konten blog</p>
         </div>
-        <Button onClick={openCreateDialog} className="gradient-primary text-white rounded-xl">
+        <Button onClick={openCreateDialog} className="bg-primary text-primary-foreground rounded-xl h-10 text-xs font-semibold hover:bg-primary/90">
           <Plus className="w-4 h-4 mr-2" />
           Tambah Artikel
         </Button>
       </div>
 
-      {/* Stats Cards */}
+      {/* ── Stats Cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="glass-card">
+        <Card className="rounded-xl dash-card overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <FileText className="w-4 h-4 text-primary" />
+              <div className="p-2 rounded-lg bg-primary/10 dark:bg-primary/20">
+                <FileText className="w-4 h-4 text-primary dark:text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Total</p>
                 <p className="text-lg font-bold">{pagination.total}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card">
+        <Card className="rounded-xl dash-card overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <Eye className="w-4 h-4 text-green-600" />
+              <div className="p-2 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20">
+                <Eye className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Published</p>
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Published</p>
                 <p className="text-lg font-bold">{posts.filter(p => p.isPublished).length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card">
+        <Card className="rounded-xl dash-card overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/10">
-                <FileText className="w-4 h-4 text-amber-600" />
+              <div className="p-2 rounded-lg bg-amber-500/10 dark:bg-amber-500/20">
+                <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Draft</p>
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Draft</p>
                 <p className="text-lg font-bold">{posts.filter(p => !p.isPublished).length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card">
+        <Card className="rounded-xl dash-card overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Eye className="w-4 h-4 text-blue-600" />
+              <div className="p-2 rounded-lg bg-violet-500/10 dark:bg-violet-500/20">
+                <Eye className="w-4 h-4 text-violet-600 dark:text-violet-400" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Total Views</p>
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Total Views</p>
                 <p className="text-lg font-bold">{posts.reduce((acc, p) => acc + p.viewCount, 0)}</p>
               </div>
             </div>
@@ -401,8 +406,8 @@ export default function BlogManagementPage() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card className="glass-card">
+      {/* ── Filters ── */}
+      <Card className="rounded-xl dash-card overflow-hidden">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -411,11 +416,11 @@ export default function BlogManagementPage() {
                 placeholder="Cari judul atau slug..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-9 text-xs rounded-lg"
               />
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full sm:w-[150px]">
+              <SelectTrigger className="w-full sm:w-[150px] h-9 text-xs rounded-lg">
                 <Filter className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Kategori" />
               </SelectTrigger>
@@ -427,7 +432,7 @@ export default function BlogManagementPage() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[150px]">
+              <SelectTrigger className="w-full sm:w-[150px] h-9 text-xs rounded-lg">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -440,11 +445,11 @@ export default function BlogManagementPage() {
         </CardContent>
       </Card>
 
-      {/* Posts List */}
-      <Card className="glass-card">
+      {/* ── Posts List ── */}
+      <Card className="rounded-xl dash-card overflow-hidden">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Daftar Artikel</CardTitle>
-          <CardDescription className="text-xs">
+          <CardDescription className="text-xs text-muted-foreground">
             {filteredPosts.length} artikel ditemukan
           </CardDescription>
         </CardHeader>
@@ -466,7 +471,7 @@ export default function BlogManagementPage() {
               {filteredPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="p-4 hover:bg-muted/50 transition-colors"
+                  className="p-4 hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex items-start gap-3">
                     {/* Featured Image Thumbnail */}
@@ -478,7 +483,7 @@ export default function BlogManagementPage() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-purple-500/10">
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-violet-500/10 dark:from-primary/20 dark:to-violet-500/20">
                           <FileText className="w-6 h-6 text-muted-foreground/40" />
                         </div>
                       )}
@@ -489,13 +494,13 @@ export default function BlogManagementPage() {
                         <Badge
                           variant={post.isPublished ? 'default' : 'secondary'}
                           className={cn(
-                            "text-[10px]",
-                            post.isPublished && "bg-green-500/10 text-green-600 hover:bg-green-500/20"
+                            "text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full",
+                            post.isPublished && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"
                           )}
                         >
                           {post.isPublished ? 'Published' : 'Draft'}
                         </Badge>
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline" className="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full">
                           {CATEGORY_OPTIONS.find(c => c.value === post.category)?.label || post.category}
                         </Badge>
                       </div>
@@ -528,7 +533,7 @@ export default function BlogManagementPage() {
                           setPreviewPost(post);
                           setShowPreviewDialog(true);
                         }}
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                         title="Preview"
                       >
                         <ScanEye className="w-4 h-4" />
@@ -537,7 +542,7 @@ export default function BlogManagementPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => openEditDialog(post)}
-                        className="h-8 w-8"
+                        className="h-8 w-8 rounded-lg hover:bg-muted/30 transition-colors"
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -548,7 +553,7 @@ export default function BlogManagementPage() {
                           setDeletingPost(post);
                           setShowDeleteDialog(true);
                         }}
-                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        className="h-8 w-8 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -561,82 +566,86 @@ export default function BlogManagementPage() {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
+      {/* ── Create/Edit Dialog ── */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-0">
             <DialogTitle>{editingPost ? 'Edit Artikel' : 'Tambah Artikel Baru'}</DialogTitle>
             <DialogDescription>
               {editingPost ? 'Ubah detail artikel' : 'Buat artikel baru untuk blog'}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             {/* Title & Slug */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Judul *</Label>
+                <Label className="text-xs">Judul *</Label>
                 <Input
                   value={formData.title}
                   onChange={(e) => handleTitleChange(e.target.value)}
                   placeholder="Judul artikel"
+                  className="h-9 text-xs rounded-lg"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Slug *</Label>
+                <Label className="text-xs">Slug *</Label>
                 <Input
                   value={formData.slug}
                   onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
                   placeholder="judul-artikel"
+                  className="h-9 text-xs rounded-lg"
                 />
               </div>
             </div>
 
             {/* Excerpt */}
             <div className="space-y-2">
-              <Label>Ringkasan</Label>
+              <Label className="text-xs">Ringkasan</Label>
               <Textarea
                 value={formData.excerpt}
                 onChange={(e) => setFormData(prev => ({ ...prev, excerpt: e.target.value }))}
                 placeholder="Ringkasan singkat artikel..."
                 rows={2}
+                className="text-xs rounded-lg"
               />
             </div>
 
             {/* Content */}
             <div className="space-y-2">
-              <Label>Konten *</Label>
+              <Label className="text-xs">Konten *</Label>
               <Textarea
                 value={formData.content}
                 onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
                 placeholder="Tulis konten artikel di sini..."
                 rows={10}
-                className="font-mono text-sm"
+                className="font-mono text-xs rounded-lg"
               />
             </div>
 
             {/* Featured Image */}
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <ImageIcon className="w-4 h-4" />
+              <Label className="text-xs flex items-center gap-2">
+                <ImageIcon className="w-3.5 h-3.5" />
                 Featured Image URL
               </Label>
               <Input
                 value={formData.featuredImage}
                 onChange={(e) => setFormData(prev => ({ ...prev, featuredImage: e.target.value }))}
                 placeholder="https://example.com/image.jpg"
+                className="h-9 text-xs rounded-lg"
               />
             </div>
 
             {/* Category & Author */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Kategori</Label>
+                <Label className="text-xs">Kategori</Label>
                 <Select
                   value={formData.category}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9 text-xs rounded-lg">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -647,64 +656,69 @@ export default function BlogManagementPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Author</Label>
+                <Label className="text-xs">Author</Label>
                 <Input
                   value={formData.author}
                   onChange={(e) => setFormData(prev => ({ ...prev, author: e.target.value }))}
                   placeholder="Nama penulis"
+                  className="h-9 text-xs rounded-lg"
                 />
               </div>
             </div>
 
             {/* Tags */}
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Tag className="w-4 h-4" />
+              <Label className="text-xs flex items-center gap-2">
+                <Tag className="w-3.5 h-3.5" />
                 Tags (pisahkan dengan koma)
               </Label>
               <Input
                 value={formData.tags}
                 onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
                 placeholder="tutorial, tips, panduan"
+                className="h-9 text-xs rounded-lg"
               />
             </div>
 
             {/* SEO Section */}
             <div className="border-t pt-4 mt-4">
-              <h4 className="font-medium mb-3 flex items-center gap-2">
-                <Globe className="w-4 h-4" />
+              <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Globe className="w-3.5 h-3.5" />
                 Pengaturan SEO
               </h4>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label>Meta Title</Label>
-                    <span className="text-xs text-muted-foreground">{formData.metaTitle?.length || 0}/60</span>
+                    <Label className="text-xs">Meta Title</Label>
+                    <span className="text-[10px] text-muted-foreground">{formData.metaTitle?.length || 0}/60</span>
                   </div>
                   <Input
                     value={formData.metaTitle}
                     onChange={(e) => setFormData(prev => ({ ...prev, metaTitle: e.target.value }))}
                     placeholder="Title untuk SEO (max 60 karakter)"
+                    className="h-9 text-xs rounded-lg"
                   />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label>Meta Description</Label>
-                    <span className="text-xs text-muted-foreground">{formData.metaDescription?.length || 0}/160</span>
+                    <Label className="text-xs">Meta Description</Label>
+                    <span className="text-[10px] text-muted-foreground">{formData.metaDescription?.length || 0}/160</span>
                   </div>
                   <Textarea
                     value={formData.metaDescription}
                     onChange={(e) => setFormData(prev => ({ ...prev, metaDescription: e.target.value }))}
                     placeholder="Deskripsi untuk SEO (max 160 karakter)"
                     rows={2}
+                    className="text-xs rounded-lg"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Keywords (pisahkan dengan koma)</Label>
+                  <Label className="text-xs">Keywords (pisahkan dengan koma)</Label>
                   <Input
                     value={formData.keywords}
                     onChange={(e) => setFormData(prev => ({ ...prev, keywords: e.target.value }))}
                     placeholder="keyword1, keyword2, keyword3"
+                    className="h-9 text-xs rounded-lg"
                   />
                 </div>
               </div>
@@ -713,23 +727,24 @@ export default function BlogManagementPage() {
             {/* Publish Status */}
             <div className="flex items-center justify-between border-t pt-4">
               <div>
-                <Label>Status Publikasi</Label>
-                <p className="text-xs text-muted-foreground">
+                <Label className="text-xs">Status Publikasi</Label>
+                <p className="text-[10px] text-muted-foreground">
                   {formData.isPublished ? 'Artikel akan terlihat publik' : 'Artikel disimpan sebagai draft'}
                 </p>
               </div>
               <Switch
                 checked={formData.isPublished}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublished: checked }))}
+                size="md"
               />
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
+          <DialogFooter className="px-6 py-4 border-t">
+            <Button variant="outline" onClick={() => setShowDialog(false)} className="rounded-lg h-9 text-xs font-medium">
               Batal
             </Button>
-            <Button onClick={handleSave} disabled={saving} className="gradient-primary text-white">
+            <Button onClick={handleSave} disabled={saving} className="bg-primary text-primary-foreground rounded-lg h-9 px-4 text-xs font-semibold hover:bg-primary/90">
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {editingPost ? 'Simpan Perubahan' : 'Buat Artikel'}
             </Button>
@@ -737,7 +752,7 @@ export default function BlogManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Blog Preview Dialog */}
+      {/* ── Blog Preview Dialog ── */}
       <BlogPreviewDialog
         post={previewPost}
         open={showPreviewDialog}
@@ -747,20 +762,20 @@ export default function BlogManagementPage() {
         }}
       />
 
-      {/* Delete Confirmation Dialog */}
+      {/* ── Delete Confirmation Dialog ── */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
+        <AlertDialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden">
+          <AlertDialogHeader className="px-6 pt-6">
             <AlertDialogTitle>Hapus Artikel?</AlertDialogTitle>
             <AlertDialogDescription>
               Artikel &quot;{deletingPost?.title}&quot; akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+          <AlertDialogFooter className="px-6 py-4">
+            <AlertDialogCancel className="rounded-lg h-9 text-xs font-medium">Batal</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-lg h-9 px-4 text-xs font-semibold"
             >
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Hapus
@@ -768,14 +783,16 @@ export default function BlogManagementPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 }
 
 function BlogSkeleton() {
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4">
-      <Skeleton className="h-10 w-48" />
+    <div className="min-h-screen bg-background dashboard-mesh">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+      <Skeleton className="h-8 w-48" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
           <Skeleton key={i} className="h-20" />
@@ -783,6 +800,7 @@ function BlogSkeleton() {
       </div>
       <Skeleton className="h-16" />
       <Skeleton className="h-64" />
+      </div>
     </div>
   );
 }
@@ -804,10 +822,10 @@ function BlogPreviewDialog({
   const tags = post.tags ? post.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
 
   const categoryColors: Record<string, string> = {
-    artikel: 'bg-blue-500/10 text-blue-600',
-    tips: 'bg-green-500/10 text-green-600',
-    tutorial: 'bg-purple-500/10 text-purple-600',
-    berita: 'bg-orange-500/10 text-orange-600',
+    artikel: 'bg-violet-500/10 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
+    tips: 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
+    tutorial: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400',
+    berita: 'bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400',
   };
 
   const formatDate = (date: string | null) => {
@@ -821,19 +839,19 @@ function BlogPreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[95vw] max-h-[92vh] overflow-hidden p-0 flex flex-col">
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] overflow-hidden p-0 gap-0 flex flex-col">
         {/* Preview Header Bar */}
         <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <ScanEye className="w-4 h-4 text-primary" />
+            <ScanEye className="w-4 h-4 text-primary dark:text-primary" />
             <DialogTitle className="text-sm font-medium">Preview Artikel</DialogTitle>
           </div>
           <div className="flex items-center gap-2">
             <Badge
               variant={post.isPublished ? 'default' : 'secondary'}
               className={cn(
-                "text-[10px]",
-                post.isPublished && "bg-green-500/10 text-green-600"
+                "text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full",
+                post.isPublished && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
               )}
             >
               {post.isPublished ? 'Published' : 'Draft'}
@@ -841,7 +859,7 @@ function BlogPreviewDialog({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 text-[10px] gap-1"
+              className="h-7 text-[10px] gap-1 rounded-lg"
               asChild
             >
               <a href={postUrl} target="_blank" rel="noopener noreferrer">
@@ -856,16 +874,16 @@ function BlogPreviewDialog({
         <div className="flex-1 overflow-y-auto">
           {/* Hero Section */}
           <div className="relative py-8 md:py-12 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-purple-500/5" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-violet-500/5 dark:from-primary/10 dark:to-violet-500/10" />
             <div className="container mx-auto px-4 relative z-10">
               <div className="max-w-3xl mx-auto">
                 {/* Category Badge */}
-                <Badge className={cn("mb-3", categoryColors[post.category] || '')}>
+                <Badge className={cn("mb-3 text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full", categoryColors[post.category] || '')}>
                   {CATEGORY_OPTIONS.find(c => c.value === post.category)?.label || post.category}
                 </Badge>
 
                 {/* Title */}
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 leading-tight">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 leading-tight tracking-tight">
                   {post.title}
                 </h1>
 
@@ -913,7 +931,7 @@ function BlogPreviewDialog({
           {post.excerpt && (
             <div className="px-4 pb-4">
               <div className="max-w-3xl mx-auto">
-                <div className="bg-muted/50 rounded-lg p-4 border">
+                <div className="bg-muted/30 rounded-lg p-4 border border-border/60">
                   <p className="text-sm italic text-muted-foreground leading-relaxed">
                     {post.excerpt}
                   </p>
@@ -935,7 +953,7 @@ function BlogPreviewDialog({
                   prose-strong:text-foreground
                   prose-ul:my-3 prose-ol:my-3
                   prose-li:text-muted-foreground
-                  prose-blockquote:border-l-primary prose-blockquote:bg-muted/50 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:rounded-r-lg
+                  prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:rounded-r-lg
                   prose-code:text-primary prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded text-sm
                   prose-pre:bg-muted prose-pre:border prose-pre:text-sm
                   prose-img:rounded-xl prose-img:shadow-lg
@@ -950,10 +968,10 @@ function BlogPreviewDialog({
             <div className="px-4 pb-6">
               <div className="max-w-3xl mx-auto">
                 <div className="border-t pt-6">
-                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Tags</p>
+                  <p className="text-[10px] font-medium text-muted-foreground mb-2 uppercase tracking-wider">Tags</p>
                   <div className="flex flex-wrap gap-1.5">
                     {tags.map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
+                      <Badge key={index} variant="secondary" className="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full">
                         <Tag className="w-2.5 h-2.5 mr-1" />
                         {tag}
                       </Badge>
@@ -968,17 +986,17 @@ function BlogPreviewDialog({
           <div className="px-4 pb-6">
             <div className="max-w-3xl mx-auto">
               <div className="border-t pt-6">
-                <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider flex items-center gap-1.5">
+                <p className="text-[10px] font-medium text-muted-foreground mb-3 uppercase tracking-wider flex items-center gap-1.5">
                   <Globe className="w-3 h-3" />
                   SEO Preview
                 </p>
-                <div className="bg-muted/50 rounded-lg p-4 border space-y-1.5">
+                <div className="bg-muted/30 rounded-lg p-4 border border-border/60 space-y-1.5">
                   {/* Google Search Preview */}
                   <div className="space-y-1">
-                    <p className="text-base text-blue-700 dark:text-blue-400 truncate leading-snug hover:underline cursor-pointer">
+                    <p className="text-base text-violet-700 dark:text-violet-400 truncate leading-snug hover:underline cursor-pointer">
                       {post.metaTitle || post.title}
                     </p>
-                    <p className="text-xs text-green-700 dark:text-green-500 truncate">
+                    <p className="text-xs text-emerald-700 dark:text-emerald-500 truncate">
                       {siteUrl}/blog/{post.slug}
                     </p>
                     <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">

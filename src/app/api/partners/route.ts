@@ -28,11 +28,28 @@ export async function GET() {
 
     const partners = await db.partner.findMany({
       orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            sessions: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: { createdAt: true },
+            },
+          },
+        },
+      },
     });
 
     return NextResponse.json({
       success: true,
-      data: partners.map(p => serializePartner(p as unknown as Record<string, unknown>)),
+      data: partners.map(p => {
+        const serialized = serializePartner(p as unknown as Record<string, unknown>);
+        // Attach last login from latest session
+        const lastSession = p.user?.sessions?.[0];
+        (serialized as Record<string, unknown>).lastLogin = lastSession?.createdAt?.toISOString() || null;
+        return serialized;
+      }),
     });
   } catch (error) {
     console.error('Get partners error:', error);

@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { 
   Eye, EyeOff, User, Building2, Loader2, ArrowLeft, Shield, 
-  Sparkles, Zap, Star, TrendingUp, Wallet, ChevronRight,
+  Sparkles, Star, TrendingUp, Wallet, ChevronRight,
   Lock, Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';

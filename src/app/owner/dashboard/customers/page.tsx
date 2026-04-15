@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -15,24 +15,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SimplePagination } from '@/components/ui/pagination';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import {
   Users,
   Search,
-  UserPlus,
+  Plus,
   Phone,
   Wallet,
   Loader2,
   MapPin,
   Crown,
   Star,
-  MoreVertical,
   Trash2,
   Edit,
   Ban,
   FileText,
-  Filter,
   User,
   Building,
   Copy,
@@ -46,11 +43,7 @@ import {
   RefreshCw,
   PieChart,
   Target,
-  CreditCard,
   Receipt,
-  Clock,
-  ArrowUpRight,
-  ArrowDownRight,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -59,8 +52,8 @@ import { CitySearch } from '@/components/ui/city-search';
 import { isValidIndonesianPhone, normalizePhone } from '@/lib/customer-utils';
 import {
   PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
+import AnalyticsBubbleMap from '@/components/map/analytics-bubble-map';
 
 interface Partner {
   id: string;
@@ -104,7 +97,15 @@ interface CustomerStats {
   newThisMonth: number;
 }
 
-const COLORS = ['#f59e0b', '#6b7280', '#3b82f6', '#ef4444'];
+const COLORS = ['#f59e0b', '#6b7280', '#06b6d4', '#ef4444'];
+
+// Label → avatar color mapping
+const LABEL_AVATAR: Record<string, string> = {
+  VIP: 'bg-amber-500/15 text-amber-500',
+  Regular: 'bg-gray-400/15 text-gray-400',
+  New: 'bg-cyan-500/15 text-cyan-500',
+  Blacklist: 'bg-red-500/15 text-red-500',
+};
 
 export default function OwnerCustomersPage() {
   const router = useRouter();
@@ -118,6 +119,7 @@ export default function OwnerCustomersPage() {
   const [mainTab, setMainTab] = useState<'list' | 'analytics'>('list');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [sortOrder, setSortOrder] = useState<string>('volume-desc');
   const redirectAttempted = useRef(false);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -216,27 +218,47 @@ export default function OwnerCustomersPage() {
     }
   };
 
-  // Filter customers based on search only
-  const filteredCustomers = customers.filter((c) => {
-    if (!searchQuery) return true;
+  // Filter customers based on search, then sort client-side
+  const filteredCustomers = (() => {
     const searchLower = searchQuery.toLowerCase();
-    return (
-      c.name?.toLowerCase().includes(searchLower) ||
-      c.phone?.includes(searchLower)
-    );
-  });
+    let result = customers.filter((c) => {
+      if (!searchQuery) return true;
+      return (
+        c.name?.toLowerCase().includes(searchLower) ||
+        c.phone?.includes(searchLower)
+      );
+    });
+    switch (sortOrder) {
+      case 'volume-desc':
+        result.sort((a, b) => (b.totalVolume || 0) - (a.totalVolume || 0));
+        break;
+      case 'trx-desc':
+        result.sort((a, b) => (b.totalTransactions || 0) - (a.totalTransactions || 0));
+        break;
+      case 'name-asc':
+        result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        break;
+      case 'newest':
+        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        break;
+    }
+    return result;
+  })();
+
+  // KPI computations
+  const totalVolume = stats?.totalVolume || 0;
 
   if (isLoading || !hasHydrated) {
     return (
-      <div className="container mx-auto px-3 py-4 space-y-3 pb-24 md:pb-6">
-        <Skeleton className="h-8 w-32" />
-        <div className="flex gap-1 p-1 bg-muted/50 rounded-xl">
-          <Skeleton className="h-9 flex-1 rounded-lg" />
-          <Skeleton className="h-9 flex-1 rounded-lg" />
+      <div className="min-h-screen bg-background dashboard-mesh">
+  <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+        <Skeleton className="h-8 w-24 rounded-xl bg-muted" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{[1,2,3,4].map(i => <Skeleton key={i} className="h-16 rounded-xl bg-muted" />)}</div>
+        <div className="flex gap-1 p-1 bg-muted/60 rounded-xl">
+          <Skeleton className="h-9 flex-1 rounded-lg bg-muted" />
+          <Skeleton className="h-9 flex-1 rounded-lg bg-muted" />
         </div>
-        <Skeleton className="h-10 rounded-xl" />
-        <div className="space-y-2">{[1,2,3].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
-      </div>
+  </div></div>
     );
   }
 
@@ -245,51 +267,84 @@ export default function OwnerCustomersPage() {
   }
 
   return (
-    <div className="container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3 pb-20 md:pb-4">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2">
+    <div className="min-h-screen bg-background dashboard-mesh">
+  <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+      {/* ── Page Header ── */}
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-base sm:text-lg font-bold flex items-center gap-2">
-            <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
-            <span className="truncate">Customer</span>
-          </h1>
-          <div className="flex items-center gap-2 mt-0.5">
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Kelola data pelanggan</p>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Customer</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Customer</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-xs text-muted-foreground">Kelola data pelanggan</p>
             {lastUpdated && (
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 {isRefreshing ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
                 ) : (
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 )}
                 <span className="hidden sm:inline">{isRefreshing ? 'Refreshing...' : formatTimeAgo(lastUpdated)}</span>
               </div>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Button
             onClick={() => { fetchCustomers(); fetchStats(); }}
             size="sm"
-            variant="outline"
-            className="h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-lg"
+            variant="ghost"
+            className="h-9 w-9 p-0 rounded-lg"
             disabled={isRefreshing}
           >
-            <RefreshCw className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", isRefreshing && "animate-spin")} />
+            <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
           </Button>
           <NewCustomerDialog onCreated={() => { fetchCustomers(); fetchStats(); }} />
         </div>
       </div>
 
-      {/* Main Tabs: Customer & Analytics */}
-      <div className="flex gap-1 p-1 bg-muted/50 rounded-xl">
+      {/* ── KPI Cards - Always visible ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <CustomerKPICard
+          title="Total Customer"
+          value={stats?.totalCustomers || 0}
+          icon={<Users className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
+          color="primary"
+          isCount
+        />
+        <CustomerKPICard
+          title="Total Volume"
+          value={totalVolume}
+          icon={<TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
+          color="green"
+        />
+        <CustomerKPICard
+          title="VIP"
+          value={stats?.vipCount || 0}
+          icon={<Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
+          color="amber"
+          isCount
+        />
+        <CustomerKPICard
+          title="New This Month"
+          value={stats?.newThisMonth || 0}
+          icon={<Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
+          color="purple"
+          isCount
+        />
+      </div>
+
+      {/* ── Main Tabs: Customer & Analytics ── */}
+      <div className="flex gap-1 p-1 bg-muted/60 rounded-xl">
         <button
           onClick={() => setMainTab('list')}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-xs font-medium transition-all",
+            "flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all",
             mainTab === 'list' 
               ? "bg-background text-foreground shadow-sm" 
-              : "text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground/80"
           )}
         >
           <Users className="w-4 h-4" />
@@ -298,10 +353,10 @@ export default function OwnerCustomersPage() {
         <button
           onClick={() => setMainTab('analytics')}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-xs font-medium transition-all",
+            "flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all",
             mainTab === 'analytics' 
               ? "bg-background text-foreground shadow-sm" 
-              : "text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground/80"
           )}
         >
           <BarChart3 className="w-4 h-4" />
@@ -309,61 +364,115 @@ export default function OwnerCustomersPage() {
         </button>
       </div>
 
-      {/* Tab Content */}
+      {/* ── Tab Content ── */}
       {mainTab === 'list' ? (
         <div className="space-y-3">
-          {/* Filter Pills */}
-          <div className="overflow-x-auto -mx-3 px-3 scrollbar-hide">
-            <div className="flex gap-1.5 min-w-max pb-1">
-              {[
-                { value: 'all', label: 'Semua', count: totalItems },
-                { value: 'VIP', label: 'VIP', count: stats?.vipCount, color: 'amber' },
-                { value: 'Regular', label: 'Regular', count: stats?.regularCount, color: 'gray' },
-                { value: 'New', label: 'New', count: stats?.newCount, color: 'blue' },
-                { value: 'blacklist', label: 'Blacklist', count: stats?.blacklistCount, color: 'red' },
-              ].map(tab => (
+          {/* Insight Chips (filter pills, partner-style) */}
+          {!loading && stats && (
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+              {(stats?.vipCount || 0) > 0 && (
                 <button
-                  key={tab.value}
-                  onClick={() => setLabelFilter(tab.value)}
+                  onClick={() => setLabelFilter(labelFilter === 'VIP' ? 'all' : 'VIP')}
                   className={cn(
-                    "px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-all whitespace-nowrap",
-                    labelFilter === tab.value 
-                      ? cn(
-                          tab.color === 'amber' && "bg-amber-500 text-white shadow-sm",
-                          tab.color === 'gray' && "bg-gray-500 text-white shadow-sm",
-                          tab.color === 'blue' && "bg-blue-500 text-white shadow-sm",
-                          tab.color === 'red' && "bg-red-500 text-white shadow-sm",
-                          !tab.color && "bg-primary text-primary-foreground shadow-sm"
-                        )
-                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                    "flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-colors",
+                    labelFilter === 'VIP'
+                      ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20"
                   )}
                 >
-                  {tab.label}
-                  {tab.count !== undefined && tab.count > 0 && (
-                    <span className={cn("ml-1", labelFilter === tab.value ? "opacity-80" : "opacity-60")}>
-                      {tab.count}
-                    </span>
-                  )}
+                  <Users className="w-3 h-3" />
+                  <span>{stats.vipCount} VIP</span>
                 </button>
-              ))}
+              )}
+              {(stats?.blacklistCount || 0) > 0 && (
+                <button
+                  onClick={() => setLabelFilter(labelFilter === 'blacklist' ? 'all' : 'blacklist')}
+                  className={cn(
+                    "flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-colors",
+                    labelFilter === 'blacklist'
+                      ? "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30"
+                      : "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 hover:bg-red-500/20"
+                  )}
+                >
+                  <Ban className="w-3 h-3" />
+                  <span>{stats.blacklistCount} Blacklist</span>
+                </button>
+              )}
+              {(stats?.newCount || 0) > 0 && (
+                <button
+                  onClick={() => setLabelFilter(labelFilter === 'New' ? 'all' : 'New')}
+                  className={cn(
+                    "flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-colors",
+                    labelFilter === 'New'
+                      ? "bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30"
+                      : "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20"
+                  )}
+                >
+                  <Star className="w-3 h-3" />
+                  <span>{stats.newCount} New</span>
+                </button>
+              )}
+              {(stats?.regularCount || 0) > 0 && (
+                <button
+                  onClick={() => setLabelFilter(labelFilter === 'Regular' ? 'all' : 'Regular')}
+                  className={cn(
+                    "flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-colors",
+                    labelFilter === 'Regular'
+                      ? "bg-gray-500/20 text-gray-600 dark:text-gray-400 border border-gray-500/30"
+                      : "bg-muted/60 text-muted-foreground border border-border/60 hover:bg-muted"
+                  )}
+                >
+                  <User className="w-3 h-3" />
+                  <span>{stats.regularCount} Regular</span>
+                </button>
+              )}
+              {labelFilter !== 'all' && (
+                <button
+                  onClick={() => setLabelFilter('all')}
+                  className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
+                >
+                  <Users className="w-3 h-3" />
+                  <span>Semua ({totalItems})</span>
+                </button>
+              )}
             </div>
+          )}
+
+          {/* Search + Sort Bar */}
+          <div className="flex gap-2 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari nama/no. WA..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 sm:pl-10 h-9 sm:h-10 rounded-xl text-xs sm:text-sm bg-muted/40 border-border/60 focus-visible:bg-background"
+              />
+            </div>
+            <Select value={sortOrder} onValueChange={setSortOrder}>
+              <SelectTrigger className="w-[110px] sm:w-[130px] h-9 sm:h-10 rounded-xl text-[11px] sm:text-xs bg-muted/40 border-border/60">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="volume-desc">Volume ↓</SelectItem>
+                <SelectItem value="trx-desc">Trx ↓</SelectItem>
+                <SelectItem value="name-asc">Name A-Z</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
-            <Input
-              placeholder="Cari nama/no. WA..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 sm:pl-10 h-9 sm:h-10 rounded-xl text-sm"
-            />
-          </div>
+          {/* Customer Count */}
+          {!loading && (
+            <p className="text-[10px] sm:text-[11px] text-muted-foreground px-1">
+              {filteredCustomers.length} customer ditemukan
+            </p>
+          )}
 
           {/* Customer List */}
-          <div className="space-y-2">
+          <div className="space-y-2 sm:space-y-2.5">
             {loading ? (
-              [...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 sm:h-20 rounded-xl" />)
+              [...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 sm:h-[76px] rounded-xl bg-muted" />)
             ) : filteredCustomers.length > 0 ? (
               filteredCustomers.map((customer) => (
                 <CustomerCard
@@ -373,9 +482,11 @@ export default function OwnerCustomersPage() {
                 />
               ))
             ) : (
-              <div className="text-center py-12">
-                <Users className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
-                <p className="text-xs sm:text-sm text-muted-foreground">Tidak ada customer</p>
+              <div className="text-center py-16">
+                <div className="w-12 h-12 rounded-full bg-muted/60 flex items-center justify-center mx-auto mb-3">
+                  <Users className="w-6 h-6 text-muted-foreground/50" />
+                </div>
+                <p className="text-sm text-muted-foreground">Tidak ada customer ditemukan</p>
               </div>
             )}
           </div>
@@ -394,7 +505,7 @@ export default function OwnerCustomersPage() {
       ) : (
         <CustomerAnalytics stats={stats} loading={statsLoading} />
       )}
-    </div>
+  </div></div>
   );
 }
 
@@ -404,210 +515,273 @@ function CustomerAnalytics({ stats, loading }: { stats: CustomerStats | null; lo
   const segmentData = stats ? [
     { name: 'VIP', value: stats.vipCount, color: '#f59e0b' },
     { name: 'Regular', value: stats.regularCount, color: '#6b7280' },
-    { name: 'New', value: stats.newCount, color: '#3b82f6' },
+    { name: 'New', value: stats.newCount, color: '#06b6d4' },
     { name: 'Blacklist', value: stats.blacklistCount, color: '#ef4444' },
   ].filter(d => d.value > 0) : [];
 
   const topCustomersData = stats?.topCustomers?.slice(0, 5) || [];
+  const topCity = stats?.topCities?.[0] || null;
 
   if (loading) {
     return (
-      <div className="space-y-2 sm:space-y-3">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
-          {[1,2,3,4].map(i => <Skeleton key={i} className="h-16 sm:h-24 rounded-lg sm:rounded-xl" />)}
+      <div className="space-y-4">
+        <Skeleton className="h-[88px] sm:h-24 rounded-xl bg-muted" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Skeleton className="h-56 sm:h-72 rounded-xl bg-muted" />
+          <Skeleton className="h-56 sm:h-72 rounded-xl bg-muted" />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
-          <Skeleton className="h-48 sm:h-64 rounded-lg sm:rounded-xl" />
-          <Skeleton className="h-48 sm:h-64 rounded-lg sm:rounded-xl" />
-        </div>
+        <Skeleton className="h-64 sm:h-72 rounded-xl bg-muted" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-2 sm:space-y-3">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
-        <AnalyticsCard
-          title="Total Customer"
-          value={stats?.totalCustomers || 0}
-          subtitle={`${stats?.newThisMonth || 0} baru bulan ini`}
-          icon={<Users className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
-          color="primary"
-          isCount
-        />
-        <AnalyticsCard
-          title="Total Volume"
-          value={stats?.totalVolume || 0}
-          subtitle="dari semua customer"
-          icon={<Wallet className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
-          color="green"
-        />
-        <AnalyticsCard
-          title="Avg Transaction"
-          value={stats?.avgTransactionValue || 0}
-          subtitle="nilai rata-rata"
-          icon={<Target className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
-          color="blue"
-        />
-        <AnalyticsCard
-          title="Growth Rate"
-          value={`${(stats?.growthRate || 0).toFixed(1)}%`}
-          subtitle="pertumbuhan bulanan"
-          icon={<TrendingUp className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
-          color="purple"
-          isPercent
-          change={stats?.growthRate}
-        />
+    <div className="space-y-3">
+      {/* Analytics Summary Card */}
+      <div className="rounded-xl dash-card overflow-hidden p-3 sm:p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
+          <AnalyticsCard
+            title="Total Customer"
+            value={stats?.totalCustomers || 0}
+            subtitle={`${stats?.newThisMonth || 0} baru bulan ini`}
+            icon={<Users className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
+            color="primary"
+            isCount
+          />
+          <AnalyticsCard
+            title="Total Volume"
+            value={stats?.totalVolume || 0}
+            subtitle="dari semua customer"
+            icon={<Wallet className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
+            color="emerald"
+          />
+          <AnalyticsCard
+            title="Avg Transaction"
+            value={stats?.avgTransactionValue || 0}
+            subtitle="nilai rata-rata"
+            icon={<Target className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
+            color="cyan"
+          />
+          <AnalyticsCard
+            title="Conversion Rate"
+            value={stats?.totalCustomers > 0 ? `${(((stats.regularCount || 0) + (stats.vipCount || 0)) / stats.totalCustomers * 100).toFixed(1)}%` : '0.0%'}
+            subtitle="rasio aktif"
+            icon={<Activity className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
+            color="amber"
+            isPercent
+          />
+          <AnalyticsCard
+            title="Growth Rate"
+            value={`${(stats?.growthRate || 0).toFixed(1)}%`}
+            subtitle="pertumbuhan bulanan"
+            icon={<TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
+            color="violet"
+            isPercent
+            change={stats?.growthRate}
+          />
+        </div>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
-        {/* Segment Distribution */}
-        <Card className="glass-card">
-          <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
-            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
-              <PieChart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-              Segmentasi Customer
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
-            {segmentData.length > 0 ? (
-              <div className="flex items-center gap-2 sm:gap-4">
-                <ResponsiveContainer width="45%" height={140} className="sm:h-[180px]">
-                  <RePieChart>
-                    <Pie
-                      data={segmentData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={30}
-                      outerRadius={55}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {segmentData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: number) => `${value} customer`} />
-                  </RePieChart>
-                </ResponsiveContainer>
-                <div className="flex-1 space-y-1 sm:space-y-1.5">
-                  {segmentData.map((item) => (
+      {/* Top Customer + Top Lokasi — 2-Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {/* Top Customer */}
+        <div className="rounded-xl dash-card overflow-hidden">
+          <div className="px-3 pt-3 sm:px-4 sm:pt-3.5 flex items-start justify-between gap-2">
+            <div>
+              <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-foreground">
+                <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" />
+                Top Customer
+              </h3>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 pl-5 sm:pl-6">
+                {topCustomersData.length > 0
+                  ? `${topCustomersData[0].name} memimpin dengan ${formatCurrency(topCustomersData[0].totalVolume)} volume`
+                  : 'Belum ada data customer'}
+              </p>
+            </div>
+            {topCustomersData.length > 0 && (
+              <Badge variant="secondary" className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border-0 flex-shrink-0">
+                {topCustomersData.length} customer
+              </Badge>
+            )}
+          </div>
+          <div className="px-3 pb-3 pt-2 sm:px-4 sm:pb-3.5">
+            {topCustomersData.length > 0 ? (
+              <div className="space-y-1.5">
+                {topCustomersData.map((customer, index) => (
+                  <div key={customer.id} className="flex items-center gap-2.5 py-1.5 px-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className={cn(
+                      "w-5 h-5 sm:w-7 sm:h-7 rounded-md flex items-center justify-center font-bold text-[9px] sm:text-[11px] flex-shrink-0",
+                      index === 0 ? "bg-gradient-to-br from-yellow-400 to-amber-500 text-white" :
+                      index === 1 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-white" :
+                      index === 2 ? "bg-gradient-to-br from-orange-400 to-orange-500 text-white" :
+                      "bg-muted text-muted-foreground"
+                    )}>
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] sm:text-sm font-medium truncate">{customer.name}</p>
+                      <p className="text-[9px] sm:text-[10px] text-muted-foreground">{customer.totalTransactions} transaksi</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-[11px] sm:text-sm font-bold text-primary">{formatCurrency(customer.totalVolume || 0)}</p>
+                      <Badge variant="outline" className="text-[8px] sm:text-[9px] px-1.5 py-0 rounded-full">
+                        {customer.label}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-20 flex items-center justify-center text-muted-foreground text-xs">
+                <div className="text-center">
+                  <Crown className="w-6 h-6 mx-auto mb-1.5 text-muted-foreground/30" />
+                  <p>Belum ada data customer</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Top Lokasi */}
+        <div className="rounded-xl dash-card overflow-hidden">
+          <div className="px-3 pt-3 sm:px-4 sm:pt-3.5 flex items-start justify-between gap-2">
+            <div>
+              <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-foreground">
+                <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-500" />
+                Top Lokasi
+              </h3>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 pl-5 sm:pl-6">
+                {topCity
+                  ? `${topCity.city} paling aktif dengan ${topCity.count} customer`
+                  : 'Belum ada data lokasi'}
+              </p>
+            </div>
+            {stats?.topCities && stats.topCities.length > 0 && (
+              <Badge variant="secondary" className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-0 flex-shrink-0">
+                {stats.topCities.length} lokasi
+              </Badge>
+            )}
+          </div>
+          <div className="px-3 pb-3 pt-2 sm:px-4 sm:pb-3.5">
+            {stats?.topCities && stats.topCities.length > 0 ? (
+              <AnalyticsBubbleMap topCities={stats.topCities} accentColor="#06b6d4" />
+            ) : (
+              <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs">
+                <div className="text-center">
+                  <MapPin className="w-6 h-6 mx-auto mb-1.5 text-muted-foreground/30" />
+                  <p>Belum ada data lokasi</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Segmentasi Customer */}
+      <div className="rounded-xl dash-card overflow-hidden">
+        <div className="px-3 pt-3 sm:px-4 sm:pt-3.5">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-foreground">
+                <PieChart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-600 dark:text-violet-400" />
+                Segmentasi Customer
+              </h3>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 pl-5 sm:pl-6">
+                {segmentData.length > 0
+                  ? (() => {
+                      const top = [...segmentData].sort((a, b) => b.value - a.value)[0];
+                      const total = segmentData.reduce((s, d) => s + d.value, 0);
+                      return `${top.name} mendominasi dengan ${top.value} customer (${((top.value / total) * 100).toFixed(0)}%)`;
+                    })()
+                  : 'Belum ada data'}
+              </p>
+            </div>
+            {segmentData.length > 0 && (
+              <Badge variant="secondary" className="text-[9px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 border-0 flex-shrink-0">
+                {segmentData.reduce((s, d) => s + d.value, 0)} total
+              </Badge>
+            )}
+          </div>
+        </div>
+        <div className="px-3 pb-3 pt-2.5 sm:px-4 sm:pb-3.5">
+          {segmentData.length > 0 ? (
+            <div className="flex items-center gap-2 sm:gap-4">
+              <ResponsiveContainer width="45%" height={140} className="sm:h-[180px]">
+                <RePieChart>
+                  <Pie
+                    data={segmentData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={30}
+                    outerRadius={55}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {segmentData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => `${value} customer`} />
+                </RePieChart>
+              </ResponsiveContainer>
+              <div className="flex-1 space-y-1 sm:space-y-1.5">
+                {segmentData.map((item) => {
+                  const total = segmentData.reduce((s, d) => s + d.value, 0);
+                  const pct = ((item.value / total) * 100).toFixed(0);
+                  return (
                     <div key={item.name} className="flex items-center justify-between text-[10px] sm:text-xs">
                       <div className="flex items-center gap-1 sm:gap-2">
                         <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                         <span className="text-muted-foreground">{item.name}</span>
                       </div>
-                      <span className="font-medium">{item.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
-                Belum ada data
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Top Locations */}
-        <Card className="glass-card">
-          <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
-            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
-              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-              Top Lokasi
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
-            {stats?.topCities && stats.topCities.length > 0 ? (
-              <div className="space-y-1.5 sm:space-y-2">
-                {stats.topCities.slice(0, 5).map((city, index) => {
-                  const percentage = stats.totalCustomers > 0 
-                    ? (city.count / stats.totalCustomers) * 100 
-                    : 0;
-                  return (
-                    <div key={city.city} className="flex items-center gap-2 sm:gap-3">
-                      <div className={cn(
-                        "w-5 h-5 sm:w-6 sm:h-6 rounded-md sm:rounded-lg flex items-center justify-center text-[9px] sm:text-xs font-bold flex-shrink-0",
-                        index === 0 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
-                        index === 1 ? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" :
-                        index === 2 ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" :
-                        "bg-muted text-muted-foreground"
-                      )}>
-                        {index + 1}
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold">{item.value}</span>
+                        <span className="text-[9px] text-muted-foreground">({pct}%)</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-                          <span className="text-[10px] sm:text-sm font-medium truncate">{city.city}</span>
-                          <span className="text-[9px] sm:text-xs text-muted-foreground">{city.count}</span>
-                        </div>
-                        <div className="h-1 sm:h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-primary rounded-full transition-all"
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                      </div>
-                      <span className="text-[9px] sm:text-xs font-medium text-primary flex-shrink-0">
-                        {percentage.toFixed(0)}%
-                      </span>
                     </div>
                   );
                 })}
               </div>
-            ) : (
-              <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
-                Belum ada data lokasi
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Top Customers */}
-      <Card className="glass-card">
-        <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
-          <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
-            <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-            Top Customer
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3">
-          {topCustomersData.length > 0 ? (
-            <div className="space-y-1.5 sm:space-y-2">
-              {topCustomersData.map((customer, index) => (
-                <div key={customer.id} className="flex items-center gap-2 sm:gap-3 py-1.5 sm:py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-muted/30">
-                  <div className={cn(
-                    "w-6 h-6 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-[10px] sm:text-xs flex-shrink-0",
-                    index === 0 ? "bg-gradient-to-br from-yellow-400 to-amber-500 text-white" :
-                    index === 1 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-white" :
-                    index === 2 ? "bg-gradient-to-br from-orange-400 to-orange-500 text-white" :
-                    "bg-muted text-muted-foreground"
-                  )}>
-                    {index + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] sm:text-sm font-medium truncate">{customer.name}</p>
-                    <p className="text-[9px] sm:text-xs text-muted-foreground">{customer.totalTransactions || 0} transaksi</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[11px] sm:text-sm font-bold text-primary">{formatCurrency(customer.totalVolume || 0)}</p>
-                    <Badge variant="outline" className="text-[8px] sm:text-[10px] h-4 sm:h-5 px-1">
-                      {customer.label}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
             </div>
           ) : (
-            <div className="h-[100px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
-              Belum ada data customer
+            <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
+              Belum ada data
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Customer KPI Card (same style as PartnerKPICard)
+function CustomerKPICard({ title, value, icon, color, isCount }: {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  color: 'primary' | 'green' | 'amber' | 'purple';
+  isCount?: boolean;
+}) {
+  const iconStyles = {
+    primary: { bg: 'bg-primary/15', text: 'text-primary dark:text-primary' },
+    green: { bg: 'bg-emerald-500/15', text: 'text-emerald-600 dark:text-emerald-400' },
+    amber: { bg: 'bg-amber-500/15', text: 'text-amber-600 dark:text-amber-400' },
+    purple: { bg: 'bg-purple-500/15', text: 'text-purple-600 dark:text-purple-400' },
+  };
+
+  const style = iconStyles[color];
+
+  return (
+    <div className="rounded-lg bg-muted/30 border border-border p-3 sm:p-3.5 transition-colors hover:bg-muted/50">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <div className={cn("w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center", style.bg)}>
+          <div className={style.text}>{icon}</div>
+        </div>
+        <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">{title}</span>
+      </div>
+      <p className="text-sm sm:text-lg font-bold text-foreground tracking-tight">
+        {isCount ? value.toLocaleString() : formatCurrency(value)}
+      </p>
     </div>
   );
 }
@@ -618,51 +792,52 @@ function AnalyticsCard({ title, value, subtitle, icon, color, isCount, isPercent
   value: number | string;
   subtitle?: string;
   icon: React.ReactNode;
-  color: 'primary' | 'green' | 'blue' | 'purple';
+  color: 'primary' | 'emerald' | 'cyan' | 'violet' | 'amber';
   isCount?: boolean;
   isPercent?: boolean;
   change?: number;
 }) {
-  const colorClasses = {
-    primary: 'from-primary to-primary/70',
-    green: 'from-green-500 to-emerald-600',
-    blue: 'from-blue-500 to-cyan-600',
-    purple: 'from-purple-500 to-violet-600',
+  const iconBgClasses = {
+    primary: 'bg-primary/15',
+    emerald: 'bg-emerald-500/15',
+    cyan: 'bg-cyan-500/15',
+    violet: 'bg-violet-500/15',
+    amber: 'bg-amber-500/15',
   };
 
-  const bgColorClasses = {
-    primary: 'bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20',
-    green: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20',
-    blue: 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20',
-    purple: 'bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20',
+  const iconColorClasses = {
+    primary: 'text-primary',
+    emerald: 'text-emerald-600 dark:text-emerald-400',
+    cyan: 'text-cyan-600 dark:text-cyan-400',
+    violet: 'text-violet-600 dark:text-violet-400',
+    amber: 'text-amber-600 dark:text-amber-400',
   };
 
   return (
-    <Card className={cn("glass-card overflow-hidden", bgColorClasses[color])}>
-      <div className={cn("h-0.5 sm:h-1 bg-gradient-to-r", colorClasses[color])} />
-      <CardContent className="p-2 sm:p-3">
-        <div className="flex items-start justify-between gap-1">
-          <div className="min-w-0 flex-1">
-            <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{title}</p>
-            <p className="text-sm sm:text-lg font-bold truncate">
-              {isPercent ? value : isCount ? value : formatCurrency(value as number)}
-            </p>
-            {subtitle && (
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{subtitle}</p>
-            )}
-            {change !== undefined && (
-              <div className={cn("flex items-center gap-0.5 text-[9px] sm:text-[10px]", change >= 0 ? 'text-green-600' : 'text-red-600')}>
-                {change >= 0 ? <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
-                <span>{change >= 0 ? '+' : ''}{change.toFixed(1)}%</span>
-              </div>
-            )}
-          </div>
-          <div className={cn("w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-gradient-to-br flex items-center justify-center text-white flex-shrink-0", colorClasses[color])}>
-            {icon}
-          </div>
+    <div className="rounded-lg bg-muted/30 border border-border p-3 sm:p-3.5 transition-colors hover:bg-muted/50">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <div className={cn("w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center", iconBgClasses[color], iconColorClasses[color])}>
+          {icon}
         </div>
-      </CardContent>
-    </Card>
+        <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">{title}</span>
+      </div>
+      <p className="text-sm sm:text-lg font-bold text-foreground tracking-tight">
+        {isPercent ? value : isCount ? value : formatCurrency(value as number)}
+      </p>
+      <div className={cn("flex items-center mt-1", change !== undefined ? "justify-between" : "gap-1.5")}>
+        {subtitle && (
+          <span className="text-[9px] sm:text-[10px] text-muted-foreground">{subtitle}</span>
+        )}
+        {change !== undefined && (
+          <span className={cn("text-[9px] sm:text-[10px] font-semibold flex items-center gap-0.5",
+            change >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+          )}>
+            {change >= 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+            {change >= 0 ? '+' : ''}{change.toFixed(1)}%
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -670,19 +845,19 @@ function AnalyticsCard({ title, value, subtitle, icon, color, isCount, isPercent
 function LabelBadge({ label }: { label: string }) {
   const variants: Record<string, { className: string; icon: React.ReactNode }> = {
     VIP: {
-      className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200',
+      className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800',
       icon: <Crown className="w-3 h-3" />,
     },
     Regular: {
-      className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 border-gray-200',
+      className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700',
       icon: <User className="w-3 h-3" />,
     },
     New: {
-      className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200',
+      className: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800',
       icon: <Star className="w-3 h-3" />,
     },
     Blacklist: {
-      className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200',
+      className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800',
       icon: <Ban className="w-3 h-3" />,
     },
   };
@@ -690,7 +865,7 @@ function LabelBadge({ label }: { label: string }) {
   const variant = variants[label] || variants.Regular;
 
   return (
-    <Badge variant="outline" className={cn('text-[9px] sm:text-xs gap-0.5 sm:gap-1 font-medium px-1.5 sm:px-2', variant.className)}>
+    <Badge variant="outline" className={cn('text-[8px] sm:text-[9px] gap-0.5 sm:gap-1 font-medium px-1.5 sm:px-2 py-0 rounded-full', variant.className)}>
       {variant.icon}
       {label}
     </Badge>
@@ -708,21 +883,21 @@ function AddedByBadge({ addedBy, partner }: { addedBy: string; partner?: Partner
       case 'public':
         return { label: 'Public', icon: <User className="w-2.5 h-2.5 sm:w-3 sm:h-3" />, className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' };
       default:
-        return { label: addedBy, icon: <User className="w-2.5 h-2.5 sm:w-3 sm:h-3" />, className: 'bg-gray-100 text-gray-700' };
+        return { label: addedBy, icon: <User className="w-2.5 h-2.5 sm:w-3 sm:h-3" />, className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' };
     }
   };
 
   const info = getAddedByInfo();
 
   return (
-    <Badge variant="outline" className={cn('text-[8px] sm:text-[10px] gap-0.5 sm:gap-1 border-0', info.className)}>
+    <Badge variant="outline" className={cn('text-[9px] sm:text-[10px] gap-0.5 sm:gap-1 border-0 py-0.5 rounded-full', info.className)}>
       {info.icon}
       <span className="truncate max-w-[50px] sm:max-w-none">{info.label}</span>
     </Badge>
   );
 }
 
-// Customer Card Component
+// Customer Card Component (PartnerCard-style redesign)
 function CustomerCard({
   customer,
   onUpdated,
@@ -730,114 +905,84 @@ function CustomerCard({
   customer: Customer;
   onUpdated: () => void;
 }) {
-  const [actionsOpen, setActionsOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const isBlacklisted = customer.label === 'Blacklist';
-
-  const handleCopyPhone = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(customer.phone);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy phone:', err);
-    }
-  };
+  const initials = customer.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
+  const labelAvatarClass = LABEL_AVATAR[customer.label] || 'bg-muted/50 text-muted-foreground';
 
   return (
-    <Card className={cn("glass-card overflow-hidden tap-highlight active-scale", isBlacklisted && "opacity-60")}>
-      <CardContent className="p-0">
-        <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3">
-          {/* Avatar */}
+    <>
+      <div
+        className={cn(
+          'group relative rounded-xl dash-card overflow-hidden border border-border/50 transition-all hover:border-border cursor-pointer active:scale-[0.98]',
+          isBlacklisted && 'opacity-60'
+        )}
+        onClick={() => setShowDetail(true)}
+      >
+        <div className="flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3">
+          {/* Avatar - label-colored initials */}
           <div className={cn(
-            "w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0",
-            isBlacklisted ? "bg-red-100 dark:bg-red-900/30" : 
-            customer.label === 'VIP' ? "bg-amber-100 dark:bg-amber-900/30" :
-            "bg-primary/10"
+            'w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] sm:text-xs font-bold',
+            labelAvatarClass
           )}>
-            {customer.label === 'VIP' ? (
-              <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
-            ) : (
-              <span className={cn(
-                "font-bold text-xs sm:text-sm",
-                isBlacklisted ? "text-red-600" : "text-primary"
-              )}>
-                {customer.name?.charAt(0).toUpperCase()}
-              </span>
-            )}
+            {initials}
           </div>
 
-          {/* Content */}
+          {/* Center - Name, label, info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1 sm:gap-2">
-              <p className="text-[11px] sm:text-sm font-medium truncate">{customer.name}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs sm:text-sm font-semibold truncate">{customer.name}</p>
               <LabelBadge label={customer.label} />
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
-              <p className="text-[10px] sm:text-xs text-muted-foreground">{customer.phone}</p>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-4 w-4 sm:h-5 sm:w-5 p-0"
-                onClick={handleCopyPhone}
-              >
-                {copied ? (
-                  <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-green-600" />
-                ) : (
-                  <Copy className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-muted-foreground" />
-                )}
-              </Button>
-              <AddedByBadge addedBy={customer.addedBy} partner={customer.partner} />
+            <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5">
+              <Phone className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-muted-foreground/40 flex-shrink-0" />
+              <span className="text-[10px] sm:text-[11px] text-muted-foreground truncate">{customer.phone}</span>
             </div>
-            {(customer.bankName || customer.city) && (
-              <div className="flex items-center gap-2 sm:gap-3 mt-0.5 sm:mt-1 text-[9px] sm:text-xs text-muted-foreground">
-                {customer.city && (
-                  <span className="flex items-center gap-0.5 sm:gap-1">
-                    <MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                    <span className="truncate max-w-[60px] sm:max-w-none">{customer.city}</span>
-                  </span>
-                )}
-                {customer.bankName && (
-                  <span className="flex items-center gap-0.5 sm:gap-1">
-                    <WalletCards className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                    <span className="truncate max-w-[50px] sm:max-w-none">{customer.bankName}</span>
-                  </span>
-                )}
-              </div>
-            )}
+            <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
+              <span className="text-[10px] sm:text-[11px] text-muted-foreground font-semibold">{formatCurrency(customer.totalVolume)}</span>
+              <span className="text-[10px] text-muted-foreground/30">·</span>
+              <span className="text-[10px] sm:text-[11px] text-muted-foreground">{customer.totalTransactions} trx</span>
+              {customer.city && (
+                <>
+                  <span className="text-[10px] text-muted-foreground/30 hidden sm:inline">·</span>
+                  <span className="text-[10px] sm:text-[11px] text-muted-foreground truncate hidden sm:inline">{customer.city}</span>
+                </>
+              )}
+            </div>
           </div>
 
-          {/* Stats */}
-          <div className="text-right hidden sm:block flex-shrink-0">
-            <p className="text-xs sm:text-sm font-bold text-primary">{formatCurrency(customer.totalVolume)}</p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">{customer.totalTransactions} trx</p>
-          </div>
+          {/* Right - Edit button (always visible on mobile, hover on desktop) */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 rounded-lg flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-muted/80"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDetail(true);
+            }}
+          >
+            <Edit className="w-3.5 h-3.5 text-muted-foreground" />
+          </Button>
+        </div>
 
-          {/* Actions */}
-          <Dialog open={actionsOpen} onOpenChange={setActionsOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg flex-shrink-0">
-                <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
-            </DialogTrigger>
-            <CustomerActionsDialogContent
-              customer={customer}
-              onUpdated={() => {
-                onUpdated();
-                setActionsOpen(false);
-              }}
-              onClose={() => setActionsOpen(false)}
-            />
-          </Dialog>
+        {/* Bottom meta row - only visible on sm+ */}
+        <div className="hidden sm:flex items-center gap-1.5 px-3 pb-2.5 -mt-0.5">
+          <AddedByBadge addedBy={customer.addedBy} partner={customer.partner} />
         </div>
-        
-        {/* Mobile Stats Footer */}
-        <div className="sm:hidden flex items-center justify-between px-2.5 py-1.5 bg-muted/30 border-t text-[9px]">
-          <span className="text-muted-foreground">{formatCurrency(customer.totalVolume)} • {customer.totalTransactions} trx</span>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Detail Dialog */}
+      <CustomerActionsDialogContent
+        customer={customer}
+        onUpdated={() => {
+          onUpdated();
+          setShowDetail(false);
+        }}
+        onClose={() => setShowDetail(false)}
+        open={showDetail}
+        onOpenChange={setShowDetail}
+      />
+    </>
   );
 }
 
@@ -846,10 +991,14 @@ function CustomerActionsDialogContent({
   customer,
   onUpdated,
   onClose,
+  open,
+  onOpenChange,
 }: {
   customer: Customer;
   onUpdated: () => void;
   onClose: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [label, setLabel] = useState(customer.label);
   const [notes, setNotes] = useState(customer.notes || '');
@@ -970,129 +1119,170 @@ function CustomerActionsDialogContent({
   };
 
   return (
-    <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <User className="w-5 h-5 text-primary" />
-          {customer.name}
-        </DialogTitle>
-        <DialogDescription>Kelola informasi customer</DialogDescription>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className="max-w-md max-h-[90vh] sm:max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
+      <DialogHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className={cn(
+            "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xs sm:text-sm font-bold",
+            LABEL_AVATAR[customer.label] || 'bg-muted/50 text-muted-foreground'
+          )}>
+            {customer.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'}
+          </div>
+          <div className="min-w-0 flex-1">
+            <DialogTitle className="text-sm truncate">{customer.name}</DialogTitle>
+            <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
+              <LabelBadge label={customer.label} />
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground">{formatCurrency(customer.totalVolume)} · {customer.totalTransactions} trx</span>
+            </div>
+          </div>
+        </div>
       </DialogHeader>
 
       {/* Tab Buttons */}
-      <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
+      <div className="flex gap-1 p-1 bg-muted/60 rounded-xl mx-4 sm:mx-5">
         <button
           onClick={() => setActiveTab('info')}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-xs font-medium transition-all",
+            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-[11px] sm:text-xs font-medium transition-all",
             activeTab === 'info' 
               ? "bg-background text-foreground shadow-sm" 
-              : "text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground/80"
           )}
         >
-          <User className="w-3.5 h-3.5" />
+          <User className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           Info
         </button>
         <button
           onClick={() => setActiveTab('transactions')}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-xs font-medium transition-all",
+            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-[11px] sm:text-xs font-medium transition-all",
             activeTab === 'transactions' 
               ? "bg-background text-foreground shadow-sm" 
-              : "text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground/80"
           )}
         >
-          <Receipt className="w-3.5 h-3.5" />
+          <Receipt className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           Transaksi
-          <Badge variant="secondary" className="text-[10px] h-4 px-1">
+          <Badge variant="secondary" className="text-[8px] sm:text-[9px] h-4 px-1 py-0.5 rounded-full">
             {customer.totalTransactions}
           </Badge>
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto -mx-6 px-6">
+      <div className="flex-1 overflow-y-auto hide-scrollbar px-4 sm:px-5 py-3">
         {error && (
-          <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 text-sm mb-4">
+          <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs sm:text-sm mb-3">
             {error}
           </div>
         )}
 
         {activeTab === 'info' ? (
-          <div className="space-y-4">
-            {/* Customer Info */}
-            <div className="p-3 rounded-lg bg-muted/50 space-y-2">
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">{customer.phone}</span>
+          <div className="space-y-3 sm:space-y-4">
+            {/* Info Rows */}
+            <div className="rounded-xl border border-border/50 divide-y divide-border/50 overflow-hidden">
+              {/* Phone */}
+              <div className="flex items-center justify-between px-3 py-2 sm:px-3.5 sm:py-2.5">
+                <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                    <Phone className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[9px] sm:text-[10px] text-muted-foreground">WhatsApp</p>
+                    <p className="text-[11px] sm:text-xs font-medium truncate">{customer.phone}</p>
+                  </div>
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 p-0 ml-auto"
+                  className="h-7 w-7 flex-shrink-0"
                   onClick={handleCopyPhone}
                 >
                   {copied ? (
-                    <Check className="w-3 h-3 text-green-600" />
+                    <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   ) : (
-                    <Copy className="w-3 h-3 text-muted-foreground" />
+                    <Copy className="w-3.5 h-3.5 text-muted-foreground" />
                   )}
                 </Button>
               </div>
+
+              {/* City */}
               {customer.city && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">{customer.city}</span>
+                <div className="flex items-center gap-2 sm:gap-2.5 px-3 py-2 sm:px-3.5 sm:py-2.5">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-600 dark:text-cyan-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[9px] sm:text-[10px] text-muted-foreground">Kota</p>
+                    <p className="text-[11px] sm:text-xs font-medium truncate">{customer.city}</p>
+                  </div>
                 </div>
               )}
-              {(customer.bankName || customer.bankAccount) && (
-                <div className="flex items-center gap-2">
-                  <Wallet className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    {customer.bankName}
-                    {customer.bankAccount && ` - ${customer.bankAccount}`}
-                    {customer.bankHolder && ` a.n ${customer.bankHolder}`}
-                  </span>
+
+              {/* Bank */}
+              {(customer.bankName || customer.bankAccount || customer.bankHolder) && (
+                <div className="px-3 py-2 sm:px-3.5 sm:py-2.5">
+                  <div className="flex items-center gap-2 sm:gap-2.5">
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                      <Wallet className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[9px] sm:text-[10px] text-muted-foreground">Bank</p>
+                      <p className="text-[11px] sm:text-xs font-medium truncate">
+                        {[customer.bankName, customer.bankHolder && `a.n ${customer.bankHolder}`].filter(Boolean).join(' · ')}
+                      </p>
+                      {customer.bankAccount && (
+                        <p className="text-[10px] sm:text-[11px] text-muted-foreground font-mono mt-0.5">{customer.bankAccount}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
-              <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">{formatCurrency(customer.totalVolume)} ({customer.totalTransactions} trx)</span>
+
+              {/* Added By */}
+              <div className="flex items-center gap-2 sm:gap-2.5 px-3 py-2 sm:px-3.5 sm:py-2.5">
+                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0">
+                  <Building className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-violet-600 dark:text-violet-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground">Ditambahkan</p>
+                  <AddedByBadge addedBy={customer.addedBy} partner={customer.partner} />
+                </div>
               </div>
             </div>
 
-            <Separator />
-
             {/* Change Label */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Crown className="w-4 h-4" />
+            <div className="space-y-1.5">
+              <Label className="text-[9px] sm:text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 Label / Tier
               </Label>
               <Select value={label} onValueChange={setLabel}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full h-9 text-[11px] sm:text-xs rounded-lg">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="VIP">
                     <div className="flex items-center gap-2">
-                      <Crown className="w-4 h-4 text-amber-600" />
+                      <Crown className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                       VIP
                     </div>
                   </SelectItem>
                   <SelectItem value="Regular">
                     <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-gray-600" />
+                      <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                       Regular
                     </div>
                   </SelectItem>
                   <SelectItem value="New">
                     <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4 text-blue-600" />
+                      <Star className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                       New
                     </div>
                   </SelectItem>
                   <SelectItem value="Blacklist">
                     <div className="flex items-center gap-2">
-                      <Ban className="w-4 h-4 text-red-600" />
+                      <Ban className="w-4 h-4 text-red-600 dark:text-red-400" />
                       Blacklist
                     </div>
                   </SelectItem>
@@ -1101,24 +1291,25 @@ function CustomerActionsDialogContent({
             </div>
 
             {/* Notes */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
+            <div className="space-y-1.5">
+              <Label className="text-[9px] sm:text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 Catatan
               </Label>
               <Textarea
                 placeholder="Tambahkan catatan..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                rows={3}
+                rows={2}
+                className="text-[11px] sm:text-xs rounded-lg"
               />
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5 sm:gap-2">
               <Button
                 onClick={handleUpdate}
-                className="w-full gradient-primary text-white h-11 rounded-xl"
+                className="w-full h-9 text-[11px] sm:text-xs font-semibold rounded-xl"
                 disabled={loading}
               >
                 {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Edit className="w-4 h-4 mr-2" />}
@@ -1129,8 +1320,8 @@ function CustomerActionsDialogContent({
                 variant="outline"
                 onClick={handleBlacklistToggle}
                 className={cn(
-                  "w-full h-11 rounded-xl",
-                  customer.label === 'Blacklist' && "text-green-600 border-green-200 hover:bg-green-50"
+                  "w-full h-9 text-[11px] sm:text-xs font-medium rounded-xl",
+                  customer.label === 'Blacklist' && "text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                 )}
                 disabled={loading}
               >
@@ -1146,86 +1337,86 @@ function CustomerActionsDialogContent({
                   </>
                 )}
               </Button>
-            </div>
 
-            <Separator />
+              <Separator />
 
-            {/* Delete Button */}
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Hapus Customer
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Hapus Customer?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Tindakan ini tidak dapat dibatalkan. Customer <strong>{customer.name}</strong> akan dihapus secara permanen.
-                    {customer.totalTransactions > 0 && (
-                      <span className="block mt-2 text-amber-600">
-                        Customer ini memiliki {customer.totalTransactions} transaksi dan tidak dapat dihapus.
-                      </span>
-                    )}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Batal</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDelete}
-                    className="bg-red-600 hover:bg-red-700"
-                    disabled={loading || customer.totalTransactions > 0}
+              {/* Delete Button */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="w-full text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
-                    Hapus
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Hapus Customer
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Hapus Customer?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tindakan ini tidak dapat dibatalkan. Customer <strong>{customer.name}</strong> akan dihapus secara permanen.
+                      {customer.totalTransactions > 0 && (
+                        <span className="block mt-2 text-amber-600 dark:text-amber-400">
+                          Customer ini memiliki {customer.totalTransactions} transaksi dan tidak dapat dihapus.
+                        </span>
+                      )}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-red-600 hover:bg-red-700"
+                      disabled={loading || customer.totalTransactions > 0}
+                    >
+                      Hapus
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         ) : (
-          <div className="space-y-3 pb-4">
+          <div className="space-y-2 sm:space-y-3 pb-2 sm:pb-4">
             {transactionsLoading ? (
               <div className="space-y-2">
-                {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}
+                {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}
               </div>
             ) : transactions.length > 0 ? (
               transactions.map((tx) => {
                 const status = tx.status as string;
                 const statusColors: Record<string, string> = {
                   pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-                  verification: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-                  process: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-                  success: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                  verification: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
+                  process: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+                  success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
                   failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
                 };
                 return (
-                  <Card key={tx.id as string} className="glass-card overflow-hidden">
-                    <CardContent className="p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-mono text-muted-foreground">{tx.orderId as string}</span>
-                        <Badge className={cn("text-[10px]", statusColors[status] || statusColors.pending)}>
+                  <Card key={tx.id as string} className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
+                    <CardContent className="p-2.5 sm:p-3">
+                      <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                        <span className="text-[10px] sm:text-xs font-mono text-muted-foreground truncate mr-2">{tx.orderId as string}</span>
+                        <Badge className={cn("text-[8px] sm:text-[9px] px-1.5 sm:px-2 py-0.5 rounded-full flex-shrink-0", statusColors[status] || statusColors.pending)}>
                           {status}
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-bold text-primary">{formatCurrency(tx.nominal as number)}</p>
-                          <p className="text-[10px] text-muted-foreground">
+                          <p className="font-semibold text-primary text-xs sm:text-sm">{formatCurrency(tx.nominal as number)}</p>
+                          <p className="text-[9px] sm:text-[10px] text-muted-foreground">
                             Fee: {formatCurrency(tx.paymentFee as number)}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs">{tx.paymentType?.name as string}</p>
-                          <p className="text-[10px] text-muted-foreground">{tx.methodTransaction as string}</p>
+                          <p className="text-[10px] sm:text-xs font-medium">{tx.paymentType?.name as string}</p>
+                          <p className="text-[9px] sm:text-[10px] text-muted-foreground">{tx.methodTransaction as string}</p>
                         </div>
                       </div>
                       {tx.partner && (
-                        <div className="mt-2 pt-2 border-t">
-                          <p className="text-[10px] text-muted-foreground">
+                        <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-border/60">
+                          <p className="text-[9px] sm:text-[10px] text-muted-foreground">
                             Partner: <span className="font-medium">{(tx.partner as {name: string}).name}</span>
                           </p>
                         </div>
@@ -1235,15 +1426,18 @@ function CustomerActionsDialogContent({
                 );
               })
             ) : (
-              <div className="text-center py-8">
-                <Receipt className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-30" />
-                <p className="text-sm text-muted-foreground">Belum ada transaksi</p>
+              <div className="text-center py-6 sm:py-8">
+                <div className="w-10 h-10 rounded-full bg-muted/60 flex items-center justify-center mx-auto mb-3">
+                  <Receipt className="w-5 h-5 text-muted-foreground/50" />
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Belum ada transaksi</p>
               </div>
             )}
           </div>
         )}
       </div>
     </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1318,121 +1512,123 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gradient-primary text-white rounded-lg h-8 sm:h-9 px-2.5 sm:px-4 shadow-md">
-          <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
+        <Button size="sm" className="bg-primary text-primary-foreground rounded-lg h-9 px-4 font-medium hover:bg-primary/90">
+          <Plus className="w-4 h-4 mr-1.5" />
           <span className="hidden sm:inline">Baru</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
+        <DialogHeader className="px-5 pt-5 pb-0">
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
             Customer Baru
           </DialogTitle>
           <DialogDescription>Tambahkan pelanggan baru ke sistem</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Basic Info */}
-          <div className="space-y-3">
-            <p className="text-sm font-medium text-muted-foreground">Informasi Dasar</p>
-            <div className="space-y-2">
-              <Label>Nama <span className="text-red-500">*</span></Label>
-              <Input
-                placeholder="Nama lengkap"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                required
-                className="rounded-xl"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>No. WA <span className="text-red-500">*</span></Label>
-              <Input
-                placeholder="08xxx"
-                value={formData.phone}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                required
-                className="rounded-xl"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Email (Opsional)</Label>
-              <Input
-                type="email"
-                placeholder="email@contoh.com"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                className="rounded-xl"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Lokasi / Kota (Opsional)</Label>
-              <CitySearch
-                value={formData.city}
-                onChange={(value) => setFormData(prev => ({ ...prev, city: value }))}
-                placeholder="Cari kota..."
-              />
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Bank Info */}
-          <div className="space-y-3">
-            <p className="text-sm font-medium text-muted-foreground">Informasi Bank (Opsional)</p>
-            <div className="space-y-2">
-              <Label>Nama Bank</Label>
-              <Select
-                value={formData.bankName}
-                onValueChange={(value) => {
-                  setFormData(prev => ({ ...prev, bankName: value }));
-                  if (value !== 'Lainnya') {
-                    setCustomBankName('');
-                  }
-                }}
-              >
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Pilih bank" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BANK_LIST.map((bank) => (
-                    <SelectItem key={bank} value={bank}>{bank}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {formData.bankName === 'Lainnya' && (
-              <div className="space-y-2">
-                <Label>Nama Bank Lainnya</Label>
-                <Input
-                  placeholder="Ketik nama bank"
-                  value={customBankName}
-                  onChange={(e) => setCustomBankName(e.target.value)}
-                  className="rounded-xl"
-                />
+        <form id="owner-customer-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto hide-scrollbar">
+          <div className="px-5 py-4 space-y-4">
+            {/* Basic Info - Grid */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Informasi Dasar</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Nama <span className="text-red-500">*</span></Label>
+                  <Input
+                    placeholder="Nama lengkap"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    required
+                    className="h-9 text-xs rounded-lg"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>No. WA <span className="text-red-500">*</span></Label>
+                  <Input
+                    placeholder="08xxx"
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    required
+                    className="h-9 text-xs rounded-lg"
+                  />
+                </div>
               </div>
-            )}
-            <div className="space-y-2">
-              <Label>Nomor Rekening</Label>
-              <Input
-                placeholder="Nomor rekening"
-                value={formData.bankAccount}
-                onChange={(e) => setFormData(prev => ({ ...prev, bankAccount: e.target.value }))}
-                className="rounded-xl"
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Email <span className="text-muted-foreground font-normal">(Opsional)</span></Label>
+                  <Input
+                    type="email"
+                    placeholder="email@contoh.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    className="h-9 text-xs rounded-lg"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Lokasi / Kota <span className="text-muted-foreground font-normal">(Opsional)</span></Label>
+                  <CitySearch
+                    value={formData.city}
+                    onChange={(value) => setFormData(prev => ({ ...prev, city: value }))}
+                    placeholder="Cari kota..."
+                  />
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Nama Pemilik Rekening</Label>
-              <Input
-                placeholder="Nama di rekening"
-                value={formData.bankHolder}
-                onChange={(e) => setFormData(prev => ({ ...prev, bankHolder: e.target.value }))}
-                className="rounded-xl"
-              />
+
+            <Separator />
+
+            {/* Bank Info */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <WalletCards className="w-3 h-3" />
+                Informasi Bank <span className="normal-case tracking-normal text-muted-foreground/60">(Opsional)</span>
+              </p>
+              <div className="space-y-2">
+                <Select
+                  value={formData.bankName}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({ ...prev, bankName: value }));
+                    if (value !== 'Lainnya') {
+                      setCustomBankName('');
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-9 text-xs rounded-lg">
+                    <SelectValue placeholder="Pilih bank" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BANK_LIST.map((bank) => (
+                      <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.bankName === 'Lainnya' && (
+                  <Input
+                    placeholder="Ketik nama bank"
+                    value={customBankName}
+                    onChange={(e) => setCustomBankName(e.target.value)}
+                    className="h-9 text-xs rounded-lg"
+                  />
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Input
+                    placeholder="Nomor Rekening"
+                    value={formData.bankAccount}
+                    onChange={(e) => setFormData(prev => ({ ...prev, bankAccount: e.target.value }))}
+                    className="h-9 text-xs rounded-lg"
+                  />
+                  <Input
+                    placeholder="Nama Pemilik Rekening"
+                    value={formData.bankHolder}
+                    onChange={(e) => setFormData(prev => ({ ...prev, bankHolder: e.target.value }))}
+                    className="h-9 text-xs rounded-lg"
+                  />
+                </div>
+              </div>
             </div>
           </div>
-
-          <Button type="submit" className="w-full gradient-primary text-white h-11 rounded-xl" disabled={loading}>
+        </form>
+        <div className="px-5 pb-5 pt-2 border-t border-border/50 bg-background">
+          <Button type="submit" form="owner-customer-form" className="w-full h-10 text-xs font-semibold rounded-xl" disabled={loading}>
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1445,7 +1641,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
               </>
             )}
           </Button>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

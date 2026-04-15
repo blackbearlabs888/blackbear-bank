@@ -22,23 +22,15 @@ import {
   Users,
   AlertTriangle,
   CheckCircle,
-  Info,
   Bell,
   Star,
-  Zap,
-  TrendingDown,
-  ArrowUpRight,
   Gift,
   Sparkles,
   ChevronRight,
   Copy,
   Check,
-  X,
   Radio,
-  Tag,
-  FileText,
   Calendar,
-  Loader2,
   CreditCard,
   Quote,
   Globe,
@@ -207,13 +199,14 @@ export default function PartnerDashboardPage() {
   const promoItems = announcements?.filter(a => a.type === 'promo') || [];
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-6 space-y-3 sm:space-y-6 pb-24 md:pb-6">
+    <div className="min-h-screen bg-background dashboard-mesh">
+  <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
       {/* Welcome Card - Clean Modern Design */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/80">
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary to-primary/80">
         {/* Simple decorative circle */}
         <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full" />
         <div className="absolute -right-4 -bottom-8 w-24 h-24 bg-white/5 rounded-full" />
-        
+
         <div className="relative p-4 sm:p-5">
           <div className="flex items-center gap-3">
             {/* Avatar */}
@@ -222,29 +215,29 @@ export default function PartnerDashboardPage() {
                 {user?.name?.charAt(0)?.toUpperCase() || 'P'}
               </span>
             </div>
-            
+
             {/* Greeting */}
             <div className="flex-1 min-w-0">
-              <p className="text-white/70 text-xs">Selamat datang,</p>
-              <h1 className="text-lg sm:text-xl font-bold text-white truncate">
+              <p className="text-white/70 text-sm">Selamat datang,</p>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">
                 {user?.name?.split(' ')[0]}!
               </h1>
               <div className="flex items-center gap-1.5 mt-1.5">
-                <Badge className="bg-white/20 text-white border-0 text-[10px] px-2 py-0 h-auto">
+                <Badge className="bg-white/20 text-white border-0 text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full">
                   {currentPartner?.tier as string}
                 </Badge>
-                <Badge className="bg-white/20 text-white border-0 text-[10px] px-2 py-0 h-auto">
+                <Badge className="bg-white/20 text-white border-0 text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full">
                   {currentPartner?.commission as number}%
                 </Badge>
               </div>
             </div>
-            
+
             {/* Progress Circle */}
             <div className="text-center flex-shrink-0">
               <div className="relative w-14 h-14 sm:w-16 sm:h-16">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                   <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
-                  <circle 
+                  <circle
                     cx="18" cy="18" r="16" fill="none" stroke="white" strokeWidth="3"
                     strokeDasharray={`${Math.min(progressPercent, 100)} 100`}
                     strokeLinecap="round"
@@ -258,7 +251,7 @@ export default function PartnerDashboardPage() {
               <p className="text-white/60 text-[10px] mt-1">Target</p>
             </div>
           </div>
-          
+
           {/* Quick Stats */}
           <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/10 text-xs">
             <div>
@@ -279,30 +272,30 @@ export default function PartnerDashboardPage() {
         </Alert>
       )}
 
-      {/* Broadcast Notifications - Modern Design */}
+      {/* Broadcast Notifications */}
       {broadcasts && broadcasts.length > 0 && (
-        <div className="space-y-3 animate-fade-in">
+        <div className="space-y-3">
           {broadcasts.slice(0, 3).map((broadcast, index) => (
-            <Card 
+            <Card
               key={broadcast.id}
-              className="glass-card overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 active-scale"
+              className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden cursor-pointer hover:bg-muted/30 transition-colors"
               onClick={() => setSelectedBroadcast(broadcast)}
             >
               <div className="flex">
                 {/* Left accent bar */}
                 <div className="w-1 bg-gradient-to-b from-amber-400 to-orange-500" />
-                
+
                 <CardContent className="flex-1 p-4">
                   <div className="flex items-start gap-3">
                     {/* Icon */}
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0">
                       <Radio className="w-5 h-5 text-white" />
                     </div>
-                    
+
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="secondary" className="text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+                        <Badge variant="secondary" className="text-[9px] sm:text-[10px] font-medium bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">
                           BROADCAST
                         </Badge>
                         {broadcast.startDate && (
@@ -314,7 +307,7 @@ export default function PartnerDashboardPage() {
                       <h3 className="font-semibold text-sm mb-1 truncate">{broadcast.title}</h3>
                       <p className="text-xs text-muted-foreground line-clamp-2">{broadcast.description}</p>
                     </div>
-                    
+
                     {/* Arrow */}
                     <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                   </div>
@@ -322,7 +315,7 @@ export default function PartnerDashboardPage() {
               </div>
             </Card>
           ))}
-          
+
           {/* Show more button if there are more broadcasts */}
           {broadcasts.length > 3 && (
             <button className="w-full py-2 text-xs text-muted-foreground hover:text-primary transition-colors">
@@ -332,15 +325,15 @@ export default function PartnerDashboardPage() {
         </div>
       )}
 
-      {/* Announcements Banner (Running Text) - Modern Design */}
+      {/* Announcements Banner (Running Text) */}
       {regularAnnouncements && regularAnnouncements.length > 0 && (
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border border-primary/20">
+        <div className="relative overflow-hidden rounded-xl bg-muted/50 border border-border/60">
           <div className="flex items-center gap-3 py-3 px-4">
             {/* Icon */}
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
               <Bell className="w-4 h-4 text-primary" />
             </div>
-            
+
             {/* Running text */}
             <div className="flex-1 overflow-hidden">
               <div className="animate-marquee whitespace-nowrap">
@@ -361,50 +354,50 @@ export default function PartnerDashboardPage() {
         </div>
       )}
 
-      {/* Stats Cards - Enhanced Design */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-        <StatsCard 
-          title="Profit Saya" 
-          value={formatCurrency(stats?.totalProfit || 0)} 
-          icon={DollarSign} 
-          gradient 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatsCard
+          title="Profit Saya"
+          value={formatCurrency(stats?.totalProfit || 0)}
+          icon={DollarSign}
+          gradient
           trend={stats?.totalProfit > 0 ? 'up' : 'neutral'}
         />
-        <StatsCard 
-          title="Total Transaksi" 
-          value={String(stats?.totalTransactions || 0)} 
-          icon={ShoppingBag} 
-          color="text-blue-600" 
-          bg="bg-blue-100 dark:bg-blue-900/30"
+        <StatsCard
+          title="Total Transaksi"
+          value={String(stats?.totalTransactions || 0)}
+          icon={ShoppingBag}
+          color="text-violet-600 dark:text-violet-400"
+          bg="bg-violet-100 dark:bg-violet-900/20"
           trend={stats?.totalTransactions > 0 ? 'up' : 'neutral'}
         />
-        <StatsCard 
-          title="Total Volume" 
-          value={formatCurrency(stats?.totalVolume || 0)} 
-          icon={TrendingUp} 
-          color="text-green-600" 
-          bg="bg-green-100 dark:bg-green-900/30"
+        <StatsCard
+          title="Total Volume"
+          value={formatCurrency(stats?.totalVolume || 0)}
+          icon={TrendingUp}
+          color="text-emerald-600 dark:text-emerald-400"
+          bg="bg-emerald-100 dark:bg-emerald-900/20"
           trend={stats?.totalVolume > 0 ? 'up' : 'neutral'}
         />
-        <StatsCard 
-          title="Pending" 
-          value={String(stats?.pendingTransactions || 0)} 
-          icon={Clock} 
-          color="text-orange-600" 
-          bg="bg-orange-100 dark:bg-orange-900/30"
+        <StatsCard
+          title="Pending"
+          value={String(stats?.pendingTransactions || 0)}
+          icon={Clock}
+          color="text-amber-600 dark:text-amber-400"
+          bg="bg-amber-100 dark:bg-amber-900/20"
           alert={stats?.pendingTransactions > 0}
         />
       </div>
 
       {/* Quick Actions - Mobile */}
-      <div className="grid grid-cols-2 gap-2 sm:hidden">
-        <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5 tap-highlight active-scale glass-card">
+      <div className="grid grid-cols-2 gap-3 sm:hidden">
+        <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5 rounded-lg hover:bg-muted/30 transition-colors">
           <Link href="/partner/dashboard/customers">
             <Users className="w-4 h-4" />
             <span className="text-[10px]">Kelola Customer</span>
           </Link>
         </Button>
-        <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5 tap-highlight active-scale glass-card">
+        <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5 rounded-lg hover:bg-muted/30 transition-colors">
           <Link href="/partner/dashboard/transactions">
             <ShoppingBag className="w-4 h-4" />
             <span className="text-[10px]">Riwayat Transaksi</span>
@@ -413,21 +406,21 @@ export default function PartnerDashboardPage() {
       </div>
 
       {/* Share Order Link - Partner Referral */}
-      <Card className="glass-card animate-slide-up overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-cyan-500 via-primary to-violet-500" />
+      <Card className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-cyan-500 via-violet-500 to-emerald-500" />
         <CardHeader className="pb-2">
           <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-            <Globe className="w-4 h-4 text-cyan-500" />
+            <Globe className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />
             Link Order Customer
           </CardTitle>
-          <CardDescription className="text-[10px] sm:text-xs">
+          <CardDescription className="text-[10px] font-medium text-muted-foreground">
             Bagikan link ini ke customer untuk order langsung dengan nama Anda
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-3 sm:px-6">
-          <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-r from-cyan-500/5 via-primary/5 to-violet-500/5 border border-primary/10">
-            <div className="flex items-center gap-2 sm:gap-3 mb-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-primary flex items-center justify-center flex-shrink-0 shadow-lg">
+        <CardContent className="px-4 sm:px-6">
+          <div className="p-3 sm:p-4 rounded-xl bg-muted/30 border border-border/60">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-violet-500 flex items-center justify-center flex-shrink-0">
                 <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div className="min-w-0 flex-1">
@@ -439,7 +432,7 @@ export default function PartnerDashboardPage() {
             </div>
             <div className="flex gap-2">
               <Button
-                className="flex-1 h-10 sm:h-11 rounded-xl bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 text-white shadow-md text-xs sm:text-sm"
+                className="flex-1 rounded-xl h-10 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                 onClick={() => {
                   const link = `${window.location.origin}/order?partnerId=${currentPartner?.id}`;
                   navigator.clipboard.writeText(link);
@@ -454,7 +447,7 @@ export default function PartnerDashboardPage() {
               </Button>
               <Button
                 variant="outline"
-                className="h-10 sm:h-11 px-3 sm:px-4 rounded-xl text-xs sm:text-sm"
+                className="h-9 px-3 rounded-lg text-xs font-medium hover:bg-muted/30 transition-colors"
                 onClick={() => {
                   const link = `${window.location.origin}/order?partnerId=${currentPartner?.id}`;
                   if (navigator.share) {
@@ -485,21 +478,21 @@ export default function PartnerDashboardPage() {
         dataLoading={dataLoading}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
-        {/* Target Progress - Enhanced */}
-        <Card className="glass-card animate-slide-up overflow-hidden">
-          <div className="h-1 gradient-primary" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {/* Target Progress */}
+        <Card className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
+          <div className="h-1 bg-primary" />
           <CardHeader className="pb-1 sm:pb-2">
             <CardTitle className="text-sm sm:text-base flex items-center gap-2">
               <Target className="w-4 h-4 text-primary" />
               Progress Target
             </CardTitle>
-            <CardDescription className="text-[10px] sm:text-xs">Target bulanan Anda</CardDescription>
+            <CardDescription className="text-[10px] font-medium text-muted-foreground">Target bulanan Anda</CardDescription>
           </CardHeader>
-          <CardContent className="px-2 sm:px-6">
-            <div className="space-y-3 sm:space-y-4">
+          <CardContent className="px-4 sm:px-6">
+            <div className="space-y-3">
               <div>
-                <div className="flex justify-between mb-1 sm:mb-2 text-xs sm:text-sm">
+                <div className="flex justify-between mb-1.5 text-xs sm:text-sm">
                   <span className="text-muted-foreground">Progress</span>
                   <span className="font-bold text-primary">{progressPercent.toFixed(0)}%</span>
                 </div>
@@ -512,24 +505,24 @@ export default function PartnerDashboardPage() {
                   )}
                 </div>
               </div>
-              
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                <div className="p-2 sm:p-4 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10">
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 sm:p-4 rounded-xl bg-primary/5 border border-primary/10">
                   <p className="text-[10px] sm:text-xs text-muted-foreground">Profit Saat Ini</p>
                   <p className="text-base sm:text-xl font-bold text-primary">
                     {formatCurrency(currentPartner?.totalProfit as number || 0)}
                   </p>
                 </div>
-                <div className="p-2 sm:p-4 rounded-lg sm:rounded-xl bg-muted/50">
+                <div className="p-3 sm:p-4 rounded-xl bg-muted/30">
                   <p className="text-[10px] sm:text-xs text-muted-foreground">Target</p>
                   <p className="text-base sm:text-xl font-bold">{formatCurrency(currentPartner?.target as number || 0)}</p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-1 sm:pt-2">
-                <Badge className="gradient-primary text-white text-[10px] sm:text-xs">{currentPartner?.tier as string}</Badge>
-                <Badge variant="secondary" className="text-[10px] sm:text-xs">{currentPartner?.badge as string}</Badge>
-                <Badge variant="outline" className="border-primary/30 text-primary text-[10px] sm:text-xs">
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <Badge className="bg-primary text-primary-foreground text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-medium">{currentPartner?.tier as string}</Badge>
+                <Badge variant="secondary" className="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full">{currentPartner?.badge as string}</Badge>
+                <Badge variant="outline" className="border-primary/30 text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full">
                   Komisi: {currentPartner?.commission as number}%
                 </Badge>
               </div>
@@ -537,36 +530,36 @@ export default function PartnerDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Leaderboard - Enhanced */}
-        <Card className="glass-card animate-slide-up stagger-1 overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-500" />
+        {/* Leaderboard */}
+        <Card className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500" />
           <CardHeader className="pb-1 sm:pb-2">
             <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-yellow-500" />
+              <Trophy className="w-4 h-4 text-amber-500 dark:text-amber-400" />
               Leaderboard
             </CardTitle>
-            <CardDescription className="text-[10px] sm:text-xs">Top 5 Partner bulan ini</CardDescription>
+            <CardDescription className="text-[10px] font-medium text-muted-foreground">Top 5 Partner bulan ini</CardDescription>
           </CardHeader>
-          <CardContent className="px-1 sm:px-6">
-            <div className="space-y-0.5 sm:space-y-1">
+          <CardContent className="px-2 sm:px-6">
+            <div className="space-y-1">
               {dataLoading ? (
-                [...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 sm:h-14 rounded-lg sm:rounded-xl" />)
+                [...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 sm:h-14 rounded-xl" />)
               ) : leaderboard?.length ? (
                 leaderboard.map((p: Record<string, unknown>, index: number) => {
                   const isMe = p.id === currentPartner?.id;
                   return (
-                    <div 
-                      key={p.id as string} 
+                    <div
+                      key={p.id as string}
                       className={cn(
-                        'flex items-center gap-2 sm:gap-3 py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl transition-all tap-highlight active-scale',
-                        isMe ? 'bg-primary/10 ring-2 ring-primary/30 shadow-md' : 'hover:bg-muted/50'
+                        'flex items-center gap-2 sm:gap-3 py-2 px-2 sm:px-3 rounded-xl transition-colors',
+                        isMe ? 'bg-primary/10 ring-2 ring-primary/30' : 'hover:bg-muted/30'
                       )}
                     >
                       <div className={cn(
                         'w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center font-bold text-[10px] sm:text-xs flex-shrink-0',
-                        index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white shadow-md' :
+                        index === 0 ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-white' :
                         index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-white' :
-                        index === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white' :
+                        index === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-500 text-white' :
                         'bg-muted text-muted-foreground'
                       )}>
                         {index + 1}
@@ -578,7 +571,7 @@ export default function PartnerDashboardPage() {
                         </p>
                         <p className="text-[10px] sm:text-xs text-muted-foreground">{formatCurrency(p.totalProfit as number)}</p>
                       </div>
-                      <Badge variant="outline" className="text-[9px] sm:text-[10px]">{p.tier as string}</Badge>
+                      <Badge variant="outline" className="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full">{p.tier as string}</Badge>
                     </div>
                   );
                 })
@@ -590,30 +583,30 @@ export default function PartnerDashboardPage() {
         </Card>
       </div>
 
-      {/* Promos Section - Enhanced */}
+      {/* Promos Section */}
       {(promoItems && promoItems.length > 0) && (
-        <Card className="glass-card animate-slide-up stagger-2 overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500" />
+        <Card className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-pink-500 via-violet-500 to-fuchsia-500" />
           <CardHeader className="pb-1 sm:pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                <Gift className="w-4 h-4 text-pink-500" />
+                <Gift className="w-4 h-4 text-pink-500 dark:text-pink-400" />
                 Promo & Materi
               </CardTitle>
-              <Badge className="bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 text-[10px]">
+              <Badge className="bg-pink-100 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full">
                 {promoItems.length} Aktif
               </Badge>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {promoItems.map((promo) => (
                 <button
                   key={promo.id}
                   onClick={() => setSelectedPromo(promo)}
-                  className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-br from-pink-50 to-purple-50 dark:from-pink-900/10 dark:to-purple-900/10 rounded-lg sm:rounded-xl hover:from-pink-100 hover:to-purple-100 dark:hover:from-pink-900/20 dark:hover:to-purple-900/20 transition-all tap-highlight active-scale border border-pink-100 dark:border-pink-900/30 text-left"
+                  className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors border border-border/60 text-left"
                 >
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-pink-500 to-violet-500 flex items-center justify-center flex-shrink-0">
                     <Gift className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -631,31 +624,31 @@ export default function PartnerDashboardPage() {
       )}
 
       {/* Recent Transactions & Testimonials Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Recent Transactions */}
-        <Card className="glass-card animate-slide-up overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-emerald-500 via-primary to-purple-500" />
+        <Card className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-emerald-500 via-cyan-500 to-emerald-500" />
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-500" />
+                <CheckCircle className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                 Transaksi Terakhir
               </CardTitle>
-              <Button variant="ghost" size="sm" asChild className="tap-highlight h-7 sm:h-8 text-[10px] sm:text-xs">
+              <Button variant="ghost" size="sm" asChild className="rounded-lg h-9 text-xs font-medium hover:bg-muted/30 transition-colors">
                 <Link href="/partner/dashboard/transactions">
                   Semua
                   <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-0.5 sm:ml-1" />
                 </Link>
               </Button>
             </div>
-            <CardDescription className="text-[10px] sm:text-xs">
+            <CardDescription className="text-[10px] font-medium text-muted-foreground">
               <span className="flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Transaksi berhasil
               </span>
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-2 sm:px-6">
+          <CardContent className="px-3 sm:px-6">
             {transactionsLoading ? (
               <div className="space-y-2">
                 {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-14 sm:h-16 rounded-xl" />)}
@@ -663,8 +656,8 @@ export default function PartnerDashboardPage() {
             ) : recentTransactions.length > 0 ? (
               <div className="space-y-1.5">
                 {recentTransactions.map((tx) => (
-                  <div key={tx.id} className="flex items-center gap-2.5 sm:gap-3 p-2 sm:p-2.5 rounded-xl bg-muted/20 hover:bg-muted/40 transition-all border border-transparent hover:border-emerald-500/20">
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <div key={tx.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/20 hover:bg-muted/30 transition-colors border border-transparent hover:border-emerald-500/20">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center flex-shrink-0">
                       <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -691,48 +684,48 @@ export default function PartnerDashboardPage() {
         </Card>
 
         {/* Partner Testimonials */}
-        <Card className="glass-card animate-slide-up stagger-1 overflow-hidden">
+        <Card className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
           <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400" />
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                <Star className="w-4 h-4 text-amber-500" />
+                <Star className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                 Testimoni Customer
               </CardTitle>
-              <Badge className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px]">
+              <Badge className="bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full">
                 {partnerTestimonials.length}
               </Badge>
             </div>
-            <CardDescription className="text-[10px] sm:text-xs">
+            <CardDescription className="text-[10px] font-medium text-muted-foreground">
               <span className="flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                 Dari transaksi Anda
               </span>
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-2 sm:px-6">
+          <CardContent className="px-3 sm:px-6">
             {testimonialsLoading ? (
               <div className="space-y-2">
                 {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-16 sm:h-20 rounded-xl" />)}
               </div>
             ) : partnerTestimonials.length > 0 ? (
-              <div className="space-y-1.5 max-h-[380px] sm:max-h-[420px] overflow-y-auto pr-1">
+              <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
                 {partnerTestimonials.map((t) => (
                   <div
                     key={t.id}
                     className={cn(
-                      "rounded-xl p-2.5 sm:p-3 transition-all duration-200 border",
+                      "rounded-xl p-3 transition-colors border",
                       !t.isApproved
-                        ? "bg-amber-50/50 dark:bg-amber-900/10 border-amber-200/50 dark:border-amber-800/30"
-                        : "bg-muted/20 border-transparent hover:border-primary/20"
+                        ? "bg-amber-50 dark:bg-amber-900/10 border-amber-200/50 dark:border-amber-800/30"
+                        : "bg-muted/20 border-border/60 hover:bg-muted/30"
                     )}
                   >
                     <div className="flex items-start gap-2.5">
                       <div className={cn(
-                        "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg",
+                        "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0",
                         !t.isApproved
                           ? "bg-gradient-to-br from-amber-400 to-orange-500"
-                          : "bg-gradient-to-br from-emerald-400 to-green-500"
+                          : "bg-gradient-to-br from-emerald-400 to-emerald-500"
                       )}>
                         <Star className="w-4 h-4 sm:w-5 sm:h-5 text-white fill-white" />
                       </div>
@@ -746,14 +739,14 @@ export default function PartnerDashboardPage() {
                                 className={cn(
                                   "w-2.5 h-2.5 sm:w-3 sm:h-3",
                                   s <= t.rating
-                                    ? "text-amber-400 fill-amber-400"
+                                    ? "text-amber-400 dark:text-amber-300 fill-amber-400 dark:fill-amber-300"
                                     : "text-muted-foreground/20"
                                 )}
                               />
                             ))}
                           </div>
                           {t.isFeatured && (
-                            <Trophy className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                            <Trophy className="w-3 h-3 text-amber-500 dark:text-amber-400 flex-shrink-0" />
                           )}
                         </div>
                         {t.review && (
@@ -796,7 +789,7 @@ export default function PartnerDashboardPage() {
         </Card>
       </div>
 
-      {/* Broadcast Detail Dialog - Modern Design */}
+      {/* Broadcast Detail Dialog */}
       <Dialog open={!!selectedBroadcast} onOpenChange={() => setSelectedBroadcast(null)}>
         <DialogContent className="max-w-md p-0 overflow-hidden">
           <DialogHeader className="sr-only">
@@ -811,20 +804,20 @@ export default function PartnerDashboardPage() {
                 <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
                   <Radio className="w-5 h-5 text-white" />
                 </div>
-                <Badge className="bg-white/20 text-white border-white/30 text-[10px]">
+                <Badge className="bg-white/20 text-white border-white/30 text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full">
                   BROADCAST
                 </Badge>
               </div>
               <h2 className="text-lg font-bold text-white">{selectedBroadcast?.title}</h2>
             </div>
           </div>
-          
+
           {/* Content */}
           <div className="p-6 space-y-4">
             <p className="text-sm text-muted-foreground leading-relaxed">
               {selectedBroadcast?.description}
             </p>
-            
+
             {selectedBroadcast?.startDate && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
                 <Calendar className="w-4 h-4" />
@@ -834,9 +827,9 @@ export default function PartnerDashboardPage() {
                 </span>
               </div>
             )}
-            
+
             {selectedBroadcast?.link && (
-              <Button asChild className="w-full h-11">
+              <Button asChild className="w-full h-10 text-xs font-semibold rounded-xl">
                 <a href={selectedBroadcast.link} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Buka Link
@@ -847,7 +840,7 @@ export default function PartnerDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Promo Detail Dialog - Modern Design */}
+      {/* Promo Detail Dialog */}
       <Dialog open={!!selectedPromo} onOpenChange={() => setSelectedPromo(null)}>
         <DialogContent className="max-w-md p-0 overflow-hidden">
           <DialogHeader className="sr-only">
@@ -855,27 +848,27 @@ export default function PartnerDashboardPage() {
             <DialogDescription>{selectedPromo?.description || 'Informasi promo'}</DialogDescription>
           </DialogHeader>
           {/* Header with gradient */}
-          <div className="relative bg-gradient-to-br from-pink-500 to-purple-600 p-6 pb-4">
+          <div className="relative bg-gradient-to-br from-pink-500 to-violet-600 p-6 pb-4">
             <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
             <div className="relative">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
                   <Gift className="w-5 h-5 text-white" />
                 </div>
-                <Badge className="bg-white/20 text-white border-white/30 text-[10px]">
+                <Badge className="bg-white/20 text-white border-white/30 text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full">
                   PROMO
                 </Badge>
               </div>
               <h2 className="text-lg font-bold text-white">{selectedPromo?.title}</h2>
             </div>
           </div>
-          
+
           {/* Content */}
           <div className="p-6 space-y-4">
             <p className="text-sm text-muted-foreground leading-relaxed">
               {selectedPromo?.description}
             </p>
-            
+
             {selectedPromo?.startDate && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
                 <Calendar className="w-4 h-4" />
@@ -885,8 +878,8 @@ export default function PartnerDashboardPage() {
                 </span>
               </div>
             )}
-            
-            <Button asChild className="w-full h-11 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700">
+
+            <Button asChild className="w-full h-10 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
               <a href={selectedPromo?.link} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Buka Materi Promo
@@ -895,13 +888,14 @@ export default function PartnerDashboardPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+  </div>
+</div>
   );
 }
 
-function StatsCard({ title, value, icon: Icon, gradient, color, bg, trend, alert }: { 
-  title: string; 
-  value: string; 
+function StatsCard({ title, value, icon: Icon, gradient, color, bg, trend, alert }: {
+  title: string;
+  value: string;
   icon: React.ElementType;
   gradient?: boolean;
   color?: string;
@@ -911,27 +905,27 @@ function StatsCard({ title, value, icon: Icon, gradient, color, bg, trend, alert
 }) {
   return (
     <Card className={cn(
-      'glass-card animate-fade-in tap-highlight active-scale overflow-hidden',
-      alert && 'ring-2 ring-orange-300 dark:ring-orange-700'
+      'rounded-xl border border-border/60 shadow-none bg-card overflow-hidden',
+      alert && 'ring-2 ring-amber-400 dark:ring-amber-600'
     )}>
-      <CardContent className="p-2 sm:p-4">
-        <div className="flex items-start justify-between gap-1 sm:gap-2">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">{title}</p>
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">{title}</p>
             <p className={cn('text-sm sm:text-xl font-bold truncate', gradient && 'text-primary')}>{value}</p>
             {alert && (
-              <p className="text-[9px] sm:text-[10px] text-orange-600 dark:text-orange-400 mt-0.5 sm:mt-1 flex items-center gap-0.5">
+              <p className="text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 sm:mt-1 flex items-center gap-0.5">
                 <AlertTriangle className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                 Perlu ditangani
               </p>
             )}
           </div>
           <div className={cn(
-            'w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0',
-            gradient && 'gradient-primary shadow-md',
+            'w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0',
+            gradient && 'bg-primary text-primary-foreground shadow-sm',
             !gradient && bg
           )}>
-            <Icon className={cn('w-3.5 h-3.5 sm:w-5 sm:h-5', gradient ? 'text-white' : color)} />
+            <Icon className={cn('w-4 h-4 sm:w-5 sm:h-5', gradient ? 'text-primary-foreground' : color)} />
           </div>
         </div>
       </CardContent>
@@ -1044,27 +1038,27 @@ function SmartAlertsCard({
   const getTypeStyle = (type: string) => {
     switch (type) {
       case 'warning':
-        return 'bg-amber-500';
+        return 'bg-amber-500 dark:bg-amber-400';
       case 'success':
-        return 'bg-green-500';
+        return 'bg-emerald-500 dark:bg-emerald-400';
       default:
-        return 'bg-primary';
+        return 'bg-violet-500 dark:bg-violet-400';
     }
   };
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+    <div className="flex gap-2 overflow-x-auto pb-1">
       {notifications.slice(0, 5).map((item) => {
         const Icon = item.icon;
         const isClickable = !!item.action;
-        
+
         const content = (
           <div
             key={item.id}
             className={cn(
-              'flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-card border flex-shrink-0 min-w-[140px]',
-              'transition-all duration-200',
-              isClickable && 'cursor-pointer hover:border-primary/50 hover:shadow-sm active:scale-[0.98]'
+              'flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-card border border-border/60 flex-shrink-0 min-w-[140px]',
+              'transition-colors',
+              isClickable && 'cursor-pointer hover:bg-muted/30 hover:border-primary/50'
             )}
           >
             <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', getTypeStyle(item.type))}>
@@ -1093,13 +1087,13 @@ function SmartAlertsCard({
 
 function DashboardSkeleton() {
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-6 space-y-3 sm:space-y-6">
-      <Skeleton className="h-24 sm:h-32 rounded-xl sm:rounded-2xl" />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-        {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-20 sm:h-32 rounded-lg sm:rounded-2xl" />)}
+    <div className="container mx-auto px-4 py-4 sm:px-6 sm:py-6 space-y-4 max-w-4xl">
+      <Skeleton className="h-28 sm:h-36 rounded-xl" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 sm:h-32 rounded-xl" />)}
       </div>
-      <Skeleton className="h-28 sm:h-32 rounded-xl sm:rounded-2xl" />
-      <Skeleton className="h-48 sm:h-64 rounded-xl sm:rounded-2xl" />
+      <Skeleton className="h-28 sm:h-36 rounded-xl" />
+      <Skeleton className="h-48 sm:h-64 rounded-xl" />
     </div>
   );
 }

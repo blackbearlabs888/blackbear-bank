@@ -49,6 +49,26 @@ export function formatPreciseCurrency(value: number): string {
   return formatted;
 }
 
+// Ultra compact - no Rp prefix: 1.5jt, 500rb, 2.3m, 1t
+export function formatShort(value: number): string {
+  if (value >= 1000000000000) {
+    const n = value / 1000000000000;
+    return `${n % 1 === 0 ? n : n.toFixed(1).replace(/\.0$/, '')}t`;
+  }
+  if (value >= 1000000000) {
+    const n = value / 1000000000;
+    return `${n % 1 === 0 ? n : n.toFixed(1).replace(/\.0$/, '')}m`;
+  }
+  if (value >= 1000000) {
+    const n = value / 1000000;
+    return `${n % 1 === 0 ? n : n.toFixed(1).replace(/\.0$/, '')}jt`;
+  }
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(0)}rb`;
+  }
+  return `${value}`;
+}
+
 export function formatDate(date: Date | string): string {
   return new Intl.DateTimeFormat('id-ID', {
     dateStyle: 'medium',

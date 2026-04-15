@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,30 +12,24 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   CreditCard,
   Plus,
-  Percent,
   DollarSign,
   Loader2,
   TrendingUp,
   Globe,
-  Truck,
-  Calculator,
   BarChart3,
-  ArrowUpRight,
-  ArrowDownRight,
   RefreshCw,
   Settings2,
-  Wallet,
-  Target,
   Sparkles,
   Search,
   ImageIcon,
   Store,
+  Truck,
+  Target,
 } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatShort } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -98,13 +92,6 @@ interface MarketplaceStats {
 }
 
 type DiscountType = 'percent' | 'nominal';
-
-const COLORS = {
-  primary: 'from-primary to-primary/70',
-  green: 'from-green-500 to-emerald-600',
-  violet: 'from-violet-500 to-purple-600',
-  amber: 'from-amber-500 to-orange-600',
-};
 
 export default function OwnerFeesPage() {
   const router = useRouter();
@@ -252,13 +239,15 @@ export default function OwnerFeesPage() {
 
   if (isLoading || !hasHydrated) {
     return (
-      <div className="container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3 pb-20 md:pb-4">
-        <Skeleton className="h-8 w-24" />
-        <div className="flex gap-1 p-1 bg-muted/50 rounded-xl">
-          <Skeleton className="h-9 flex-1 rounded-lg" />
-          <Skeleton className="h-9 flex-1 rounded-lg" />
+      <div className="min-h-screen bg-background dashboard-mesh">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+          <Skeleton className="h-8 w-24" />
+          <div className="flex gap-1 p-1 bg-muted/60 rounded-xl">
+            <Skeleton className="h-9 flex-1 rounded-lg" />
+            <Skeleton className="h-9 flex-1 rounded-lg" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">{[1,2,3,4].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
         </div>
-        <div className="grid grid-cols-2 gap-1.5">{[1,2,3,4].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
       </div>
     );
   }
@@ -273,22 +262,24 @@ export default function OwnerFeesPage() {
   const totalPaymentFees = paymentTypeStats.reduce((sum, pt) => sum + pt.totalFees, 0);
 
   return (
-    <div className="container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3 pb-20 md:pb-4">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2">
+    <div className="min-h-screen bg-background dashboard-mesh">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+      {/* ── Page Header ── */}
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-base sm:text-lg font-bold flex items-center gap-2">
-            <Percent className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
-            <span className="truncate">Pengaturan Fee</span>
-          </h1>
-          <div className="flex items-center gap-2 mt-0.5">
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Kelola biaya & marketplace</p>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Fee & Marketplace</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Pengaturan Fee</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-xs text-muted-foreground">Kelola biaya & marketplace</p>
             {lastUpdated && (
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 {isRefreshing ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
                 ) : (
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 )}
                 <span className="hidden sm:inline">{isRefreshing ? 'Refreshing...' : formatTimeAgo(lastUpdated)}</span>
               </div>
@@ -298,56 +289,56 @@ export default function OwnerFeesPage() {
         <Button
           onClick={() => fetchData()}
           size="sm"
-          variant="outline"
-          className="h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-lg"
+          variant="ghost"
+          className="h-9 w-9 p-0 rounded-lg"
           disabled={isRefreshing}
         >
-          <RefreshCw className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", isRefreshing && "animate-spin")} />
+          <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
         </Button>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+      {/* ── KPI Cards ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <FeeKPICard
           title="Payment Aktif"
           value={activePaymentTypes}
-          icon={<CreditCard className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          icon={<CreditCard className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
           color="primary"
           isCount
         />
         <FeeKPICard
           title="Marketplace"
           value={activeMarketplaces}
-          icon={<Globe className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          icon={<Globe className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
           color="green"
           isCount
         />
         <FeeKPICard
           title="Fee Payment"
           value={totalPaymentFees}
-          icon={<TrendingUp className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          icon={<TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
           color="violet"
         />
         <FeeKPICard
           title="Fee Platform"
           value={totalPlatformFees}
-          icon={<DollarSign className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+          icon={<DollarSign className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
           color="amber"
         />
       </div>
 
-      {/* Fee Calculator */}
-      <FeeCalculatorCard paymentTypes={paymentTypes} marketplaces={marketplaces} />
+      {/* ── Active Discounts Indicator ── */}
+      <ActiveDiscountsCard paymentTypes={paymentTypes} />
 
-      {/* Main Tabs */}
-      <div className="flex gap-1 p-1 bg-muted/50 rounded-xl">
+      {/* ── Main Tabs: Payment & Marketplace ── */}
+      <div className="flex gap-1 p-1 bg-muted/60 rounded-xl">
         <button
           onClick={() => setMainTab('payment')}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-xs font-medium transition-all",
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-sm font-medium transition-all",
             mainTab === 'payment' 
               ? "bg-background text-foreground shadow-sm" 
-              : "text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground/80"
           )}
         >
           <CreditCard className="w-4 h-4" />
@@ -356,10 +347,10 @@ export default function OwnerFeesPage() {
         <button
           onClick={() => setMainTab('marketplace')}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-xs font-medium transition-all",
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-sm font-medium transition-all",
             mainTab === 'marketplace' 
               ? "bg-background text-foreground shadow-sm" 
-              : "text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground/80"
           )}
         >
           <Globe className="w-4 h-4" />
@@ -367,27 +358,27 @@ export default function OwnerFeesPage() {
         </button>
       </div>
 
-      {/* Tab Content */}
+      {/* ── Tab Content ── */}
       {mainTab === 'payment' ? (
-        <div className="space-y-2 sm:space-y-3">
+        <div className="space-y-4">
           {/* Stats Summary */}
           {paymentTypeStats.length > 0 && (
-            <Card className="glass-card">
-              <CardContent className="p-2.5 sm:p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <BarChart3 className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[10px] sm:text-xs font-medium">Top Payment by Volume</span>
+            <Card className="rounded-xl dash-card overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <BarChart3 className="w-3.5 h-3.5 text-primary dark:text-primary" />
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Top Payment by Volume</span>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {[...paymentTypeStats].sort((a, b) => b.totalVolume - a.totalVolume).slice(0, 3).map((pt, idx) => (
-                    <div key={pt.id} className="flex items-center justify-between text-[10px] sm:text-xs">
+                    <div key={pt.id} className="flex items-center justify-between text-[11px] sm:text-xs">
                       <div className="flex items-center gap-1.5">
                         <Badge variant="outline" className="w-4 h-4 p-0 text-[8px] justify-center">
                           {idx + 1}
                         </Badge>
                         <span className="truncate">{pt.name}</span>
                       </div>
-                      <span className="font-medium">{formatCurrency(pt.totalVolume)}</span>
+                      <span className="font-semibold">{formatCurrency(pt.totalVolume)}</span>
                     </div>
                   ))}
                 </div>
@@ -396,14 +387,14 @@ export default function OwnerFeesPage() {
           )}
 
           {/* Search + New Button */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
                 placeholder="Cari payment type..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 pl-8 text-xs sm:text-sm rounded-lg"
+                className="h-8 pl-8 text-xs rounded-lg"
               />
             </div>
             <NewPaymentTypeDialog onCreated={() => fetchData()} />
@@ -411,11 +402,11 @@ export default function OwnerFeesPage() {
 
           {/* Payment Type Grid */}
           {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-44 sm:h-48 rounded-lg sm:rounded-xl" />)}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-44 sm:h-48 rounded-xl" />)}
             </div>
           ) : filteredPaymentTypes.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {filteredPaymentTypes.map((pt) => {
                 const stats = paymentTypeStats.find(s => s.id === pt.id);
                 return (
@@ -439,25 +430,25 @@ export default function OwnerFeesPage() {
           )}
         </div>
       ) : (
-        <div className="space-y-2 sm:space-y-3">
+        <div className="space-y-4">
           {/* Stats Summary */}
           {marketplaceStats.length > 0 && (
-            <Card className="glass-card">
-              <CardContent className="p-2.5 sm:p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <BarChart3 className="w-3.5 h-3.5 text-green-600" />
-                  <span className="text-[10px] sm:text-xs font-medium">Top Marketplace by Fee</span>
+            <Card className="rounded-xl dash-card overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <BarChart3 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Top Marketplace by Fee</span>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {[...marketplaceStats].sort((a, b) => b.totalFees - a.totalFees).slice(0, 3).map((mp, idx) => (
-                    <div key={mp.id} className="flex items-center justify-between text-[10px] sm:text-xs">
+                    <div key={mp.id} className="flex items-center justify-between text-[11px] sm:text-xs">
                       <div className="flex items-center gap-1.5">
                         <Badge variant="outline" className="w-4 h-4 p-0 text-[8px] justify-center">
                           {idx + 1}
                         </Badge>
                         <span className="truncate">{mp.name}</span>
                       </div>
-                      <span className="font-medium">{formatCurrency(mp.totalFees)}</span>
+                      <span className="font-semibold">{formatCurrency(mp.totalFees)}</span>
                     </div>
                   ))}
                 </div>
@@ -466,14 +457,14 @@ export default function OwnerFeesPage() {
           )}
 
           {/* Search + New Button */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
                 placeholder="Cari marketplace..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 pl-8 text-xs sm:text-sm rounded-lg"
+                className="h-8 pl-8 text-xs rounded-lg"
               />
             </div>
             <NewMarketplaceDialog onCreated={() => fetchData()} />
@@ -481,11 +472,11 @@ export default function OwnerFeesPage() {
 
           {/* Marketplace Grid */}
           {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-40 sm:h-44 rounded-lg sm:rounded-xl" />)}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-40 sm:h-44 rounded-xl" />)}
             </div>
           ) : filteredMarketplaces.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {filteredMarketplaces.map((mp) => {
                 const stats = marketplaceStats.find(s => s.id === mp.id);
                 return (
@@ -509,6 +500,7 @@ export default function OwnerFeesPage() {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -521,253 +513,97 @@ function FeeKPICard({ title, value, icon, color, isCount }: {
   color: 'primary' | 'green' | 'violet' | 'amber';
   isCount?: boolean;
 }) {
-  const colorClasses = {
-    primary: 'from-primary to-primary/70',
-    green: 'from-green-500 to-emerald-600',
-    violet: 'from-violet-500 to-purple-600',
-    amber: 'from-amber-500 to-orange-600',
+  const iconBgClasses = {
+    primary: 'bg-primary/15',
+    green: 'bg-emerald-500/15',
+    violet: 'bg-violet-500/15',
+    amber: 'bg-amber-500/15',
   };
 
-  const bgColorClasses = {
-    primary: 'bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20',
-    green: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20',
-    violet: 'bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20',
-    amber: 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20',
+  const iconColorClasses = {
+    primary: 'text-primary dark:text-primary',
+    green: 'text-emerald-600 dark:text-emerald-400',
+    violet: 'text-violet-600 dark:text-violet-400',
+    amber: 'text-amber-600 dark:text-amber-400',
   };
 
   return (
-    <Card className={cn("glass-card overflow-hidden", bgColorClasses[color])}>
-      <div className={cn("h-0.5 sm:h-1 bg-gradient-to-r", colorClasses[color])} />
-      <CardContent className="p-2 sm:p-3">
-        <div className="flex items-start justify-between gap-1">
-          <div className="min-w-0 flex-1">
-            <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{title}</p>
-            <p className="text-sm sm:text-lg font-bold truncate">
-              {isCount ? value : formatCurrency(value)}
-            </p>
-          </div>
-          <div className={cn("w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-gradient-to-br flex items-center justify-center text-white flex-shrink-0", colorClasses[color])}>
-            {icon}
-          </div>
+    <div className="rounded-lg bg-muted/30 border border-border p-3 sm:p-3.5 transition-colors hover:bg-muted/50">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <div className={cn("w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center", iconBgClasses[color])}>
+          <div className={iconColorClasses[color]}>{icon}</div>
         </div>
-      </CardContent>
-    </Card>
+        <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">{title}</span>
+      </div>
+      <p className="text-sm sm:text-lg font-bold text-foreground tracking-tight">
+        {isCount ? value : formatCurrency(value)}
+      </p>
+    </div>
   );
 }
 
-// Fee Calculator Card
-function FeeCalculatorCard({ 
-  paymentTypes, 
-  marketplaces 
-}: { 
-  paymentTypes: PaymentType[];
-  marketplaces: Marketplace[];
-}) {
-  const [nominal, setNominal] = useState<string>('1000000');
-  const [paymentTypeId, setPaymentTypeId] = useState<string>('');
-  const [marketplaceId, setMarketplaceId] = useState<string>('');
-  const [method, setMethod] = useState<'Online' | 'COD'>('Online');
+// Active Discounts Indicator Card
+function ActiveDiscountsCard({ paymentTypes }: { paymentTypes: PaymentType[] }) {
+  const discounted = paymentTypes.filter(
+    pt => pt.isActive && (pt.discountPercent > 0 || pt.discountNominal > 0)
+  );
 
-  const selectedPaymentType = paymentTypes.find(pt => pt.id === paymentTypeId);
-  const selectedMarketplace = marketplaces.find(mp => mp.id === marketplaceId);
-
-  const nominalNum = parseFloat(nominal) || 0;
-
-  // Calculate payment fee
-  let paymentFee = 0;
-  let isAboveThreshold = false;
-  if (selectedPaymentType && nominalNum > 0) {
-    const feePercent = method === 'Online' 
-      ? selectedPaymentType.onlineFeePercent 
-      : selectedPaymentType.codFeePercent;
-    const feeFlat = method === 'Online' 
-      ? selectedPaymentType.onlineFeeFlat 
-      : selectedPaymentType.codFeeFlat;
-    
-    isAboveThreshold = nominalNum >= selectedPaymentType.threshold;
-    paymentFee = isAboveThreshold 
-      ? nominalNum * (feePercent / 100) 
-      : feeFlat;
-  }
-
-  // Apply discount - support both percent and nominal
-  let discountAmount = 0;
-  let originalPaymentFee = paymentFee;
-  let discountLabel = '';
-  const hasPercentDiscount = selectedPaymentType && selectedPaymentType.discountPercent > 0 && paymentFee > 0;
-  const hasNominalDiscount = selectedPaymentType && selectedPaymentType.discountNominal > 0 && paymentFee > 0;
-  const hasDiscount = hasPercentDiscount || hasNominalDiscount;
-  
-  if (hasDiscount && selectedPaymentType) {
-    if (hasPercentDiscount) {
-      discountAmount = paymentFee * (selectedPaymentType.discountPercent / 100);
-      discountLabel = `${selectedPaymentType.discountPercent}%`;
-    } else if (hasNominalDiscount) {
-      discountAmount = selectedPaymentType.discountNominal;
-      discountLabel = formatCurrency(selectedPaymentType.discountNominal);
-    }
-    // Don't let discount exceed the fee
-    discountAmount = Math.min(discountAmount, paymentFee);
-    paymentFee = paymentFee - discountAmount;
-  }
-
-  // Calculate platform fee
-  let platformFee = 0;
-  if (selectedMarketplace && nominalNum > 0) {
-    let mpFeePercent = Number(selectedMarketplace.feePercent) || 0;
-    const mpFeeFlat = Number(selectedMarketplace.feeFlat) || 0;
-    if (mpFeePercent > 100) {
-      mpFeePercent = mpFeePercent / 1000;
-    }
-    platformFee = nominalNum * (mpFeePercent / 100) + mpFeeFlat;
-  }
-
-  const netMargin = paymentFee - platformFee;
-  const totalDeduction = paymentFee + platformFee;
-  const customerReceives = nominalNum - paymentFee;
+  if (discounted.length === 0) return null;
 
   return (
-    <Card className="glass-card border-violet-200 dark:border-violet-800">
-      <CardHeader className="pb-1.5 sm:pb-2 pt-2.5 sm:pt-3 px-3 sm:px-4">
-        <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
-          <Calculator className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
-          Kalkulator Fee
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-3 sm:px-4 pb-2.5 sm:pb-3 space-y-2 sm:space-y-3">
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1">
-            <Label className="text-[10px] sm:text-xs">Nominal</Label>
-            <Input
-              type="number"
-              placeholder="Nominal"
-              value={nominal}
-              onChange={(e) => setNominal(e.target.value)}
-              className="h-8 sm:h-9 text-xs sm:text-sm rounded-lg"
-            />
+    <Card className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-card shadow-none">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+            <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
           </div>
-          <div className="space-y-1">
-            <Label className="text-[10px] sm:text-xs">Metode</Label>
-            <Select value={method} onValueChange={(v) => setMethod(v as 'Online' | 'COD')}>
-              <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm rounded-lg">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Online">Online</SelectItem>
-                <SelectItem value="COD">COD</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold">Diskon Berjalan</p>
+            <p className="text-[10px] text-muted-foreground">Payment type yang sedang diskon</p>
           </div>
-          <div className="space-y-1">
-            <Label className="text-[10px] sm:text-xs">Payment Type</Label>
-            <Select value={paymentTypeId} onValueChange={setPaymentTypeId}>
-              <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm rounded-lg">
-                <SelectValue placeholder="Pilih..." />
-              </SelectTrigger>
-              <SelectContent>
-                {paymentTypes.map((pt) => (
-                  <SelectItem key={pt.id} value={pt.id}>{pt.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-[10px] sm:text-xs">Marketplace</Label>
-            <Select value={marketplaceId} onValueChange={setMarketplaceId}>
-              <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm rounded-lg">
-                <SelectValue placeholder="Opsional" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none">Tanpa</SelectItem>
-                {marketplaces.map((mp) => (
-                  <SelectItem key={mp.id} value={mp.id}>{mp.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Badge className="ml-auto text-[9px] px-2 py-0.5 rounded-full h-5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800">
+            {discounted.length} aktif
+          </Badge>
         </div>
-
-        {/* Results */}
-        <div className="bg-muted/50 rounded-lg sm:rounded-xl p-2.5 sm:p-3 space-y-1.5 sm:space-y-2">
-          <div className="flex items-center justify-between text-[10px] sm:text-xs">
-            <span className="text-muted-foreground">Nominal</span>
-            <span className="font-medium">{formatCurrency(nominalNum)}</span>
-          </div>
-
-          {selectedPaymentType && (
-            <>
-              <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                <div className="flex items-center gap-1">
-                  <span className="text-muted-foreground">Payment Fee</span>
-                  <Badge variant={isAboveThreshold ? "default" : "secondary"} className="text-[8px] h-3.5 px-1">
-                    {isAboveThreshold ? '%' : 'Flat'}
-                  </Badge>
-                </div>
-                <span className="font-medium text-violet-600">-{formatCurrency(paymentFee)}</span>
-              </div>
-              {hasDiscount && (
-                <>
-                  <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                    <div className="flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-amber-500" />
-                      <span className="text-amber-600 dark:text-amber-400">Diskon {discountLabel}</span>
+        <div className="space-y-1.5">
+          {discounted.map(pt => {
+            const label = pt.discountPercent > 0
+              ? `${pt.discountPercent}%`
+              : formatCurrency(pt.discountNominal);
+            return (
+              <div
+                key={pt.id}
+                className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-amber-50/60 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  {pt.logoUrl ? (
+                    <img
+                      src={pt.logoUrl}
+                      alt={pt.name}
+                      className="w-6 h-6 rounded-md object-cover flex-shrink-0"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="w-6 h-6 rounded-md bg-amber-200/60 dark:bg-amber-800/40 flex items-center justify-center flex-shrink-0">
+                      <CreditCard className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                     </div>
-                    <span className="font-medium text-green-600">+{formatCurrency(discountAmount)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-muted-foreground">
-                    <span>Fee sebelum diskon</span>
-                    <span className="line-through">{formatCurrency(originalPaymentFee)}</span>
-                  </div>
-                </>
-              )}
-              <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-muted-foreground">
-                <span>Customer receives</span>
-                <span>{formatCurrency(customerReceives)}</span>
+                  )}
+                  <span className="text-[11px] sm:text-xs font-medium truncate">{pt.name}</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {pt.minTransaction > 0 && (
+                    <span className="text-[9px] text-muted-foreground hidden sm:inline">
+                      Min. {formatCurrency(pt.minTransaction)}
+                    </span>
+                  )}
+                  <span className="text-[10px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                    -{label}
+                  </span>
+                </div>
               </div>
-            </>
-          )}
-
-          {selectedMarketplace && (
-            <div className="flex items-center justify-between text-[10px] sm:text-xs pt-1 border-t">
-              <span className="text-muted-foreground">Platform Fee</span>
-              <span className="font-medium text-amber-600">-{formatCurrency(platformFee)}</span>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between text-[10px] sm:text-xs pt-1 border-t">
-            <span className="font-medium">Net Margin</span>
-            <span className={cn("font-bold", netMargin > 0 ? "text-green-600" : "text-muted-foreground")}>
-              {formatCurrency(netMargin)}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between text-[10px] sm:text-xs">
-            <span className="font-medium">Total Potongan</span>
-            <span className="font-bold text-red-500">-{formatCurrency(totalDeduction)}</span>
-          </div>
+            );
+          })}
         </div>
-
-        {/* Threshold Info */}
-        {selectedPaymentType && (
-          <div className={cn(
-            "flex items-center gap-1.5 text-[9px] sm:text-[10px] p-1.5 sm:p-2 rounded-lg",
-            isAboveThreshold 
-              ? "bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400"
-              : "bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400"
-          )}>
-            {isAboveThreshold ? (
-              <>
-                <ArrowUpRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                <span>Above threshold - Fee % applied</span>
-              </>
-            ) : (
-              <>
-                <ArrowDownRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                <span>Below threshold - Flat fee applied</span>
-              </>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   );
@@ -797,103 +633,98 @@ function PaymentTypeGridCard({
   return (
     <>
       <Card className={cn(
-        "glass-card tap-highlight flex flex-col overflow-hidden",
+        "rounded-xl border border-border/60 bg-card shadow-none flex flex-col overflow-hidden",
         !paymentType.isActive && "opacity-60"
       )}>
-        <CardContent className="p-2.5 sm:p-3 flex flex-col flex-1 gap-2">
-          {/* Top row: Logo + Name + Actions */}
-          <div className="flex items-start gap-2">
-            {/* Logo */}
-            <div className={cn(
-              "w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden",
-              paymentType.isActive ? "bg-primary/10" : "bg-muted"
-            )}>
-              {paymentType.logoUrl ? (
-                <img 
-                  src={paymentType.logoUrl} 
-                  alt={paymentType.name}
-                  className="w-full h-full object-cover rounded-lg sm:rounded-xl"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                  }}
-                />
-              ) : (
-                <CreditCard className={cn("w-5 h-5 sm:w-6 sm:h-6", paymentType.isActive ? "text-primary" : "text-muted-foreground")} />
-              )}
-              {/* Hidden fallback icon for error state */}
-              <CreditCard className={cn("w-5 h-5 sm:w-6 sm:h-6 hidden absolute", paymentType.isActive ? "text-primary" : "text-muted-foreground")} />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              {/* Name */}
-              <p className="text-[11px] sm:text-sm font-semibold truncate leading-tight">{paymentType.name}</p>
-              
-              {/* Fee display */}
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 truncate">
-                {paymentType.onlineFeePercent}% + {formatCurrency(paymentType.onlineFeeFlat)}
-              </p>
-
-              {/* Discount badge */}
-              {hasDiscount && (
-                <Badge className="mt-1 text-[8px] h-4 px-1.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100">
-                  <Sparkles className="w-2.5 h-2.5 mr-0.5" />
-                  {discountBadgeLabel}
-                </Badge>
-              )}
-
-              {/* Min transaction indicator */}
-              {hasDiscount && paymentType.minTransaction > 0 && (
-                <p className="text-[8px] sm:text-[9px] text-muted-foreground mt-0.5">
-                  Min. {formatCurrency(paymentType.minTransaction)}
-                </p>
-              )}
-
-              {/* Active/Inactive indicator */}
-              <div className="flex items-center gap-1 mt-1">
-                <div className={cn(
-                  "w-1.5 h-1.5 rounded-full",
-                  paymentType.isActive ? "bg-green-500" : "bg-muted-foreground/40"
-                )} />
-                <span className="text-[8px] sm:text-[9px] text-muted-foreground">
-                  {paymentType.isActive ? 'Aktif' : 'Nonaktif'}
-                </span>
+        <CardContent className="p-3 sm:p-4 flex flex-col flex-1 gap-2">
+          {/* Top row: Logo + Name + Switch */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2 min-w-0 flex-1">
+              {/* Logo */}
+              <div className={cn(
+                "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden relative",
+                paymentType.isActive ? "bg-primary/10 dark:bg-primary/20" : "bg-muted"
+              )}>
+                {paymentType.logoUrl ? (
+                  <img 
+                    src={paymentType.logoUrl} 
+                    alt={paymentType.name}
+                    className="w-full h-full object-cover rounded-xl"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                ) : (
+                  <CreditCard className={cn("w-5 h-5 sm:w-6 sm:h-6", paymentType.isActive ? "text-primary dark:text-primary" : "text-muted-foreground")} />
+                )}
+                {/* Hidden fallback icon for error state */}
+                <CreditCard className={cn("w-5 h-5 sm:w-6 sm:h-6 hidden absolute", paymentType.isActive ? "text-primary dark:text-primary" : "text-muted-foreground")} />
               </div>
+
+              <div className="min-w-0 flex-1">
+                {/* Name */}
+                <p className="text-[11px] sm:text-sm font-semibold truncate leading-tight">{paymentType.name}</p>
+                
+                {/* Fee display */}
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 truncate">
+                  {paymentType.onlineFeePercent}% + {formatCurrency(paymentType.onlineFeeFlat)}
+                </p>
+
+                {/* Discount badge */}
+                {hasDiscount && (
+                  <Badge className="mt-1 text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full h-4 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/30">
+                    <Sparkles className="w-2.5 h-2.5 mr-0.5" />
+                    {discountBadgeLabel}
+                  </Badge>
+                )}
+
+                {/* Min transaction indicator */}
+                {hasDiscount && paymentType.minTransaction > 0 && (
+                  <p className="text-[8px] sm:text-[9px] text-muted-foreground mt-0.5">
+                    Min. {formatCurrency(paymentType.minTransaction)}
+                  </p>
+                )}
+              </div>
+            </div>
+            {/* Switch — top right */}
+            <div className="flex-shrink-0">
+              <Switch
+                size="sm"
+                checked={paymentType.isActive}
+                onCheckedChange={onToggle}
+              />
             </div>
           </div>
 
-          {/* Stats row */}
+          {/* Stats row - Payment Type */}
           {stats && (
             <div className="grid grid-cols-3 gap-1 mt-auto pt-2 border-t">
               <div className="text-center">
                 <p className="text-[8px] sm:text-[9px] text-muted-foreground">Trx</p>
-                <p className="text-[9px] sm:text-[10px] font-medium">{stats.transactionCount}</p>
+                <p className="text-[9px] sm:text-[10px] font-semibold">{formatShort(stats.transactionCount)}</p>
               </div>
               <div className="text-center">
                 <p className="text-[8px] sm:text-[9px] text-muted-foreground">Volume</p>
-                <p className="text-[9px] sm:text-[10px] font-medium">{formatCurrency(stats.totalVolume)}</p>
+                <p className="text-[9px] sm:text-[10px] font-semibold">{formatShort(stats.totalVolume)}</p>
               </div>
               <div className="text-center">
                 <p className="text-[8px] sm:text-[9px] text-muted-foreground">Fee</p>
-                <p className="text-[9px] sm:text-[10px] font-medium">{formatCurrency(stats.totalFees)}</p>
+                <p className="text-[9px] sm:text-[10px] font-semibold">{formatShort(stats.totalFees)}</p>
               </div>
             </div>
           )}
 
-          {/* Bottom row: Settings + Toggle */}
-          <div className="flex items-center justify-between pt-1 mt-auto">
+          {/* Bottom row: Edit button */}
+          <div className="flex items-center justify-end pt-1 mt-auto">
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
               onClick={() => setShowEdit(true)}
             >
               <Settings2 className="w-3.5 h-3.5" />
             </Button>
-            <Switch
-              checked={paymentType.isActive}
-              onCheckedChange={onToggle}
-            />
           </div>
         </CardContent>
       </Card>
@@ -927,59 +758,58 @@ function MarketplaceGridCard({
   return (
     <>
       <Card className={cn(
-        "glass-card tap-highlight flex flex-col overflow-hidden",
+        "rounded-xl border border-border/60 bg-card shadow-none flex flex-col overflow-hidden",
         !marketplace.isActive && "opacity-60"
       )}>
-        <CardContent className="p-2.5 sm:p-3 flex flex-col flex-1 gap-2">
-          {/* Top row: Logo + Name + Actions */}
-          <div className="flex items-start gap-2">
-            {/* Logo */}
-            <div className={cn(
-              "w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden",
-              marketplace.isActive ? "bg-green-100 dark:bg-green-900/30" : "bg-muted"
-            )}>
-              {marketplace.logoUrl ? (
-                <img 
-                  src={marketplace.logoUrl} 
-                  alt={marketplace.name}
-                  className="w-full h-full object-cover rounded-lg sm:rounded-xl"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                  }}
-                />
-              ) : (
-                <Store className={cn("w-5 h-5 sm:w-6 sm:h-6", marketplace.isActive ? "text-green-600" : "text-muted-foreground")} />
-              )}
-              <Store className={cn("w-5 h-5 sm:w-6 sm:h-6 hidden absolute", marketplace.isActive ? "text-green-600" : "text-muted-foreground")} />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              {/* Name */}
-              <p className="text-[11px] sm:text-sm font-semibold truncate leading-tight">{marketplace.name}</p>
-              
-              {/* Fee display */}
-              <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                <Badge variant="outline" className="text-[8px] h-4 px-1">
-                  {marketplace.feePercent}%
-                </Badge>
-                {marketplace.feeFlat > 0 && (
-                  <span className="text-[8px] sm:text-[9px] text-muted-foreground">
-                    +{formatCurrency(marketplace.feeFlat)}
-                  </span>
+        <CardContent className="p-3 sm:p-4 flex flex-col flex-1 gap-2">
+          {/* Top row: Logo + Name + Switch */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2 min-w-0 flex-1">
+              {/* Logo */}
+              <div className={cn(
+                "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden relative",
+                marketplace.isActive ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-muted"
+              )}>
+                {marketplace.logoUrl ? (
+                  <img 
+                    src={marketplace.logoUrl} 
+                    alt={marketplace.name}
+                    className="w-full h-full object-cover rounded-xl"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                ) : (
+                  <Store className={cn("w-5 h-5 sm:w-6 sm:h-6", marketplace.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")} />
                 )}
+                <Store className={cn("w-5 h-5 sm:w-6 sm:h-6 hidden absolute", marketplace.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")} />
               </div>
 
-              {/* Active/Inactive indicator */}
-              <div className="flex items-center gap-1 mt-1">
-                <div className={cn(
-                  "w-1.5 h-1.5 rounded-full",
-                  marketplace.isActive ? "bg-green-500" : "bg-muted-foreground/40"
-                )} />
-                <span className="text-[8px] sm:text-[9px] text-muted-foreground">
-                  {marketplace.isActive ? 'Aktif' : 'Nonaktif'}
-                </span>
+              <div className="min-w-0 flex-1">
+                {/* Name */}
+                <p className="text-[11px] sm:text-sm font-semibold truncate leading-tight">{marketplace.name}</p>
+                
+                {/* Fee display */}
+                <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                  <Badge variant="outline" className="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full h-4">
+                    {marketplace.feePercent}%
+                  </Badge>
+                  {marketplace.feeFlat > 0 && (
+                    <span className="text-[8px] sm:text-[9px] text-muted-foreground">
+                      +{formatCurrency(marketplace.feeFlat)}
+                    </span>
+                  )}
+                </div>
               </div>
+            </div>
+            {/* Switch — top right */}
+            <div className="flex-shrink-0">
+              <Switch
+                size="sm"
+                checked={marketplace.isActive}
+                onCheckedChange={onToggle}
+              />
             </div>
           </div>
 
@@ -990,38 +820,34 @@ function MarketplaceGridCard({
             </p>
           )}
 
-          {/* Stats row */}
+          {/* Stats row - Marketplace */}
           {stats && (
             <div className="grid grid-cols-3 gap-1 mt-auto pt-2 border-t">
               <div className="text-center">
                 <p className="text-[8px] sm:text-[9px] text-muted-foreground">Trx</p>
-                <p className="text-[9px] sm:text-[10px] font-medium">{stats.transactionCount}</p>
+                <p className="text-[9px] sm:text-[10px] font-semibold">{formatShort(stats.transactionCount)}</p>
               </div>
               <div className="text-center">
                 <p className="text-[8px] sm:text-[9px] text-muted-foreground">Volume</p>
-                <p className="text-[9px] sm:text-[10px] font-medium">{formatCurrency(stats.totalVolume)}</p>
+                <p className="text-[9px] sm:text-[10px] font-semibold">{formatShort(stats.totalVolume)}</p>
               </div>
               <div className="text-center">
                 <p className="text-[8px] sm:text-[9px] text-muted-foreground">Fee</p>
-                <p className="text-[9px] sm:text-[10px] font-medium">{formatCurrency(stats.totalFees)}</p>
+                <p className="text-[9px] sm:text-[10px] font-semibold">{formatShort(stats.totalFees)}</p>
               </div>
             </div>
           )}
 
-          {/* Bottom row: Settings + Toggle */}
-          <div className="flex items-center justify-between pt-1 mt-auto">
+          {/* Bottom row: Edit button */}
+          <div className="flex items-center justify-end pt-1 mt-auto">
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
               onClick={() => setShowEdit(true)}
             >
               <Settings2 className="w-3.5 h-3.5" />
             </Button>
-            <Switch
-              checked={marketplace.isActive}
-              onCheckedChange={onToggle}
-            />
           </div>
         </CardContent>
       </Card>
@@ -1043,7 +869,7 @@ function LogoPreview({ url, fallbackIcon }: { url: string | null | undefined; fa
   if (!url) return null;
   return (
     <div className="flex items-center gap-2 mt-1.5">
-      <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+      <div className="w-8 h-8 rounded-xl overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
         <img 
           src={url} 
           alt="Logo preview" 
@@ -1133,17 +959,17 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gradient-primary text-white rounded-lg h-8 px-3 text-[10px] sm:text-xs">
+        <Button size="sm" className="bg-primary text-primary-foreground rounded-lg h-9 px-4 text-xs font-medium hover:bg-primary/90">
           <Plus className="w-3 h-3 mr-1" />
           Baru
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-4 pt-4 pb-2">
           <DialogTitle className="text-base sm:text-lg">Tipe Pembayaran Baru</DialogTitle>
           <DialogDescription>Tambahkan tipe pembayaran dengan pengaturan fee</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-3 px-4 pb-4 overflow-y-auto max-h-[60vh]">
           {/* Name */}
           <div className="space-y-1.5">
             <Label className="text-xs sm:text-sm">Nama</Label>
@@ -1152,7 +978,7 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
-              className="h-9 sm:h-10"
+              className="h-9 rounded-lg"
             />
           </div>
 
@@ -1166,7 +992,7 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
               placeholder="https://..."
               value={formData.logoUrl}
               onChange={(e) => setFormData(prev => ({ ...prev, logoUrl: e.target.value }))}
-              className="h-9"
+              className="h-9 rounded-lg"
             />
             <p className="text-[10px] text-muted-foreground">Masukkan URL gambar logo (https://...)</p>
             <LogoPreview url={formData.logoUrl} fallbackIcon={<CreditCard className="w-4 h-4 text-primary" />} />
@@ -1177,26 +1003,26 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
             <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5" /> Fee Online
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-[10px] sm:text-xs">Persentase (%)</Label>
+                <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Persentase (%)</Label>
                 <Input
                   type="number"
                   step="0.01"
                   placeholder="0"
                   value={formData.onlineFeePercent}
                   onChange={(e) => setFormData(prev => ({ ...prev, onlineFeePercent: parseFloat(e.target.value) || 0 }))}
-                  className="h-9"
+                  className="h-9 rounded-lg"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] sm:text-xs">Flat (Rp)</Label>
+                <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Flat (Rp)</Label>
                 <Input
                   type="number"
                   placeholder="0"
                   value={formData.onlineFeeFlat}
                   onChange={(e) => setFormData(prev => ({ ...prev, onlineFeeFlat: parseFloat(e.target.value) || 0 }))}
-                  className="h-9"
+                  className="h-9 rounded-lg"
                 />
               </div>
             </div>
@@ -1207,26 +1033,26 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
             <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
               <Truck className="w-3.5 h-3.5" /> Fee COD
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-[10px] sm:text-xs">Persentase (%)</Label>
+                <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Persentase (%)</Label>
                 <Input
                   type="number"
                   step="0.01"
                   placeholder="0"
                   value={formData.codFeePercent}
                   onChange={(e) => setFormData(prev => ({ ...prev, codFeePercent: parseFloat(e.target.value) || 0 }))}
-                  className="h-9"
+                  className="h-9 rounded-lg"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] sm:text-xs">Flat (Rp)</Label>
+                <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Flat (Rp)</Label>
                 <Input
                   type="number"
                   placeholder="0"
                   value={formData.codFeeFlat}
                   onChange={(e) => setFormData(prev => ({ ...prev, codFeeFlat: parseFloat(e.target.value) || 0 }))}
-                  className="h-9"
+                  className="h-9 rounded-lg"
                 />
               </div>
             </div>
@@ -1240,26 +1066,26 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
               placeholder="1000000"
               value={formData.threshold}
               onChange={(e) => setFormData(prev => ({ ...prev, threshold: parseFloat(e.target.value) || 0 }))}
-              className="h-9"
+              className="h-9 rounded-lg"
             />
           </div>
 
           {/* Discount */}
           <div className="space-y-2">
             <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
               Diskon Default
             </p>
             {/* Discount type toggle */}
-            <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
+            <div className="flex gap-1 p-1 bg-muted/60 rounded-xl">
               <button
                 type="button"
                 onClick={() => setDiscountType('percent')}
                 className={cn(
-                  "flex-1 py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all",
+                  "flex-1 py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all",
                   discountType === 'percent'
                     ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground/80"
                 )}
               >
                 Persentase (%)
@@ -1268,10 +1094,10 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
                 type="button"
                 onClick={() => setDiscountType('nominal')}
                 className={cn(
-                  "flex-1 py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all",
+                  "flex-1 py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all",
                   discountType === 'nominal'
                     ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground/80"
                 )}
               >
                 Nominal (Rp)
@@ -1288,7 +1114,7 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
                   placeholder="0"
                   value={formData.discountPercent || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, discountPercent: parseFloat(e.target.value) || 0 }))}
-                  className="h-9"
+                  className="h-9 rounded-lg"
                 />
                 <p className="text-[10px] text-muted-foreground">Diskon otomatis diterapkan saat transaksi baru</p>
               </div>
@@ -1301,7 +1127,7 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
                   placeholder="0"
                   value={formData.discountNominal || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, discountNominal: parseFloat(e.target.value) || 0 }))}
-                  className="h-9"
+                  className="h-9 rounded-lg"
                 />
                 <p className="text-[10px] text-muted-foreground">Potongan nominal tetap dari fee</p>
               </div>
@@ -1321,7 +1147,7 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
                   placeholder="0 (tanpa minimum)"
                   value={formData.minTransaction || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, minTransaction: parseFloat(e.target.value) || 0 }))}
-                  className="h-9"
+                  className="h-9 rounded-lg"
                 />
                 <p className="text-[10px] text-muted-foreground">
                   Diskon hanya berlaku jika nominal transaksi ≥ {formData.minTransaction > 0 ? formatCurrency(formData.minTransaction) : 'Rp 0'}
@@ -1330,11 +1156,11 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
             )}
           </div>
 
-          <div className="flex gap-2 pt-2">
-            <Button type="button" variant="outline" className="flex-1 h-9" onClick={() => setOpen(false)}>
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" className="flex-1 h-9 rounded-lg" onClick={() => setOpen(false)}>
               Batal
             </Button>
-            <Button type="submit" className="flex-1 gradient-primary text-white h-9" disabled={loading}>
+            <Button type="submit" className="flex-1 bg-primary text-primary-foreground rounded-xl h-10 text-xs font-semibold hover:bg-primary/90" disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan'}
             </Button>
           </div>
@@ -1427,12 +1253,12 @@ function EditPaymentTypeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-4 pt-4 pb-2">
           <DialogTitle className="text-base sm:text-lg">Edit Payment Type</DialogTitle>
           <DialogDescription>Edit pengaturan fee untuk {paymentType.name}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-3 px-4 pb-4 overflow-y-auto max-h-[60vh]">
           {/* Name */}
           <div className="space-y-1.5">
             <Label className="text-xs sm:text-sm">Nama</Label>
@@ -1440,7 +1266,7 @@ function EditPaymentTypeDialog({
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
-              className="h-9"
+              className="h-9 rounded-lg"
             />
           </div>
 
@@ -1454,7 +1280,7 @@ function EditPaymentTypeDialog({
               placeholder="https://..."
               value={formData.logoUrl}
               onChange={(e) => setFormData(prev => ({ ...prev, logoUrl: e.target.value }))}
-              className="h-9"
+              className="h-9 rounded-lg"
             />
             <p className="text-[10px] text-muted-foreground">Masukkan URL gambar logo (https://...)</p>
             <LogoPreview url={formData.logoUrl || paymentType.logoUrl} fallbackIcon={<CreditCard className="w-4 h-4 text-primary" />} />
@@ -1465,24 +1291,24 @@ function EditPaymentTypeDialog({
             <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5" /> Fee Online
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-[10px]">%</Label>
+                <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">%</Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={formData.onlineFeePercent}
                   onChange={(e) => setFormData(prev => ({ ...prev, onlineFeePercent: parseFloat(e.target.value) || 0 }))}
-                  className="h-9"
+                  className="h-9 rounded-lg"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px]">Flat</Label>
+                <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Flat</Label>
                 <Input
                   type="number"
                   value={formData.onlineFeeFlat}
                   onChange={(e) => setFormData(prev => ({ ...prev, onlineFeeFlat: parseFloat(e.target.value) || 0 }))}
-                  className="h-9"
+                  className="h-9 rounded-lg"
                 />
               </div>
             </div>
@@ -1493,24 +1319,24 @@ function EditPaymentTypeDialog({
             <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
               <Truck className="w-3.5 h-3.5" /> Fee COD
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-[10px]">%</Label>
+                <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">%</Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={formData.codFeePercent}
                   onChange={(e) => setFormData(prev => ({ ...prev, codFeePercent: parseFloat(e.target.value) || 0 }))}
-                  className="h-9"
+                  className="h-9 rounded-lg"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px]">Flat</Label>
+                <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Flat</Label>
                 <Input
                   type="number"
                   value={formData.codFeeFlat}
                   onChange={(e) => setFormData(prev => ({ ...prev, codFeeFlat: parseFloat(e.target.value) || 0 }))}
-                  className="h-9"
+                  className="h-9 rounded-lg"
                 />
               </div>
             </div>
@@ -1523,25 +1349,25 @@ function EditPaymentTypeDialog({
               type="number"
               value={formData.threshold}
               onChange={(e) => setFormData(prev => ({ ...prev, threshold: parseFloat(e.target.value) || 0 }))}
-              className="h-9"
+              className="h-9 rounded-lg"
             />
           </div>
 
           {/* Discount */}
           <div className="space-y-2">
             <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
               Diskon Default
             </p>
-            <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
+            <div className="flex gap-1 p-1 bg-muted/60 rounded-xl">
               <button
                 type="button"
                 onClick={() => setDiscountType('percent')}
                 className={cn(
-                  "flex-1 py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all",
+                  "flex-1 py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all",
                   discountType === 'percent'
                     ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground/80"
                 )}
               >
                 Persentase (%)
@@ -1550,10 +1376,10 @@ function EditPaymentTypeDialog({
                 type="button"
                 onClick={() => setDiscountType('nominal')}
                 className={cn(
-                  "flex-1 py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all",
+                  "flex-1 py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all",
                   discountType === 'nominal'
                     ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground/80"
                 )}
               >
                 Nominal (Rp)
@@ -1570,7 +1396,7 @@ function EditPaymentTypeDialog({
                   placeholder="0"
                   value={formData.discountPercent || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, discountPercent: parseFloat(e.target.value) || 0 }))}
-                  className="h-9"
+                  className="h-9 rounded-lg"
                 />
                 <p className="text-[10px] text-muted-foreground">Diskon otomatis diterapkan saat transaksi baru</p>
               </div>
@@ -1583,7 +1409,7 @@ function EditPaymentTypeDialog({
                   placeholder="0"
                   value={formData.discountNominal || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, discountNominal: parseFloat(e.target.value) || 0 }))}
-                  className="h-9"
+                  className="h-9 rounded-lg"
                 />
                 <p className="text-[10px] text-muted-foreground">Potongan nominal tetap dari fee</p>
               </div>
@@ -1603,7 +1429,7 @@ function EditPaymentTypeDialog({
                   placeholder="0 (tanpa minimum)"
                   value={formData.minTransaction || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, minTransaction: parseFloat(e.target.value) || 0 }))}
-                  className="h-9"
+                  className="h-9 rounded-lg"
                 />
                 <p className="text-[10px] text-muted-foreground">
                   Diskon hanya berlaku jika nominal transaksi ≥ {formData.minTransaction > 0 ? formatCurrency(formData.minTransaction) : 'Rp 0'}
@@ -1612,11 +1438,11 @@ function EditPaymentTypeDialog({
             )}
           </div>
 
-          <div className="flex gap-2 pt-2">
-            <Button type="button" variant="outline" className="flex-1 h-9" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" className="flex-1 h-9 rounded-lg" onClick={() => onOpenChange(false)}>
               Batal
             </Button>
-            <Button type="submit" className="flex-1 gradient-primary text-white h-9" disabled={loading}>
+            <Button type="submit" className="flex-1 bg-primary text-primary-foreground rounded-xl h-10 text-xs font-semibold hover:bg-primary/90" disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan'}
             </Button>
           </div>
@@ -1675,17 +1501,17 @@ function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gradient-primary text-white rounded-lg h-8 px-3 text-[10px] sm:text-xs">
+        <Button size="sm" className="bg-primary text-primary-foreground rounded-lg h-9 px-4 text-xs font-medium hover:bg-primary/90">
           <Plus className="w-3 h-3 mr-1" />
           Baru
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-4 pt-4 pb-2">
           <DialogTitle className="text-base sm:text-lg">Marketplace Baru</DialogTitle>
           <DialogDescription>Tambahkan marketplace dengan pengaturan fee</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-3 px-4 pb-4 overflow-y-auto max-h-[60vh]">
           {/* Name */}
           <div className="space-y-1.5">
             <Label className="text-xs sm:text-sm">Nama</Label>
@@ -1694,7 +1520,7 @@ function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
-              className="h-9"
+              className="h-9 rounded-lg"
             />
           </div>
 
@@ -1708,33 +1534,33 @@ function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
               placeholder="https://..."
               value={formData.logoUrl}
               onChange={(e) => setFormData(prev => ({ ...prev, logoUrl: e.target.value }))}
-              className="h-9"
+              className="h-9 rounded-lg"
             />
             <p className="text-[10px] text-muted-foreground">Masukkan URL gambar logo (https://...)</p>
-            <LogoPreview url={formData.logoUrl} fallbackIcon={<Store className="w-4 h-4 text-green-600" />} />
+            <LogoPreview url={formData.logoUrl} fallbackIcon={<Store className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />} />
           </div>
 
           {/* Fee */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-[10px] sm:text-xs">Fee Persentase (%)</Label>
+              <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Fee Persentase (%)</Label>
               <Input
                 type="number"
                 step="0.01"
                 placeholder="0"
                 value={formData.feePercent}
                 onChange={(e) => setFormData(prev => ({ ...prev, feePercent: parseFloat(e.target.value) || 0 }))}
-                className="h-9"
+                className="h-9 rounded-lg"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-[10px] sm:text-xs">Fee Flat (Rp)</Label>
+              <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Fee Flat (Rp)</Label>
               <Input
                 type="number"
                 placeholder="0"
                 value={formData.feeFlat}
                 onChange={(e) => setFormData(prev => ({ ...prev, feeFlat: parseFloat(e.target.value) || 0 }))}
-                className="h-9"
+                className="h-9 rounded-lg"
               />
             </div>
           </div>
@@ -1747,15 +1573,15 @@ function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               rows={2}
-              className="text-sm"
+              className="text-sm rounded-lg"
             />
           </div>
 
-          <div className="flex gap-2 pt-2">
-            <Button type="button" variant="outline" className="flex-1 h-9" onClick={() => setOpen(false)}>
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" className="flex-1 h-9 rounded-lg" onClick={() => setOpen(false)}>
               Batal
             </Button>
-            <Button type="submit" className="flex-1 gradient-primary text-white h-9" disabled={loading}>
+            <Button type="submit" className="flex-1 bg-primary text-primary-foreground rounded-xl h-10 text-xs font-semibold hover:bg-primary/90" disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan'}
             </Button>
           </div>
@@ -1827,12 +1653,12 @@ function EditMarketplaceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-4 pt-4 pb-2">
           <DialogTitle className="text-base sm:text-lg">Edit Marketplace</DialogTitle>
           <DialogDescription>Edit pengaturan untuk {marketplace.name}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-3 px-4 pb-4 overflow-y-auto max-h-[60vh]">
           {/* Name */}
           <div className="space-y-1.5">
             <Label className="text-xs sm:text-sm">Nama</Label>
@@ -1840,7 +1666,7 @@ function EditMarketplaceDialog({
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
-              className="h-9"
+              className="h-9 rounded-lg"
             />
           </div>
 
@@ -1854,31 +1680,31 @@ function EditMarketplaceDialog({
               placeholder="https://..."
               value={formData.logoUrl}
               onChange={(e) => setFormData(prev => ({ ...prev, logoUrl: e.target.value }))}
-              className="h-9"
+              className="h-9 rounded-lg"
             />
             <p className="text-[10px] text-muted-foreground">Masukkan URL gambar logo (https://...)</p>
-            <LogoPreview url={formData.logoUrl || marketplace.logoUrl} fallbackIcon={<Store className="w-4 h-4 text-green-600" />} />
+            <LogoPreview url={formData.logoUrl || marketplace.logoUrl} fallbackIcon={<Store className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />} />
           </div>
 
           {/* Fee */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-[10px]">Fee %</Label>
+              <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Fee %</Label>
               <Input
                 type="number"
                 step="0.01"
                 value={formData.feePercent}
                 onChange={(e) => setFormData(prev => ({ ...prev, feePercent: parseFloat(e.target.value) || 0 }))}
-                className="h-9"
+                className="h-9 rounded-lg"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-[10px]">Fee Flat</Label>
+              <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Fee Flat</Label>
               <Input
                 type="number"
                 value={formData.feeFlat}
                 onChange={(e) => setFormData(prev => ({ ...prev, feeFlat: parseFloat(e.target.value) || 0 }))}
-                className="h-9"
+                className="h-9 rounded-lg"
               />
             </div>
           </div>
@@ -1890,15 +1716,15 @@ function EditMarketplaceDialog({
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               rows={2}
-              className="text-sm"
+              className="text-sm rounded-lg"
             />
           </div>
 
-          <div className="flex gap-2 pt-2">
-            <Button type="button" variant="outline" className="flex-1 h-9" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" className="flex-1 h-9 rounded-lg" onClick={() => onOpenChange(false)}>
               Batal
             </Button>
-            <Button type="submit" className="flex-1 gradient-primary text-white h-9" disabled={loading}>
+            <Button type="submit" className="flex-1 bg-primary text-primary-foreground rounded-xl h-10 text-xs font-semibold hover:bg-primary/90" disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan'}
             </Button>
           </div>

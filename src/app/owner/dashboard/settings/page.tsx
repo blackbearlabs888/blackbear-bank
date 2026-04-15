@@ -7,15 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Switch, ToggleField } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
-  Settings as SettingsIcon,
   User,
   Globe,
   Search,
@@ -77,6 +75,16 @@ function useAuthHydrated() {
     () => false
   );
 }
+
+// Tab configuration
+const SETTINGS_TABS = [
+  { value: 'profile', label: 'Profil', icon: User },
+  { value: 'website', label: 'Website', icon: Globe },
+  { value: 'seo', label: 'SEO', icon: Search },
+  { value: 'social', label: 'Sosial', icon: Share2 },
+  { value: 'notifications', label: 'Notif', icon: Bell },
+  { value: 'system', label: 'Sistem', icon: Shield },
+] as const;
 
 export default function OwnerSettingsPage() {
   const router = useRouter();
@@ -407,18 +415,23 @@ export default function OwnerSettingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Pengaturan</h1>
-          <p className="text-sm text-muted-foreground">Kelola konfigurasi website</p>
+    <div className="min-h-screen bg-background dashboard-mesh">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+      {/* ── Page Header ── */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Configuration</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Pengaturan</h1>
+          <p className="text-xs text-muted-foreground">Kelola konfigurasi website</p>
         </div>
         <Button
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="gradient-primary text-white rounded-xl h-10 px-4"
+          className="bg-primary text-primary-foreground rounded-lg h-10 px-4 text-xs font-semibold hover:bg-primary/90"
         >
           {saving ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -429,8 +442,8 @@ export default function OwnerSettingsPage() {
         </Button>
       </div>
 
-      {/* Profile Card */}
-      <Card className="glass-card">
+      {/* ── Profile Card ── */}
+      <Card className="rounded-xl dash-card overflow-hidden">
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <Avatar className="h-14 w-14">
@@ -438,7 +451,7 @@ export default function OwnerSettingsPage() {
                 src={profile?.avatar || user?.avatar} 
                 onError={() => setAvatarError(true)}
               />
-              <AvatarFallback className="gradient-primary text-white text-lg font-bold">
+              <AvatarFallback className="bg-primary text-primary-foreground text-lg font-bold">
                 {profile?.name?.charAt(0) || user?.name?.charAt(0) || 'O'}
               </AvatarFallback>
             </Avatar>
@@ -451,43 +464,38 @@ export default function OwnerSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Settings Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full grid grid-cols-6 h-12">
-          <TabsTrigger value="profile" className="flex-col gap-1 py-2">
-            <User className="w-4 h-4" />
-            <span className="text-[10px]">Profil</span>
-          </TabsTrigger>
-          <TabsTrigger value="website" className="flex-col gap-1 py-2">
-            <Globe className="w-4 h-4" />
-            <span className="text-[10px]">Website</span>
-          </TabsTrigger>
-          <TabsTrigger value="seo" className="flex-col gap-1 py-2">
-            <Search className="w-4 h-4" />
-            <span className="text-[10px]">SEO</span>
-          </TabsTrigger>
-          <TabsTrigger value="social" className="flex-col gap-1 py-2">
-            <Share2 className="w-4 h-4" />
-            <span className="text-[10px]">Sosial</span>
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex-col gap-1 py-2">
-            <Bell className="w-4 h-4" />
-            <span className="text-[10px]">Notif</span>
-          </TabsTrigger>
-          <TabsTrigger value="system" className="flex-col gap-1 py-2">
-            <Shield className="w-4 h-4" />
-            <span className="text-[10px]">Sistem</span>
-          </TabsTrigger>
-        </TabsList>
+      {/* ── Custom Segmented Tab Control ── */}
+      <div className="flex gap-1 p-1 bg-muted/60 rounded-xl overflow-x-auto hide-scrollbar">
+        {SETTINGS_TABS.map((tab) => {
+          const TabIcon = tab.icon;
+          const isActive = activeTab === tab.value;
+          return (
+            <button
+              key={tab.value}
+              onClick={() => setActiveTab(tab.value)}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap min-w-0',
+                isActive
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground/80'
+              )}
+            >
+              <TabIcon className="w-4 h-4 flex-shrink-0" />
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
 
-        {/* Profile Tab */}
-        <TabsContent value="profile" className="space-y-4 mt-4">
-          <Card className="glass-card">
+      {/* ── Tab Content ── */}
+      {activeTab === 'profile' && (
+        <div className="space-y-4">
+          <Card className="rounded-xl dash-card overflow-hidden">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Profil Owner</CardTitle>
-              <CardDescription className="text-xs">Informasi pemilik website</CardDescription>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Profil Owner</p>
+              <CardTitle className="text-sm font-semibold">Informasi pemilik website</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               {/* Avatar Preview */}
               <div className="space-y-3">
                 <Label className="text-sm">Avatar</Label>
@@ -498,12 +506,12 @@ export default function OwnerSettingsPage() {
                         src={formData.avatar || undefined}
                         onError={() => setAvatarError(true)}
                       />
-                      <AvatarFallback className="gradient-primary text-white text-xl font-bold">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xl font-bold">
                         {formData.name?.charAt(0)?.toUpperCase() || 'O'}
                       </AvatarFallback>
                     </Avatar>
                     {formData.avatar && !avatarError && (
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
                         <CheckCircle2 className="w-3 h-3 text-white" />
                       </div>
                     )}
@@ -513,7 +521,7 @@ export default function OwnerSettingsPage() {
                       value={formData.avatar}
                       onChange={(e) => handleChange('avatar', e.target.value)}
                       placeholder="https://example.com/avatar.png"
-                      className="h-11"
+                      className="h-9 text-xs rounded-lg"
                     />
                     <p className="text-xs text-muted-foreground mt-1.5">
                       URL gambar avatar owner
@@ -530,7 +538,7 @@ export default function OwnerSettingsPage() {
                   value={formData.name}
                   onChange={(e) => handleChange('name', e.target.value)}
                   placeholder="Nama owner"
-                  className="h-11"
+                  className="h-9 text-xs rounded-lg"
                 />
               </div>
               <div className="space-y-2">
@@ -540,21 +548,22 @@ export default function OwnerSettingsPage() {
                   value={formData.email}
                   onChange={(e) => handleChange('email', e.target.value)}
                   placeholder="Email owner"
-                  className="h-11"
+                  className="h-9 text-xs rounded-lg"
                 />
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        {/* Website Tab */}
-        <TabsContent value="website" className="space-y-4 mt-4">
+      {activeTab === 'website' && (
+        <div className="space-y-4">
           {/* Live Preview Card */}
-          <Card className="glass-card border-primary/20">
+          <Card className="rounded-xl border border-primary/20 shadow-none bg-card">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
                 <Eye className="w-4 h-4 text-primary" />
-                <CardTitle className="text-base">Preview</CardTitle>
+                <CardTitle className="text-sm font-semibold">Preview</CardTitle>
               </div>
               <CardDescription className="text-xs">Tampilan website Anda</CardDescription>
             </CardHeader>
@@ -576,8 +585,8 @@ export default function OwnerSettingsPage() {
                         onError={() => setFaviconError(true)}
                       />
                     ) : (
-                      <div className="w-3.5 h-3.5 rounded-sm gradient-primary flex items-center justify-center">
-                        <span className="text-[6px] text-white font-bold">
+                      <div className="w-3.5 h-3.5 rounded-sm bg-primary flex items-center justify-center">
+                        <span className="text-[6px] text-primary-foreground font-bold">
                           {getInitials(formData.websiteTitle)}
                         </span>
                       </div>
@@ -600,8 +609,8 @@ export default function OwnerSettingsPage() {
                       onError={() => setLogoError(true)}
                     />
                   ) : (
-                    <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-md">
-                      <span className="text-white font-bold text-sm">
+                    <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-md">
+                      <span className="text-primary-foreground font-bold text-sm">
                         {getInitials(formData.websiteTitle)}
                       </span>
                     </div>
@@ -612,19 +621,19 @@ export default function OwnerSettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="glass-card">
+          <Card className="rounded-xl dash-card overflow-hidden">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Pengaturan Website</CardTitle>
-              <CardDescription className="text-xs">Konfigurasi tampilan website</CardDescription>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Pengaturan Website</p>
+              <CardTitle className="text-sm font-semibold">Konfigurasi tampilan website</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div className="space-y-2">
                 <Label className="text-sm">Judul Website</Label>
                 <Input
                   value={formData.websiteTitle}
                   onChange={(e) => handleChange('websiteTitle', e.target.value)}
                   placeholder="Black Bear"
-                  className="h-11"
+                  className="h-9 text-xs rounded-lg"
                 />
                 <p className="text-xs text-muted-foreground">Nama yang ditampilkan di header dan tab browser</p>
               </div>
@@ -653,7 +662,7 @@ export default function OwnerSettingsPage() {
                       value={formData.logoUrl}
                       onChange={(e) => handleChange('logoUrl', e.target.value)}
                       placeholder="https://example.com/logo.png"
-                      className="h-11"
+                      className="h-9 text-xs rounded-lg"
                     />
                     <p className="text-xs text-muted-foreground">
                       Kosongkan untuk gunakan inisial
@@ -678,8 +687,8 @@ export default function OwnerSettingsPage() {
                         onError={() => setFaviconError(true)}
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-sm gradient-primary flex items-center justify-center">
-                        <span className="text-white font-bold text-[8px]">
+                      <div className="w-8 h-8 rounded-sm bg-primary flex items-center justify-center">
+                        <span className="text-primary-foreground font-bold text-[8px]">
                           {getInitials(formData.websiteTitle)}
                         </span>
                       </div>
@@ -690,7 +699,7 @@ export default function OwnerSettingsPage() {
                       value={formData.faviconUrl}
                       onChange={(e) => handleChange('faviconUrl', e.target.value)}
                       placeholder="https://example.com/favicon.ico"
-                      className="h-11"
+                      className="h-9 text-xs rounded-lg"
                     />
                     <p className="text-xs text-muted-foreground">
                       Ikon di tab browser (16x16 atau 32x32 px)
@@ -700,16 +709,17 @@ export default function OwnerSettingsPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        {/* SEO Tab */}
-        <TabsContent value="seo" className="space-y-4 mt-4">
-          <Card className="glass-card">
+      {activeTab === 'seo' && (
+        <div className="space-y-4">
+          <Card className="rounded-xl dash-card overflow-hidden">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Pengaturan SEO</CardTitle>
-              <CardDescription className="text-xs">Optimasi mesin pencari</CardDescription>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Pengaturan SEO</p>
+              <CardTitle className="text-sm font-semibold">Optimasi mesin pencari</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm">Meta Title</Label>
@@ -721,7 +731,7 @@ export default function OwnerSettingsPage() {
                   value={formData.metaTitle}
                   onChange={(e) => handleChange('metaTitle', e.target.value)}
                   placeholder="Black Bear - Layanan Tarik Tunai Terpercaya"
-                  className="h-11"
+                  className="h-9 text-xs rounded-lg"
                 />
                 <p className="text-xs text-muted-foreground">Judul halaman untuk SEO</p>
               </div>
@@ -743,14 +753,14 @@ export default function OwnerSettingsPage() {
               </div>
 
               {/* SEO Preview */}
-              <div className="mt-4 p-4 rounded-xl bg-white dark:bg-muted/30 border">
+              <div className="mt-4 p-4 rounded-xl bg-background border border-border/60">
                 <div className="flex items-center gap-1.5 mb-3">
                   <Search className="w-4 h-4 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">Google Search Preview</span>
                 </div>
                 <div className="space-y-1.5">
                   {/* Meta Title */}
-                  <p className="text-blue-600 dark:text-blue-400 text-lg font-medium truncate hover:underline cursor-pointer">
+                  <p className="text-emerald-700 dark:text-emerald-400 text-lg font-medium truncate hover:underline cursor-pointer">
                     {formData.metaTitle || `${formData.websiteTitle} - Layanan Tarik Tunai Terpercaya`}
                   </p>
                   {/* URL */}
@@ -763,8 +773,8 @@ export default function OwnerSettingsPage() {
                         onError={() => setFaviconError(true)}
                       />
                     ) : (
-                      <div className="w-4 h-4 rounded-sm gradient-primary flex items-center justify-center">
-                        <span className="text-white font-bold text-[6px]">
+                      <div className="w-4 h-4 rounded-sm bg-primary flex items-center justify-center">
+                        <span className="text-primary-foreground font-bold text-[6px]">
                           {getInitials(formData.websiteTitle)}
                         </span>
                       </div>
@@ -775,7 +785,7 @@ export default function OwnerSettingsPage() {
                     <span className="text-muted-foreground text-xs">›</span>
                   </div>
                   {/* Meta Description */}
-                  <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2 leading-relaxed">
+                  <p className="text-muted-foreground text-sm line-clamp-2 leading-relaxed">
                     {formData.metaDescription || 'Layanan tarik tunai profesional untuk Kartu Kredit & Paylater dengan proses cepat dan aman.'}
                   </p>
                 </div>
@@ -784,7 +794,7 @@ export default function OwnerSettingsPage() {
                   <div className="flex items-center gap-1.5">
                     <div className={cn(
                       "w-2 h-2 rounded-full",
-                      (formData.metaTitle?.length || 0) <= 60 ? "bg-green-500" : "bg-amber-500"
+                      (formData.metaTitle?.length || 0) <= 60 ? "bg-emerald-500" : "bg-amber-500"
                     )} />
                     <span className="text-[10px] text-muted-foreground">
                       Title: {formData.metaTitle?.length || 0}/60
@@ -793,7 +803,7 @@ export default function OwnerSettingsPage() {
                   <div className="flex items-center gap-1.5">
                     <div className={cn(
                       "w-2 h-2 rounded-full",
-                      (formData.metaDescription?.length || 0) <= 160 ? "bg-green-500" : "bg-amber-500"
+                      (formData.metaDescription?.length || 0) <= 160 ? "bg-emerald-500" : "bg-amber-500"
                     )} />
                     <span className="text-[10px] text-muted-foreground">
                       Desc: {formData.metaDescription?.length || 0}/160
@@ -803,16 +813,17 @@ export default function OwnerSettingsPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        {/* Social Tab */}
-        <TabsContent value="social" className="space-y-4 mt-4">
+      {activeTab === 'social' && (
+        <div className="space-y-4">
           {/* Footer Preview Card */}
-          <Card className="glass-card border-primary/20">
+          <Card className="rounded-xl border border-primary/20 shadow-none bg-card">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
                 <Monitor className="w-4 h-4 text-primary" />
-                <CardTitle className="text-base">Preview Footer</CardTitle>
+                <CardTitle className="text-sm font-semibold">Preview Footer</CardTitle>
               </div>
               <CardDescription className="text-xs">Tampilan footer website</CardDescription>
             </CardHeader>
@@ -831,8 +842,8 @@ export default function OwnerSettingsPage() {
                           onError={() => setLogoError(true)}
                         />
                       ) : (
-                        <div className="w-6 h-6 rounded-lg gradient-primary flex items-center justify-center">
-                          <span className="text-white font-bold text-[8px]">
+                        <div className="w-6 h-6 rounded-lg bg-primary flex items-center justify-center">
+                          <span className="text-primary-foreground font-bold text-[8px]">
                             {getInitials(formData.websiteTitle)}
                           </span>
                         </div>
@@ -849,8 +860,8 @@ export default function OwnerSettingsPage() {
                     <p className="font-medium mb-2 text-[10px]">Follow Us</p>
                     <div className="flex gap-2 justify-end">
                       {formData.footerEmail ? (
-                        <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                          <Mail className="w-3 h-3 text-amber-600" />
+                        <div className="w-6 h-6 rounded-lg bg-amber-500/10 dark:bg-amber-500/20 flex items-center justify-center">
+                          <Mail className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                         </div>
                       ) : (
                         <div className="w-6 h-6 rounded-lg bg-muted flex items-center justify-center">
@@ -858,8 +869,8 @@ export default function OwnerSettingsPage() {
                         </div>
                       )}
                       {formData.footerWhatsapp ? (
-                        <div className="w-6 h-6 rounded-lg bg-green-500/10 flex items-center justify-center">
-                          <Smartphone className="w-3 h-3 text-green-600" />
+                        <div className="w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                          <Smartphone className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                         </div>
                       ) : (
                         <div className="w-6 h-6 rounded-lg bg-muted flex items-center justify-center">
@@ -867,8 +878,8 @@ export default function OwnerSettingsPage() {
                         </div>
                       )}
                       {formData.footerInstagram ? (
-                        <div className="w-6 h-6 rounded-lg bg-pink-500/10 flex items-center justify-center">
-                          <Instagram className="w-3 h-3 text-pink-600" />
+                        <div className="w-6 h-6 rounded-lg bg-pink-500/10 dark:bg-pink-500/20 flex items-center justify-center">
+                          <Instagram className="w-3 h-3 text-pink-600 dark:text-pink-400" />
                         </div>
                       ) : (
                         <div className="w-6 h-6 rounded-lg bg-muted flex items-center justify-center">
@@ -876,8 +887,8 @@ export default function OwnerSettingsPage() {
                         </div>
                       )}
                       {formData.footerFacebook ? (
-                        <div className="w-6 h-6 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                          <Facebook className="w-3 h-3 text-blue-600" />
+                        <div className="w-6 h-6 rounded-lg bg-violet-500/10 dark:bg-violet-500/20 flex items-center justify-center">
+                          <Facebook className="w-3 h-3 text-violet-600 dark:text-violet-400" />
                         </div>
                       ) : (
                         <div className="w-6 h-6 rounded-lg bg-muted flex items-center justify-center">
@@ -910,12 +921,12 @@ export default function OwnerSettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="glass-card">
+          <Card className="rounded-xl dash-card overflow-hidden">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Tautan Sosial</CardTitle>
-              <CardDescription className="text-xs">Kontak dan media sosial</CardDescription>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Tautan Sosial</p>
+              <CardTitle className="text-sm font-semibold">Kontak dan media sosial</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div className="space-y-2">
                 <Label className="text-sm flex items-center gap-2">
                   <Smartphone className="w-4 h-4" />
@@ -926,13 +937,13 @@ export default function OwnerSettingsPage() {
                     value={formData.footerWhatsapp}
                     onChange={(e) => handleChange('footerWhatsapp', e.target.value)}
                     placeholder="628123456789"
-                    className="h-11 flex-1"
+                    className="h-9 text-xs rounded-lg flex-1"
                   />
                   {formData.footerWhatsapp && (
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-11 w-11 flex-shrink-0"
+                      className="h-9 w-9 rounded-lg flex-shrink-0"
                       asChild
                     >
                       <a 
@@ -958,13 +969,13 @@ export default function OwnerSettingsPage() {
                     value={formData.footerEmail}
                     onChange={(e) => handleChange('footerEmail', e.target.value)}
                     placeholder="contact@example.com"
-                    className="h-11 flex-1"
+                    className="h-9 text-xs rounded-lg flex-1"
                   />
                   {formData.footerEmail && (
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-11 w-11 flex-shrink-0"
+                      className="h-9 w-9 rounded-lg flex-shrink-0"
                       asChild
                     >
                       <a 
@@ -989,13 +1000,13 @@ export default function OwnerSettingsPage() {
                     value={formData.footerInstagram}
                     onChange={(e) => handleChange('footerInstagram', e.target.value)}
                     placeholder="https://instagram.com/username"
-                    className="h-11 flex-1"
+                    className="h-9 text-xs rounded-lg flex-1"
                   />
                   {formData.footerInstagram && (
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-11 w-11 flex-shrink-0"
+                      className="h-9 w-9 rounded-lg flex-shrink-0"
                       asChild
                     >
                       <a 
@@ -1020,13 +1031,13 @@ export default function OwnerSettingsPage() {
                     value={formData.footerFacebook}
                     onChange={(e) => handleChange('footerFacebook', e.target.value)}
                     placeholder="https://facebook.com/username"
-                    className="h-11 flex-1"
+                    className="h-9 text-xs rounded-lg flex-1"
                   />
                   {formData.footerFacebook && (
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-11 w-11 flex-shrink-0"
+                      className="h-9 w-9 rounded-lg flex-shrink-0"
                       asChild
                     >
                       <a 
@@ -1056,13 +1067,13 @@ export default function OwnerSettingsPage() {
                     value={formData.footerTiktok}
                     onChange={(e) => handleChange('footerTiktok', e.target.value)}
                     placeholder="https://tiktok.com/@username"
-                    className="h-11 flex-1"
+                    className="h-9 text-xs rounded-lg flex-1"
                   />
                   {formData.footerTiktok && (
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-11 w-11 flex-shrink-0"
+                      className="h-9 w-9 rounded-lg flex-shrink-0"
                       asChild
                     >
                       <a 
@@ -1088,13 +1099,13 @@ export default function OwnerSettingsPage() {
                     value={formData.footerYoutube}
                     onChange={(e) => handleChange('footerYoutube', e.target.value)}
                     placeholder="https://youtube.com/@channel"
-                    className="h-11 flex-1"
+                    className="h-9 text-xs rounded-lg flex-1"
                   />
                   {formData.footerYoutube && (
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-11 w-11 flex-shrink-0"
+                      className="h-9 w-9 rounded-lg flex-shrink-0"
                       asChild
                     >
                       <a 
@@ -1122,13 +1133,13 @@ export default function OwnerSettingsPage() {
                     value={formData.footerThreads}
                     onChange={(e) => handleChange('footerThreads', e.target.value)}
                     placeholder="https://threads.net/@username"
-                    className="h-11 flex-1"
+                    className="h-9 text-xs rounded-lg flex-1"
                   />
                   {formData.footerThreads && (
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-11 w-11 flex-shrink-0"
+                      className="h-9 w-9 rounded-lg flex-shrink-0"
                       asChild
                     >
                       <a 
@@ -1145,28 +1156,30 @@ export default function OwnerSettingsPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        {/* Notifications Tab */}
-        <TabsContent value="notifications" className="space-y-4 mt-4">
+      {activeTab === 'notifications' && (
+        <div className="space-y-4">
           {/* Telegram Configuration */}
-          <Card className="glass-card">
+          <Card className="rounded-xl dash-card overflow-hidden">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Notifikasi Telegram</p>
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
                     <Send className="w-4 h-4" />
-                    Notifikasi Telegram
+                    Kirim notifikasi ke Telegram
                   </CardTitle>
-                  <CardDescription className="text-xs">Kirim notifikasi ke Telegram</CardDescription>
                 </div>
                 <Switch
                   checked={notificationSettings.telegramEnabled}
                   onCheckedChange={(checked) => handleNotificationChange('telegramEnabled', checked)}
+                  size="md"
                 />
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               {/* Bot Token */}
               <div className="space-y-2">
                 <Label className="text-sm">Bot Token</Label>
@@ -1175,7 +1188,7 @@ export default function OwnerSettingsPage() {
                   value={notificationSettings.telegramBotToken}
                   onChange={(e) => handleNotificationChange('telegramBotToken', e.target.value)}
                   placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
-                  className="h-11"
+                  className="h-9 text-xs rounded-lg"
                 />
                 <p className="text-xs text-muted-foreground">
                   Dapatkan dari @BotFather di Telegram
@@ -1189,7 +1202,7 @@ export default function OwnerSettingsPage() {
                   value={notificationSettings.telegramChatId}
                   onChange={(e) => handleNotificationChange('telegramChatId', e.target.value)}
                   placeholder="-1001234567890"
-                  className="h-11"
+                  className="h-9 text-xs rounded-lg"
                 />
                 <p className="text-xs text-muted-foreground">
                   ID chat atau grup tujuan (gunakan @userinfobot untuk mendapatkan ID)
@@ -1197,12 +1210,12 @@ export default function OwnerSettingsPage() {
               </div>
 
               {/* Webhook Management */}
-              <div className="space-y-2 p-3 rounded-xl bg-muted/50 border border-dashed">
+              <div className="space-y-2 p-3 rounded-xl bg-muted/40 border border-dashed">
                 <div className="flex items-center gap-2">
                   <Link2 className="w-4 h-4 text-primary" />
                   <p className="text-sm font-medium">Webhook Bot</p>
                   {webhookInfo?.url ? (
-                    <Badge className="bg-green-100 text-green-700 text-[10px]">Aktif</Badge>
+                    <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px]">Aktif</Badge>
                   ) : (
                     <Badge variant="outline" className="text-[10px]">Belum diset</Badge>
                   )}
@@ -1219,7 +1232,7 @@ export default function OwnerSettingsPage() {
                     size="sm"
                     onClick={handleSetWebhook}
                     disabled={webhookLoading || !notificationSettings.hasBotToken}
-                    className="flex-1 h-8 text-xs"
+                    className="flex-1 h-8 text-xs rounded-lg font-medium"
                   >
                     {webhookLoading ? (
                       <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
@@ -1236,7 +1249,7 @@ export default function OwnerSettingsPage() {
                       size="sm"
                       onClick={handleDeleteWebhook}
                       disabled={webhookLoading}
-                      className="h-8 text-xs text-destructive hover:bg-destructive/10"
+                      className="h-8 text-xs rounded-lg font-medium text-destructive hover:bg-destructive/10 transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5 mr-1.5" />
                       Hapus
@@ -1251,7 +1264,7 @@ export default function OwnerSettingsPage() {
                   variant="outline"
                   onClick={handleTestTelegram}
                   disabled={testingTelegram || !notificationSettings.hasBotToken || !notificationSettings.telegramChatId}
-                  className="flex-1"
+                  className="flex-1 h-9 text-xs rounded-lg font-medium"
                 >
                   {testingTelegram ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1263,7 +1276,7 @@ export default function OwnerSettingsPage() {
                 <Button
                   onClick={handleSaveNotificationSettings}
                   disabled={saving}
-                  className="gradient-primary text-white"
+                  className="bg-primary text-primary-foreground rounded-lg h-10 text-xs font-semibold hover:bg-primary/90"
                 >
                   {saving ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1278,7 +1291,7 @@ export default function OwnerSettingsPage() {
               {testResult && (
                 <div className={cn(
                   "flex items-center gap-2 p-3 rounded-lg text-sm",
-                  testResult.success ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive"
+                  testResult.success ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-destructive/10 text-destructive"
                 )}>
                   {testResult.success ? (
                     <Check className="w-4 h-4" />
@@ -1292,83 +1305,64 @@ export default function OwnerSettingsPage() {
           </Card>
 
           {/* Notification Preferences */}
-          <Card className="glass-card">
+          <Card className="rounded-xl dash-card overflow-hidden">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Preferensi Notifikasi</CardTitle>
-              <CardDescription className="text-xs">Pilih event yang ingin di-notifikasi</CardDescription>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Preferensi Notifikasi</p>
+              <CardTitle className="text-sm font-semibold">Pilih event yang ingin di-notifikasi</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {/* New Transaction */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
-                <div>
-                  <p className="font-medium text-sm">Transaksi Baru</p>
-                  <p className="text-xs text-muted-foreground">Notif saat ada transaksi baru</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.notifyNewTransaction}
-                  onCheckedChange={(checked) => handleNotificationChange('notifyNewTransaction', checked)}
-                  disabled={!notificationSettings.telegramEnabled}
-                />
-              </div>
-
-              {/* Transaction Status */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
-                <div>
-                  <p className="font-medium text-sm">Update Status Transaksi</p>
-                  <p className="text-xs text-muted-foreground">Notif saat status berubah</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.notifyTransactionStatus}
-                  onCheckedChange={(checked) => handleNotificationChange('notifyTransactionStatus', checked)}
-                  disabled={!notificationSettings.telegramEnabled}
-                />
-              </div>
-
-              {/* New Partner */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
-                <div>
-                  <p className="font-medium text-sm">Partner Baru</p>
-                  <p className="text-xs text-muted-foreground">Notif saat partner bergabung</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.notifyNewPartner}
-                  onCheckedChange={(checked) => handleNotificationChange('notifyNewPartner', checked)}
-                  disabled={!notificationSettings.telegramEnabled}
-                />
-              </div>
-
-              {/* New Customer */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
-                <div>
-                  <p className="font-medium text-sm">Pelanggan Baru</p>
-                  <p className="text-xs text-muted-foreground">Notif saat pelanggan baru ditambahkan</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.notifyNewCustomer}
-                  onCheckedChange={(checked) => handleNotificationChange('notifyNewCustomer', checked)}
-                  disabled={!notificationSettings.telegramEnabled}
-                />
-              </div>
-
-              {/* Daily Report */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
-                <div>
-                  <p className="font-medium text-sm">Laporan Harian</p>
-                  <p className="text-xs text-muted-foreground">Ringkasan transaksi harian</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.notifyDailyReport}
-                  onCheckedChange={(checked) => handleNotificationChange('notifyDailyReport', checked)}
-                  disabled={!notificationSettings.telegramEnabled}
-                />
-              </div>
+            <CardContent className="space-y-1">
+              <ToggleField
+                label="Transaksi Baru"
+                description="Notif saat ada transaksi baru"
+                checked={notificationSettings.notifyNewTransaction}
+                onCheckedChange={(v) => handleNotificationChange('notifyNewTransaction', v)}
+                disabled={!notificationSettings.telegramEnabled}
+                size="sm"
+                className="p-3 rounded-xl hover:bg-muted/30 transition-colors"
+              />
+              <ToggleField
+                label="Update Status Transaksi"
+                description="Notif saat status berubah"
+                checked={notificationSettings.notifyTransactionStatus}
+                onCheckedChange={(v) => handleNotificationChange('notifyTransactionStatus', v)}
+                disabled={!notificationSettings.telegramEnabled}
+                size="sm"
+                className="p-3 rounded-xl hover:bg-muted/30 transition-colors"
+              />
+              <ToggleField
+                label="Partner Baru"
+                description="Notif saat partner bergabung"
+                checked={notificationSettings.notifyNewPartner}
+                onCheckedChange={(v) => handleNotificationChange('notifyNewPartner', v)}
+                disabled={!notificationSettings.telegramEnabled}
+                size="sm"
+                className="p-3 rounded-xl hover:bg-muted/30 transition-colors"
+              />
+              <ToggleField
+                label="Pelanggan Baru"
+                description="Notif saat pelanggan baru ditambahkan"
+                checked={notificationSettings.notifyNewCustomer}
+                onCheckedChange={(v) => handleNotificationChange('notifyNewCustomer', v)}
+                disabled={!notificationSettings.telegramEnabled}
+                size="sm"
+                className="p-3 rounded-xl hover:bg-muted/30 transition-colors"
+              />
+              <ToggleField
+                label="Laporan Harian"
+                description="Ringkasan transaksi harian"
+                checked={notificationSettings.notifyDailyReport}
+                onCheckedChange={(v) => handleNotificationChange('notifyDailyReport', v)}
+                disabled={!notificationSettings.telegramEnabled}
+                size="sm"
+                className="p-3 rounded-xl hover:bg-muted/30 transition-colors"
+              />
             </CardContent>
           </Card>
 
           {/* How to Setup Telegram */}
-          <Card className="glass-card border-primary/20">
+          <Card className="rounded-xl border border-primary/20 shadow-none bg-card">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base text-primary">Cara Setup Telegram</CardTitle>
+              <CardTitle className="text-sm font-semibold text-primary">Cara Setup Telegram</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex gap-3">
@@ -1389,22 +1383,23 @@ export default function OwnerSettingsPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        {/* System Tab */}
-        <TabsContent value="system" className="space-y-4 mt-4">
-          <Card className="glass-card">
+      {activeTab === 'system' && (
+        <div className="space-y-4">
+          <Card className="rounded-xl dash-card overflow-hidden">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Pengaturan Sistem</CardTitle>
-              <CardDescription className="text-xs">Konfigurasi lanjutan</CardDescription>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Pengaturan Sistem</p>
+              <CardTitle className="text-sm font-semibold">Konfigurasi lanjutan</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-1">
               {/* Maintenance Mode */}
-              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 hover:bg-muted/30 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center",
-                    formData.maintenanceMode ? "bg-destructive/10" : "bg-muted"
+                    formData.maintenanceMode ? "bg-destructive/10" : "bg-muted",
                   )}>
                     <AlertCircle className={cn(
                       "w-5 h-5",
@@ -1421,11 +1416,12 @@ export default function OwnerSettingsPage() {
                 <Switch
                   checked={formData.maintenanceMode}
                   onCheckedChange={(checked) => handleChange('maintenanceMode', checked)}
+                  size="md"
                 />
               </div>
 
               {/* Dark Mode */}
-              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 hover:bg-muted/30 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
                     <Moon className="w-5 h-5" />
@@ -1440,53 +1436,93 @@ export default function OwnerSettingsPage() {
                 <Switch
                   checked={theme === 'dark'}
                   onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                  size="md"
                 />
               </div>
             </CardContent>
           </Card>
 
           {/* Danger Zone */}
-          <Card className="glass-card border-destructive/30">
+          <Card className="rounded-xl border border-destructive/30 shadow-none bg-card">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base text-destructive">Zona Berbahaya</CardTitle>
-              <CardDescription className="text-xs">Aksi yang tidak dapat dibatalkan</CardDescription>
+              <p className="text-[10px] font-medium text-destructive/60 uppercase tracking-wider">Zona Berbahaya</p>
+              <CardTitle className="text-sm font-semibold text-destructive">Aksi yang tidak dapat dibatalkan</CardTitle>
             </CardHeader>
             <CardContent>
-              <button
+              <Button
+                variant="outline"
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 p-4 rounded-xl bg-destructive/5 hover:bg-destructive/10 transition-smooth tap-highlight"
+                className="w-full h-10 text-sm font-medium text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
               >
-                <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center">
-                  <LogOut className="w-5 h-5 text-destructive" />
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-sm text-destructive">Keluar</p>
-                  <p className="text-xs text-muted-foreground">Logout dari akun owner</p>
-                </div>
-              </button>
+                <LogOut className="w-4 h-4 mr-2" />
+                Keluar dari Akun
+              </Button>
             </CardContent>
           </Card>
-
-          {/* Version Info */}
-          <div className="text-center text-xs text-muted-foreground pt-4">
-            {formData.websiteTitle} v1.0.0 • Owner Panel
-          </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
+      </div>
     </div>
   );
 }
 
+// ──────────────────────────────────────────
+// Skeleton Loading State
+// ──────────────────────────────────────────
 function SettingsSkeleton() {
   return (
-    <div className="container mx-auto px-4 py-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-10 w-24 rounded-xl" />
+    <div className="min-h-screen bg-background dashboard-mesh">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+      {/* Header Skeleton */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-36" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <Skeleton className="h-10 w-24 rounded-lg" />
       </div>
-      <Skeleton className="h-24 rounded-xl" />
-      <Skeleton className="h-12 rounded-xl" />
-      <Skeleton className="h-64 rounded-xl" />
+
+      {/* Profile Card Skeleton */}
+      <div className="rounded-xl border border-border/60 p-4">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-14 w-14 rounded-full" />
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Bar Skeleton */}
+      <div className="flex gap-1 p-1 bg-muted/60 rounded-xl">
+        {[1, 2, 3, 4, 5, 6].map(i => (
+          <Skeleton key={i} className="h-10 flex-1 rounded-lg" />
+        ))}
+      </div>
+
+      {/* Content Cards Skeleton */}
+      <div className="space-y-4">
+        <div className="rounded-xl border border-border/60 p-5 space-y-4">
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-5 w-40" />
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-9 w-full rounded-lg" />
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-9 w-full rounded-lg" />
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-20 w-full rounded-lg" />
+          </div>
+        </div>
+      </div>
+      </div>
     </div>
   );
 }

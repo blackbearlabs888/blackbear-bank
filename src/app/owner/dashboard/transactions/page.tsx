@@ -18,18 +18,17 @@ import { CitySearch } from '@/components/ui/city-search';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Plus, Search, Loader2, ChevronRight, ArrowUp, ArrowDown, Target,
-  Percent, AlertCircle, X, Check, User, Clock, Hash, Trash2, Edit3,
+  Percent, AlertCircle, X, Check, User, Clock, Trash2, Edit3,
   Calculator, TrendingUp, TrendingDown, Wallet, CreditCard, Info,
-  CheckCircle, XCircle, ChevronLeft, ChevronRight as ChevronRightIcon,
-  RefreshCw, Eye, Zap, Filter, Calendar, ArrowRightLeft, Sparkles,
-  Store, DollarSign, PiggyBank, Building2, ArrowRight, MinusCircle, Copy,
-  BarChart3, PieChart, LineChart, Activity, Layers, Users, MessageSquare,
-  ExternalLink, Banknote,
+  CheckCircle, XCircle, RefreshCw, Zap, Calendar, ArrowRightLeft, Sparkles,
+  Store, PiggyBank, Building2, Copy,
+  BarChart3, PieChart, Activity, Users, MessageSquare,
+  ExternalLink, Banknote, Layers, Filter, Star,
 } from 'lucide-react';
 import {
-  AreaChart, Area, BarChart, Bar, PieChart as RePieChart, Pie, Cell,
-  LineChart as ReLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, RadialBarChart, RadialBar,
+  AreaChart, Area, PieChart as RePieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer,
 } from 'recharts';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -97,11 +96,11 @@ interface Customer { id: string; name: string; phone: string; city?: string; ban
 interface Marketplace { id: string; name: string; feePercent: number; feeFlat?: number; isActive: boolean; }
 
 const STATUS_CONFIG = {
-  pending: { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', icon: Clock, iconColor: 'text-orange-600', gradient: 'from-orange-500 to-amber-600' },
-  verification: { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: AlertCircle, iconColor: 'text-blue-600', gradient: 'from-blue-500 to-indigo-600' },
-  process: { color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400', icon: Loader2, iconColor: 'text-cyan-600', gradient: 'from-cyan-500 to-teal-600' },
-  success: { color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: ArrowUp, iconColor: 'text-green-600', gradient: 'from-green-500 to-emerald-600' },
-  failed: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: ArrowDown, iconColor: 'text-red-600', gradient: 'from-red-500 to-rose-600' },
+  pending: { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', icon: Clock, iconColor: 'text-orange-600', barColor: 'bg-orange-500', dotColor: 'bg-orange-500' },
+  verification: { color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400', icon: AlertCircle, iconColor: 'text-violet-600', barColor: 'bg-violet-500', dotColor: 'bg-violet-500' },
+  process: { color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400', icon: Loader2, iconColor: 'text-cyan-600', barColor: 'bg-cyan-500', dotColor: 'bg-cyan-500' },
+  success: { color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', icon: ArrowUp, iconColor: 'text-emerald-600', barColor: 'bg-emerald-500', dotColor: 'bg-emerald-500' },
+  failed: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: ArrowDown, iconColor: 'text-red-600', barColor: 'bg-red-500', dotColor: 'bg-red-500' },
 };
 
 export default function OwnerTransactionsPage() {
@@ -122,7 +121,7 @@ export default function OwnerTransactionsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -160,7 +159,7 @@ export default function OwnerTransactionsPage() {
       }
     };
   }, [isAuthenticated, hasHydrated, user, activeTab, currentPage]);
-  
+
   // Reset to first page when tab changes
   useEffect(() => {
     setCurrentPage(1);
@@ -219,14 +218,11 @@ export default function OwnerTransactionsPage() {
         } else {
           toast.success(`Status diubah ke ${status}`);
         }
-        // Update transaction locally without full page refresh
         if (data.data) {
           setSelectedTransaction(data.data as Transaction);
           setTransactions(prev => prev.map(t => t.id === id ? (data.data as Transaction) : t));
         }
-        // Refresh analytics in background
         fetchAnalytics();
-        // Close dialog after save
         setDetailOpen(false);
         setSelectedTransaction(null);
       } else toast.error(data.error || 'Gagal');
@@ -235,18 +231,14 @@ export default function OwnerTransactionsPage() {
   };
 
   const deleteTx = async (id: string) => {
-    // Find the transaction to delete
     const tx = transactions.find(t => t.id === id);
     if (!tx) return;
-    
-    // Show confirmation dialog
     setDeletingTx(tx);
     setDeleteConfirmOpen(true);
   };
 
   const confirmDelete = async () => {
     if (!deletingTx) return;
-    
     try {
       const res = await fetch(`/api/transactions/${deletingTx.id}`, { method: 'DELETE' });
       const data = await res.json();
@@ -258,9 +250,9 @@ export default function OwnerTransactionsPage() {
         setDeleteConfirmOpen(false);
         setDeletingTx(null);
       } else toast.error(data.error || 'Gagal menghapus');
-    } catch (e) { 
+    } catch (e) {
       console.error('Delete error:', e);
-      toast.error('Gagal menghapus transaksi'); 
+      toast.error('Gagal menghapus transaksi');
     }
   };
 
@@ -273,54 +265,56 @@ export default function OwnerTransactionsPage() {
   if (!isAuthenticated || user?.role !== 'owner') return null;
 
   return (
-    <div className="container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3 pb-20 md:pb-4">
-      {/* Header with Last Updated */}
-      <div className="flex items-center justify-between gap-2">
+    <div className="min-h-screen bg-background dashboard-mesh">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+      {/* ── Page Header ── */}
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-base sm:text-lg font-bold flex items-center gap-2">
-            <ArrowRightLeft className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
-            <span className="truncate">Transaksi</span>
-          </h1>
-          <div className="flex items-center gap-2 mt-0.5">
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Kelola semua transaksi</p>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Transaksi</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Kelola Transaksi</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-xs text-muted-foreground">Semua transaksi partner & customer</p>
             {lastUpdated && (
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 {isRefreshing ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
                 ) : (
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 )}
                 <span className="hidden sm:inline">{isRefreshing ? 'Refreshing...' : formatTimeAgo(lastUpdated)}</span>
               </div>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Button
             onClick={() => { fetchTransactions(); fetchAnalytics(); }}
             size="sm"
-            variant="outline"
-            className="h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-lg"
+            variant="ghost"
+            className="h-9 w-9 p-0 rounded-lg"
             disabled={isRefreshing}
           >
-            <RefreshCw className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", isRefreshing && "animate-spin")} />
+            <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
           </Button>
-          <Button onClick={() => setNewTxOpen(true)} size="sm" className="gradient-primary text-white rounded-lg h-8 sm:h-9 px-2.5 sm:px-3 shadow-md">
-            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" /> 
+          <Button onClick={() => setNewTxOpen(true)} size="sm" className="bg-primary text-primary-foreground rounded-lg h-9 px-4 font-medium hover:bg-primary/90">
+            <Plus className="w-4 h-4 mr-1.5" />
             <span className="hidden sm:inline">Baru</span>
           </Button>
         </div>
       </div>
 
-      {/* Main Tabs: Transaksi & Analytics */}
-      <div className="flex gap-1 p-1 bg-muted/50 rounded-xl">
+      {/* ── Main Tabs: Transaksi & Analytics ── */}
+      <div className="flex gap-1 p-1 bg-muted/60 rounded-xl">
         <button
           onClick={() => setMainTab('transactions')}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-xs font-medium transition-all",
-            mainTab === 'transactions' 
-              ? "bg-background text-foreground shadow-sm" 
-              : "text-muted-foreground hover:text-foreground"
+            "flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all",
+            mainTab === 'transactions'
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground/80"
           )}
         >
           <Wallet className="w-4 h-4" />
@@ -329,10 +323,10 @@ export default function OwnerTransactionsPage() {
         <button
           onClick={() => setMainTab('analytics')}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg text-xs font-medium transition-all",
-            mainTab === 'analytics' 
-              ? "bg-background text-foreground shadow-sm" 
-              : "text-muted-foreground hover:text-foreground"
+            "flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all",
+            mainTab === 'analytics'
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground/80"
           )}
         >
           <BarChart3 className="w-4 h-4" />
@@ -340,71 +334,87 @@ export default function OwnerTransactionsPage() {
         </button>
       </div>
 
-      {/* Tab Content */}
+      {/* ── Tab Content ── */}
       {mainTab === 'transactions' ? (
-        <div className="space-y-3">
-          {/* Status Filter Pills */}
-          <div className="overflow-x-auto -mx-3 px-3 scrollbar-hide">
-            <div className="flex gap-1.5 min-w-max pb-1">
-              {[
-                { value: 'all', label: 'Semua' },
-                { value: 'pending', label: 'Pending', count: analytics?.statusCounts.pending, color: 'orange' },
-                { value: 'verification', label: 'Verif', count: analytics?.statusCounts.verification, color: 'blue' },
-                { value: 'process', label: 'Proses', count: analytics?.statusCounts.process, color: 'cyan' },
-                { value: 'success', label: 'Sukses', count: analytics?.statusCounts.success, color: 'green' },
-                { value: 'failed', label: 'Gagal', count: analytics?.statusCounts.failed, color: 'red' },
-              ].map(tab => (
+        <div className="space-y-4">
+          {/* Status Filter Tabs */}
+          <div className="flex gap-1.5 overflow-x-auto hide-scrollbar -mx-1 px-1">
+            {[
+              { value: 'all', label: 'Semua', icon: Layers },
+              { value: 'pending', label: 'Pending', count: analytics?.statusCounts.pending, color: 'bg-orange-500', icon: Clock },
+              { value: 'verification', label: 'Verif', count: analytics?.statusCounts.verification, color: 'bg-violet-500', icon: AlertCircle },
+              { value: 'process', label: 'Proses', count: analytics?.statusCounts.process, color: 'bg-cyan-500', icon: Loader2 },
+              { value: 'success', label: 'Sukses', count: analytics?.statusCounts.success, color: 'bg-emerald-500', icon: CheckCircle },
+              { value: 'failed', label: 'Gagal', count: analytics?.statusCounts.failed, color: 'bg-red-500', icon: XCircle },
+            ].map(tab => {
+              const TabIcon = tab.icon!;
+              const isActive = activeTab === tab.value;
+              return (
                 <button
                   key={tab.value}
                   onClick={() => setActiveTab(tab.value)}
                   className={cn(
-                    "px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-all whitespace-nowrap",
-                    activeTab === tab.value 
-                      ? cn(
-                          tab.color === 'orange' && "bg-orange-500 text-white shadow-sm",
-                          tab.color === 'blue' && "bg-blue-500 text-white shadow-sm",
-                          tab.color === 'cyan' && "bg-cyan-500 text-white shadow-sm",
-                          tab.color === 'green' && "bg-green-500 text-white shadow-sm",
-                          tab.color === 'red' && "bg-red-500 text-white shadow-sm",
-                          !tab.color && "bg-primary text-primary-foreground shadow-sm"
-                        )
-                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                    'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap flex-shrink-0',
+                    isActive
+                      ? tab.color
+                        ? cn(tab.color, 'text-white shadow-sm')
+                        : 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted'
                   )}
                 >
-                  {tab.label}
+                  <TabIcon className={cn('w-3.5 h-3.5', tab.value === 'process' && isActive && 'animate-spin')} />
+                  <span className="hidden sm:inline">{tab.label}</span>
                   {tab.count !== undefined && tab.count > 0 && (
-                    <span className={cn("ml-1", activeTab === tab.value ? "opacity-80" : "opacity-60")}>
+                    <span className={cn(
+                      'tabular-nums text-[10px] min-w-[16px] text-center px-1 rounded-full',
+                      isActive ? 'bg-white/20' : 'bg-muted'
+                    )}>
                       {tab.count}
                     </span>
                   )}
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
 
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Cari order ID, nama, no. WA..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 sm:pl-10 h-9 sm:h-10 rounded-xl text-sm"
+              className="pl-10 h-10 rounded-xl text-sm bg-muted/40 border-border/60 focus-visible:bg-background"
             />
           </div>
 
           {/* Transaction List */}
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {loading ? (
-              [...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 sm:h-20 rounded-xl" />)
+              [...Array(5)].map((_, i) => (
+                <div key={i} className="rounded-xl border bg-card overflow-hidden">
+                  <div className="flex items-center gap-3 p-3.5">
+                    <Skeleton className="w-3 h-14 rounded-full flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="h-4 w-36" />
+                      <Skeleton className="h-3 w-48" />
+                    </div>
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                  <Skeleton className="h-8 w-full" />
+                </div>
+              ))
             ) : filtered.length > 0 ? (
               filtered.map(tx => (
                 <TxCard key={tx.id} tx={tx} onClick={() => { setSelectedTransaction(tx); setDetailOpen(true); }} />
               ))
             ) : (
-              <div className="text-center py-12">
-                <Wallet className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
-                <p className="text-xs sm:text-sm text-muted-foreground">Tidak ada transaksi</p>
+              <div className="text-center py-16">
+                <div className="w-12 h-12 rounded-full bg-muted/60 flex items-center justify-center mx-auto mb-3">
+                  <Wallet className="w-6 h-6 text-muted-foreground/50" />
+                </div>
+                <p className="text-sm text-muted-foreground">Tidak ada transaksi</p>
               </div>
             )}
           </div>
@@ -434,7 +444,7 @@ export default function OwnerTransactionsPage() {
         onDelete={deleteTx}
         updating={updatingStatus}
       />
-      
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="max-w-sm">
@@ -474,16 +484,52 @@ export default function OwnerTransactionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
 
-// Minimalist Modern Analytics Dashboard Component
+// ──────────────────────────────────────────
+// Health Score Calculator
+// ──────────────────────────────────────────
+function calculateHealthScore(analytics: AnalyticsData): { score: number; breakdown: { label: string; value: number; weight: number; score: number; }[] } {
+  // 1. Success Rate Score (30%)
+  const total = Object.values(analytics.statusCounts).reduce((a, b) => a + b, 0);
+  const successRate = total > 0 ? (analytics.statusCounts.success / total) * 100 : 0;
+  const successScore = Math.min(100, successRate * 1.25);
+
+  // 2. Margin Health (25%)
+  const marginPercent = analytics.feeAnalysis.avgMarginPercent;
+  const marginScore = Math.min(100, (marginPercent / 5) * 100);
+
+  // 3. Volume Trend (25%)
+  const trendScore = Math.max(0, Math.min(100, 50 + analytics.forecast.profitChange));
+
+  // 4. Transaction Volume (20%)
+  const volumeScore = Math.min(100, (analytics.feeAnalysis.totalTransactions / 200) * 100);
+
+  const score = Math.round(
+    successScore * 0.30 + marginScore * 0.25 + trendScore * 0.25 + volumeScore * 0.20
+  );
+
+  return {
+    score,
+    breakdown: [
+      { label: 'Success Rate', value: parseFloat(successRate.toFixed(1)), weight: 30, score: Math.round(successScore) },
+      { label: 'Margin Health', value: parseFloat(marginPercent.toFixed(2)), weight: 25, score: Math.round(marginScore) },
+      { label: 'Volume Trend', value: parseFloat(analytics.forecast.profitChange.toFixed(1)), weight: 25, score: Math.round(trendScore) },
+      { label: 'Volume', value: analytics.feeAnalysis.totalTransactions, weight: 20, score: Math.round(volumeScore) },
+    ]
+  };
+}
+
+// ──────────────────────────────────────────
+// Analytics Dashboard — Dark Modern Premium UI
+// ──────────────────────────────────────────
 function ModernAnalyticsDashboard({ analytics, loading }: { analytics: AnalyticsData | null; loading: boolean }) {
-  // Prepare data for charts
   const statusChartData = analytics ? [
     { name: 'Berhasil', value: analytics.statusCounts.success, color: '#22c55e' },
-    { name: 'Proses', value: analytics.statusCounts.process, color: '#3b82f6' },
+    { name: 'Proses', value: analytics.statusCounts.process, color: '#06b6d4' },
     { name: 'Verifikasi', value: analytics.statusCounts.verification, color: '#8b5cf6' },
     { name: 'Pending', value: analytics.statusCounts.pending, color: '#f59e0b' },
     { name: 'Gagal', value: analytics.statusCounts.failed, color: '#ef4444' },
@@ -491,131 +537,261 @@ function ModernAnalyticsDashboard({ analytics, loading }: { analytics: Analytics
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          {[1,2,3,4].map(i => <Skeleton key={i} className="h-[88px] sm:h-28 rounded-2xl" />)}
+      <div className="space-y-3">
+        {/* Loading Main Card */}
+        <div className="rounded-xl dash-card overflow-hidden p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+            {/* Health Score skeleton */}
+            <div className="flex flex-col items-center mx-auto sm:mx-0">
+              <Skeleton className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-muted/60" />
+              <Skeleton className="h-3 w-20 mt-2 bg-muted" />
+              <div className="mt-2.5 space-y-1.5 w-28">
+                {[1,2,3,4].map(i => <Skeleton key={i} className="h-2.5 w-full bg-muted/40" />)}
+              </div>
+            </div>
+            {/* KPIs skeleton */}
+            <div className="flex-1 grid grid-cols-2 gap-3">
+              {[1,2,3,4].map(i => (
+                <div key={i} className="rounded-lg bg-muted/30 border border-border p-3">
+                  <Skeleton className="h-2.5 w-16 mb-2 bg-muted" />
+                  <Skeleton className="h-5 w-20 mb-1 bg-muted" />
+                  <Skeleton className="h-2 w-12 bg-muted/60" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-          <Skeleton className="h-64 rounded-2xl" />
-          <Skeleton className="h-64 rounded-2xl" />
+        {/* Loading Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+          <Skeleton className="h-52 sm:h-64 rounded-xl bg-muted" />
+          <Skeleton className="h-52 sm:h-64 rounded-xl bg-muted" />
+        </div>
+        {/* Loading sections */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+          <Skeleton className="h-48 rounded-xl bg-muted" />
+          <Skeleton className="h-32 rounded-xl bg-muted" />
         </div>
       </div>
     );
   }
 
+  const healthScore = analytics ? calculateHealthScore(analytics) : null;
+  const healthColor = healthScore ? (healthScore.score >= 80 ? '#22c55e' : healthScore.score >= 50 ? '#f59e0b' : '#ef4444') : '#6b7280';
+  const healthColorClass = healthScore ? (healthScore.score >= 80 ? 'text-emerald-600 dark:text-emerald-400' : healthScore.score >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400') : 'text-muted-foreground';
+  const healthGlowClass = healthScore ? (healthScore.score >= 80 ? 'shadow-emerald-500/20' : healthScore.score >= 50 ? 'shadow-amber-500/20' : 'shadow-red-500/20') : '';
+
   const feeRows = analytics ? [
     { label: 'Total Payment Fee', value: analytics.feeAnalysis.totalPaymentFee, color: 'text-emerald-600 dark:text-emerald-400' },
     { label: 'Total Platform Fee', value: analytics.feeAnalysis.totalPlatformFee, color: 'text-orange-600 dark:text-orange-400' },
-    { label: 'Net Margin', value: analytics.feeAnalysis.totalNetMargin, color: 'text-blue-600 dark:text-blue-400' },
+    { label: 'Net Margin', value: analytics.feeAnalysis.totalNetMargin, color: 'text-cyan-600 dark:text-cyan-400' },
     { label: 'Total Profit Owner', value: analytics.feeAnalysis.totalOwnerProfit, color: 'text-violet-600 dark:text-violet-400' },
     { label: 'Avg Payment Fee / Trx', value: analytics.feeAnalysis.avgPaymentFee, color: 'text-muted-foreground' },
     { label: 'Avg Margin', value: `${analytics.feeAnalysis.avgMarginPercent.toFixed(2)}%`, isText: true, color: 'text-muted-foreground' },
   ] : [];
 
+  const sortedPeakHours = analytics?.peakHours
+    ? [...analytics.peakHours].sort((a, b) => b.count - a.count).slice(0, 5)
+    : [];
+  const maxPeakCount = sortedPeakHours.length > 0 ? sortedPeakHours[0].count : 1;
+
   return (
-    <div className="space-y-4">
-      {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <ModernKPICard
-          title="Proyeksi Profit"
-          value={analytics?.forecast.projectedProfit || 0}
-          subtitle={`Sisa ${analytics?.forecast.daysRemaining} hari`}
-          change={analytics?.forecast.profitChange}
-          icon={<Target className="w-4 h-4 sm:w-5 sm:h-5" />}
-          accentColor="border-l-emerald-500"
-          iconColor="text-emerald-500"
-        />
-        <ModernKPICard
-          title="Profit Bulan Ini"
-          value={analytics?.forecast.currentMonthProfit || 0}
-          subtitle={`${analytics?.forecast.daysPassed}/${analytics?.forecast.daysInMonth} hari`}
-          icon={<TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />}
-          accentColor="border-l-blue-500"
-          iconColor="text-blue-500"
-        />
-        <ModernKPICard
-          title="Volume Bulan Ini"
-          value={analytics?.forecast.currentMonthVolume || 0}
-          subtitle={`${analytics?.feeAnalysis.totalTransactions} transaksi`}
-          icon={<Wallet className="w-4 h-4 sm:w-5 sm:h-5" />}
-          accentColor="border-l-amber-500"
-          iconColor="text-amber-500"
-        />
-        <ModernKPICard
-          title="Net Margin"
-          value={`${(analytics?.feeAnalysis.avgMarginPercent || 0).toFixed(2)}%`}
-          subtitle="Rata-rata margin"
-          icon={<Percent className="w-4 h-4 sm:w-5 sm:h-5" />}
-          accentColor="border-l-violet-500"
-          iconColor="text-violet-500"
-          isPercent
-        />
+    <div className="space-y-3">
+      {/* ── Main Card: Health Score + KPIs ── */}
+      <div className="rounded-xl dash-card overflow-hidden overflow-hidden">
+        <div className="p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row gap-5 sm:gap-6">
+            {/* ── Health Score (left/top) ── */}
+            {healthScore && (
+              <div className="flex flex-col items-center mx-auto sm:mx-0 flex-shrink-0">
+                <div className={cn('relative w-20 h-20 sm:w-24 sm:h-24 rounded-full', healthGlowClass, 'shadow-lg')}>
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 80 80">
+                    <circle cx="40" cy="40" r="34" fill="none" stroke="var(--border)" strokeWidth="6" />
+                    <circle
+                      cx="40" cy="40" r="34"
+                      fill="none"
+                      stroke={healthColor}
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(healthScore.score / 100) * 213.6} 213.6`}
+                      className="transition-all duration-1000 ease-out"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={cn('text-xl sm:text-2xl font-bold tabular-nums', healthColorClass)}>{healthScore.score}</span>
+                    <span className="text-[8px] sm:text-[10px] text-muted-foreground font-medium">SCORE</span>
+                  </div>
+                </div>
+                <p className="text-[11px] sm:text-xs font-semibold text-foreground mt-2.5">Health Score</p>
+                {/* Breakdown */}
+                <div className="w-full mt-3 space-y-2 px-1">
+                  {healthScore.breakdown.map((item) => (
+                    <div key={item.label} className="flex items-center gap-2">
+                      <span className="text-[9px] sm:text-[10px] text-muted-foreground truncate flex-1">{item.label}</span>
+                      <div className="w-12 h-1 bg-muted rounded-full overflow-hidden flex-shrink-0">
+                        <div
+                          className={cn('h-full rounded-full transition-all duration-700',
+                            item.score >= 80 ? 'bg-emerald-500/60' : item.score >= 50 ? 'bg-amber-500/60' : 'bg-red-500/60'
+                          )}
+                          style={{ width: `${item.score}%` }}
+                        />
+                      </div>
+                      <span className={cn('text-[9px] sm:text-[10px] font-bold tabular-nums w-5 text-right flex-shrink-0',
+                        item.score >= 80 ? 'text-emerald-600 dark:text-emerald-400' : item.score >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'
+                      )}>
+                        {item.score}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Divider (vertical on desktop) ── */}
+            {healthScore && <div className="hidden sm:block w-px bg-border self-stretch flex-shrink-0" />}
+            {healthScore && <div className="sm:hidden h-px bg-border" />}
+
+            {/* ── 4 KPI Metrics (right/bottom) ── */}
+            <div className="flex-1 grid grid-cols-2 gap-2.5 sm:gap-3">
+              {/* Proyeksi Profit */}
+              <div className="rounded-lg bg-muted/30 border border-border p-3 sm:p-3.5 transition-colors hover:bg-muted/50">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-emerald-500/15 flex items-center justify-center">
+                    <Target className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Proyeksi Profit</span>
+                </div>
+                <p className="text-sm sm:text-lg font-bold text-foreground tracking-tight">
+                  {formatCompactCurrency(analytics?.forecast.projectedProfit || 0)}
+                </p>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-[9px] sm:text-[10px] text-muted-foreground">Sisa {analytics?.forecast.daysRemaining} hari</span>
+                  {analytics?.forecast.profitChange !== undefined && !isNaN(analytics?.forecast.profitChange) && (
+                    <span className={cn('text-[9px] sm:text-[10px] font-semibold flex items-center gap-0.5',
+                      analytics?.forecast.profitChange >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                    )}>
+                      {analytics?.forecast.profitChange >= 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+                      {analytics?.forecast.profitChange >= 0 ? '+' : ''}{analytics?.forecast.profitChange.toFixed(1)}%
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Profit Bulan Ini */}
+              <div className="rounded-lg bg-muted/30 border border-border p-3 sm:p-3.5 transition-colors hover:bg-muted/50">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-violet-500/15 flex items-center justify-center">
+                    <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Profit Bulan Ini</span>
+                </div>
+                <p className="text-sm sm:text-lg font-bold text-foreground tracking-tight">
+                  {formatCompactCurrency(analytics?.forecast.currentMonthProfit || 0)}
+                </p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="text-[9px] sm:text-[10px] text-muted-foreground">{analytics?.forecast.daysPassed}/{analytics?.forecast.daysInMonth} hari</span>
+                </div>
+              </div>
+
+              {/* Volume Bulan Ini */}
+              <div className="rounded-lg bg-muted/30 border border-border p-3 sm:p-3.5 transition-colors hover:bg-muted/50">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-amber-500/15 flex items-center justify-center">
+                    <Wallet className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Volume Bulan Ini</span>
+                </div>
+                <p className="text-sm sm:text-lg font-bold text-foreground tracking-tight">
+                  {formatCompactCurrency(analytics?.forecast.currentMonthVolume || 0)}
+                </p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="text-[9px] sm:text-[10px] text-muted-foreground">{analytics?.feeAnalysis.totalTransactions} transaksi</span>
+                </div>
+              </div>
+
+              {/* Net Margin */}
+              <div className="rounded-lg bg-muted/30 border border-border p-3 sm:p-3.5 transition-colors hover:bg-muted/50">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-cyan-500/15 flex items-center justify-center">
+                    <Percent className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-600 dark:text-cyan-400" />
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">Net Margin</span>
+                </div>
+                <p className="text-sm sm:text-lg font-bold text-foreground tracking-tight">
+                  {(analytics?.feeAnalysis.avgMarginPercent || 0).toFixed(2)}%
+                </p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="text-[9px] sm:text-[10px] text-muted-foreground">Rata-rata margin</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+      {/* ── Charts Row ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
         {/* Profit Trend Chart */}
-        <Card className="rounded-2xl border bg-card shadow-none">
-          <CardHeader className="pb-0 pt-5 px-5">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Activity className="w-4 h-4 text-muted-foreground" />
+        <div className="rounded-xl dash-card overflow-hidden">
+          <div className="px-3 pt-3 sm:px-4 sm:pt-4">
+            <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-foreground">
+              <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400" />
               Tren Profit 7 Hari
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 pb-5 pt-2">
+            </h3>
+          </div>
+          <div className="px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4 sm:pt-2">
             {analytics && analytics.dailyTrends.length > 0 ? (
-              <ResponsiveContainer width="100%" height={180} className="sm:h-[220px]">
+              <ResponsiveContainer width="100%" height={150} className="sm:h-[220px]">
                 <AreaChart data={analytics.dailyTrends}>
                   <defs>
-                    <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.15}/>
-                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                    <linearGradient id="colorProfitDark" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
-                  <XAxis dataKey="day" tick={{ fontSize: 11 }} stroke="#d1d5db" axisLine={false} tickLine={false} />
-                  <YAxis 
-                    tick={{ fontSize: 11 }} 
-                    stroke="#d1d5db" 
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="day" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} stroke="var(--border)" axisLine={false} tickLine={false} />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                    stroke="var(--border)"
                     axisLine={false} tickLine={false}
                     tickFormatter={(v) => {
-                      if (v >= 1000000000000) return `${(v/1000000000000).toFixed(0)}T`;
-                      if (v >= 1000000000) return `${(v/1000000000).toFixed(0)}M`;
-                      if (v >= 1000000) return `${(v/1000000).toFixed(0)}jt`;
-                      if (v >= 1000) return `${(v/1000).toFixed(0)}rb`;
+                      if (v >= 1000000000000) return `${(v / 1000000000000).toFixed(0)}T`;
+                      if (v >= 1000000000) return `${(v / 1000000000).toFixed(0)}M`;
+                      if (v >= 1000000) return `${(v / 1000000).toFixed(0)}jt`;
+                      if (v >= 1000) return `${(v / 1000).toFixed(0)}rb`;
                       return v.toString();
-                    }} 
-                    width={40} 
+                    }}
+                    width={38}
                   />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value: number) => formatCurrency(value)}
                     labelStyle={{ fontSize: 12, fontWeight: 600 }}
-                    contentStyle={{ fontSize: 11, borderRadius: 10, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                    contentStyle={{ fontSize: 11, borderRadius: 10, border: '1px solid var(--border)', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', backgroundColor: 'var(--popover)', color: 'var(--popover-foreground)' }}
                   />
-                  <Area type="monotone" dataKey="profit" stroke="#22c55e" strokeWidth={2} fillOpacity={1} fill="url(#colorProfit)" name="Profit" />
+                  <Area type="monotone" dataKey="profit" stroke="#22c55e" strokeWidth={2} fillOpacity={1} fill="url(#colorProfitDark)" name="Profit" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[180px] sm:h-[220px] flex flex-col items-center justify-center text-muted-foreground gap-2">
-                <Activity className="w-8 h-8 opacity-20" />
-                <p className="text-sm">Belum ada data</p>
+              <div className="h-[150px] sm:h-[220px] flex flex-col items-center justify-center text-muted-foreground gap-2">
+                <Activity className="w-8 h-8 opacity-30" />
+                <p className="text-xs sm:text-sm">Belum ada data</p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Status Distribution */}
-        <Card className="rounded-2xl border bg-card shadow-none">
-          <CardHeader className="pb-0 pt-5 px-5">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <PieChart className="w-4 h-4 text-muted-foreground" />
+        <div className="rounded-xl dash-card overflow-hidden">
+          <div className="px-3 pt-3 sm:px-4 sm:pt-4">
+            <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-foreground">
+              <PieChart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-600 dark:text-violet-400" />
               Distribusi Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 pb-5 pt-2">
+            </h3>
+          </div>
+          <div className="px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4 sm:pt-2">
             {statusChartData.length > 0 ? (
-              <div className="flex items-center gap-4">
-                <ResponsiveContainer width="48%" height={160} className="sm:h-[200px]">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <ResponsiveContainer width="45%" height={130} className="sm:h-[200px]">
                   <RePieChart>
                     <Pie
                       data={statusChartData}
@@ -631,86 +807,185 @@ function ModernAnalyticsDashboard({ analytics, loading }: { analytics: Analytics
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => `${value} trx`} contentStyle={{ fontSize: 11, borderRadius: 10, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
+                    <Tooltip formatter={(value: number) => `${value} trx`} contentStyle={{ fontSize: 11, borderRadius: 10, border: '1px solid var(--border)', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', backgroundColor: 'var(--popover)', color: 'var(--popover-foreground)' }} />
                   </RePieChart>
                 </ResponsiveContainer>
-                <div className="flex-1 space-y-2.5">
+                <div className="flex-1 space-y-2 sm:space-y-2.5">
                   {statusChartData.map((item) => (
                     <div key={item.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2 sm:gap-2.5">
                         <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-                        <span className="text-sm text-muted-foreground">{item.name}</span>
+                        <span className="text-[11px] sm:text-sm text-muted-foreground">{item.name}</span>
                       </div>
-                      <span className="text-sm font-semibold tabular-nums">{item.value}</span>
+                      <span className="text-[11px] sm:text-sm font-semibold tabular-nums text-foreground">{item.value}</span>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <div className="h-[160px] sm:h-[200px] flex flex-col items-center justify-center text-muted-foreground gap-2">
-                <PieChart className="w-8 h-8 opacity-20" />
-                <p className="text-sm">Belum ada data</p>
+              <div className="h-[130px] sm:h-[200px] flex flex-col items-center justify-center text-muted-foreground gap-2">
+                <PieChart className="w-8 h-8 opacity-30" />
+                <p className="text-xs sm:text-sm">Belum ada data</p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      {/* Fee Summary Card */}
-      <Card className="rounded-2xl border bg-card shadow-none">
-        <CardHeader className="pb-0 pt-5 px-5">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-muted-foreground" />
+      {/* ── Payment Type Performance + Peak Hours Row ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+        {/* Payment Type Performance */}
+        <div className="rounded-xl dash-card overflow-hidden">
+          <div className="px-3 pt-3 sm:px-4 sm:pt-4">
+            <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-foreground">
+              <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 dark:text-amber-400" />
+              Performa Metode Pembayaran
+            </h3>
+          </div>
+          <div className="px-3 pb-3 pt-2 sm:px-4 sm:pb-4 sm:pt-3 space-y-2.5">
+            {analytics && analytics.paymentTypes.length > 0 ? (
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
+                {analytics.paymentTypes.map((pt) => {
+                  const rateColor = pt.successRate >= 80 ? 'bg-emerald-500' : pt.successRate >= 50 ? 'bg-amber-500' : 'bg-red-500';
+                  const rateTextColor = pt.successRate >= 80 ? 'text-emerald-600 dark:text-emerald-400' : pt.successRate >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400';
+                  return (
+                    <div key={pt.id} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] sm:text-xs font-medium text-foreground truncate">{pt.name}</span>
+                        <span className={cn('text-[10px] sm:text-xs font-semibold tabular-nums', rateTextColor)}>
+                          {pt.successRate.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 sm:h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={cn('h-full rounded-full transition-all duration-500', rateColor)}
+                            style={{ width: `${Math.max(2, pt.successRate)}%` }}
+                          />
+                        </div>
+                        <span className="text-[9px] sm:text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+                          {pt.transactionCount} trx
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="h-24 flex flex-col items-center justify-center text-muted-foreground gap-1.5">
+                <CreditCard className="w-6 h-6 opacity-30" />
+                <p className="text-[11px] sm:text-xs">Belum ada data</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Peak Hours */}
+        <div className="rounded-xl dash-card overflow-hidden">
+          <div className="px-3 pt-3 sm:px-4 sm:pt-4">
+            <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-foreground">
+              <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-600 dark:text-yellow-400" />
+              Jam Puncak Transaksi
+            </h3>
+          </div>
+          <div className="px-3 pb-3 pt-2 sm:px-4 sm:pb-4 sm:pt-3">
+            {sortedPeakHours.length > 0 ? (
+              <div className="space-y-2">
+                {sortedPeakHours.map((ph, idx) => (
+                  <div key={ph.hour} className="flex items-center gap-2.5">
+                    {/* Rank badge */}
+                    <div className={cn(
+                      'w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center text-[9px] sm:text-[10px] font-bold flex-shrink-0',
+                      idx === 0 ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' : idx === 1 ? 'bg-muted text-foreground' : 'bg-muted/50 text-muted-foreground'
+                    )}>
+                      {idx + 1}
+                    </div>
+                    {/* Hour label */}
+                    <span className="text-[11px] sm:text-xs font-mono text-foreground w-10 sm:w-12 flex-shrink-0">
+                      {String(ph.hour).padStart(2, '0')}:00
+                    </span>
+                    {/* Bar */}
+                    <div className="flex-1 h-2 sm:h-2.5 bg-muted/40 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-yellow-500/80 to-orange-500/80 transition-all duration-500"
+                        style={{ width: `${(ph.count / maxPeakCount) * 100}%` }}
+                      />
+                    </div>
+                    {/* Count */}
+                    <span className="text-[10px] sm:text-xs font-semibold tabular-nums text-foreground w-8 text-right flex-shrink-0">
+                      {ph.count}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-24 flex flex-col items-center justify-center text-muted-foreground gap-1.5">
+                <Zap className="w-6 h-6 opacity-30" />
+                <p className="text-[11px] sm:text-xs">Belum ada data</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Fee Summary Card ── */}
+      <div className="rounded-xl dash-card overflow-hidden">
+        <div className="px-3 pt-3 sm:px-4 sm:pt-4">
+          <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-foreground">
+            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-600 dark:text-cyan-400" />
             Ringkasan Fee
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-5 pb-5 pt-3">
-          <div className="rounded-xl border overflow-hidden">
+          </h3>
+        </div>
+        <div className="px-3 pb-3 pt-2 sm:px-4 sm:pb-4 sm:pt-3">
+          <div className="rounded-lg border border-border overflow-hidden">
             {feeRows.map((row, i) => (
               <div
                 key={row.label}
                 className={cn(
-                  'flex items-center justify-between px-4 py-3',
-                  i < feeRows.length - 1 && 'border-b',
-                  i === feeRows.length - 1 && 'bg-muted/30'
+                  'flex items-center justify-between px-3 py-2 sm:px-4 sm:py-2.5',
+                  i < feeRows.length - 1 && 'border-b border-border',
+                  i === feeRows.length - 1 && 'bg-muted/30',
+                  i % 2 !== 0 && i < feeRows.length - 1 && 'bg-muted/20'
                 )}
               >
-                <span className="text-sm text-muted-foreground">{row.label}</span>
-                <span className={cn('text-sm font-semibold tabular-nums', row.color)}>
-                  {row.isText ? row.value : formatCurrency(row.value as number)}
+                <span className="text-[11px] sm:text-sm text-muted-foreground">{row.label}</span>
+                <span className={cn('text-[11px] sm:text-sm font-semibold tabular-nums', row.color)}>
+                  {row.isText ? row.value : formatCompactCurrency(row.value as number)}
                 </span>
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Action Required */}
+      {/* ── Action Required ── */}
       {(analytics?.statusCounts.pending || 0) > 0 || (analytics?.statusCounts.verification || 0) > 0 ? (
-        <div className="rounded-2xl border border-amber-200/60 dark:border-amber-800/30 bg-amber-50/50 dark:bg-amber-950/20 px-4 py-3 sm:px-5 sm:py-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 flex-shrink-0" />
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/20 px-3 py-2.5 sm:px-4 sm:py-3">
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 dark:text-amber-400" />
+              </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium">Perlu Tindakan</p>
-                <p className="text-xs text-muted-foreground truncate">
+                <p className="text-xs sm:text-sm font-medium text-amber-800 dark:text-amber-300">Perlu Tindakan</p>
+                <p className="text-[10px] sm:text-xs text-amber-600/70 dark:text-amber-400/60 truncate">
                   {(analytics?.statusCounts.pending || 0) > 0 && `${analytics?.statusCounts.pending} pending`}
                   {(analytics?.statusCounts.pending || 0) > 0 && (analytics?.statusCounts.verification || 0) > 0 && ' · '}
                   {(analytics?.statusCounts.verification || 0) > 0 && `${analytics?.statusCounts.verification} verifikasi`}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               {(analytics?.statusCounts.pending || 0) > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-orange-400" />
-                  <span className="text-xs font-medium text-orange-600 dark:text-orange-400">{analytics?.statusCounts.pending}</span>
+                <div className="flex items-center gap-1 sm:gap-1.5">
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-500" />
+                  <span className="text-[10px] sm:text-xs font-medium text-orange-600 dark:text-orange-400">{analytics?.statusCounts.pending}</span>
                 </div>
               )}
               {(analytics?.statusCounts.verification || 0) > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-blue-400" />
-                  <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{analytics?.statusCounts.verification}</span>
+                <div className="flex items-center gap-1 sm:gap-1.5">
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500" />
+                  <span className="text-[10px] sm:text-xs font-medium text-violet-600 dark:text-violet-400">{analytics?.statusCounts.verification}</span>
                 </div>
               )}
             </div>
@@ -721,7 +996,9 @@ function ModernAnalyticsDashboard({ analytics, loading }: { analytics: Analytics
   );
 }
 
-// Compact currency formatter for large numbers
+// ──────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────
 function formatCompactCurrency(value: number): string {
   if (value >= 1000000000000) return `Rp ${(value / 1000000000000).toFixed(1).replace(/\.0$/, '')}T`;
   if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1).replace(/\.0$/, '')}M`;
@@ -730,131 +1007,74 @@ function formatCompactCurrency(value: number): string {
   return `Rp ${value}`;
 }
 
-// Minimalist KPI Card Component
-function ModernKPICard({ title, value, subtitle, change, icon, accentColor, iconColor, isPercent }: {
-  title: string;
-  value: number | string;
-  subtitle?: string;
-  change?: number;
-  icon: React.ReactNode;
-  accentColor: string;
-  iconColor: string;
-  isPercent?: boolean;
-}) {
-  // Format value safely
-  const formatValue = (val: number | string): string => {
-    if (typeof val === 'string') return val;
-    if (isNaN(val) || !isFinite(val)) return 'Rp 0';
-    return formatCompactCurrency(val);
-  };
-
-  return (
-    <Card className={cn('rounded-2xl border bg-card shadow-none border-l-[3px]', accentColor)}>
-      <CardContent className="p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1 space-y-1">
-            <p className="text-xs text-muted-foreground truncate font-medium">{title}</p>
-            <p className="text-lg sm:text-xl font-bold truncate tracking-tight">
-              {isPercent ? value : formatValue(value)}
-            </p>
-            {subtitle && (
-              <p className="text-[11px] text-muted-foreground/70 truncate">{subtitle}</p>
-            )}
-            {change !== undefined && !isNaN(change) && (
-              <div className={cn('flex items-center gap-1 text-[11px] font-medium', change >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
-                {change >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                <span>{change >= 0 ? '+' : ''}{change.toFixed(1)}%</span>
-              </div>
-            )}
-          </div>
-          <div className={cn('w-9 h-9 sm:w-10 sm:h-10 rounded-xl border flex items-center justify-center flex-shrink-0', iconColor, 'bg-muted/40')}>
-            {icon}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+function formatTimeAgo(date: Date): string {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
-// Stat Card Component
-function StatCard({ title, value, change, isPercent, isCount, loading, icon, gradient, highlight }: {
-  title: string;
-  value: number | string;
-  change?: number;
-  isPercent?: boolean;
-  isCount?: boolean;
-  loading?: boolean;
-  icon: React.ReactNode;
-  gradient: string;
-  highlight?: boolean;
-}) {
-  return (
-    <Card className={cn("glass-card overflow-hidden", highlight && "ring-2 ring-amber-400/50")}>
-      <div className={cn("h-0.5 bg-gradient-to-r", gradient)} />
-      <CardContent className="p-2.5">
-        {loading ? (
-          <div className="space-y-1">
-            <Skeleton className="h-3 w-16" />
-            <Skeleton className="h-5 w-20" />
-          </div>
-        ) : (
-          <div className="space-y-0.5">
-            <p className="text-[10px] text-muted-foreground">{title}</p>
-            <div className="flex items-end justify-between">
-              <p className="text-sm sm:text-base font-bold">
-                {isCount ? value : isPercent ? value : formatCurrency(value as number)}
-              </p>
-              <div className={cn("w-6 h-6 rounded bg-gradient-to-br flex items-center justify-center text-white", gradient)}>
-                {icon}
-              </div>
-            </div>
-            {change !== undefined && (
-              <div className={cn("text-[10px] flex items-center gap-0.5", change >= 0 ? 'text-green-600' : 'text-red-600')}>
-                {change >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                {change >= 0 ? '+' : ''}{change.toFixed(1)}%
-              </div>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// Transaction Card
+// ──────────────────────────────────────────
+// Transaction Card — left accent bar, clean layout
+// ──────────────────────────────────────────
 function TxCard({ tx, onClick }: { tx: Transaction; onClick: () => void }) {
   const config = STATUS_CONFIG[tx.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
-  const Icon = config.icon;
 
   return (
-    <Card className="glass-card overflow-hidden active-scale cursor-pointer hover:shadow-md transition-all tap-highlight" onClick={onClick}>
+    <Card
+      className="rounded-xl border bg-card shadow-none overflow-hidden cursor-pointer transition-shadow hover:shadow-md"
+      onClick={onClick}
+    >
       <CardContent className="p-0">
-        <div className="flex items-center gap-2 p-2 sm:gap-2.5 sm:p-2.5">
-          <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center bg-gradient-to-br flex-shrink-0", config.gradient)}>
-            <Icon className={cn("w-4 h-4 sm:w-5 sm:h-5 text-white", tx.status === 'process' && "animate-spin")} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-1">
-              <p className="font-mono text-[9px] sm:text-[10px] text-muted-foreground truncate">{tx.orderId}</p>
-              <Badge className={cn("text-[8px] sm:text-[9px] capitalize px-1.5 sm:px-2", config.color)}>{tx.status}</Badge>
+        <div className="flex items-stretch">
+          {/* Left accent bar */}
+          <div className={cn('w-[3px] flex-shrink-0 rounded-l-xl', config.barColor)} />
+
+          <div className="flex-1 min-w-0 p-3 sm:p-3.5">
+            {/* Top row: order ID + status badge */}
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <p className="font-mono text-[11px] sm:text-xs text-muted-foreground truncate">{tx.orderId}</p>
+              <Badge className={cn("text-[9px] sm:text-[10px] capitalize px-2 py-0.5 rounded-full", config.color)}>
+                {tx.status}
+              </Badge>
             </div>
-            <p className="text-[11px] sm:text-xs font-medium truncate">{tx.customer?.name}</p>
-            <div className="flex items-center justify-between gap-1 mt-0.5">
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{tx.paymentType?.name} • {tx.methodTransaction}</p>
-              <p className="text-[10px] sm:text-xs font-bold text-primary flex-shrink-0">+{formatCurrency(tx.ownerProfit)}</p>
+
+            {/* Customer name */}
+            <p className="text-sm font-semibold truncate mb-1.5">{tx.customer?.name}</p>
+
+            {/* Bottom: payment type + owner profit */}
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground truncate">
+                {tx.paymentType?.name} · {tx.methodTransaction}
+              </p>
+              <p className="text-sm font-bold text-primary flex-shrink-0 tabular-nums bg-primary/5 px-2 py-0.5 rounded-md">
+                +{formatCurrency(tx.ownerProfit)}
+              </p>
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-between px-2 sm:px-2.5 py-1.5 bg-muted/30 border-t text-[9px] sm:text-[10px]">
-          <span className="text-muted-foreground truncate">{formatCurrency(tx.nominal)} • {formatDate(tx.createdAt)}</span>
+
+        {/* Footer bar */}
+        <div className="flex items-center justify-between px-3 sm:px-3.5 py-2 bg-muted/30 border-t border-border/60 text-[10px] sm:text-[11px]">
+          <span className="text-muted-foreground truncate flex items-center gap-1.5">
+            <span className="font-semibold text-foreground/70 bg-muted/60 px-1.5 py-0.5 rounded">{formatCurrency(tx.nominal)}</span>
+            <span className="bg-muted/60 px-1.5 py-0.5 rounded">{formatDate(tx.createdAt)}</span>
+          </span>
           <div className="flex items-center gap-1 flex-shrink-0">
             {tx.marketplace && (
-              <Badge variant="outline" className="text-[8px] sm:text-[9px] h-3.5 sm:h-4 px-1 flex items-center gap-0.5">
-                <Store className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
+              <Badge variant="outline" className="text-[9px] h-4 px-1.5 flex items-center gap-0.5 rounded-md">
+                <Store className="w-2.5 h-2.5" />
                 <span className="truncate max-w-[50px] sm:max-w-none">{tx.marketplace.name}</span>
               </Badge>
             )}
-            {tx.partner && <Badge variant="secondary" className="text-[8px] sm:text-[9px] h-3.5 sm:h-4 px-1 truncate max-w-[50px] sm:max-w-none">{tx.partner.name}</Badge>}
+            {tx.partner && (
+              <Badge variant="secondary" className="text-[9px] h-4 px-1.5 truncate max-w-[50px] sm:max-w-none rounded-md">
+                {tx.partner.name}
+              </Badge>
+            )}
           </div>
         </div>
       </CardContent>
@@ -862,28 +1082,51 @@ function TxCard({ tx, onClick }: { tx: Transaction; onClick: () => void }) {
   );
 }
 
+// ──────────────────────────────────────────
 // Loading State
+// ──────────────────────────────────────────
 function LoadingState() {
   return (
-    <div className="container mx-auto px-3 py-4 space-y-3 pb-20">
-      <Skeleton className="h-8 w-32" />
-      <div className="grid grid-cols-2 gap-2">
-        <Skeleton className="h-16 rounded-lg" />
-        <Skeleton className="h-16 rounded-lg" />
+    <div className="container mx-auto px-4 py-4 space-y-4 pb-20 max-w-4xl">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <Skeleton className="h-7 w-32" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-9 rounded-lg" />
+          <Skeleton className="h-9 w-20 rounded-lg" />
+        </div>
       </div>
-      <Skeleton className="h-10 rounded-lg" />
-      <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
+      <Skeleton className="h-10 rounded-xl" />
+      <div className="space-y-2">{[1, 2, 3].map(i => (
+        <div key={i} className="rounded-xl border bg-card overflow-hidden">
+          <div className="flex items-stretch">
+            <Skeleton className="w-[3px] rounded-l-xl" />
+            <div className="flex-1 p-3.5 space-y-2">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+          </div>
+          <Skeleton className="h-8 w-full" />
+        </div>
+      ))}</div>
     </div>
   );
 }
 
+// ──────────────────────────────────────────
 // Bank list for dropdown
+// ──────────────────────────────────────────
 const BANK_LIST = [
   'BCA', 'Mandiri', 'BRI', 'BNI', 'CIMB Niaga', 'Permata', 'Danamon',
   'Panin', 'OCBC NISP', 'Jenius', 'Seabank', 'Bank Jago', 'Lainnya'
 ];
 
+// ──────────────────────────────────────────
 // New Transaction Dialog
+// ──────────────────────────────────────────
 function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenChange: (v: boolean) => void; onCreated: () => void }) {
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -911,16 +1154,13 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
     const pt = paymentTypes.find(p => p.id === form.paymentTypeId);
     if (!pt) return null;
 
-    // Get fee values with safety checks
     let feePercent = form.methodTransaction === 'Online' ? pt.onlineFeePercent : pt.codFeePercent;
     const feeFlat = form.methodTransaction === 'Online' ? pt.onlineFeeFlat : pt.codFeeFlat;
-    
-    // Safety: if feePercent > 100, it's likely stored incorrectly (e.g., 8000 instead of 8%)
+
     if (feePercent > 100) {
       feePercent = feePercent / 1000;
     }
-    
-    // Use threshold logic: if nominal >= threshold, use percentage; otherwise use flat fee
+
     let originalFee: number;
     if (nominal >= (pt.threshold || 0)) {
       originalFee = nominal * (feePercent / 100);
@@ -928,7 +1168,6 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
       originalFee = feeFlat;
     }
 
-    // Apply discount from payment type
     const ptDiscountPercent = pt.discountPercent || 0;
     const ptDiscountNominal = pt.discountNominal || 0;
     const ptMinTransaction = pt.minTransaction || 0;
@@ -982,24 +1221,22 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
     e.preventDefault();
     setLoading(true);
     try {
-      // Normalize marketplaceId: 'none' or '' means no marketplace
-      const normalizedMarketplaceId = (form.marketplaceId && form.marketplaceId !== 'none') 
-        ? form.marketplaceId 
+      const normalizedMarketplaceId = (form.marketplaceId && form.marketplaceId !== 'none')
+        ? form.marketplaceId
         : null;
-      
-      // Handle bank name: use customBankName if "Lainnya" is selected
+
       const bankNameToSubmit = form.customerBankName === 'Lainnya' ? customBankName : form.customerBankName;
-      
+
       const res = await fetch('/api/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          ...form, 
+        body: JSON.stringify({
+          ...form,
           customerBankName: bankNameToSubmit,
-          nominal: parseFloat(form.nominal), 
-          marketplaceId: normalizedMarketplaceId, 
-          partnerId: form.partnerId || null, 
-          isNewCustomer: isNewCust 
+          nominal: parseFloat(form.nominal),
+          marketplaceId: normalizedMarketplaceId,
+          partnerId: form.partnerId || null,
+          isNewCustomer: isNewCust
         }),
       });
       const d = await res.json();
@@ -1029,11 +1266,11 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
           <DialogDescription className="text-xs">Buat transaksi dengan kalkulasi real-time</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={submit} className="space-y-3">
-          {/* Customer */}
+        <form onSubmit={submit} className="space-y-4">
+          {/* ── Customer Section ── */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-xs">Customer</Label>
+              <Label className="text-xs font-medium">Customer</Label>
               <div className="flex gap-1">
                 <Button type="button" variant={!isNewCust ? 'default' : 'outline'} size="sm" className="h-6 text-[10px] px-2" onClick={() => { setIsNewCust(false); setSelectedCust(null); }}>Existing</Button>
                 <Button type="button" variant={isNewCust ? 'default' : 'outline'} size="sm" className="h-6 text-[10px] px-2" onClick={() => { setIsNewCust(true); setSelectedCust(null); }}>Baru</Button>
@@ -1051,8 +1288,7 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
                     className="h-8"
                   />
                 </div>
-                {/* Bank Account Fields */}
-                <div className="p-2 bg-muted/50 rounded-lg space-y-2">
+                <div className="p-2.5 bg-muted/40 rounded-lg space-y-2 border border-border/60">
                   <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
                     <Building2 className="w-3 h-3" /> Rekening (Opsional)
                   </p>
@@ -1084,7 +1320,7 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
                 </div>
               </div>
             ) : selectedCust ? (
-              <div className="p-2 bg-muted rounded-lg space-y-2">
+              <div className="p-2.5 bg-muted/40 rounded-lg space-y-2 border border-border/60">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium">{selectedCust.name}</p>
@@ -1092,7 +1328,6 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
                   </div>
                   <Button type="button" variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => { setSelectedCust(null); setForm(p => ({ ...p, customerId: '' })); }}>Ganti</Button>
                 </div>
-                {/* Bank Account Preview */}
                 {selectedCust.bankName && selectedCust.bankAccount && (
                   <div className="flex items-center gap-2 p-2 bg-background rounded-md border">
                     <Building2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -1136,138 +1371,140 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
 
           <Separator />
 
-          {/* Nominal & Payment */}
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label className="text-[10px]">Nominal</Label><Input type="number" value={form.nominal} onChange={e => setForm(p => ({ ...p, nominal: e.target.value }))} required className="h-8 text-xs" /></div>
-            <div><Label className="text-[10px]">Payment Type</Label><Select value={form.paymentTypeId} onValueChange={v => setForm(p => ({ ...p, paymentTypeId: v }))}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pilih" /></SelectTrigger><SelectContent>{paymentTypes.map(pt => <SelectItem key={pt.id} value={pt.id} className="text-xs">{pt.name}</SelectItem>)}</SelectContent></Select></div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label className="text-[10px]">Metode</Label><Select value={form.methodTransaction} onValueChange={v => setForm(p => ({ ...p, methodTransaction: v }))}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Online">Online</SelectItem><SelectItem value="COD">COD</SelectItem></SelectContent></Select></div>
-            <div>
-              <Label className="text-[10px]">Marketplace</Label>
-              <Select value={form.marketplaceId} onValueChange={v => setForm(p => ({ ...p, marketplaceId: v }))}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tanpa" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Tanpa</SelectItem>
-                  {marketplaces.map(mp => (
-                    <SelectItem key={mp.id} value={mp.id} className="text-xs">
-                      <div className="flex items-center gap-2">
-                        <span>{mp.name}</span>
-                        <Badge variant="outline" className="text-[9px] h-4">
-                          {mp.feePercent}%{mp.feeFlat ? ` + ${formatCurrency(mp.feeFlat)}` : ''}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* ── Nominal & Payment ── */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Transaksi</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label className="text-[10px]">Nominal</Label><Input type="number" value={form.nominal} onChange={e => setForm(p => ({ ...p, nominal: e.target.value }))} required className="h-8 text-xs" /></div>
+              <div><Label className="text-[10px]">Payment Type</Label><Select value={form.paymentTypeId} onValueChange={v => setForm(p => ({ ...p, paymentTypeId: v }))}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pilih" /></SelectTrigger><SelectContent>{paymentTypes.map(pt => <SelectItem key={pt.id} value={pt.id} className="text-xs">{pt.name}</SelectItem>)}</SelectContent></Select></div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label className="text-[10px]">Metode</Label><Select value={form.methodTransaction} onValueChange={v => setForm(p => ({ ...p, methodTransaction: v }))}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Online">Online</SelectItem><SelectItem value="COD">COD</SelectItem></SelectContent></Select></div>
+              <div>
+                <Label className="text-[10px]">Marketplace</Label>
+                <Select value={form.marketplaceId} onValueChange={v => setForm(p => ({ ...p, marketplaceId: v }))}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tanpa" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Tanpa</SelectItem>
+                    {marketplaces.map(mp => (
+                      <SelectItem key={mp.id} value={mp.id} className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <span>{mp.name}</span>
+                          <Badge variant="outline" className="text-[9px] h-4">
+                            {mp.feePercent}%{mp.feeFlat ? ` + ${formatCurrency(mp.feeFlat)}` : ''}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
           <Separator />
 
-          {/* Partner */}
-          <div className="flex items-center justify-between">
-            <Label className="text-xs">Partner (Opsional)</Label>
-            <Button type="button" variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => { setShowPartner(!showPartner); if (showPartner) { setSelectedPartner(null); setForm(p => ({ ...p, partnerId: '' })); } }}>{showPartner ? 'Hapus' : '+ Tambah'}</Button>
+          {/* ── Partner ── */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium">Partner (Opsional)</Label>
+              <Button type="button" variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => { setShowPartner(!showPartner); if (showPartner) { setSelectedPartner(null); setForm(p => ({ ...p, partnerId: '' })); } }}>{showPartner ? 'Hapus' : '+ Tambah'}</Button>
+            </div>
+            {showPartner && (
+              selectedPartner ? (
+                <div className="flex items-center justify-between p-2.5 bg-muted/40 rounded-lg border border-border/60">
+                  <div><p className="text-xs font-medium">{selectedPartner.name}</p><p className="text-[10px] text-muted-foreground">Komisi: {selectedPartner.commission}%</p></div>
+                  <Button type="button" variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => { setSelectedPartner(null); setForm(p => ({ ...p, partnerId: '' })); }}>Ganti</Button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <Input placeholder="Cari partner..." value={searchPartner} onChange={e => setSearchPartner(e.target.value)} className="h-8 text-xs" />
+                  {searchPartner.length >= 1 && (
+                    <div className="absolute top-full left-0 right-0 bg-background border rounded-lg shadow-lg z-10 mt-1 max-h-32 overflow-y-auto">
+                      {partners.filter(p => p.name.toLowerCase().includes(searchPartner.toLowerCase())).map(p => (
+                        <button key={p.id} type="button" className="w-full text-left p-2 hover:bg-muted text-xs" onClick={() => { setSelectedPartner(p); setForm(pr => ({ ...pr, partnerId: p.id })); setSearchPartner(''); }}>
+                          {p.name} <span className="text-muted-foreground">({p.commission}%)</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            )}
           </div>
-          {showPartner && (
-            selectedPartner ? (
-              <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                <div><p className="text-xs font-medium">{selectedPartner.name}</p><p className="text-[10px] text-muted-foreground">Komisi: {selectedPartner.commission}%</p></div>
-                <Button type="button" variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => { setSelectedPartner(null); setForm(p => ({ ...p, partnerId: '' })); }}>Ganti</Button>
-              </div>
-            ) : (
-              <div className="relative">
-                <Input placeholder="Cari partner..." value={searchPartner} onChange={e => setSearchPartner(e.target.value)} className="h-8 text-xs" />
-                {searchPartner.length >= 1 && (
-                  <div className="absolute top-full left-0 right-0 bg-background border rounded-lg shadow-lg z-10 mt-1 max-h-32 overflow-y-auto">
-                    {partners.filter(p => p.name.toLowerCase().includes(searchPartner.toLowerCase())).map(p => (
-                      <button key={p.id} type="button" className="w-full text-left p-2 hover:bg-muted text-xs" onClick={() => { setSelectedPartner(p); setForm(pr => ({ ...pr, partnerId: p.id })); setSearchPartner(''); }}>
-                        {p.name} <span className="text-muted-foreground">({p.commission}%)</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          )}
 
-          {/* Calculation */}
+          {/* ── Real-time Calculation Card ── */}
           {calc && form.nominal && (
-            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-              <CardContent className="p-3 space-y-2">
-                <div className="flex items-center gap-1.5 text-[10px] font-medium text-primary">
-                  <Calculator className="w-3 h-3" /> Kalkulasi Real-time
+            <div className="rounded-xl border border-primary/15 bg-primary/[0.03] p-3.5 space-y-2.5">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                <Calculator className="w-3.5 h-3.5" /> Kalkulasi Real-time
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Nominal:</span>
+                  <span className="font-medium">{formatCurrency(parseFloat(form.nominal))}</span>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Nominal:</span>
-                    <span className="font-medium">{formatCurrency(parseFloat(form.nominal))}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Fee ({calc.feePercent}%):</span>
-                    <span className="text-red-600">{calc.hasDiscount ? <><s className="text-muted-foreground/50 mr-0.5">{formatCurrency(calc.originalFee)}</s>{formatCurrency(calc.paymentFee)}</> : `-${formatCurrency(calc.paymentFee)}`}</span>
-                  </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Fee ({calc.feePercent}%):</span>
+                  <span className="text-red-600">{calc.hasDiscount ? <><s className="text-muted-foreground/50 mr-0.5">{formatCurrency(calc.originalFee)}</s>{formatCurrency(calc.paymentFee)}</> : `-${formatCurrency(calc.paymentFee)}`}</span>
                 </div>
-                
-                {calc.hasDiscount && (
-                  <div className="flex items-center justify-between text-[10px] p-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded border border-emerald-200 dark:border-emerald-800">
-                    <div className="flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-emerald-600" />
-                      <span className="text-emerald-700 dark:text-emerald-400">Diskon {calc.appliedDiscountPercent.toFixed(1)}%</span>
-                    </div>
-                    <span className="text-emerald-600 font-medium">-{formatCurrency(calc.discountAmount)}</span>
-                  </div>
-                )}
-                
-                {!calc.meetsMin && calc.ptMinTransaction > 0 && (
-                  <div className="text-[9px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                    <Info className="w-2.5 h-2.5" />
-                    Min. {formatCurrency(calc.ptMinTransaction)} untuk diskon
-                  </div>
-                )}
-                
-                {calc.platformFee > 0 && calc.selectedMp && (
-                  <div className="flex items-center justify-between text-[10px] p-1.5 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
-                    <div className="flex items-center gap-1">
-                      <Store className="w-3 h-3 text-orange-600" />
-                      <span className="text-orange-700 dark:text-orange-400">{calc.selectedMp.name}</span>
-                      <Badge variant="outline" className="text-[9px] h-3.5">{calc.selectedMp.feePercent}%</Badge>
-                    </div>
-                    <span className="text-red-600 font-medium">-{formatCurrency(calc.platformFee)}</span>
-                  </div>
-                )}
-                
-                <Separator className="my-1" />
-                
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Diterima Customer:</span>
-                  <span className="font-bold text-primary">{formatCurrency(calc.totalReceived)}</span>
-                </div>
-                
-                <div className="flex justify-between text-xs p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+              </div>
+
+              {calc.hasDiscount && (
+                <div className="flex items-center justify-between text-[11px] p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
                   <div className="flex items-center gap-1">
-                    <PiggyBank className="w-3.5 h-3.5 text-green-600" />
-                    <span className="font-medium text-green-700 dark:text-green-400">Profit Anda:</span>
+                    <Sparkles className="w-3 h-3 text-emerald-600" />
+                    <span className="text-emerald-700 dark:text-emerald-400 font-medium">Diskon {calc.appliedDiscountPercent.toFixed(1)}%</span>
                   </div>
-                  <span className="font-bold text-green-600">+{formatCurrency(calc.ownerProfit)}</span>
+                  <span className="text-emerald-600 font-semibold">-{formatCurrency(calc.discountAmount)}</span>
                 </div>
-                
-                {selectedPartner && calc.partnerProfit > 0 && (
-                  <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>Profit Partner ({selectedPartner.name}):</span>
-                    <span className="text-blue-600">+{formatCurrency(calc.partnerProfit)}</span>
+              )}
+
+              {!calc.meetsMin && calc.ptMinTransaction > 0 && (
+                <div className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <Info className="w-2.5 h-2.5" />
+                  Min. {formatCurrency(calc.ptMinTransaction)} untuk diskon
+                </div>
+              )}
+
+              {calc.platformFee > 0 && calc.selectedMp && (
+                <div className="flex items-center justify-between text-[11px] p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <div className="flex items-center gap-1">
+                    <Store className="w-3 h-3 text-orange-600" />
+                    <span className="text-orange-700 dark:text-orange-400 font-medium">{calc.selectedMp.name}</span>
+                    <Badge variant="outline" className="text-[9px] h-3.5">{calc.selectedMp.feePercent}%</Badge>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <span className="text-red-600 font-semibold">-{formatCurrency(calc.platformFee)}</span>
+                </div>
+              )}
+
+              <Separator />
+
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Diterima Customer:</span>
+                <span className="font-bold text-primary">{formatCurrency(calc.totalReceived)}</span>
+              </div>
+
+              <div className="flex justify-between text-xs p-2.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <div className="flex items-center gap-1.5">
+                  <PiggyBank className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="font-medium text-emerald-700 dark:text-emerald-400">Profit Anda:</span>
+                </div>
+                <span className="font-bold text-emerald-600">+{formatCurrency(calc.ownerProfit)}</span>
+              </div>
+
+              {selectedPartner && calc.partnerProfit > 0 && (
+                <div className="flex justify-between text-[11px] text-muted-foreground">
+                  <span>Profit Partner ({selectedPartner.name}):</span>
+                  <span className="text-cyan-600 font-medium">+{formatCurrency(calc.partnerProfit)}</span>
+                </div>
+              )}
+            </div>
           )}
 
           <DialogFooter>
-            <Button type="submit" className="w-full gradient-primary text-white h-9" disabled={loading || (!isNewCust && !selectedCust) || !form.nominal || !form.paymentTypeId}>
+            <Button type="submit" className="w-full bg-primary text-primary-foreground h-9 font-medium hover:bg-primary/90" disabled={loading || (!isNewCust && !selectedCust) || !form.nominal || !form.paymentTypeId}>
               {loading ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Proses...</> : <><Check className="w-3 h-3 mr-1" /> Buat (Process)</>}
             </Button>
           </DialogFooter>
@@ -1277,8 +1514,15 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
   );
 }
 
-// Transaction Detail Dialog Content (uses key pattern for reset)
-function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Transaction; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean, partnerId?: string, discountPercent?: number, discountNominal?: number) => void; onDelete: (id: string) => void; updating: boolean }) {
+// ──────────────────────────────────────────
+// Transaction Detail Dialog Content
+// ──────────────────────────────────────────
+function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: {
+  tx: Transaction;
+  onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean, partnerId?: string, discountPercent?: number, discountNominal?: number) => void;
+  onDelete: (id: string) => void;
+  updating: boolean;
+}) {
   const [notes, setNotes] = useState(tx.notes || '');
   const [transactionLink, setTransactionLink] = useState(tx.transactionLink || '');
   const [status, setStatus] = useState(tx.status);
@@ -1294,7 +1538,6 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
   const [discountValue, setDiscountValue] = useState('');
   const [discountTab, setDiscountTab] = useState('detail');
 
-  // Load partners always, marketplaces when verification
   useEffect(() => {
     fetch('/api/partners')
       .then(res => res.json())
@@ -1316,7 +1559,6 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
     }
   }, []);
 
-  // Calculate preview when nominal changes
   const calculatedPreview = useMemo(() => {
     if (!editNominal) return null;
 
@@ -1325,18 +1567,15 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
 
     if (newNominal === tx.nominal) return null;
 
-    // Get fee calculation based on existing payment type
     const isOnline = tx.methodTransaction === 'Online';
     let feePercent = isOnline ? (tx.paymentType?.onlineFeePercent || 0) : (tx.paymentType?.codFeePercent || 0);
     const feeFlat = isOnline ? (tx.paymentType?.onlineFeeFlat || 0) : (tx.paymentType?.codFeeFlat || 0);
     const threshold = tx.paymentType?.threshold || 1000000;
 
-    // Safety: normalize fee percent if > 100
     if (feePercent > 100) {
       feePercent = feePercent / 1000;
     }
 
-    // Calculate payment fee
     let paymentFee: number;
     if (newNominal >= threshold) {
       paymentFee = newNominal * (feePercent / 100);
@@ -1344,7 +1583,6 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
       paymentFee = feeFlat;
     }
 
-    // Calculate platform fee if marketplace exists
     let platformFee = 0;
     if (tx.marketplace) {
       let mpFeePercent = tx.marketplace.feePercent || 0;
@@ -1355,14 +1593,12 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
       platformFee = newNominal * (mpFeePercent / 100) + mpFeeFlat;
     }
 
-    // Calculate margins
     const netMargin = paymentFee - platformFee;
     const partnerRate = tx.partner?.commission || 0;
     const partnerProfit = netMargin * (partnerRate / 100);
     const ownerProfit = netMargin - partnerProfit;
     const totalReceived = newNominal - paymentFee;
 
-    // Also include the new nominal for reference
     return {
       nominal: newNominal,
       paymentFee,
@@ -1376,14 +1612,12 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
 
   const previewCalc = calculatedPreview;
 
-  // Calculate profit preview when marketplace changes
   const profitPreview = useMemo(() => {
     if (status !== 'verification') return null;
 
     const selectedMp = marketplaces.find(m => m.id === marketplace);
     const currentPlatformFee = tx.platformFee || 0;
 
-    // Safety: ensure numeric values and normalize marketplace fee percent if > 100
     let newPlatformFee = 0;
     if (selectedMp) {
       let mpFeePercent = Number(selectedMp.feePercent) || 0;
@@ -1393,17 +1627,17 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
       }
       newPlatformFee = Number(tx.nominal) * (mpFeePercent / 100) + mpFeeFlat;
     }
-    
+
     const currentNetMargin = tx.paymentFee - currentPlatformFee;
     const newNetMargin = tx.paymentFee - newPlatformFee;
-    
+
     const partnerRate = tx.partner?.commission || 0;
     const currentPartnerProfit = currentNetMargin * partnerRate / 100;
     const newPartnerProfit = newNetMargin * partnerRate / 100;
-    
+
     const currentOwnerProfit = currentNetMargin - currentPartnerProfit;
     const newOwnerProfit = newNetMargin - newPartnerProfit;
-    
+
     return {
       selectedMp,
       currentPlatformFee,
@@ -1418,8 +1652,7 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
 
   const handleStatus = (s: string) => {
     setStatus(s);
-    if (s === 'verification' && marketplaces.length === 0) { 
-      // Load marketplaces if not already loaded
+    if (s === 'verification' && marketplaces.length === 0) {
       fetch('/api/marketplaces?activeOnly=true')
         .then(res => res.json())
         .then(d => {
@@ -1435,13 +1668,10 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
   };
 
   const save = () => {
-    // Check if nominal changed
     const nominalChanged = editNominal && parseFloat(nominal) !== tx.nominal;
     const newNominal = nominalChanged ? parseFloat(nominal) : undefined;
 
-    // Send 'none' explicitly so backend knows to clear marketplace
     const effectivePartnerId = partnerChanged ? selectedPartnerId : undefined;
-    // Calculate discount values if discount tab was used
     let discountPercent: number | undefined;
     let discountNominal: number | undefined;
     if (discountValue) {
@@ -1450,7 +1680,6 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
         if (discountType === 'percent') {
           discountPercent = Math.min(val, 100);
         } else {
-          // Send nominal discount directly
           discountNominal = val;
         }
       }
@@ -1461,8 +1690,6 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
   const config = STATUS_CONFIG[tx.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
   const StatusIcon = config.icon;
 
-  // Check if any changes were made
-  // For verification status, always allow save (it's a confirmation action)
   const originalMarketplace = tx.marketplace?.id || 'none';
   const nominalChanged = editNominal && parseFloat(nominal) !== tx.nominal;
   const hasDiscount = discountValue && parseFloat(discountValue) > 0;
@@ -1473,14 +1700,12 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
     nominalChanged ||
     partnerChanged ||
     hasDiscount ||
-    status === 'verification'; // Always allow save when status is verification
+    status === 'verification';
 
-  // Discount preview calculation
   const discountPreview = useMemo(() => {
     const val = parseFloat(discountValue);
     if (isNaN(val) || val <= 0) return null;
 
-    // Calculate original fee
     const isOnline = tx.methodTransaction === 'Online';
     let feePercent = isOnline ? (tx.paymentType?.onlineFeePercent || 0) : (tx.paymentType?.codFeePercent || 0);
     const feeFlat = isOnline ? (tx.paymentType?.onlineFeeFlat || 0) : (tx.paymentType?.codFeeFlat || 0);
@@ -1548,108 +1773,112 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
   const canDiscount = tx.status === 'pending' || tx.status === 'verification';
 
   return (
-    <Tabs value={discountTab} onValueChange={setDiscountTab} className="w-full">
-      {/* Clean Header with Status + Order ID */}
-      <div className="bg-card rounded-t-lg border-b">
-        <div className="flex items-center justify-between px-4 pt-3 pb-2">
-          <div className="flex items-center gap-2.5">
-            <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium", config.color)}>
-              <StatusIcon className={cn("w-3 h-3", tx.status === 'process' && "animate-spin")} />
-              <span className="capitalize">{tx.status}</span>
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded truncate max-w-[100px]">{tx.orderId}</span>
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText(tx.orderId);
-                toast.success('Order ID disalin');
-              }}
-              className="p-1 hover:bg-muted rounded transition-colors"
-              title="Salin Order ID"
-            >
-              <Copy className="w-3 h-3 text-muted-foreground" />
-            </button>
-          </div>
+    <Tabs value={discountTab} onValueChange={setDiscountTab} className="w-full min-w-0 flex flex-col">
+      {/* ── Header: Status + Order ID ── */}
+      <div className="px-4 pt-3 pb-2 pr-12 min-w-0 overflow-hidden">
+        <div className="flex items-center gap-2">
+          <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold", config.color)}>
+            <StatusIcon className={cn("w-3 h-3", tx.status === 'process' && "animate-spin")} />
+            <span className="capitalize">{tx.status}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(tx.orderId);
+              toast.success('Order ID disalin');
+            }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/60 hover:bg-muted transition-colors"
+            title="Salin Order ID"
+          >
+            <span className="text-[10px] font-mono text-muted-foreground">{tx.orderId}</span>
+            <Copy className="w-2.5 h-2.5 text-muted-foreground/60" />
+          </button>
         </div>
-        {/* Tab Triggers - underline style */}
-        <TabsList className="w-full bg-transparent h-auto p-0 gap-0 rounded-none">
-          <TabsTrigger
-            value="detail"
-            className="flex-1 py-2 text-xs font-medium text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none transition-colors border-b-2 border-transparent"
-          >
-            <Info className="w-3.5 h-3.5 mr-1" /> Detail
-          </TabsTrigger>
-          <TabsTrigger
-            value="aksi"
-            className="flex-1 py-2 text-xs font-medium text-muted-foreground data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none transition-colors border-b-2 border-transparent"
-          >
-            <Zap className="w-3.5 h-3.5 mr-1" /> Aksi
-          </TabsTrigger>
-          <TabsTrigger
-            value="diskon"
-            className={cn(
-              "flex-1 py-2 text-xs font-medium data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none transition-colors border-b-2 border-transparent",
-              canDiscount ? "text-muted-foreground" : "text-muted-foreground/40 cursor-not-allowed"
-            )}
-            disabled={!canDiscount}
-          >
-            <Percent className="w-3.5 h-3.5 mr-1" /> Diskon
-          </TabsTrigger>
-        </TabsList>
       </div>
 
-      {/* Tab Contents */}
-      <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(85vh - 140px)' }}>
-        {/* TAB 1: Detail */}
-        <TabsContent value="detail" className="mt-0 p-4 space-y-4">
-          {/* ── Financial Card ── */}
-          <div className="rounded-xl bg-slate-900 p-4 text-white space-y-3">
+      {/* ── Segmented Tab Control ── */}
+      <div className="px-4 pb-3">
+        <div className="flex gap-1 p-1 bg-muted/60 rounded-xl">
+          {[
+            { value: 'detail', label: 'Detail', icon: Info },
+            { value: 'aksi', label: 'Aksi', icon: Zap },
+            { value: 'diskon', label: 'Diskon', icon: Percent, disabled: !canDiscount },
+          ].map(tab => {
+            const TabIcon = tab.icon;
+            const isActive = discountTab === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => !('disabled' in tab && tab.disabled) && setDiscountTab(tab.value)}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all",
+                  isActive
+                    ? "bg-background text-foreground shadow-sm"
+                    : ('disabled' in tab && tab.disabled)
+                      ? "text-muted-foreground/30 cursor-not-allowed"
+                      : "text-muted-foreground hover:text-foreground/70"
+                )}
+              >
+                <TabIcon className="w-3.5 h-3.5" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Tab Contents ── */}
+      <div className="overflow-y-auto overflow-x-hidden hide-scrollbar px-4 min-w-0 flex-1" style={{ maxHeight: 'calc(85vh - 170px)' }}>
+
+        {/* ══════════════════════════════════════ */}
+        {/* TAB 1: DETAIL */}
+        {/* ══════════════════════════════════════ */}
+        <TabsContent value="detail" className="mt-0 pb-4 space-y-3 min-w-0">
+          {/* ── Financial Summary Card ── */}
+          <div className="rounded-xl dash-card overflow-hidden p-4">
             {/* Nominal */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] text-muted-foreground">Nominal</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditNominal(!editNominal);
-                    if (editNominal) {
-                      setNominal(tx.nominal.toString());
-                    }
-                  }}
-                  className={cn(
-                    "p-1.5 rounded-lg transition-colors",
-                    editNominal
-                      ? "bg-emerald-500/20 text-emerald-400"
-                      : "hover:bg-white/10 text-muted-foreground hover:text-foreground"
-                  )}
-                  title={editNominal ? 'Batal edit' : 'Edit nominal'}
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                </button>
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Nominal</p>
+                {editNominal ? (
+                  <Input
+                    type="number"
+                    value={nominal}
+                    onChange={(e) => setNominal(e.target.value)}
+                    className="h-9 mt-1 text-sm font-bold text-emerald-600 dark:text-emerald-400 bg-muted border-border focus:border-emerald-500 rounded-lg"
+                    placeholder="Masukkan nominal"
+                  />
+                ) : (
+                  <p className="text-2xl font-bold tracking-tight mt-0.5 text-foreground">{formatCurrency(tx.nominal)}</p>
+                )}
               </div>
-              {editNominal ? (
-                <Input
-                  type="number"
-                  value={nominal}
-                  onChange={(e) => setNominal(e.target.value)}
-                  className="h-8 text-sm font-bold text-emerald-400 bg-white/10 border-white/20 focus:border-emerald-500"
-                  placeholder="Masukkan nominal"
-                />
-              ) : (
-                <p className="text-xl font-bold text-foreground">{formatCurrency(tx.nominal)}</p>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setEditNominal(!editNominal);
+                  if (editNominal) setNominal(tx.nominal.toString());
+                }}
+                className={cn(
+                  "p-2 rounded-lg transition-all flex-shrink-0",
+                  editNominal
+                    ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/30"
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                )}
+                title={editNominal ? 'Batal edit' : 'Edit nominal'}
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+              </button>
             </div>
 
             {/* Fee breakdown */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-muted-foreground">Payment Fee</span>
-                <span className="text-red-400">
+            <div className="space-y-2 py-2.5 border-t border-border">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-muted-foreground">Payment Fee</span>
+                <span className="text-[12px] font-semibold text-red-600 dark:text-red-400 tabular-nums">
                   {previewCalc && previewCalc.paymentFee !== tx.paymentFee ? (
                     <>
-                      <span className="line-through text-muted-foreground/50 mr-1.5">{formatCurrency(tx.paymentFee)}</span>
+                      <span className="line-through text-muted-foreground/50 mr-1">{formatCurrency(tx.paymentFee)}</span>
                       -{formatCurrency(previewCalc.paymentFee)}
                     </>
                   ) : (
@@ -1658,12 +1887,12 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
                 </span>
               </div>
               {(previewCalc?.platformFee ?? tx.platformFee) > 0 && (
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-muted-foreground">Platform Fee</span>
-                  <span className="text-red-400">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-muted-foreground">Platform Fee</span>
+                  <span className="text-[12px] font-semibold text-red-600 dark:text-red-400 tabular-nums">
                     {previewCalc && previewCalc.platformFee !== tx.platformFee ? (
                       <>
-                        <span className="line-through text-muted-foreground/50 mr-1.5">{formatCurrency(tx.platformFee)}</span>
+                        <span className="line-through text-muted-foreground/50 mr-1">{formatCurrency(tx.platformFee)}</span>
                         -{formatCurrency(previewCalc.platformFee)}
                       </>
                     ) : (
@@ -1674,193 +1903,313 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
               )}
             </div>
 
-            {/* Separator */}
-            <div className="border-t border-white/10" />
-
             {/* Profit */}
-            <div>
-              <span className="text-[11px] text-muted-foreground">Profit Anda</span>
+            <div className="pt-2.5 border-t border-border">
+              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-1">Profit Anda</p>
               {previewCalc && previewCalc.ownerProfit !== tx.ownerProfit ? (
-                <div className="mt-0.5">
-                  <p className="text-[11px] text-muted-foreground/50 line-through">{formatCurrency(tx.ownerProfit)}</p>
-                  <p className="text-lg font-bold text-emerald-400">+{formatCurrency(previewCalc.ownerProfit)}</p>
+                <div>
+                  <p className="text-[10px] text-muted-foreground line-through">{formatCurrency(tx.ownerProfit)}</p>
+                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">+{formatCurrency(previewCalc.ownerProfit)}</p>
                 </div>
               ) : (
-                <p className="text-lg font-bold text-emerald-400 mt-0.5">+{formatCurrency(previewCalc?.ownerProfit ?? tx.ownerProfit)}</p>
+                <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">+{formatCurrency(previewCalc?.ownerProfit ?? tx.ownerProfit)}</p>
               )}
               {tx.partner && (
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  {tx.partner.name}{' '}
-                  <span className="text-emerald-300">
+                <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-border">
+                  <Users className="w-3 h-3 text-violet-600 dark:text-violet-400" />
+                  <span className="text-[10px] text-muted-foreground">{tx.partner.name}</span>
+                  <span className="text-[10px] font-semibold text-violet-600 dark:text-violet-300 tabular-nums">
                     {previewCalc && previewCalc.partnerProfit !== tx.partnerProfit ? (
                       <>
-                        <span className="line-through text-muted-foreground/50 mr-1">{formatCurrency(tx.partnerProfit)}</span>
+                        <span className="line-through text-muted-foreground/50 mr-0.5">{formatCurrency(tx.partnerProfit)}</span>
                         +{formatCurrency(previewCalc.partnerProfit)}
                       </>
                     ) : (
                       <span>+{formatCurrency(previewCalc?.partnerProfit ?? tx.partnerProfit)}</span>
                     )}
                   </span>
-                </p>
+                </div>
               )}
               {previewCalc && previewCalc.ownerProfit !== tx.ownerProfit && (
-                <p className="text-[10px] text-muted-foreground/50 mt-1 italic">*Preview kalkulasi</p>
+                <p className="text-[9px] text-muted-foreground/50 mt-1.5 italic flex items-center gap-1">
+                  <Calculator className="w-2.5 h-2.5" /> Preview kalkulasi
+                </p>
               )}
+
+              {/* Dana Diterima Customer */}
+              <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-border">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Dana Diterima Customer</p>
+                {previewCalc && previewCalc.totalReceived !== tx.totalReceived ? (
+                  <p className="text-base font-bold text-cyan-600 dark:text-cyan-400">
+                    <span className="text-[10px] text-muted-foreground line-through mr-1">{formatCurrency(tx.totalReceived)}</span>
+                    {formatCurrency(previewCalc.totalReceived)}
+                  </p>
+                ) : (
+                  <p className="text-base font-bold text-cyan-600 dark:text-cyan-400">{formatCurrency(previewCalc?.totalReceived ?? tx.totalReceived)}</p>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* ── Transaction Info (clean minimal) ── */}
-          <div className="space-y-2.5">
+          {/* ── Info Rows ── */}
+          <div className="rounded-xl border divide-y divide-border/60 overflow-hidden">
             {/* Customer */}
-            <div className="flex items-start gap-2.5 py-1">
-              <User className="w-3.5 h-3.5 text-muted-foreground/60 mt-0.5 shrink-0" />
+            <div className="flex items-center gap-3 px-3.5 py-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <User className="w-4 h-4 text-blue-500" />
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-muted-foreground">Customer</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <p className="text-sm font-semibold truncate">{tx.customer?.name}</p>
-                  <p className="text-xs text-muted-foreground">{tx.customer?.phone}</p>
-                </div>
-                <div className="flex items-center gap-0.5 mt-0.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(tx.customer?.phone || '');
-                      toast.success('No. WA disalin');
-                    }}
-                    className="p-1 hover:bg-muted rounded-md transition-colors"
-                    title="Salin No. WA"
-                  >
-                    <Copy className="w-3 h-3 text-muted-foreground" />
-                  </button>
-                  <a
-                    href={`https://wa.me/${tx.customer?.phone?.replace(/^0/, '62')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1 hover:bg-muted rounded-md transition-colors"
-                    title="Buka WhatsApp"
-                  >
-                    <MessageSquare className="w-3 h-3 text-muted-foreground" />
-                  </a>
-                </div>
+                <p className="text-[10px] text-muted-foreground font-medium">Customer</p>
+                <p className="text-sm font-semibold truncate">{tx.customer?.name}</p>
+              </div>
+              <div className="flex items-center gap-0.5 flex-shrink-0 self-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(tx.customer?.phone || '');
+                    toast.success('No. WA disalin');
+                  }}
+                  className="flex items-center justify-center w-8 h-8 hover:bg-muted rounded-md transition-colors"
+                  title="Salin No. WA"
+                >
+                  <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+                <a
+                  href={`https://wa.me/${tx.customer?.phone?.replace(/^0/, '62')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-8 h-8 hover:bg-muted rounded-md transition-colors"
+                  title="Buka WhatsApp"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
+                </a>
+              </div>
+            </div>
+
+            {/* Phone */}
+            <div className="flex items-center gap-3 px-3.5 py-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-emerald-500">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground font-medium">WhatsApp</p>
+                <p className="text-sm font-mono font-medium">{tx.customer?.phone}</p>
               </div>
             </div>
 
             {/* Payment */}
-            <div className="flex items-start gap-2.5 py-1">
-              <CreditCard className="w-3.5 h-3.5 text-muted-foreground/60 mt-0.5 shrink-0" />
+            <div className="flex items-center gap-3 px-3.5 py-2.5">
+              <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0">
+                <CreditCard className="w-4 h-4 text-violet-500" />
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-muted-foreground">Payment</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
+                <p className="text-[10px] text-muted-foreground font-medium">Payment</p>
+                <div className="flex items-center gap-1.5">
                   <p className="text-sm font-semibold">{tx.paymentType?.name}</p>
-                  <p className="text-xs text-muted-foreground">{tx.methodTransaction}</p>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">{tx.methodTransaction}</span>
                 </div>
               </div>
             </div>
 
             {/* Bank Account */}
             {tx.customer?.bankName && tx.customer?.bankAccount && (
-              <div className="flex items-start gap-2.5 py-1">
-                <Banknote className="w-3.5 h-3.5 text-muted-foreground/60 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-muted-foreground">Rekening</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <p className="text-sm font-semibold">{tx.customer.bankName}</p>
-                    <p className="text-xs text-muted-foreground font-mono">{tx.customer.bankAccount}</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(tx.customer.bankAccount || '');
-                        toast.success('Disalin');
-                      }}
-                      className="p-1 hover:bg-muted rounded-md transition-colors"
-                      title="Salin nomor rekening"
-                    >
-                      <Copy className="w-3 h-3 text-muted-foreground" />
-                    </button>
-                  </div>
+              <div className="flex items-center gap-3 px-3.5 py-2.5">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                  <Banknote className="w-4 h-4 text-amber-500" />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] text-muted-foreground font-medium">Rekening</p>
+                  <p className="text-sm font-semibold">{tx.customer.bankName} <span className="font-mono text-xs text-muted-foreground">{tx.customer.bankAccount}</span></p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(tx.customer.bankAccount || '');
+                    toast.success('Disalin');
+                  }}
+                  className="p-1.5 hover:bg-muted rounded-md transition-colors flex-shrink-0"
+                  title="Salin nomor rekening"
+                >
+                  <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
               </div>
             )}
 
             {/* Marketplace */}
             {tx.marketplace && (
-              <div className="flex items-start gap-2.5 py-1">
-                <Store className="w-3.5 h-3.5 text-muted-foreground/60 mt-0.5 shrink-0" />
+              <div className="flex items-center gap-3 px-3.5 py-2.5">
+                <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                  <Store className="w-4 h-4 text-orange-500" />
+                </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-muted-foreground">Marketplace</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-[10px] text-muted-foreground font-medium">Marketplace</p>
+                  <div className="flex items-center gap-1.5">
                     <p className="text-sm font-semibold">{tx.marketplace.name}</p>
-                    <p className="text-xs text-muted-foreground">Fee: {tx.marketplace.feePercent}%</p>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-medium">{tx.marketplace.feePercent}%</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Partner */}
+            {tx.partner && (
+              <div className="flex items-center gap-3 px-3.5 py-2.5">
+                <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+                  <Users className="w-4 h-4 text-cyan-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] text-muted-foreground font-medium">Partner</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold">{tx.partner.name}</p>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 font-medium">{tx.partner.commission}%</span>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Date */}
-            <div className="flex items-start gap-2.5 py-1">
-              <Calendar className="w-3.5 h-3.5 text-muted-foreground/60 mt-0.5 shrink-0" />
+            <div className="flex items-center gap-3 px-3.5 py-2.5">
+              <div className="w-8 h-8 rounded-lg bg-slate-500/10 flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-4 h-4 text-slate-500" />
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-muted-foreground">Tanggal</p>
-                <p className="text-sm font-semibold mt-0.5">{formatDate(tx.createdAt)}</p>
+                <p className="text-[10px] text-muted-foreground font-medium">Tanggal</p>
+                <p className="text-sm font-medium">{formatDate(tx.createdAt)}</p>
               </div>
             </div>
           </div>
 
-          {/* ── WhatsApp Share (compact) ── */}
+          {/* WhatsApp Review Reminder - only for success status */}
+          {tx.status === 'success' && tx.customer?.phone && (
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 sm:p-3.5 space-y-2.5">
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Star className="w-4 h-4 text-emerald-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-foreground">Minta Ulasan Customer</p>
+                  <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                    Kirim pesan WhatsApp untuk mengingatkan customer memberi ulasan setelah transaksi selesai.
+                  </p>
+                </div>
+              </div>
+              <a
+                href={`https://wa.me/${tx.customer.phone.replace(/^0/, '62')}?text=${encodeURIComponent(
+                  `Halo ${tx.customer.name.split(' ')[0]}! 🎉\n\n` +
+                  `Terima kasih sudah bertransaksi dengan kami!\n\n` +
+                  `📋 Order ID: ${tx.orderId}\n` +
+                  `💰 Nominal: ${formatCurrency(tx.nominal)}\n` +
+                  `💳 Payment: ${tx.paymentType?.name}\n` +
+                  `✅ Status: Selesai\n\n` +
+                  `Kami sangat senang jika Anda bisa memberikan ulasan tentang pengalaman bertransaksi bersama kami. 😊\n\n` +
+                  `📝 Tulis ulasan anda disini:\n${typeof window !== 'undefined' ? window.location.origin : ''}/track?orderId=${tx.orderId}\n\n` +
+                  `Terima kasih! 🙏`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-sm"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                </svg>
+                Kirim Reminder via WhatsApp
+              </a>
+            </div>
+          )}
+
+          {/* WhatsApp Share */}
           <a
             href={`https://wa.me/?text=${encodeURIComponent(`🛒 Detail Transaksi\n\nOrder ID: ${tx.orderId}\nNominal: ${formatCurrency(tx.nominal)}\nPayment: ${tx.paymentType?.name}\nStatus: ${tx.status.toUpperCase()}\nCustomer: ${tx.customer?.name}\nTanggal: ${formatDate(tx.createdAt)}`)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 transition-colors"
           >
             <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
             </svg>
             Share ke WhatsApp
           </a>
         </TabsContent>
 
-        {/* TAB 2: Aksi */}
-        <TabsContent value="aksi" className="mt-0 p-4 space-y-2.5">
-          {/* Status Change */}
-          <div>
-            <p className="text-[9px] font-medium text-muted-foreground mb-2">UBAH STATUS</p>
-            <div className="grid grid-cols-5 gap-1.5">
+        {/* ══════════════════════════════════════ */}
+        {/* TAB 2: AKSI */}
+        {/* ══════════════════════════════════════ */}
+        <TabsContent value="aksi" className="mt-0 pb-4 space-y-4 min-w-0">
+          {/* ── Status Change ── */}
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold text-muted-foreground mb-3 uppercase tracking-wider text-center">Ubah Status</p>
+            <div className="relative flex items-center justify-between px-2">
+              {/* Connecting line */}
+              <div className="absolute left-5 right-5 top-1/2 h-px bg-border" />
+              {/* Glow behind active icon */}
+              <div className={cn(
+                "absolute w-12 h-12 rounded-full blur-md -z-10 transition-all duration-300",
+                status === 'pending' && "bg-orange-400/20",
+                status === 'verification' && "bg-violet-400/20",
+                status === 'process' && "bg-cyan-400/20",
+                status === 'success' && "bg-emerald-400/20",
+                status === 'failed' && "bg-red-400/20",
+              )} />
               {[
-                { v: 'pending', l: 'Pending', icon: Clock, color: 'bg-orange-500' },
-                { v: 'verification', l: 'Verif', icon: AlertCircle, color: 'bg-violet-500' },
-                { v: 'process', l: 'Proses', icon: Loader2, color: 'bg-cyan-500' },
-                { v: 'success', l: 'Sukses', icon: CheckCircle, color: 'bg-emerald-500' },
-                { v: 'failed', l: 'Gagal', icon: XCircle, color: 'bg-red-500' },
+                { v: 'pending', l: 'Pending', icon: Clock, bg: 'bg-orange-500', ring: 'ring-orange-500/20' },
+                { v: 'verification', l: 'Verifikasi', icon: AlertCircle, bg: 'bg-violet-500', ring: 'ring-violet-500/20' },
+                { v: 'process', l: 'Proses', icon: Loader2, bg: 'bg-cyan-500', ring: 'ring-cyan-500/20' },
+                { v: 'success', l: 'Sukses', icon: CheckCircle, bg: 'bg-emerald-500', ring: 'ring-emerald-500/20' },
+                { v: 'failed', l: 'Gagal', icon: XCircle, bg: 'bg-red-500', ring: 'ring-red-500/20' },
               ].map(s => {
                 const Icon = s.icon;
                 const isSelected = status === s.v;
                 return (
-                  <button 
-                    key={s.v} 
-                    type="button" 
-                    onClick={() => handleStatus(s.v)} 
-                    disabled={updating} 
+                  <button
+                    key={s.v}
+                    type="button"
+                    onClick={() => handleStatus(s.v)}
+                    disabled={updating}
+                    title={s.l}
                     className={cn(
-                      "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all min-h-[44px]",
-                      isSelected 
-                        ? `${s.color} text-white shadow` 
-                        : "bg-muted/30 hover:bg-muted/50"
+                      "relative z-10 flex items-center justify-center w-10 h-10 rounded-full transition-all flex-shrink-0 border-2",
+                      isSelected
+                        ? cn(s.bg, 'text-white shadow-lg ring-2', s.ring, 'border-transparent scale-110')
+                        : "bg-background border-border hover:border-border/80 text-muted-foreground hover:text-foreground shadow-sm"
                     )}
                   >
-                    <Icon className={cn("w-4 h-4", !isSelected && "text-muted-foreground", s.v === 'process' && "animate-spin")} />
-                    <span className="text-[8px] font-medium">{s.l}</span>
+                    <Icon className={cn("w-4 h-4", !isSelected && "opacity-40", s.v === 'process' && isSelected && "animate-spin")} />
                   </button>
                 );
               })}
             </div>
+            {/* Labels row */}
+            <div className="flex justify-between px-2 mt-1.5">
+              {[
+                { v: 'pending', l: 'Pending', color: 'text-orange-500' },
+                { v: 'verification', l: 'Verifikasi', color: 'text-violet-500' },
+                { v: 'process', l: 'Proses', color: 'text-cyan-500' },
+                { v: 'success', l: 'Sukses', color: 'text-emerald-500' },
+                { v: 'failed', l: 'Gagal', color: 'text-red-500' },
+              ].map(s => (
+                <span
+                  key={s.v}
+                  className={cn(
+                    "w-10 text-center text-[8px] font-medium transition-colors",
+                    status === s.v ? s.color : "text-transparent"
+                  )}
+                >
+                  {s.l}
+                </span>
+              ))}
+            </div>
           </div>
 
-          {/* Marketplace - when verification */}
+          {/* ── Marketplace (when verification) ── */}
           {status === 'verification' && (
-            <div className="space-y-2">
+            <div className="rounded-xl border bg-muted/20 p-3 space-y-2.5">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Store className="w-3 h-3" /> Marketplace
+              </p>
               <Select value={marketplace} onValueChange={setMarketplace}>
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger className="h-9 text-xs rounded-lg">
                   <SelectValue placeholder="Pilih marketplace..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -1878,88 +2227,87 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
               </Select>
 
               {profitPreview && (
-                <div className="space-y-2 text-[10px]">
-                  {/* Owner Profit Comparison */}
-                  <div className="p-2 rounded-lg bg-muted/30">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="font-medium text-muted-foreground flex items-center gap-1">
-                        <PiggyBank className="w-3 h-3" /> Profit Owner
+                <div className="space-y-2 text-[11px]">
+                  {/* Owner profit preview */}
+                  <div className="rounded-lg bg-muted/30 border border-border p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-semibold text-muted-foreground flex items-center gap-1.5 text-[10px]">
+                        <PiggyBank className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Profit Owner
                       </p>
                       {profitPreview.profitChange !== 0 && (
                         <span className={cn(
-                          "text-[9px] font-bold px-1.5 py-0.5 rounded",
-                          profitPreview.profitChange >= 0 
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" 
-                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          "text-[9px] font-bold px-2 py-0.5 rounded-full",
+                          profitPreview.profitChange >= 0
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                            : "bg-red-500/15 text-red-600 dark:text-red-400"
                         )}>
-                          {profitPreview.profitChange >= 0 ? '+' : ''}{formatCurrency(profitPreview.profitChange)}
+                          {profitPreview.profitChange >= 0 ? '+' : ''}{formatCompactCurrency(profitPreview.profitChange)}
                         </span>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
                         <p className="text-[9px] text-muted-foreground">Saat ini</p>
-                        <p className="font-bold text-sm">{formatCurrency(profitPreview.currentOwnerProfit)}</p>
+                        <p className="font-bold text-sm tabular-nums">{formatCompactCurrency(profitPreview.currentOwnerProfit)}</p>
                       </div>
                       <div>
                         <p className="text-[9px] text-muted-foreground">Baru</p>
                         <p className={cn(
-                          "font-bold text-sm",
-                          profitPreview.profitChange >= 0 ? "text-emerald-600" : "text-red-600"
-                        )}>{formatCurrency(profitPreview.newOwnerProfit)}</p>
+                          "font-bold text-sm tabular-nums",
+                          profitPreview.profitChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                        )}>{formatCompactCurrency(profitPreview.newOwnerProfit)}</p>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Partner Profit Comparison */}
+
+                  {/* Partner profit preview */}
                   {tx.partner && profitPreview.currentPartnerProfit !== undefined && (
-                    <div className="p-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <p className="font-medium text-muted-foreground flex items-center gap-1">
-                          <Users className="w-3 h-3" /> Profit Partner
-                          <span className="text-[9px] text-blue-600">({tx.partner.name})</span>
+                    <div className="rounded-lg bg-violet-500/5 border border-violet-500/10 p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-semibold text-muted-foreground flex items-center gap-1.5 text-[10px]">
+                          <Users className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" /> Profit Partner
+                          <span className="text-[9px] text-violet-600/60 dark:text-violet-400/60">({tx.partner.name})</span>
                         </p>
                         {profitPreview.newPartnerProfit !== undefined && (
                           <span className={cn(
-                            "text-[9px] font-bold px-1.5 py-0.5 rounded",
-                            (profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit) >= 0 
-                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" 
-                              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            "text-[9px] font-bold px-2 py-0.5 rounded-full",
+                            (profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit) >= 0
+                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                              : "bg-red-500/15 text-red-600 dark:text-red-400"
                           )}>
                             {(profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit) >= 0 ? '+' : ''}
-                            {formatCurrency(profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit)}
+                            {formatCompactCurrency(profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit)}
                           </span>
                         )}
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-3">
                         <div>
                           <p className="text-[9px] text-muted-foreground">Saat ini</p>
-                          <p className="font-bold text-sm text-blue-600">{formatCurrency(profitPreview.currentPartnerProfit)}</p>
+                          <p className="font-bold text-sm text-violet-600 dark:text-violet-300 tabular-nums">{formatCompactCurrency(profitPreview.currentPartnerProfit)}</p>
                         </div>
                         <div>
                           <p className="text-[9px] text-muted-foreground">Baru</p>
                           <p className={cn(
-                            "font-bold text-sm",
-                            profitPreview.newPartnerProfit !== undefined && 
-                            (profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit) >= 0 
-                              ? "text-emerald-600" 
-                              : "text-red-600"
+                            "font-bold text-sm tabular-nums",
+                            profitPreview.newPartnerProfit !== undefined &&
+                            (profitPreview.newPartnerProfit - profitPreview.currentPartnerProfit) >= 0
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-red-600 dark:text-red-400"
                           )}>
-                            {profitPreview.newPartnerProfit !== undefined ? formatCurrency(profitPreview.newPartnerProfit) : '-'}
+                            {profitPreview.newPartnerProfit !== undefined ? formatCompactCurrency(profitPreview.newPartnerProfit) : '-'}
                           </p>
                         </div>
                       </div>
                     </div>
                   )}
-                  
-                  {/* Platform Fee Info */}
+
                   {profitPreview.newPlatformFee > 0 && profitPreview.selectedMp && (
-                    <div className="flex items-center justify-between text-[9px] p-1.5 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
-                      <div className="flex items-center gap-1">
-                        <Store className="w-3 h-3 text-orange-600" />
-                        <span className="text-orange-700 dark:text-orange-400">{profitPreview.selectedMp.name}</span>
+                    <div className="flex items-center justify-between text-[10px] px-3 py-2 bg-orange-500/10 rounded-lg border border-orange-500/15">
+                      <div className="flex items-center gap-1.5">
+                        <Store className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+                        <span className="text-orange-600 dark:text-orange-300 font-medium">{profitPreview.selectedMp.name}</span>
                       </div>
-                      <span className="text-red-600 font-medium">-{formatCurrency(profitPreview.newPlatformFee)}</span>
+                      <span className="text-red-600 dark:text-red-400 font-semibold tabular-nums">-{formatCompactCurrency(profitPreview.newPlatformFee)}</span>
                     </div>
                   )}
                 </div>
@@ -1967,16 +2315,20 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
             </div>
           )}
 
-          {/* Partner Selector */}
-          <div className="rounded-lg border bg-muted/30 p-2.5">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-[9px] text-muted-foreground flex items-center gap-1">
-                <Users className="w-2.5 h-2.5" /> Partner
+          {/* ── Partner Selector ── */}
+          <div className="rounded-xl border bg-muted/20 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Users className="w-3 h-3" /> Partner
               </p>
               {selectedPartnerId !== 'none' && (
-                <Button type="button" variant="ghost" size="sm" className="h-5 text-[9px] text-red-500 px-1.5" onClick={() => { setSelectedPartnerId('none'); setPartnerChanged(true); }}>
-                  <X className="w-2.5 h-2.5" />
-                </Button>
+                <button
+                  type="button"
+                  className="text-[9px] text-red-500 hover:text-red-600 font-medium"
+                  onClick={() => { setSelectedPartnerId('none'); setPartnerChanged(true); }}
+                >
+                  Hapus
+                </button>
               )}
             </div>
             {selectedPartnerId !== 'none' ? (
@@ -1985,273 +2337,291 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
                 return p ? (
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-semibold">{p.name}</p>
-                      <p className="text-[9px] text-muted-foreground">{p.tier} &middot; Komisi {p.commission}%</p>
+                      <p className="text-sm font-semibold">{p.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{p.tier} &middot; Komisi {p.commission}%</p>
                     </div>
-                    <Button type="button" variant="ghost" size="sm" className="h-5 text-[9px] px-1.5" onClick={() => { setSelectedPartnerId('none'); setPartnerChanged(true); }}>Ganti</Button>
+                    <button type="button" className="text-[10px] text-primary font-semibold hover:underline" onClick={() => { setSelectedPartnerId('none'); setPartnerChanged(true); }}>Ganti</button>
                   </div>
-                ) : <p className="text-[9px] text-muted-foreground">Partner tidak ditemukan</p>;
+                ) : <p className="text-[10px] text-muted-foreground">Partner tidak ditemukan</p>;
               })()
             ) : (
               <div className="space-y-1.5">
-                <Input placeholder="Cari partner..." value={searchPartner} onChange={e => setSearchPartner(e.target.value)} className="h-7 text-[10px]" />
+                <Input placeholder="Cari partner..." value={searchPartner} onChange={e => setSearchPartner(e.target.value)} className="h-8 text-xs rounded-lg" />
                 {searchPartner.length >= 1 ? (
                   <div className="max-h-24 overflow-y-auto space-y-0.5">
                     {partners.filter(p => p.name.toLowerCase().includes(searchPartner.toLowerCase())).slice(0, 5).map(p => (
-                      <button key={p.id} type="button" onClick={() => { setSelectedPartnerId(p.id); setPartnerChanged(true); setSearchPartner(''); }} className="w-full text-left flex items-center justify-between px-2 py-1 rounded hover:bg-muted/50 transition-colors">
+                      <button key={p.id} type="button" onClick={() => { setSelectedPartnerId(p.id); setPartnerChanged(true); setSearchPartner(''); }} className="w-full text-left flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-muted/50 transition-colors">
                         <div>
-                          <p className="text-[10px] font-medium">{p.name}</p>
-                          <p className="text-[8px] text-muted-foreground">{p.tier} &middot; {p.commission}%</p>
+                          <p className="text-[11px] font-medium">{p.name}</p>
+                          <p className="text-[9px] text-muted-foreground">{p.tier} &middot; {p.commission}%</p>
                         </div>
                         <Check className="w-3 h-3 text-muted-foreground" />
                       </button>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[9px] text-muted-foreground text-center py-1">Ketik nama partner untuk mencari...</p>
+                  <p className="text-[10px] text-muted-foreground text-center py-1.5">Ketik nama partner untuk mencari...</p>
                 )}
               </div>
             )}
           </div>
 
-          {/* Transaction Link */}
-          <div className="p-2 rounded-lg border border-dashed bg-violet-50/50 dark:bg-violet-900/10 border-violet-200 dark:border-violet-800">
-            <p className="text-[9px] font-medium text-violet-700 dark:text-violet-400 flex items-center gap-1 mb-1.5">
-              <ExternalLink className="w-3 h-3" />
-              Link Transaksi
-            </p>
-            <Input
-              type="url"
-              value={transactionLink}
-              onChange={e => setTransactionLink(e.target.value)}
-              placeholder="https://contoh.com/transaksi..."
-              className="h-8 text-xs"
-            />
-            <p className="text-[9px] text-muted-foreground">Link untuk customer/partner melakukan transaksi</p>
+          {/* ── Link + Notes ── */}
+          <div className="space-y-2.5">
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                <ExternalLink className="w-3 h-3" /> Link Transaksi
+              </p>
+              <Input
+                type="url"
+                value={transactionLink}
+                onChange={e => setTransactionLink(e.target.value)}
+                placeholder="https://contoh.com/transaksi..."
+                className="h-9 text-xs rounded-lg"
+              />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                <Edit3 className="w-3 h-3" /> Catatan
+              </p>
+              <Textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="Catatan untuk customer/partner..."
+                className="h-12 text-xs resize-none rounded-lg"
+              />
+            </div>
           </div>
-          
-          {/* Notes */}
-          <Textarea 
-            value={notes} 
-            onChange={e => setNotes(e.target.value)} 
-            placeholder="Catatan untuk customer/partner..." 
-            className="h-10 text-xs resize-none" 
-          />
 
-          {/* Actions */}
-          <div className="flex gap-2 pt-2 border-t">
-            <Button 
-              onClick={save} 
-              disabled={updating || !hasChanges} 
-              className="flex-1 h-8 text-xs bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600"
+          {/* ── Action Buttons ── */}
+          <div className="flex gap-2 pt-3 border-t">
+            <Button
+              onClick={save}
+              disabled={updating || !hasChanges}
+              className="flex-1 h-10 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
             >
-              {updating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-              <span className="ml-1">Simpan</span>
+              {updating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              <span className="ml-1.5">Simpan Perubahan</span>
             </Button>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => onDelete(tx.id)} 
-              disabled={updating} 
-              className="h-8 w-8 text-red-600 hover:bg-red-50"
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => onDelete(tx.id)}
+              disabled={updating}
+              className="h-10 w-10 rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-600 dark:hover:bg-red-500/15 border-red-200 dark:border-red-500/30"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         </TabsContent>
 
-        {/* TAB 3: Diskon */}
-        <TabsContent value="diskon" className="mt-0 p-4 space-y-3">
+        {/* ══════════════════════════════════════ */}
+        {/* TAB 3: DISKON */}
+        {/* ══════════════════════════════════════ */}
+        <TabsContent value="diskon" className="mt-0 pb-4 space-y-3 min-w-0">
           {!canDiscount ? (
-            <div className="text-center py-8">
-              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
-              <p className="text-xs text-muted-foreground">Diskon hanya bisa diterapkan saat status <span className="font-medium">Pending</span> atau <span className="font-medium">Verifikasi</span></p>
+            <div className="text-center py-10">
+              <div className="w-14 h-14 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto mb-3">
+                <AlertCircle className="w-7 h-7 text-muted-foreground/40" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">Tidak Bisa Diskon</p>
+              <p className="text-[11px] text-muted-foreground/70 mt-1">Diskon hanya bisa diterapkan saat status <span className="font-semibold text-foreground">Pending</span> atau <span className="font-semibold text-foreground">Verifikasi</span></p>
             </div>
           ) : (
             <>
-              {/* Min Transaction Warning */}
+              {/* Warning */}
               {(tx.paymentType?.minTransaction ?? 0) > 0 && tx.nominal < (tx.paymentType?.minTransaction ?? 0) && (
-                <div className="flex items-start gap-2 p-2.5 bg-amber-50 dark:bg-amber-900/10 rounded-lg">
+                <div className="flex items-start gap-2.5 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
                   <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-                  <div className="text-[11px] text-amber-700 dark:text-amber-400">
-                    <p className="font-medium">Nominal di bawah minimum</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Diskon {tx.paymentType?.name} hanya berlaku untuk transaksi ≥ {formatCurrency(tx.paymentType?.minTransaction ?? 0)}</p>
+                  <div className="text-[11px]">
+                    <p className="font-semibold text-amber-600 dark:text-amber-400">Nominal di bawah minimum</p>
+                    <p className="text-amber-600/70 dark:text-amber-400/70 mt-0.5">Diskon {tx.paymentType?.name} hanya berlaku untuk transaksi ≥ {formatCompactCurrency(tx.paymentType?.minTransaction ?? 0)}</p>
                   </div>
                 </div>
               )}
 
-              {/* Current Fee Info */}
-              <div className="rounded-lg bg-muted/50 p-2.5 space-y-1.5">
-                <p className="text-[11px] text-muted-foreground">Info Fee Saat Ini</p>
-                <div className="space-y-1 text-[11px]">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Payment Fee</span>
-                    <span className="font-semibold text-red-400">-{formatCurrency(tx.paymentFee)}</span>
-                  </div>
-                  {tx.platformFee > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Platform Fee ({tx.marketplace?.name})</span>
-                      <span className="font-semibold text-red-400">-{formatCurrency(tx.platformFee)}</span>
+              {/* ── Fee Info Card ── */}
+              <div className="rounded-xl dash-card overflow-hidden overflow-hidden">
+                <div className="px-3.5 pt-3 pb-2">
+                  <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Info Fee Saat Ini</p>
+                </div>
+                <div className="px-3.5 pb-3.5">
+                  <div className="space-y-0 text-[11px] rounded-lg border border-border overflow-hidden">
+                    <div className="flex justify-between items-center px-3 py-2">
+                      <span className="text-muted-foreground">Payment Fee</span>
+                      <span className="font-semibold text-red-600 dark:text-red-400 tabular-nums">-{formatCompactCurrency(tx.paymentFee)}</span>
                     </div>
+                    {tx.platformFee > 0 && (
+                      <div className="flex justify-between items-center px-3 py-2 border-t border-border bg-muted/20">
+                        <span className="text-muted-foreground">Platform Fee <span className="text-muted-foreground/60">({tx.marketplace?.name})</span></span>
+                        <span className="font-semibold text-red-600 dark:text-red-400 tabular-nums">-{formatCompactCurrency(tx.platformFee)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center px-3 py-2 border-t border-border bg-muted/30">
+                      <span className="text-muted-foreground font-medium">Total Fee</span>
+                      <span className="font-bold text-red-600 dark:text-red-300 tabular-nums">-{formatCompactCurrency(tx.paymentFee + tx.platformFee)}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-3 py-2 border-t border-border">
+                      <span className="text-muted-foreground">Net Margin</span>
+                      <span className="font-semibold text-foreground tabular-nums">{formatCompactCurrency(tx.paymentFee - tx.platformFee)}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-3 py-2 border-t border-border bg-muted/20">
+                      <span className="text-muted-foreground">Customer Receives</span>
+                      <span className="font-semibold text-foreground tabular-nums">{formatCompactCurrency(tx.totalReceived)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Discount Controls ── */}
+              <div className="rounded-xl border bg-muted/20 p-3.5 space-y-3">
+                {/* Discount Type Toggle */}
+                <div>
+                  <p className="text-[10px] font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Tipe Diskon</p>
+                  <div className="flex gap-1 p-1 bg-muted/60 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => { setDiscountType('percent'); setDiscountValue(''); }}
+                      className={cn(
+                        "flex-1 py-2 rounded-lg text-[11px] font-semibold transition-all",
+                        discountType === 'percent'
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      Persentase (%)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setDiscountType('nominal'); setDiscountValue(''); }}
+                      className={cn(
+                        "flex-1 py-2 rounded-lg text-[11px] font-semibold transition-all",
+                        discountType === 'nominal'
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      Nominal (Rp)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Discount Input */}
+                <div>
+                  <p className="text-[10px] font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">
+                    {discountType === 'percent' ? 'Nilai Diskon (%)' : 'Nilai Diskon (Rp)'}
+                  </p>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">
+                      {discountType === 'percent' ? '%' : 'Rp'}
+                    </span>
+                    <Input
+                      type="number"
+                      value={discountValue}
+                      onChange={e => setDiscountValue(e.target.value)}
+                      placeholder="0"
+                      className="h-11 text-base font-bold pl-10 rounded-xl tabular-nums"
+                      min="0"
+                      max={discountType === 'percent' ? '100' : undefined}
+                    />
+                  </div>
+                  {discountType === 'percent' && discountValue && parseFloat(discountValue) > 100 && (
+                    <p className="text-[9px] text-red-500 mt-1.5 font-medium">Maksimal 100%</p>
                   )}
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Fee</span>
-                    <span className="font-semibold text-red-500">-{formatCurrency(tx.paymentFee + tx.platformFee)}</span>
-                  </div>
-                  <div className="border-t border-border my-1" />
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Net Margin</span>
-                    <span className="font-semibold">{formatCurrency(tx.paymentFee - tx.platformFee)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Customer Receives</span>
-                    <span className="font-semibold">{formatCurrency(tx.totalReceived)}</span>
-                  </div>
+                  {discountType === 'nominal' && discountPreview && parseFloat(discountValue) > discountPreview.originalPaymentFee && (
+                    <p className="text-[9px] text-red-500 mt-1.5 font-medium">Maksimal {formatCompactCurrency(discountPreview.originalPaymentFee)}</p>
+                  )}
                 </div>
               </div>
 
-              {/* Discount Type Toggle */}
-              <div>
-                <p className="text-[11px] text-muted-foreground mb-1.5">Tipe Diskon</p>
-                <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
-                  <button
-                    type="button"
-                    onClick={() => { setDiscountType('percent'); setDiscountValue(''); }}
-                    className={cn(
-                      "flex-1 py-2 rounded-md text-[11px] font-medium transition-all",
-                      discountType === 'percent' 
-                        ? "bg-background text-foreground shadow-sm" 
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Persentase (%)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setDiscountType('nominal'); setDiscountValue(''); }}
-                    className={cn(
-                      "flex-1 py-2 rounded-md text-[11px] font-medium transition-all",
-                      discountType === 'nominal' 
-                        ? "bg-background text-foreground shadow-sm" 
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Nominal (Rp)
-                  </button>
-                </div>
-              </div>
-
-              {/* Discount Input */}
-              <div>
-                <p className="text-[11px] text-muted-foreground mb-1.5">
-                  {discountType === 'percent' ? 'Diskon (%)' : 'Diskon (Rp)'}
-                </p>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    {discountType === 'percent' ? '%' : 'Rp'}
-                  </span>
-                  <Input
-                    type="number"
-                    value={discountValue}
-                    onChange={e => setDiscountValue(e.target.value)}
-                    placeholder={discountType === 'percent' ? '0' : '0'}
-                    className="h-10 text-sm font-semibold pl-10"
-                    min="0"
-                    max={discountType === 'percent' ? '100' : undefined}
-                  />
-                </div>
-                {discountType === 'percent' && discountValue && parseFloat(discountValue) > 100 && (
-                  <p className="text-[9px] text-red-500 mt-1">Maksimal 100%</p>
-                )}
-                {discountType === 'nominal' && discountPreview && parseFloat(discountValue) > discountPreview.originalPaymentFee && (
-                  <p className="text-[9px] text-red-500 mt-1">Maksimal {formatCurrency(discountPreview.originalPaymentFee)}</p>
-                )}
-              </div>
-
-              {/* Live Preview */}
+              {/* Discount Preview */}
               {discountPreview && (
-                <div className="space-y-2 animate-fade-in">
-                  <p className="text-[11px] text-muted-foreground">Preview Perhitungan</p>
-                  
-                  <div className="rounded-lg bg-muted/50 p-2.5 space-y-1.5">
-                    <div className="text-[11px] space-y-1">
-                      <div className="flex justify-between">
+                <div className="space-y-2.5">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Preview Perhitungan</p>
+
+                  {/* Fee comparison card */}
+                  <div className="rounded-xl bg-emerald-500/5 border border-emerald-500/15 p-3.5">
+                    <div className="text-[11px] space-y-2">
+                      <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Original Fee</span>
-                        <span className="font-medium">{formatCurrency(discountPreview.originalPaymentFee)}</span>
+                        <span className="font-semibold tabular-nums text-foreground">{formatCompactCurrency(discountPreview.originalPaymentFee)}</span>
                       </div>
-                      <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                        <span>Diskon ({discountPreview.effectiveDiscountPercent.toFixed(1)}%)</span>
-                        <span className="font-bold">-{formatCurrency(discountPreview.discountAmount)}</span>
+                      <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-500">
+                        <span className="font-medium">Diskon ({discountPreview.effectiveDiscountPercent.toFixed(1)}%)</span>
+                        <span className="font-bold tabular-nums">-{formatCompactCurrency(discountPreview.discountAmount)}</span>
                       </div>
-                      <div className="border-t border-border my-1" />
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">New Fee</span>
-                        <span className="font-bold text-orange-600">{formatCurrency(discountPreview.newPaymentFee)}</span>
+                      <div className="border-t border-emerald-500/10 pt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">New Fee</span>
+                          <span className="font-bold text-orange-600 dark:text-orange-500 tabular-nums">{formatCompactCurrency(discountPreview.newPaymentFee)}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="rounded-lg bg-muted/50 p-2.5 space-y-1.5">
-                    <p className="text-[11px] text-muted-foreground">Hasil Setelah Diskon</p>
-                    <div className="text-[11px] space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Customer Receives</span>
-                        <div className="text-right">
-                          <span className="line-through text-muted-foreground mr-1">{formatCurrency(discountPreview.originalTotalReceived)}</span>
-                          <span className="font-bold">{formatCurrency(discountPreview.newTotalReceived)}</span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Net Margin</span>
-                        <div className="text-right">
-                          <span className="line-through text-muted-foreground mr-1">{formatCurrency(discountPreview.originalNetMargin)}</span>
-                          <span className="font-bold">{formatCurrency(discountPreview.newNetMargin)}</span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Owner Profit</span>
-                        <div className="text-right">
-                          <span className="line-through text-muted-foreground mr-1">{formatCurrency(discountPreview.originalOwnerProfit)}</span>
-                          <span className={cn(
-                            "font-bold",
-                            discountPreview.newOwnerProfit >= discountPreview.originalOwnerProfit ? "text-emerald-600" : "text-red-600"
-                          )}>{formatCurrency(discountPreview.newOwnerProfit)}</span>
-                        </div>
-                      </div>
-                      {tx.partner && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Partner Profit ({tx.partner.name})</span>
-                          <div className="text-right">
-                            <span className="line-through text-muted-foreground mr-1">{formatCurrency(discountPreview.originalPartnerProfit)}</span>
-                            <span className={cn(
-                              "font-bold",
-                              discountPreview.newPartnerProfit >= discountPreview.originalPartnerProfit ? "text-emerald-600" : "text-red-600"
-                            )}>{formatCurrency(discountPreview.newPartnerProfit)}</span>
+                  {/* Results after discount */}
+                  <div className="rounded-xl dash-card overflow-hidden overflow-hidden">
+                    <div className="px-3.5 pt-3 pb-2">
+                      <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Hasil Setelah Diskon</p>
+                    </div>
+                    <div className="px-3.5 pb-3.5">
+                      <div className="space-y-0 text-[11px] rounded-lg border border-border overflow-hidden">
+                        <div className="flex justify-between items-center px-3 py-2">
+                          <span className="text-muted-foreground">Customer Receives</span>
+                          <div className="text-right flex items-center gap-1.5">
+                            <span className="line-through text-muted-foreground/40 tabular-nums text-[10px]">{formatCompactCurrency(discountPreview.originalTotalReceived)}</span>
+                            <span className="font-bold text-foreground tabular-nums">{formatCompactCurrency(discountPreview.newTotalReceived)}</span>
                           </div>
                         </div>
-                      )}
+                        <div className="flex justify-between items-center px-3 py-2 border-t border-border bg-muted/20">
+                          <span className="text-muted-foreground">Net Margin</span>
+                          <div className="text-right flex items-center gap-1.5">
+                            <span className="line-through text-muted-foreground/40 tabular-nums text-[10px]">{formatCompactCurrency(discountPreview.originalNetMargin)}</span>
+                            <span className="font-bold text-foreground tabular-nums">{formatCompactCurrency(discountPreview.newNetMargin)}</span>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center px-3 py-2 border-t border-border">
+                          <span className="text-muted-foreground font-medium">Owner Profit</span>
+                          <div className="text-right flex items-center gap-1.5">
+                            <span className="line-through text-muted-foreground/40 tabular-nums text-[10px]">{formatCompactCurrency(discountPreview.originalOwnerProfit)}</span>
+                            <span className={cn(
+                              "font-bold tabular-nums",
+                              discountPreview.newOwnerProfit >= discountPreview.originalOwnerProfit ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                            )}>{formatCompactCurrency(discountPreview.newOwnerProfit)}</span>
+                          </div>
+                        </div>
+                        {tx.partner && (
+                          <div className="flex justify-between items-center px-3 py-2 border-t border-border bg-muted/20">
+                            <span className="text-muted-foreground">Partner Profit <span className="text-muted-foreground/60">({tx.partner.name})</span></span>
+                            <div className="text-right flex items-center gap-1.5">
+                              <span className="line-through text-muted-foreground/40 tabular-nums text-[10px]">{formatCompactCurrency(discountPreview.originalPartnerProfit)}</span>
+                              <span className={cn(
+                                "font-bold tabular-nums",
+                                discountPreview.newPartnerProfit >= discountPreview.originalPartnerProfit ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                              )}>{formatCompactCurrency(discountPreview.newPartnerProfit)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Apply Discount Button */}
                   <Button
-                    onClick={() => {
-                      save();
-                    }}
+                    onClick={() => { save(); }}
                     disabled={updating || !discountValue || parseFloat(discountValue) <= 0}
-                    className="w-full h-9 text-xs font-semibold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-md"
+                    className="w-full h-11 text-xs font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
                   >
-                    {updating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Percent className="w-3 h-3" />}
-                    <span className="ml-1">Terapkan Diskon & Simpan</span>
+                    {updating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Percent className="w-3.5 h-3.5" />}
+                    <span className="ml-1.5">Terapkan Diskon & Simpan</span>
                   </Button>
                 </div>
               )}
 
-              {/* No discount entered hint */}
               {!discountPreview && (
-                <p className="text-[10px] text-muted-foreground text-center py-4">
-                  Masukkan nilai diskon untuk melihat preview perhitungan
-                </p>
+                <div className="text-center py-6">
+                  <Calculator className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
+                  <p className="text-[11px] text-muted-foreground/50">Masukkan nilai diskon untuk melihat preview perhitungan</p>
+                </div>
               )}
             </>
           )}
@@ -2261,13 +2631,22 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: { tx: Trans
   );
 }
 
+// ──────────────────────────────────────────
 // Transaction Detail Dialog Wrapper
-function TxDetailDialog({ open, onOpenChange, tx, onUpdate, onDelete, updating }: { open: boolean; onOpenChange: (v: boolean) => void; tx: Transaction | null; onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean, partnerId?: string, discountPercent?: number, discountNominal?: number) => void; onDelete: (id: string) => void; updating: boolean }) {
+// ──────────────────────────────────────────
+function TxDetailDialog({ open, onOpenChange, tx, onUpdate, onDelete, updating }: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  tx: Transaction | null;
+  onUpdate: (id: string, status: string, notes?: string, mp?: string, link?: string, nominal?: number, recalculate?: boolean, partnerId?: string, discountPercent?: number, discountNominal?: number) => void;
+  onDelete: (id: string) => void;
+  updating: boolean;
+}) {
   if (!tx) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0">
+      <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden">
         <DialogHeader className="sr-only">
           <DialogTitle>Detail Transaksi {tx.orderId}</DialogTitle>
         </DialogHeader>
@@ -2275,15 +2654,4 @@ function TxDetailDialog({ open, onOpenChange, tx, onUpdate, onDelete, updating }
       </DialogContent>
     </Dialog>
   );
-}
-
-// Helper
-function formatTimeAgo(date: Date): string {
-  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
 }

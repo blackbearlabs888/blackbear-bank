@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,9 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SimplePagination } from '@/components/ui/pagination';
-import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import {
   Users,
   Search,
@@ -24,25 +23,21 @@ import {
   Building2,
   Phone,
   Calendar,
-  TrendingUp,
-  ShoppingBag,
-  ArrowLeft,
   Copy,
   Check,
   Star,
   Crown,
-  Edit,
-  X,
-  Activity,
   Ban,
+  Activity,
   BarChart3,
   Sparkles,
 } from 'lucide-react';
-import { formatCurrency, formatCompactCurrency, formatDate, formatDateAgo } from '@/lib/utils';
+import { formatCurrency, formatCompactCurrency, formatDateAgo } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CitySearch } from '@/components/ui/city-search';
 import { isValidIndonesianPhone, normalizePhone } from '@/lib/customer-utils';
+import AnalyticsBubbleMap from '@/components/map/analytics-bubble-map';
 
 interface Customer {
   id: string;
@@ -171,7 +166,7 @@ export default function PartnerCustomersPage() {
 
   if (isLoading || !hasHydrated) {
     return (
-      <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
+      <div className="container mx-auto px-4 py-4 sm:px-6 sm:py-6 space-y-4 pb-20 md:pb-6 max-w-4xl">
         <Skeleton className="h-10 w-48" />
         <div className="grid grid-cols-2 gap-3">
           <Skeleton className="h-24 rounded-xl" />
@@ -190,144 +185,100 @@ export default function PartnerCustomersPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
-      {/* Header with gradient */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Customer</h1>
-          <p className="text-sm text-muted-foreground">Database pelanggan Anda</p>
+    <div className="min-h-screen bg-background dashboard-mesh">
+  <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Customer</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Customer</h1>
+          <p className="text-xs text-muted-foreground">Database pelanggan Anda</p>
         </div>
-        <NewCustomerDialog onCreated={() => { fetchCustomers(); fetchStats(); }} />
+        <div className="flex-shrink-0">
+          <NewCustomerDialog onCreated={() => { fetchCustomers(); fetchStats(); }} />
+        </div>
       </div>
 
-      {/* Stats Overview - Same as Owner */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Users className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total</p>
-                <p className="text-lg font-bold">{stats?.totalCustomers || totalItems}</p>
-              </div>
+      {/* Summary Card */}
+      <div className="rounded-xl dash-card overflow-hidden p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total Volume</p>
-                <p className="text-sm font-bold">{formatCurrency(stats?.totalVolume || 0)}</p>
-              </div>
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground font-medium">Total Customer</p>
+              <p className="text-base sm:text-lg font-bold text-foreground tracking-tight">{stats?.totalCustomers || totalItems}</p>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <Crown className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">VIP</p>
-                <p className="text-lg font-bold">{stats?.vipCount || 0}</p>
-              </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+              <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
-                <Activity className="w-5 h-5 text-teal-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Avg Trx</p>
-                <p className="text-sm font-bold">{formatCurrency(stats?.avgTransactionValue || 0)}</p>
-              </div>
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground font-medium">Total Volume</p>
+              <p className="text-base sm:text-lg font-bold text-foreground tracking-tight">{formatCurrency(stats?.totalVolume || 0)}</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+              <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground font-medium">VIP Customer</p>
+              <p className="text-base sm:text-lg font-bold text-foreground tracking-tight">{stats?.vipCount || 0}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-violet-500/10 flex items-center justify-center flex-shrink-0">
+              <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-violet-600 dark:text-violet-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground font-medium">Avg Trx Value</p>
+              <p className="text-base sm:text-lg font-bold text-foreground tracking-tight">{formatCurrency(stats?.avgTransactionValue || 0)}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Location & Segmentation Cards - Same as Owner */}
+      {/* Location & Segmentation Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Top Locations Card */}
-        <Card className="glass-card">
-          <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-base flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-primary" />
+        <div className="rounded-xl dash-card overflow-hidden">
+          <div className="px-3 pt-3 sm:px-4 sm:pt-4">
+            <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-foreground">
+              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
               Top Lokasi
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
+            </h3>
+          </div>
+          <div className="px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4 sm:pt-2">
             {stats?.topCities && stats.topCities.length > 0 ? (
-              <div className="space-y-2">
-                {stats.topCities.map((city, index) => {
-                  const percentage = stats.totalCustomers > 0 
-                    ? (city.count / stats.totalCustomers) * 100 
-                    : 0;
-                  return (
-                    <div key={city.city} className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold",
-                        index === 0 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
-                        index === 1 ? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" :
-                        index === 2 ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" :
-                        "bg-muted text-muted-foreground"
-                      )}>
-                        {index + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium truncate">{city.city}</span>
-                          <span className="text-xs text-muted-foreground">{city.count} customer</span>
-                        </div>
-                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-primary rounded-full transition-all"
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                      </div>
-                      <span className="text-xs font-medium text-primary">
-                        {percentage.toFixed(0)}%
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+              <AnalyticsBubbleMap topCities={stats.topCities} accentColor="#8b5cf6" />
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
+              <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
                 Belum ada data lokasi
-              </p>
+              </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Customer Segmentation */}
-        <Card className="glass-card">
-          <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-base flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-primary" />
+        <div className="rounded-xl dash-card overflow-hidden">
+          <div className="px-3 pt-3 sm:px-4 sm:pt-4">
+            <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-foreground">
+              <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
               Segmentasi Customer
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
+            </h3>
+          </div>
+          <div className="px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4 sm:pt-2">
             <div className="flex flex-wrap gap-2 mb-3">
-              <SegmentBadge label="VIP" count={stats?.vipCount || 0} color="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" icon={Crown} />
+              <SegmentBadge label="VIP" count={stats?.vipCount || 0} color="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400" icon={Crown} />
               <SegmentBadge label="Regular" count={stats?.regularCount || 0} color="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" icon={Users} />
-              <SegmentBadge label="New" count={stats?.newCount || 0} color="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" icon={Star} />
-              <SegmentBadge label="Blacklist" count={stats?.blacklistCount || 0} color="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" icon={Ban} />
+              <SegmentBadge label="New" count={stats?.newCount || 0} color="bg-violet-100 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400" icon={Star} />
+              <SegmentBadge label="Blacklist" count={stats?.blacklistCount || 0} color="bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400" icon={Ban} />
             </div>
             
             {/* Progress bar */}
@@ -341,7 +292,7 @@ export default function PartnerCustomersPage() {
                     <div className="bg-gray-400 h-full" style={{ width: `${(stats.regularCount / stats.totalCustomers) * 100}%` }} />
                   )}
                   {stats.newCount > 0 && (
-                    <div className="bg-blue-400 h-full" style={{ width: `${(stats.newCount / stats.totalCustomers) * 100}%` }} />
+                    <div className="bg-violet-400 h-full" style={{ width: `${(stats.newCount / stats.totalCustomers) * 100}%` }} />
                   )}
                   {stats.blacklistCount > 0 && (
                     <div className="bg-red-400 h-full" style={{ width: `${(stats.blacklistCount / stats.totalCustomers) * 100}%` }} />
@@ -349,8 +300,8 @@ export default function PartnerCustomersPage() {
                 </>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Search */}
@@ -360,13 +311,13 @@ export default function PartnerCustomersPage() {
           placeholder="Cari nama, no. WA, atau kota..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 h-11 rounded-xl"
+          className="pl-10 h-9 text-xs rounded-lg"
         />
       </div>
 
       {/* Customer List */}
-      <div className="space-y-2">
-        <p className="text-xs text-muted-foreground">{totalItems} customer</p>
+      <div className="space-y-3">
+        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{totalItems} customer</p>
         {loading ? (
           [...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
         ) : filteredCustomers.length > 0 ? (
@@ -398,34 +349,39 @@ export default function PartnerCustomersPage() {
 
       {/* Customer Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
-              Detail Customer
-            </DialogTitle>
-            <DialogDescription>Informasi lengkap customer</DialogDescription>
-          </DialogHeader>
-          
-          {selectedCustomer && (
-            <CustomerDetailView 
-              customer={selectedCustomer} 
-              onClose={() => setDetailOpen(false)}
-            />
-          )}
+        <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
+          <div className="overflow-y-auto flex-1 hide-scrollbar">
+            <div className="p-5 space-y-4">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-primary" />
+                  Detail Customer
+                </DialogTitle>
+                <DialogDescription>Informasi lengkap customer</DialogDescription>
+              </DialogHeader>
+              
+              {selectedCustomer && (
+                <CustomerDetailView 
+                  customer={selectedCustomer} 
+                  onClose={() => setDetailOpen(false)}
+                />
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
-    </div>
+  </div>
+</div>
   );
 }
 
 // Segment Badge Component
 function SegmentBadge({ label, count, color, icon: Icon }: { label: string; count: number; color: string; icon: React.ElementType }) {
   return (
-    <div className={cn('px-3 py-1.5 rounded-full flex items-center gap-2', color)}>
-      <Icon className="w-3.5 h-3.5" />
-      <span className="text-sm font-medium">{label}</span>
-      <span className="text-sm font-bold">{count}</span>
+    <div className={cn('px-2 py-0.5 rounded-full flex items-center gap-1.5', color)}>
+      <Icon className="w-3 h-3" />
+      <span className="text-[9px] sm:text-[10px] font-medium">{label}</span>
+      <span className="text-[9px] sm:text-[10px] font-bold">{count}</span>
     </div>
   );
 }
@@ -434,7 +390,7 @@ function SegmentBadge({ label, count, color, icon: Icon }: { label: string; coun
 function LabelBadge({ label }: { label: string }) {
   const variants: Record<string, { className: string; icon: React.ReactNode }> = {
     VIP: {
-      className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200',
+      className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200',
       icon: <Crown className="w-3 h-3" />,
     },
     Regular: {
@@ -442,11 +398,11 @@ function LabelBadge({ label }: { label: string }) {
       icon: <Users className="w-3 h-3" />,
     },
     New: {
-      className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200',
+      className: 'bg-violet-100 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400 border-violet-200',
       icon: <Star className="w-3 h-3" />,
     },
     Blacklist: {
-      className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200',
+      className: 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200',
       icon: <Ban className="w-3 h-3" />,
     },
   };
@@ -454,7 +410,7 @@ function LabelBadge({ label }: { label: string }) {
   const variant = variants[label] || variants.Regular;
 
   return (
-    <Badge variant="outline" className={cn('text-xs gap-1 font-medium', variant.className)}>
+    <Badge variant="outline" className={cn('text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full gap-1 font-medium', variant.className)}>
       {variant.icon}
       {label}
     </Badge>
@@ -479,7 +435,7 @@ function CustomerCard({ customer, onClick }: { customer: Customer; onClick: () =
 
   return (
     <Card 
-      className={cn("glass-card overflow-hidden tap-highlight active-scale cursor-pointer", isBlacklisted && "opacity-60")}
+      className={cn("rounded-xl border border-border/60 shadow-none bg-card overflow-hidden cursor-pointer hover:bg-muted/30 transition-colors", isBlacklisted && "opacity-60")}
       onClick={onClick}
     >
       <CardContent className="p-0">
@@ -487,16 +443,16 @@ function CustomerCard({ customer, onClick }: { customer: Customer; onClick: () =
           {/* Avatar */}
           <div className={cn(
             "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-            isBlacklisted ? "bg-red-100 dark:bg-red-900/30" : 
-            customer.label === 'VIP' ? "bg-amber-100 dark:bg-amber-900/30" :
-            "bg-primary/10"
+            isBlacklisted ? "bg-red-100 dark:bg-red-900/20" : 
+            customer.label === 'VIP' ? "bg-amber-100 dark:bg-amber-900/20" :
+            "bg-primary/10 dark:bg-primary/20"
           )}>
             {customer.label === 'VIP' ? (
-              <Crown className="w-5 h-5 text-amber-600" />
+              <Crown className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             ) : (
               <span className={cn(
                 "font-bold",
-                isBlacklisted ? "text-red-600" : "text-primary"
+                isBlacklisted ? "text-red-600 dark:text-red-400" : "text-primary"
               )}>
                 {customer.name?.charAt(0).toUpperCase()}
               </span>
@@ -518,7 +474,7 @@ function CustomerCard({ customer, onClick }: { customer: Customer; onClick: () =
                 onClick={handleCopyPhone}
               >
                 {copied ? (
-                  <Check className="w-3 h-3 text-green-600" />
+                  <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                 ) : (
                   <Copy className="w-3 h-3 text-muted-foreground" />
                 )}
@@ -564,183 +520,156 @@ function CustomerDetailView({ customer, onClose }: { customer: Customer; onClose
 
   const getLabelColor = (label: string) => {
     switch (label.toLowerCase()) {
-      case 'vip': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200';
-      case 'new': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200';
-      case 'blacklist': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200';
+      case 'vip': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200';
+      case 'new': return 'bg-violet-100 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400 border-violet-200';
+      case 'blacklist': return 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200';
       default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-gray-200';
     }
   };
 
+  const isBlacklisted = customer.label === 'Blacklist';
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Profile Header */}
-      <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl">
-        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg">
-          <span className="text-white font-bold text-2xl">
+      <div className="flex items-center gap-3.5">
+        <div className={cn(
+          "w-12 h-12 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0",
+          isBlacklisted ? "bg-red-500 text-white" :
+          customer.label === 'VIP' ? "bg-amber-500 text-white" :
+          "bg-primary text-primary-foreground"
+        )}>
+          <span className="font-bold text-lg">
             {customer.name?.charAt(0).toUpperCase()}
           </span>
         </div>
-        <div className="flex-1">
-          <h3 className="font-bold text-lg">{customer.name}</h3>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge className={cn('text-xs', getLabelColor(customer.label))}>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-base truncate">{customer.name}</h3>
+          <div className="flex items-center gap-2 mt-0.5">
+            <Badge className={cn('text-[9px] px-2 py-0.5 rounded-full border', getLabelColor(customer.label))}>
               {customer.label}
             </Badge>
+            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              {formatDateAgo(customer.createdAt)}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Contact Info */}
-      <div className="space-y-2">
-        <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-          <Phone className="w-4 h-4" />
-          Kontak
-        </h4>
-        <Card className="glass-card">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">No. WhatsApp</p>
-                <p className="font-medium">{customer.phone}</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => copyToClipboard(customer.phone, 'phone')}
-              >
-                {copiedField === 'phone' ? (
-                  <Check className="w-4 h-4 text-green-600" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
-              </Button>
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg bg-primary/5 dark:bg-primary/10 p-3 text-center">
+          <p className="text-[10px] text-muted-foreground font-medium">Total Volume</p>
+          <p className="text-base font-bold text-primary mt-0.5">{formatCompactCurrency(customer.totalVolume)}</p>
+        </div>
+        <div className="rounded-lg bg-muted/50 p-3 text-center">
+          <p className="text-[10px] text-muted-foreground font-medium">Total Transaksi</p>
+          <p className="text-base font-bold mt-0.5">{customer.totalTransactions}</p>
+        </div>
+      </div>
+
+      {/* Info Rows */}
+      <div className="rounded-xl border border-border/50 divide-y divide-border/50 overflow-hidden">
+        {/* Phone */}
+        <div className="flex items-center justify-between px-3.5 py-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+              <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Location */}
-      {customer.city && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <MapPin className="w-4 h-4" />
-            Lokasi
-          </h4>
-          <Card className="glass-card">
-            <CardContent className="p-3">
-              <p className="font-medium">{customer.city}</p>
-            </CardContent>
-          </Card>
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground">WhatsApp</p>
+              <p className="text-xs font-medium truncate">{customer.phone}</p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 flex-shrink-0"
+            onClick={() => copyToClipboard(customer.phone, 'phone')}
+          >
+            {copiedField === 'phone' ? (
+              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+            )}
+          </Button>
         </div>
-      )}
 
-      {/* Bank Info */}
-      {(customer.bankName || customer.bankAccount || customer.bankHolder) && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <Building2 className="w-4 h-4" />
-            Informasi Bank
-          </h4>
-          <Card className="glass-card">
-            <CardContent className="p-3 space-y-3">
-              {customer.bankName && (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Nama Bank</p>
-                    <p className="font-medium">{customer.bankName}</p>
-                  </div>
-                </div>
-              )}
-              {customer.bankHolder && (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Pemilik Rekening</p>
-                    <p className="font-medium">{customer.bankHolder}</p>
-                  </div>
-                </div>
-              )}
+        {/* City */}
+        {customer.city && (
+          <div className="flex items-center gap-2.5 px-3.5 py-2.5">
+            <div className="w-7 h-7 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+              <MapPin className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground">Kota</p>
+              <p className="text-xs font-medium truncate">{customer.city}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Bank */}
+        {(customer.bankName || customer.bankAccount || customer.bankHolder) && (
+          <div className="px-3.5 py-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                <Building2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground">Bank</p>
+                <p className="text-xs font-medium truncate">
+                  {[customer.bankName, customer.bankHolder && `a.n ${customer.bankHolder}`].filter(Boolean).join(' · ')}
+                </p>
+                {customer.bankAccount && (
+                  <p className="text-[11px] text-muted-foreground font-mono mt-0.5">{customer.bankAccount}</p>
+                )}
+              </div>
               {customer.bankAccount && (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Nomor Rekening</p>
-                    <p className="font-medium font-mono">{customer.bankAccount}</p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => copyToClipboard(customer.bankAccount!, 'bank')}
-                  >
-                    {copiedField === 'bank' ? (
-                      <Check className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 flex-shrink-0"
+                  onClick={() => copyToClipboard(customer.bankAccount!, 'bank')}
+                >
+                  {copiedField === 'bank' ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                  )}
+                </Button>
               )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            </div>
+          </div>
+        )}
 
-      {/* Statistics */}
-      <div className="space-y-2">
-        <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-          <TrendingUp className="w-4 h-4" />
-          Statistik
-        </h4>
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="glass-card">
-            <CardContent className="p-3">
-              <p className="text-xs text-muted-foreground">Total Volume</p>
-              <p className="text-lg font-bold text-primary">{formatCompactCurrency(customer.totalVolume)}</p>
-            </CardContent>
-          </Card>
-          <Card className="glass-card">
-            <CardContent className="p-3">
-              <p className="text-xs text-muted-foreground">Total Transaksi</p>
-              <p className="text-lg font-bold">{customer.totalTransactions}</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Notes */}
-      {customer.notes && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-muted-foreground">Catatan</h4>
-          <Card className="glass-card">
-            <CardContent className="p-3">
-              <p className="text-sm">{customer.notes}</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Member Since */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-        <div className="flex items-center gap-1">
-          <Calendar className="w-3 h-3" />
-          <span>Sejak {formatDateAgo(customer.createdAt)}</span>
-        </div>
+        {/* Notes */}
+        {customer.notes && (
+          <div className="flex items-start gap-2.5 px-3.5 py-2.5">
+            <div className="w-7 h-7 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Activity className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground">Catatan</p>
+              <p className="text-xs mt-0.5 leading-relaxed">{customer.notes}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Actions */}
-      <div className="grid grid-cols-2 gap-3 pt-2">
-        <Button variant="outline" asChild className="rounded-xl">
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" asChild className="rounded-xl h-9 text-xs font-medium">
           <a 
             href={`https://wa.me/${customer.phone.replace(/^0/, '62')}`} 
             target="_blank" 
             rel="noopener noreferrer"
           >
-            <Phone className="w-4 h-4 mr-2" />
+            <Phone className="w-3.5 h-3.5 mr-1.5" />
             WhatsApp
           </a>
         </Button>
-        <Button variant="outline" onClick={onClose} className="rounded-xl">
-          <X className="w-4 h-4 mr-2" />
+        <Button variant="outline" onClick={onClose} className="rounded-xl h-9 text-xs font-medium">
           Tutup
         </Button>
       </div>
@@ -817,110 +746,126 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gradient-primary text-white rounded-xl h-10 px-4">
+        <Button size="sm" className="bg-primary text-primary-foreground rounded-lg h-9 px-4 text-xs font-medium hover:bg-primary/90">
           <UserPlus className="w-4 h-4 mr-1" />
           Baru
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
+        <DialogHeader className="px-5 pt-5 pb-0">
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
             Customer Baru
           </DialogTitle>
           <DialogDescription>Tambahkan pelanggan baru ke sistem</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Nama <span className="text-destructive">*</span></Label>
-            <Input
-              placeholder="Nama lengkap"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              required
-              className="rounded-xl"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>No. WhatsApp <span className="text-destructive">*</span></Label>
-            <Input
-              placeholder="08xxx"
-              value={formData.phone}
-              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-              required
-              className="rounded-xl"
-            />
-          </div>
-          
-          <div className="p-3 bg-muted/50 rounded-xl space-y-3">
-            <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
-              <Building2 className="w-3 h-3" />
-              Info Bank (Opsional)
-            </p>
-            <Select
-              value={formData.bankName}
-              onValueChange={(value) => {
-                setFormData(prev => ({ ...prev, bankName: value }));
-                if (value !== 'Lainnya') {
-                  setCustomBankName('');
-                }
-              }}
-            >
-              <SelectTrigger className="rounded-xl">
-                <SelectValue placeholder="Pilih bank" />
-              </SelectTrigger>
-              <SelectContent>
-                {BANK_LIST.map((bank) => (
-                  <SelectItem key={bank} value={bank}>{bank}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {formData.bankName === 'Lainnya' && (
-              <Input
-                placeholder="Ketik nama bank"
-                value={customBankName}
-                onChange={(e) => setCustomBankName(e.target.value)}
-                className="rounded-xl"
-              />
-            )}
-            <Input
-              placeholder="Nomor Rekening"
-              value={formData.bankAccount}
-              onChange={(e) => setFormData(prev => ({ ...prev, bankAccount: e.target.value }))}
-              className="rounded-xl"
-            />
-            <Input
-              placeholder="Nama Pemilik Rekening"
-              value={formData.bankHolder}
-              onChange={(e) => setFormData(prev => ({ ...prev, bankHolder: e.target.value }))}
-              className="rounded-xl"
-            />
-          </div>
+        <form id="partner-customer-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto hide-scrollbar">
+          <div className="px-5 py-4 space-y-4">
+            {/* Basic Info - Grid */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Informasi Dasar</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Nama <span className="text-destructive">*</span></Label>
+                  <Input
+                    placeholder="Nama lengkap"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    required
+                    className="h-9 text-xs rounded-lg"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">No. WhatsApp <span className="text-destructive">*</span></Label>
+                  <Input
+                    placeholder="08xxx"
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    required
+                    className="h-9 text-xs rounded-lg"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Lokasi / Kota</Label>
+                  <CitySearch
+                    value={formData.city}
+                    onChange={(value) => setFormData(prev => ({ ...prev, city: value }))}
+                    placeholder="Cari kota..."
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Catatan</Label>
+                  <Input
+                    placeholder="Catatan tambahan..."
+                    value={formData.notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="h-9 text-xs rounded-lg"
+                  />
+                </div>
+              </div>
+            </div>
 
-          <div className="space-y-2">
-            <Label>Lokasi / Kota</Label>
-            <CitySearch
-              value={formData.city}
-              onChange={(value) => setFormData(prev => ({ ...prev, city: value }))}
-              placeholder="Cari kota..."
-            />
-          </div>
+            <Separator />
 
-          <div className="space-y-2">
-            <Label>Catatan</Label>
-            <Input
-              placeholder="Catatan tambahan..."
-              value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              className="rounded-xl"
-            />
+            {/* Bank Info */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Building2 className="w-3 h-3" />
+                Informasi Bank <span className="normal-case tracking-normal text-muted-foreground/60">(Opsional)</span>
+              </p>
+              <div className="space-y-2">
+                <Select
+                  value={formData.bankName}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({ ...prev, bankName: value }));
+                    if (value !== 'Lainnya') {
+                      setCustomBankName('');
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-9 text-xs rounded-lg">
+                    <SelectValue placeholder="Pilih bank" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BANK_LIST.map((bank) => (
+                      <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.bankName === 'Lainnya' && (
+                  <Input
+                    placeholder="Ketik nama bank"
+                    value={customBankName}
+                    onChange={(e) => setCustomBankName(e.target.value)}
+                    className="h-9 text-xs rounded-lg"
+                  />
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Input
+                    placeholder="Nomor Rekening"
+                    value={formData.bankAccount}
+                    onChange={(e) => setFormData(prev => ({ ...prev, bankAccount: e.target.value }))}
+                    className="h-9 text-xs rounded-lg"
+                  />
+                  <Input
+                    placeholder="Nama Pemilik Rekening"
+                    value={formData.bankHolder}
+                    onChange={(e) => setFormData(prev => ({ ...prev, bankHolder: e.target.value }))}
+                    className="h-9 text-xs rounded-lg"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
-
-          <Button type="submit" className="w-full gradient-primary text-white h-11 rounded-xl" disabled={loading}>
+        </form>
+        <div className="px-5 pb-5 pt-2 border-t border-border/50 bg-background">
+          <Button type="submit" form="partner-customer-form" className="w-full bg-primary text-primary-foreground h-10 rounded-xl text-xs font-semibold hover:bg-primary/90" disabled={loading}>
             {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
             Simpan Customer
           </Button>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

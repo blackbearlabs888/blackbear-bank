@@ -59,10 +59,10 @@ interface FAQ {
 }
 
 const CATEGORY_OPTIONS = [
-  { value: 'umum', label: 'Umum', color: 'bg-blue-500/10 text-blue-600' },
-  { value: 'layanan', label: 'Layanan', color: 'bg-green-500/10 text-green-600' },
-  { value: 'pembayaran', label: 'Pembayaran', color: 'bg-amber-500/10 text-amber-600' },
-  { value: 'mitra', label: 'Mitra', color: 'bg-purple-500/10 text-purple-600' },
+  { value: 'umum', label: 'Umum', color: 'bg-violet-500/10 text-violet-600 dark:text-violet-400' },
+  { value: 'layanan', label: 'Layanan', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
+  { value: 'pembayaran', label: 'Pembayaran', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' },
+  { value: 'mitra', label: 'Mitra', color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
 ];
 
 const emptyForm = {
@@ -290,43 +290,52 @@ export default function FAQManagementPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 pb-24 md:pb-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Manajemen FAQ</h1>
-          <p className="text-sm text-muted-foreground">Kelola pertanyaan yang sering diajukan</p>
+    <div className="min-h-screen bg-background dashboard-mesh">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+      {/* ── Page Header ── */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">SEO</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Manajemen FAQ</h1>
+          <p className="text-xs text-muted-foreground mt-1">Kelola pertanyaan yang sering diajukan</p>
         </div>
-        <Button onClick={openCreateDialog} className="gradient-primary text-white rounded-xl">
-          <Plus className="w-4 h-4 mr-2" />
-          Tambah FAQ
+        <Button
+          onClick={openCreateDialog}
+          size="sm"
+          className="bg-primary text-primary-foreground rounded-xl h-10 text-xs font-semibold hover:bg-primary/90 flex-shrink-0"
+        >
+          <Plus className="w-4 h-4 mr-1.5" />
+          <span className="hidden sm:inline">Tambah FAQ</span>
         </Button>
       </div>
 
-      {/* Stats Cards */}
+      {/* ── Stats Cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="glass-card">
+        <Card className="rounded-xl dash-card overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
+              <div className="p-2 rounded-lg bg-primary/10 dark:bg-primary/20">
                 <HelpCircle className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Total</p>
                 <p className="text-lg font-bold">{faqs.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         {CATEGORY_OPTIONS.map(cat => (
-          <Card key={cat.value} className="glass-card">
+          <Card key={cat.value} className="rounded-xl dash-card overflow-hidden">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className={cn("p-2 rounded-lg", cat.color)}>
                   <HelpCircle className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">{cat.label}</p>
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{cat.label}</p>
                   <p className="text-lg font-bold">{faqs.filter(f => f.category === cat.value).length}</p>
                 </div>
               </div>
@@ -335,8 +344,8 @@ export default function FAQManagementPage() {
         ))}
       </div>
 
-      {/* Filters */}
-      <Card className="glass-card">
+      {/* ── Filters ── */}
+      <Card className="rounded-xl dash-card overflow-hidden">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -345,11 +354,11 @@ export default function FAQManagementPage() {
                 placeholder="Cari pertanyaan atau jawaban..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-9 text-xs rounded-lg"
               />
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full sm:w-[150px]">
+              <SelectTrigger className="w-full sm:w-[150px] h-9 text-xs rounded-lg">
                 <Filter className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Kategori" />
               </SelectTrigger>
@@ -361,7 +370,7 @@ export default function FAQManagementPage() {
               </SelectContent>
             </Select>
             <Select value={activeFilter} onValueChange={setActiveFilter}>
-              <SelectTrigger className="w-full sm:w-[150px]">
+              <SelectTrigger className="w-full sm:w-[150px] h-9 text-xs rounded-lg">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -374,9 +383,9 @@ export default function FAQManagementPage() {
         </CardContent>
       </Card>
 
-      {/* FAQs Grouped by Category */}
+      {/* ── FAQs Grouped by Category ── */}
       {loading ? (
-        <Card className="glass-card">
+        <Card className="rounded-xl dash-card overflow-hidden">
           <CardContent className="p-4 space-y-3">
             {[...Array(5)].map((_, i) => (
               <Skeleton key={i} className="h-24 w-full" />
@@ -384,7 +393,7 @@ export default function FAQManagementPage() {
           </CardContent>
         </Card>
       ) : filteredFaqs.length === 0 ? (
-        <Card className="glass-card">
+        <Card className="rounded-xl dash-card overflow-hidden">
           <CardContent className="p-8 text-center text-muted-foreground">
             <HelpCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p>Belum ada FAQ</p>
@@ -398,14 +407,14 @@ export default function FAQManagementPage() {
             if (categoryFaqs.length === 0 && categoryFilter !== 'all') return null;
 
             return (
-              <Card key={cat.value} className="glass-card">
+              <Card key={cat.value} className="rounded-xl dash-card overflow-hidden">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Badge className={cn("text-xs", cat.color)}>
+                      <Badge className={cn("text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full", cat.color)}>
                         {cat.label}
                       </Badge>
-                      <CardTitle className="text-base">{categoryFaqs.length} FAQ</CardTitle>
+                      <span className="text-sm text-muted-foreground">{categoryFaqs.length} FAQ</span>
                     </div>
                   </div>
                 </CardHeader>
@@ -415,12 +424,12 @@ export default function FAQManagementPage() {
                       Tidak ada FAQ dalam kategori ini
                     </div>
                   ) : (
-                    <div className="divide-y">
+                    <div className="divide-y divide-border/60">
                       {categoryFaqs.map((faq, index) => (
                         <div
                           key={faq.id}
                           className={cn(
-                            "p-4 hover:bg-muted/50 transition-colors",
+                            "p-4 hover:bg-muted/30 transition-colors",
                             !faq.isActive && "opacity-60"
                           )}
                         >
@@ -430,7 +439,7 @@ export default function FAQManagementPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6"
+                                className="h-6 w-6 rounded-lg"
                                 disabled={index === 0 || saving}
                                 onClick={() => handleReorder(faq, 'up')}
                               >
@@ -439,7 +448,7 @@ export default function FAQManagementPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6"
+                                className="h-6 w-6 rounded-lg"
                                 disabled={index === categoryFaqs.length - 1 || saving}
                                 onClick={() => handleReorder(faq, 'down')}
                               >
@@ -452,21 +461,21 @@ export default function FAQManagementPage() {
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
-                                    <h3 className="font-medium">{faq.question}</h3>
+                                    <h3 className="font-medium text-sm">{faq.question}</h3>
                                     {faq.isActive ? (
-                                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                      <CheckCircle className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
                                     ) : (
                                       <XCircle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                                     )}
                                   </div>
-                                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{faq.answer}</p>
+                                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{faq.answer}</p>
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => openEditDialog(faq)}
-                                    className="h-8 w-8"
+                                    className="h-8 w-8 rounded-lg"
                                   >
                                     <Pencil className="w-4 h-4" />
                                   </Button>
@@ -477,7 +486,7 @@ export default function FAQManagementPage() {
                                       setDeletingFaq(faq);
                                       setShowDeleteDialog(true);
                                     }}
-                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                    className="h-8 w-8 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10 dark:hover:bg-destructive/20"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
@@ -496,25 +505,25 @@ export default function FAQManagementPage() {
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
+      {/* ── Create/Edit Dialog ── */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingFaq ? 'Edit FAQ' : 'Tambah FAQ Baru'}</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
+          <DialogHeader className="px-4 pt-4 pb-0">
+            <DialogTitle className="text-sm font-semibold">{editingFaq ? 'Edit FAQ' : 'Tambah FAQ Baru'}</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
               {editingFaq ? 'Ubah detail pertanyaan' : 'Buat pertanyaan baru untuk FAQ'}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
             {/* Category */}
             <div className="space-y-2">
-              <Label>Kategori</Label>
+              <Label className="text-xs">Kategori</Label>
               <Select
                 value={formData.category}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-xs rounded-lg">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -527,33 +536,36 @@ export default function FAQManagementPage() {
 
             {/* Question */}
             <div className="space-y-2">
-              <Label>Pertanyaan *</Label>
+              <Label className="text-xs">Pertanyaan *</Label>
               <Input
                 value={formData.question}
                 onChange={(e) => setFormData(prev => ({ ...prev, question: e.target.value }))}
                 placeholder="Tulis pertanyaan di sini..."
+                className="h-9 text-xs rounded-lg"
               />
             </div>
 
             {/* Answer */}
             <div className="space-y-2">
-              <Label>Jawaban *</Label>
+              <Label className="text-xs">Jawaban *</Label>
               <Textarea
                 value={formData.answer}
                 onChange={(e) => setFormData(prev => ({ ...prev, answer: e.target.value }))}
                 placeholder="Tulis jawaban di sini..."
                 rows={6}
+                className="text-xs rounded-lg"
               />
             </div>
 
             {/* Order */}
             <div className="space-y-2">
-              <Label>Urutan</Label>
+              <Label className="text-xs">Urutan</Label>
               <Input
                 type="number"
                 value={formData.order}
                 onChange={(e) => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) || 0 }))}
                 placeholder="0"
+                className="h-8 text-xs rounded-lg"
               />
               <p className="text-xs text-muted-foreground">
                 Nomor urutan untuk menentukan posisi FAQ (lebih kecil = lebih awal)
@@ -561,9 +573,9 @@ export default function FAQManagementPage() {
             </div>
 
             {/* Active Status */}
-            <div className="flex items-center justify-between border-t pt-4">
+            <div className="flex items-center justify-between border-t border-border/60 pt-3">
               <div>
-                <Label>Status Aktif</Label>
+                <Label className="text-xs">Status Aktif</Label>
                 <p className="text-xs text-muted-foreground">
                   {formData.isActive ? 'FAQ akan ditampilkan' : 'FAQ disembunyikan'}
                 </p>
@@ -571,15 +583,26 @@ export default function FAQManagementPage() {
               <Switch
                 checked={formData.isActive}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
+                size="md"
               />
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
+          <DialogFooter className="px-4 pb-4 pt-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDialog(false)}
+              className="rounded-lg h-9 text-xs font-medium"
+            >
               Batal
             </Button>
-            <Button onClick={handleSave} disabled={saving} className="gradient-primary text-white">
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              size="sm"
+              className="bg-primary text-primary-foreground rounded-xl h-10 text-xs font-semibold hover:bg-primary/90"
+            >
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {editingFaq ? 'Simpan Perubahan' : 'Buat FAQ'}
             </Button>
@@ -587,20 +610,20 @@ export default function FAQManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* ── Delete Confirmation Dialog ── */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hapus FAQ?</AlertDialogTitle>
-            <AlertDialogDescription>
+        <AlertDialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden">
+          <AlertDialogHeader className="p-4 pb-0">
+            <AlertDialogTitle className="text-sm font-semibold">Hapus FAQ?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground">
               FAQ &quot;{deletingFaq?.question}&quot; akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+          <AlertDialogFooter className="p-4 pt-3">
+            <AlertDialogCancel className="rounded-lg h-9 text-xs font-medium">Batal</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-lg h-9 text-xs font-medium"
             >
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Hapus
@@ -608,14 +631,16 @@ export default function FAQManagementPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 }
 
 function FAQSkeleton() {
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4">
-      <Skeleton className="h-10 w-48" />
+    <div className="min-h-screen bg-background dashboard-mesh">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+      <Skeleton className="h-8 w-48" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
           <Skeleton key={i} className="h-20" />
@@ -623,6 +648,7 @@ function FAQSkeleton() {
       </div>
       <Skeleton className="h-16" />
       <Skeleton className="h-64" />
+      </div>
     </div>
   );
 }

@@ -235,8 +235,8 @@ export default function OwnerNotificationsPage() {
 
   if (isLoading || !hasHydrated) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <div className="flex-1 container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3">
+      <div className="min-h-screen bg-background dashboard-mesh">
+        <div className="flex-1 container mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4 space-y-3 pb-24 md:pb-8">
           <Skeleton className="h-8 w-36" />
           <Skeleton className="h-10 rounded-xl" />
           <div className="space-y-2">
@@ -252,8 +252,8 @@ export default function OwnerNotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="flex-1 container mx-auto px-3 py-3 sm:px-4 sm:py-4 space-y-3">
+    <div className="min-h-screen bg-background dashboard-mesh">
+      <div className="flex-1 container mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4 space-y-3 pb-24 md:pb-8">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -264,6 +264,10 @@ export default function OwnerNotificationsPage() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+                <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Notifikasi</span>
+              </div>
               <h1 className="text-base sm:text-lg font-bold">Notifikasi</h1>
               <p className="text-[10px] text-muted-foreground">
                 {totalUnread} belum dibaca
