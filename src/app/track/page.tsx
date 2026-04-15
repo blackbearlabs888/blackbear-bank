@@ -206,9 +206,9 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
   const currentIndex = statuses.indexOf(currentStatus);
   
   return (
-    <div className="relative p-3 rounded-xl bg-white/30 dark:bg-black/10 backdrop-blur-xl">
+    <div className="relative p-2.5 rounded-xl bg-white/30 dark:bg-black/10 backdrop-blur-xl">
       {/* Progress Line */}
-      <div className="absolute top-7 left-7 right-7 h-0.5 bg-muted/50 rounded-full overflow-hidden">
+      <div className="absolute top-[23px] left-6 right-6 h-0.5 bg-muted/50 rounded-full overflow-hidden">
         <div 
           className="h-full bg-gradient-to-r from-primary via-purple-500 to-green-500 transition-all duration-700 rounded-full"
           style={{ width: `${(currentIndex / (statuses.length - 1)) * 100}%` }}
@@ -226,20 +226,20 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
           return (
             <div key={status} className="flex flex-col items-center relative z-10">
               <div className={cn(
-                "w-8 h-8 rounded-lg flex items-center justify-center border transition-all duration-500",
+                "w-7 h-7 rounded-lg flex items-center justify-center border transition-all duration-500",
                 isCompleted 
                   ? `bg-gradient-to-br ${config.gradient} border-transparent shadow-md` 
                   : "bg-background border-muted",
                 isCurrent && "ring-2 ring-primary/20"
               )}>
                 <Icon className={cn(
-                  "w-4 h-4",
+                  "w-3.5 h-3.5",
                   isCompleted ? "text-white" : "text-muted-foreground",
                   status === 'process' && isCurrent && "animate-spin"
                 )} />
               </div>
               <span className={cn(
-                "text-[10px] mt-1 font-medium text-center",
+                "text-[9px] mt-1 font-medium text-center",
                 isCompleted ? "text-foreground" : "text-muted-foreground"
               )}>
                 {config.label}
@@ -680,27 +680,27 @@ function TrackOrderContent() {
   };
 
   return (
-    <div className="max-w-lg mx-auto space-y-5 sm:space-y-6">
+    <div className="max-w-lg mx-auto space-y-3 sm:space-y-5">
       {/* Trust Indicators - shown when no order is being loaded */}
       {!order && !loading && !error && (
-        <div className="grid grid-cols-3 gap-3 py-1 animate-fade-in">
+        <div className="grid grid-cols-3 gap-2 py-1 animate-fade-in">
           <div className="text-center">
-            <div className="w-10 h-10 mx-auto rounded-xl bg-green-500/10 flex items-center justify-center mb-1.5">
+            <div className="w-8 h-8 mx-auto rounded-xl bg-green-500/10 flex items-center justify-center mb-1">
               <Shield className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
-            <p className="text-[10px] font-medium text-muted-foreground">Aman<br/><span className="text-foreground/80">100%</span></p>
+            <p className="text-[9px] font-medium text-muted-foreground">Aman<br/><span className="text-foreground/80">100%</span></p>
           </div>
           <div className="text-center">
-            <div className="w-10 h-10 mx-auto rounded-xl bg-primary/10 flex items-center justify-center mb-1.5">
+            <div className="w-8 h-8 mx-auto rounded-xl bg-primary/10 flex items-center justify-center mb-1">
               <Zap className="w-5 h-5 text-primary" />
             </div>
-            <p className="text-[10px] font-medium text-muted-foreground">Cepat<br/><span className="text-foreground/80">Real-time</span></p>
+            <p className="text-[9px] font-medium text-muted-foreground">Cepat<br/><span className="text-foreground/80">Real-time</span></p>
           </div>
           <div className="text-center">
-            <div className="w-10 h-10 mx-auto rounded-xl bg-amber-500/10 flex items-center justify-center mb-1.5">
+            <div className="w-8 h-8 mx-auto rounded-xl bg-amber-500/10 flex items-center justify-center mb-1">
               <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             </div>
-            <p className="text-[10px] font-medium text-muted-foreground">24/7<br/><span className="text-foreground/80">Support</span></p>
+            <p className="text-[9px] font-medium text-muted-foreground">24/7<br/><span className="text-foreground/80">Support</span></p>
           </div>
         </div>
       )}
@@ -711,7 +711,7 @@ function TrackOrderContent() {
         <CardContent className="pt-4 pb-4 px-4">
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-fuchsia-500 flex items-center justify-center shadow-md shadow-primary/20">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-fuchsia-500 flex items-center justify-center shadow-md shadow-primary/20">
                 <Search className="w-4 h-4 text-white" />
               </div>
               <div>
@@ -726,12 +726,12 @@ function TrackOrderContent() {
                   placeholder="Contoh: BB-XXXXXX"
                   value={orderId}
                   onChange={(e) => setOrderId(e.target.value.toUpperCase())}
-                  className="h-11 pl-10 text-base font-mono tracking-wide rounded-lg bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
+                  className="h-10 pl-10 text-base font-mono tracking-wide rounded-lg bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
                 />
               </div>
               <Button 
                 type="submit" 
-                className="h-11 w-11 rounded-lg bg-gradient-to-r from-primary to-fuchsia-500 hover:from-primary/90 hover:to-fuchsia-500/90 shadow-md shadow-primary/20"
+                className="h-10 w-10 rounded-lg bg-gradient-to-r from-primary to-fuchsia-500 hover:from-primary/90 hover:to-fuchsia-500/90 shadow-md shadow-primary/20"
                 disabled={loading}
               >
                 {loading ? (
@@ -773,25 +773,25 @@ function TrackOrderContent() {
                 const Icon = config.icon;
                 return (
                   <div className={cn(
-                    "text-center py-5 sm:py-6 px-3 bg-gradient-to-br",
+                    "text-center py-4 sm:py-6 px-3 bg-gradient-to-br",
                     config.bgGradient
                   )}>
                     {/* Status Icon */}
-                    <div className="relative w-16 h-16 sm:w-18 sm:h-18 mx-auto mb-3">
+                    <div className="relative w-14 h-14 sm:w-18 sm:h-18 mx-auto mb-3">
                       <div className={cn(
                         "absolute inset-0 rounded-2xl blur-lg opacity-50",
                         `bg-gradient-to-br ${config.gradient}`
                       )} />
                       <div className={cn(
-                        "relative w-16 h-16 sm:w-18 sm:h-18 rounded-2xl flex items-center justify-center shadow-xl",
+                        "relative w-14 h-14 sm:w-18 sm:h-18 rounded-2xl flex items-center justify-center shadow-xl",
                         `bg-gradient-to-br ${config.gradient}`
                       )}>
-                        <Icon className={cn('w-8 h-8 sm:w-9 sm:h-9 text-white', order.status === 'process' && 'animate-spin')} />
+                        <Icon className={cn('w-7 h-7 sm:w-9 sm:h-9 text-white', order.status === 'process' && 'animate-spin')} />
                       </div>
                     </div>
                     
                     {/* Status Badge */}
-                    <Badge className={cn(config.color, 'text-sm px-4 py-1 rounded-full')}>
+                    <Badge className={cn(config.color, 'text-xs px-3 py-0.5 rounded-full')}>
                       {config.label}
                     </Badge>
                     
@@ -814,9 +814,9 @@ function TrackOrderContent() {
           {/* Order Details Card */}
           <Card className="glass-card animate-slide-up overflow-hidden border-0 shadow-xl shadow-primary/5">
             <div className="h-1 bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500" />
-            <CardContent className="p-4 space-y-4">
+            <CardContent className="p-4 space-y-3">
               {/* Order ID */}
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-gradient-to-r from-primary/5 to-fuchsia-500/5 border border-primary/10">
+              <div className="flex items-center justify-between p-2 rounded-lg bg-gradient-to-r from-primary/5 to-fuchsia-500/5 border border-primary/10">
                 <span className="text-xs text-muted-foreground">Order ID</span>
                 <button
                   onClick={handleCopy}
@@ -833,14 +833,14 @@ function TrackOrderContent() {
 
               {/* Amount Cards */}
               <div className="grid grid-cols-2 gap-2">
-                <div className="p-3 rounded-lg bg-muted/30 border border-muted/50">
+                <div className="p-2.5 rounded-lg bg-muted/30 border border-muted/50">
                   <div className="flex items-center gap-1.5 mb-1">
                     <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
                     <p className="text-[10px] text-muted-foreground">Nominal</p>
                   </div>
                   <p className="font-bold text-base">{formatCurrency(order.nominal)}</p>
                 </div>
-                <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/20">
+                <div className="p-2.5 rounded-lg bg-red-500/5 border border-red-500/20">
                   <div className="flex items-center gap-1.5 mb-1">
                     <Wallet className="w-3.5 h-3.5 text-red-500" />
                     <p className="text-[10px] text-muted-foreground">Biaya</p>
@@ -850,7 +850,7 @@ function TrackOrderContent() {
               </div>
 
               {/* Total Received */}
-              <div className="p-3 rounded-lg bg-gradient-to-r from-primary/10 via-purple-500/10 to-fuchsia-500/10 border border-primary/20">
+              <div className="p-2.5 rounded-lg bg-gradient-to-r from-primary/10 via-purple-500/10 to-fuchsia-500/10 border border-primary/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <Wallet className="w-4 h-4 text-primary" />
@@ -862,10 +862,10 @@ function TrackOrderContent() {
                 </div>
               </div>
 
-              <Separator className="my-3" />
+              <Separator className="my-2" />
 
               {/* Customer Info - Masked for Security */}
-              <div className="p-3 rounded-lg bg-muted/20 border border-muted/30">
+              <div className="p-2.5 rounded-lg bg-muted/20 border border-muted/30">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center">
                     <User className="w-3 h-3 text-primary" />
@@ -892,18 +892,18 @@ function TrackOrderContent() {
                 </div>
               </div>
 
-              <Separator className="my-3" />
+              <Separator className="my-2" />
 
               {/* Payment & Method Info */}
               <div className="grid grid-cols-2 gap-2">
-                <div className="p-2.5 rounded-lg bg-muted/20">
+                <div className="p-2 rounded-lg bg-muted/20">
                   <p className="text-[10px] text-muted-foreground flex items-center gap-1 mb-0.5">
                     <CreditCard className="w-3 h-3" />
                     Tipe Pembayaran
                   </p>
                   <p className="font-medium text-sm">{order.paymentType}</p>
                 </div>
-                <div className="p-2.5 rounded-lg bg-muted/20">
+                <div className="p-2 rounded-lg bg-muted/20">
                   <p className="text-[10px] text-muted-foreground flex items-center gap-1 mb-0.5">
                     <Truck className="w-3 h-3" />
                     Metode
@@ -933,7 +933,7 @@ function TrackOrderContent() {
               {/* Follow Up Button - WhatsApp Proxy (phone numbers never exposed to client) */}
               {order.canContact && (
                 <Button
-                  className="w-full h-10 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-md shadow-green-500/20"
+                  className="w-full h-9 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-md shadow-green-500/20"
                   onClick={async () => {
                     try {
                       setContactLoading(true);
@@ -1000,7 +1000,7 @@ function TrackOrderContent() {
                 </div>
               )}
 
-              <Separator className="my-3" />
+              <Separator className="my-2" />
 
               {/* Timestamps */}
               <div className="grid grid-cols-2 gap-3 text-xs">
