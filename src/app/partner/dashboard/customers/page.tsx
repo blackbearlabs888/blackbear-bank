@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -32,6 +32,9 @@ import {
   BarChart3,
   Sparkles,
   MessageSquare,
+  TrendingUp,
+  ArrowRight,
+  ShieldCheck,
 } from 'lucide-react';
 import { formatCurrency, formatCompactCurrency, formatDateAgo } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -65,6 +68,38 @@ interface CustomerStats {
   avgTransactionValue: number;
   topCities: Array<{ city: string; count: number; volume: number }>;
 }
+
+// Label config
+const LABEL_CONFIG: Record<string, { color: string; bg: string; border: string; icon: React.ElementType; dotClass: string }> = {
+  VIP: {
+    color: 'text-amber-600 dark:text-amber-400',
+    bg: 'bg-amber-50 dark:bg-amber-950/30',
+    border: 'border-amber-200 dark:border-amber-800/50',
+    icon: Crown,
+    dotClass: 'bg-amber-400',
+  },
+  New: {
+    color: 'text-violet-600 dark:text-violet-400',
+    bg: 'bg-violet-50 dark:bg-violet-950/30',
+    border: 'border-violet-200 dark:border-violet-800/50',
+    icon: Star,
+    dotClass: 'bg-violet-400',
+  },
+  Regular: {
+    color: 'text-gray-600 dark:text-gray-400',
+    bg: 'bg-gray-50 dark:bg-gray-800/30',
+    border: 'border-gray-200 dark:border-gray-700',
+    icon: Users,
+    dotClass: 'bg-gray-400',
+  },
+  Blacklist: {
+    color: 'text-red-600 dark:text-red-400',
+    bg: 'bg-red-50 dark:bg-red-950/30',
+    border: 'border-red-200 dark:border-red-800/50',
+    icon: Ban,
+    dotClass: 'bg-red-400',
+  },
+};
 
 export default function PartnerCustomersPage() {
   const router = useRouter();
@@ -105,7 +140,6 @@ export default function PartnerCustomersPage() {
     }
   }, [isAuthenticated, hasHydrated, user, currentPage]);
 
-  // Window focus revalidation
   useEffect(() => {
     const handleFocus = () => {
       if (isAuthenticated && hasHydrated && user?.role === 'partner') {
@@ -172,10 +206,16 @@ export default function PartnerCustomersPage() {
         <div className="grid grid-cols-2 gap-3">
           <Skeleton className="h-24 rounded-xl" />
           <Skeleton className="h-24 rounded-xl" />
+          <Skeleton className="h-24 rounded-xl" />
+          <Skeleton className="h-24 rounded-xl" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-52 rounded-xl" />
+          <Skeleton className="h-52 rounded-xl" />
         </div>
         <Skeleton className="h-12 rounded-xl" />
         <div className="space-y-3">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
         </div>
       </div>
     );
@@ -185,241 +225,282 @@ export default function PartnerCustomersPage() {
     return null;
   }
 
+  const total = stats?.totalCustomers || 0;
+
   return (
     <div className="min-h-screen bg-background dashboard-mesh">
-  <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
-            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Customer</span>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 pb-24 md:pb-8">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+              <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Customer</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Database Customer</h1>
+            <p className="text-xs text-muted-foreground">Kelola dan pantau pelanggan Anda</p>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Customer</h1>
-          <p className="text-xs text-muted-foreground">Database pelanggan Anda</p>
+          <div className="flex-shrink-0">
+            <NewCustomerDialog onCreated={() => { fetchCustomers(); fetchStats(); }} />
+          </div>
         </div>
-        <div className="flex-shrink-0">
-          <NewCustomerDialog onCreated={() => { fetchCustomers(); fetchStats(); }} />
-        </div>
-      </div>
 
-      {/* Summary Card */}
-      <div className="rounded-xl dash-card overflow-hidden p-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] text-muted-foreground font-medium">Total Customer</p>
-              <p className="text-base sm:text-lg font-bold text-foreground tracking-tight">{stats?.totalCustomers || totalItems}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-              <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] text-muted-foreground font-medium">Total Volume</p>
-              <p className="text-base sm:text-lg font-bold text-foreground tracking-tight">{formatCurrency(stats?.totalVolume || 0)}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-              <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] text-muted-foreground font-medium">VIP Customer</p>
-              <p className="text-base sm:text-lg font-bold text-foreground tracking-tight">{stats?.vipCount || 0}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-              <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-violet-600 dark:text-violet-400" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] text-muted-foreground font-medium">Avg Trx Value</p>
-              <p className="text-base sm:text-lg font-bold text-foreground tracking-tight">{formatCurrency(stats?.avgTransactionValue || 0)}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+        {/* Summary Stats - 2x2 grid with accent cards */}
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-violet-500 to-purple-500" />
+            <CardContent className="p-3.5 sm:p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Total Customer</p>
+                  <p className="text-lg sm:text-2xl font-bold text-foreground tracking-tight">{stats?.totalCustomers || totalItems}</p>
+                </div>
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-violet-500/10 flex items-center justify-center flex-shrink-0">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-violet-600 dark:text-violet-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Location & Segmentation Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Top Locations Card */}
-        <div className="rounded-xl dash-card overflow-hidden">
-          <div className="px-3 pt-3 sm:px-4 sm:pt-4">
-            <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-foreground">
-              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-              Top Lokasi
-            </h3>
-          </div>
-          <div className="px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4 sm:pt-2">
-            {stats?.topCities && stats.topCities.length > 0 ? (
-              <AnalyticsBubbleMap topCities={stats.topCities} accentColor="#8b5cf6" />
+          <Card className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+            <CardContent className="p-3.5 sm:p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Total Volume</p>
+                  <p className="text-lg sm:text-2xl font-bold text-foreground tracking-tight">{formatCompactCurrency(stats?.totalVolume || 0)}</p>
+                </div>
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                  <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-amber-400 to-orange-500" />
+            <CardContent className="p-3.5 sm:p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">VIP Customer</p>
+                  <p className="text-lg sm:text-2xl font-bold text-foreground tracking-tight">{stats?.vipCount || 0}</p>
+                  {total > 0 && (
+                    <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5">{((stats?.vipCount || 0) / total * 100).toFixed(0)}% dari total</p>
+                  )}
+                </div>
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                  <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-cyan-500 to-blue-500" />
+            <CardContent className="p-3.5 sm:p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Avg Trx Value</p>
+                  <p className="text-lg sm:text-2xl font-bold text-foreground tracking-tight">{formatCompactCurrency(stats?.avgTransactionValue || 0)}</p>
+                </div>
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-600 dark:text-cyan-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Location & Segmentation - side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* Top Locations */}
+          <Card className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500" />
+            <CardHeader className="pb-1 sm:pb-2 px-3.5 sm:px-4 pt-3 sm:pt-4">
+              <CardTitle className="text-xs sm:text-sm flex items-center gap-2">
+                <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+                Distribusi Lokasi
+              </CardTitle>
+              <CardDescription className="text-[10px]">Sebaran customer berdasarkan kota</CardDescription>
+            </CardHeader>
+            <CardContent className="px-3.5 sm:px-4 pb-3.5 sm:pb-4">
+              {stats?.topCities && stats.topCities.length > 0 ? (
+                <AnalyticsBubbleMap topCities={stats.topCities} accentColor="#8b5cf6" />
+              ) : (
+                <div className="aspect-[1.5] flex items-center justify-center text-muted-foreground text-xs rounded-lg bg-muted/20">
+                  <div className="text-center">
+                    <MapPin className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                    <p>Belum ada data lokasi</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Customer Segmentation */}
+          <Card className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-amber-400 via-violet-500 to-cyan-500" />
+            <CardHeader className="pb-1 sm:pb-2 px-3.5 sm:px-4 pt-3 sm:pt-4">
+              <CardTitle className="text-xs sm:text-sm flex items-center gap-2">
+                <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+                Segmentasi Customer
+              </CardTitle>
+              <CardDescription className="text-[10px]">Berdasarkan aktivitas & volume transaksi</CardDescription>
+            </CardHeader>
+            <CardContent className="px-3.5 sm:px-4 pb-3.5 sm:pb-4 space-y-4">
+              {/* Segment list */}
+              <div className="space-y-2.5">
+                {(['VIP', 'Regular', 'New', 'Blacklist'] as const).map((label) => {
+                  const config = LABEL_CONFIG[label];
+                  const count = label === 'VIP' ? (stats?.vipCount || 0) 
+                    : label === 'Regular' ? (stats?.regularCount || 0)
+                    : label === 'New' ? (stats?.newCount || 0)
+                    : (stats?.blacklistCount || 0);
+                  const pct = total > 0 ? (count / total * 100) : 0;
+                  const Icon = config.icon;
+
+                  return (
+                    <div key={label} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className={cn('w-2 h-2 rounded-full', config.dotClass)} />
+                          <span className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                            <Icon className="w-3 h-3 text-muted-foreground" />
+                            {label}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-foreground">{count}</span>
+                          <span className="text-[10px] text-muted-foreground">{pct.toFixed(0)}%</span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={cn('h-full rounded-full transition-all duration-500', config.dotClass)}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Stacked bar overview */}
+              <div className="h-2.5 rounded-full overflow-hidden flex bg-muted/50">
+                {total > 0 && (
+                  <>
+                    {stats?.vipCount > 0 && (
+                      <div className="bg-amber-400 h-full transition-all duration-500" style={{ width: `${(stats.vipCount / total) * 100}%` }} />
+                    )}
+                    {stats?.regularCount > 0 && (
+                      <div className="bg-gray-400 h-full transition-all duration-500" style={{ width: `${(stats.regularCount / total) * 100}%` }} />
+                    )}
+                    {stats?.newCount > 0 && (
+                      <div className="bg-violet-400 h-full transition-all duration-500" style={{ width: `${(stats.newCount / total) * 100}%` }} />
+                    )}
+                    {stats?.blacklistCount > 0 && (
+                      <div className="bg-red-400 h-full transition-all duration-500" style={{ width: `${(stats.blacklistCount / total) * 100}%` }} />
+                    )}
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Cari nama, no. WA, atau kota..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-10 text-xs rounded-xl bg-card border-border/60"
+          />
+        </div>
+
+        {/* Customer List */}
+        <Card className="rounded-xl border border-border/60 shadow-none bg-card overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-emerald-500 via-cyan-500 to-emerald-500" />
+          <CardHeader className="pb-2 px-3.5 sm:px-4 pt-3 sm:pt-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xs sm:text-sm flex items-center gap-2">
+                  <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+                  Daftar Customer
+                </CardTitle>
+                <CardDescription className="text-[10px] mt-0.5">{totalItems} customer terdaftar</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="px-3.5 sm:px-4 pb-3.5 sm:pb-4">
+            {loading ? (
+              <div className="space-y-2.5">
+                {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
+              </div>
+            ) : filteredCustomers.length > 0 ? (
+              <div className="space-y-2">
+                {filteredCustomers.map((customer) => (
+                  <CustomerCard 
+                    key={customer.id} 
+                    customer={customer} 
+                    onClick={() => openCustomerDetail(customer)}
+                  />
+                ))}
+              </div>
             ) : (
-              <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
-                Belum ada data lokasi
+              <div className="text-center py-12 text-muted-foreground">
+                <Users className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                <p className="text-xs">{searchQuery ? 'Tidak ada customer yang cocok' : 'Belum ada customer terdaftar'}</p>
               </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Customer Segmentation */}
-        <div className="rounded-xl dash-card overflow-hidden">
-          <div className="px-3 pt-3 sm:px-4 sm:pt-4">
-            <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 text-foreground">
-              <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-              Segmentasi Customer
-            </h3>
-          </div>
-          <div className="px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4 sm:pt-2">
-            <div className="flex flex-wrap gap-2 mb-3 hide-scrollbar overflow-x-auto">
-              <SegmentBadge label="VIP" count={stats?.vipCount || 0} color="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400" icon={Crown} />
-              <SegmentBadge label="Regular" count={stats?.regularCount || 0} color="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" icon={Users} />
-              <SegmentBadge label="New" count={stats?.newCount || 0} color="bg-violet-100 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400" icon={Star} />
-              <SegmentBadge label="Blacklist" count={stats?.blacklistCount || 0} color="bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400" icon={Ban} />
-            </div>
-            
-            {/* Progress bar */}
-            <div className="h-3 rounded-full overflow-hidden flex bg-muted hide-scrollbar">
-              {stats && stats.totalCustomers > 0 && (
-                <>
-                  {stats.vipCount > 0 && (
-                    <div className="bg-amber-400 h-full" style={{ width: `${(stats.vipCount / stats.totalCustomers) * 100}%` }} />
-                  )}
-                  {stats.regularCount > 0 && (
-                    <div className="bg-gray-400 h-full" style={{ width: `${(stats.regularCount / stats.totalCustomers) * 100}%` }} />
-                  )}
-                  {stats.newCount > 0 && (
-                    <div className="bg-violet-400 h-full" style={{ width: `${(stats.newCount / stats.totalCustomers) * 100}%` }} />
-                  )}
-                  {stats.blacklistCount > 0 && (
-                    <div className="bg-red-400 h-full" style={{ width: `${(stats.blacklistCount / stats.totalCustomers) * 100}%` }} />
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Cari nama, no. WA, atau kota..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 h-9 text-xs rounded-lg"
-        />
-      </div>
-
-      {/* Customer List */}
-      <div className="space-y-3">
-        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{totalItems} customer</p>
-        {loading ? (
-          [...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
-        ) : filteredCustomers.length > 0 ? (
-          filteredCustomers.map((customer) => (
-            <CustomerCard 
-              key={customer.id} 
-              customer={customer} 
-              onClick={() => openCustomerDetail(customer)}
-            />
-          ))
-        ) : (
-          <div className="text-center py-12 text-muted-foreground">
-            <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Tidak ada customer ditemukan</p>
-          </div>
+        {/* Pagination */}
+        {!loading && totalPages > 1 && (
+          <SimplePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
         )}
-      </div>
 
-      {/* Pagination */}
-      {!loading && totalPages > 1 && (
-        <SimplePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          itemsPerPage={ITEMS_PER_PAGE}
-          onPageChange={setCurrentPage}
-        />
-      )}
-
-      {/* Customer Detail Dialog */}
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
-          <div className="overflow-y-auto flex-1 hide-scrollbar">
-            <div className="p-5 space-y-4">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" />
-                  Detail Customer
-                </DialogTitle>
-                <DialogDescription>Informasi lengkap customer</DialogDescription>
-              </DialogHeader>
-              
-              {selectedCustomer && (
-                <CustomerDetailView 
-                  customer={selectedCustomer} 
-                  onClose={() => setDetailOpen(false)}
-                />
-              )}
+        {/* Customer Detail Dialog */}
+        <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+          <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
+            <div className="overflow-y-auto flex-1 hide-scrollbar">
+              <div className="p-5 space-y-4">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-primary" />
+                    Detail Customer
+                  </DialogTitle>
+                  <DialogDescription>Informasi lengkap pelanggan</DialogDescription>
+                </DialogHeader>
+                
+                {selectedCustomer && (
+                  <CustomerDetailView 
+                    customer={selectedCustomer} 
+                    onClose={() => setDetailOpen(false)}
+                  />
+                )}
+              </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-  </div>
-</div>
-  );
-}
-
-// Segment Badge Component
-function SegmentBadge({ label, count, color, icon: Icon }: { label: string; count: number; color: string; icon: React.ElementType }) {
-  return (
-    <div className={cn('px-2 py-0.5 rounded-full flex items-center gap-1.5', color)}>
-      <Icon className="w-3 h-3" />
-      <span className="text-[9px] sm:text-[10px] font-medium">{label}</span>
-      <span className="text-[9px] sm:text-[10px] font-bold">{count}</span>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
-  );
-}
-
-// Label Badge Component
-function LabelBadge({ label }: { label: string }) {
-  const variants: Record<string, { className: string; icon: React.ReactNode }> = {
-    VIP: {
-      className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200',
-      icon: <Crown className="w-3 h-3" />,
-    },
-    Regular: {
-      className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 border-gray-200',
-      icon: <Users className="w-3 h-3" />,
-    },
-    New: {
-      className: 'bg-violet-100 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400 border-violet-200',
-      icon: <Star className="w-3 h-3" />,
-    },
-    Blacklist: {
-      className: 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200',
-      icon: <Ban className="w-3 h-3" />,
-    },
-  };
-
-  const variant = variants[label] || variants.Regular;
-
-  return (
-    <Badge variant="outline" className={cn('text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full gap-1 font-medium', variant.className)}>
-      {variant.icon}
-      {label}
-    </Badge>
   );
 }
 
 function CustomerCard({ customer, onClick }: { customer: Customer; onClick: () => void }) {
   const [copied, setCopied] = useState(false);
+  const isBlacklisted = customer.label === 'Blacklist';
+  const config = LABEL_CONFIG[customer.label] || LABEL_CONFIG.Regular;
+  const Icon = config.icon;
 
   const handleCopyPhone = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -432,81 +513,76 @@ function CustomerCard({ customer, onClick }: { customer: Customer; onClick: () =
     }
   };
 
-  const isBlacklisted = customer.label === 'Blacklist';
-
   return (
-    <Card 
-      className={cn("rounded-xl border border-border/60 shadow-none bg-card overflow-hidden cursor-pointer hover:bg-muted/30 transition-colors", isBlacklisted && "opacity-60")}
+    <div
+      className={cn(
+        "flex items-stretch rounded-xl border bg-card shadow-none overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-border active-scale",
+        isBlacklisted && "opacity-60"
+      )}
       onClick={onClick}
     >
-      <CardContent className="p-0">
-        <div className="flex items-center gap-3 p-3">
+      {/* Left accent bar */}
+      <div className={cn('w-[3px] flex-shrink-0 rounded-l-xl', config.dotClass)} />
+
+      <div className="flex-1 min-w-0 p-3">
+        <div className="flex items-center gap-3">
           {/* Avatar */}
           <div className={cn(
             "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-            isBlacklisted ? "bg-red-100 dark:bg-red-900/20" : 
-            customer.label === 'VIP' ? "bg-amber-100 dark:bg-amber-900/20" :
-            "bg-primary/10 dark:bg-primary/20"
+            config.bg
           )}>
-            {customer.label === 'VIP' ? (
-              <Crown className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            ) : (
-              <span className={cn(
-                "font-bold",
-                isBlacklisted ? "text-red-600 dark:text-red-400" : "text-primary"
-              )}>
-                {customer.name?.charAt(0).toUpperCase()}
-              </span>
-            )}
+            <Icon className={cn('w-5 h-5', config.color)} />
           </div>
-          
-          {/* Content */}
+
+          {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <p className="font-medium truncate">{customer.name}</p>
-              <LabelBadge label={customer.label} />
+              <p className="font-semibold text-sm truncate">{customer.name}</p>
+              <Badge className={cn('text-[9px] px-1.5 py-0 rounded-full border font-medium', config.bg, config.color, config.border)}>
+                {customer.label}
+              </Badge>
             </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <p className="text-xs text-muted-foreground">{customer.phone}</p>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 p-0"
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <p className="text-xs text-muted-foreground font-mono">{customer.phone}</p>
+              <button
+                type="button"
                 onClick={handleCopyPhone}
+                className="flex items-center justify-center w-5 h-5 hover:bg-muted rounded transition-colors"
               >
                 {copied ? (
-                  <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                  <Check className="w-3 h-3 text-emerald-500" />
                 ) : (
                   <Copy className="w-3 h-3 text-muted-foreground" />
                 )}
-              </Button>
+              </button>
             </div>
-            {(customer.bankName || customer.city) && (
-              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                {customer.city && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    {customer.city}
-                  </span>
-                )}
-                {customer.bankName && (
-                  <span className="flex items-center gap-1">
-                    <Building2 className="w-3 h-3" />
-                    {customer.bankName}
-                  </span>
-                )}
-              </div>
-            )}
+            <div className="flex items-center gap-2.5 mt-1 text-[11px] text-muted-foreground">
+              {customer.city && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  {customer.city}
+                </span>
+              )}
+              {customer.bankName && (
+                <span className="flex items-center gap-1">
+                  <Building2 className="w-3 h-3" />
+                  {customer.bankName}
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Stats */}
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-bold text-primary">{formatCompactCurrency(customer.totalVolume)}</p>
-            <p className="text-xs text-muted-foreground">{customer.totalTransactions} trx</p>
+          {/* Right stats + arrow */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="text-right">
+              <p className="text-sm font-bold text-primary">{formatCompactCurrency(customer.totalVolume)}</p>
+              <p className="text-[10px] text-muted-foreground">{customer.totalTransactions} trx</p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-muted-foreground/50" />
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -519,35 +595,26 @@ function CustomerDetailView({ customer, onClose }: { customer: Customer; onClose
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const getLabelColor = (label: string) => {
-    switch (label.toLowerCase()) {
-      case 'vip': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200';
-      case 'new': return 'bg-violet-100 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400 border-violet-200';
-      case 'blacklist': return 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200';
-      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-gray-200';
-    }
-  };
-
+  const config = LABEL_CONFIG[customer.label] || LABEL_CONFIG.Regular;
   const isBlacklisted = customer.label === 'Blacklist';
+  const Icon = config.icon;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Profile Header */}
-      <div className="flex items-center gap-3.5">
+      <div className="flex items-center gap-3.5 p-4 rounded-xl bg-muted/30 border border-border/40">
         <div className={cn(
           "w-12 h-12 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0",
           isBlacklisted ? "bg-red-500 text-white" :
           customer.label === 'VIP' ? "bg-amber-500 text-white" :
           "bg-primary text-primary-foreground"
         )}>
-          <span className="font-bold text-lg">
-            {customer.name?.charAt(0).toUpperCase()}
-          </span>
+          <Icon className="w-6 h-6" />
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-base truncate">{customer.name}</h3>
-          <div className="flex items-center gap-2 mt-0.5">
-            <Badge className={cn('text-[9px] px-2 py-0.5 rounded-full border', getLabelColor(customer.label))}>
+          <div className="flex items-center gap-2 mt-1">
+            <Badge className={cn('text-[9px] px-2 py-0.5 rounded-full border font-medium', config.bg, config.color, config.border)}>
               {customer.label}
             </Badge>
             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
@@ -560,11 +627,11 @@ function CustomerDetailView({ customer, onClose }: { customer: Customer; onClose
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg bg-primary/5 dark:bg-primary/10 p-3 text-center">
+        <div className="rounded-xl border border-border/50 p-3 text-center bg-primary/5">
           <p className="text-[10px] text-muted-foreground font-medium">Total Volume</p>
           <p className="text-base font-bold text-primary mt-0.5">{formatCompactCurrency(customer.totalVolume)}</p>
         </div>
-        <div className="rounded-lg bg-muted/50 p-3 text-center">
+        <div className="rounded-xl border border-border/50 p-3 text-center bg-muted/30">
           <p className="text-[10px] text-muted-foreground font-medium">Total Transaksi</p>
           <p className="text-base font-bold mt-0.5">{customer.totalTransactions}</p>
         </div>
@@ -668,7 +735,7 @@ function CustomerDetailView({ customer, onClose }: { customer: Customer; onClose
       </div>
 
       {/* Actions */}
-      <Button variant="outline" onClick={onClose} className="w-full rounded-xl h-9 text-xs font-medium">
+      <Button variant="outline" onClick={onClose} className="w-full rounded-xl h-10 text-xs font-medium">
         Tutup
       </Button>
     </div>
@@ -698,7 +765,6 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate phone number
     if (!isValidIndonesianPhone(formData.phone)) {
       toast.error('Format nomor WA tidak valid. Gunakan format 08xxx');
       return;
@@ -744,7 +810,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="bg-primary text-primary-foreground rounded-lg h-9 px-4 text-xs font-medium hover:bg-primary/90">
+        <Button size="sm" className="bg-primary text-primary-foreground rounded-xl h-9 px-4 text-xs font-medium hover:bg-primary/90">
           <UserPlus className="w-4 h-4 mr-1" />
           Baru
         </Button>
@@ -759,7 +825,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
         </DialogHeader>
         <form id="partner-customer-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto hide-scrollbar">
           <div className="px-5 py-4 space-y-4">
-            {/* Basic Info - Grid */}
+            {/* Basic Info */}
             <div className="space-y-3">
               <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Informasi Dasar</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -770,7 +836,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     required
-                    className="h-9 text-xs rounded-lg"
+                    className="h-9 text-xs rounded-xl"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -780,7 +846,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
                     value={formData.phone}
                     onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                     required
-                    className="h-9 text-xs rounded-lg"
+                    className="h-9 text-xs rounded-xl"
                   />
                 </div>
               </div>
@@ -799,7 +865,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
                     placeholder="Catatan tambahan..."
                     value={formData.notes}
                     onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                    className="h-9 text-xs rounded-lg"
+                    className="h-9 text-xs rounded-xl"
                   />
                 </div>
               </div>
@@ -823,7 +889,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
                     }
                   }}
                 >
-                  <SelectTrigger className="h-9 text-xs rounded-lg">
+                  <SelectTrigger className="h-9 text-xs rounded-xl">
                     <SelectValue placeholder="Pilih bank" />
                   </SelectTrigger>
                   <SelectContent>
@@ -837,7 +903,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
                     placeholder="Ketik nama bank"
                     value={customBankName}
                     onChange={(e) => setCustomBankName(e.target.value)}
-                    className="h-9 text-xs rounded-lg"
+                    className="h-9 text-xs rounded-xl"
                   />
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -845,13 +911,13 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
                     placeholder="Nomor Rekening"
                     value={formData.bankAccount}
                     onChange={(e) => setFormData(prev => ({ ...prev, bankAccount: e.target.value }))}
-                    className="h-9 text-xs rounded-lg"
+                    className="h-9 text-xs rounded-xl"
                   />
                   <Input
                     placeholder="Nama Pemilik Rekening"
                     value={formData.bankHolder}
                     onChange={(e) => setFormData(prev => ({ ...prev, bankHolder: e.target.value }))}
-                    className="h-9 text-xs rounded-lg"
+                    className="h-9 text-xs rounded-xl"
                   />
                 </div>
               </div>
