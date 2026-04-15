@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Loader } from 'lucide-react';
@@ -63,13 +63,17 @@ export default function AnalyticsBubbleMap({ topCities, accentColor = '#8b5cf6' 
     return null;
   };
 
-  const resolvedCities = topCities
-    .map(city => {
-      const coords = resolveCityCoords(city.city);
-      if (!coords) return null;
-      return { ...city, lat: coords.lat, lng: coords.lng };
-    })
-    .filter(Boolean) as (CityData & { lat: number; lng: number })[];
+  // Memoize resolved cities to prevent infinite re-render loop
+  const resolvedCities = useMemo(() =>
+    topCities
+      .map(city => {
+        const coords = resolveCityCoords(city.city);
+        if (!coords) return null;
+        return { ...city, lat: coords.lat, lng: coords.lng };
+      })
+      .filter(Boolean) as (CityData & { lat: number; lng: number })[],
+    [topCities]
+  );
 
   const maxCount = resolvedCities.length > 0 ? resolvedCities[0].count : 1;
 
@@ -139,8 +143,21 @@ export default function AnalyticsBubbleMap({ topCities, accentColor = '#8b5cf6' 
       mapRef.current = null;
     }
 
+    // Ensure container has dimensions before initializing
+    const container = mapContainerRef.current;
+    if (container.offsetWidth === 0 || container.offsetHeight === 0) {
+      // Wait for layout
+      const ro = new ResizeObserver(() => {
+        if (container.offsetWidth > 0 && container.offsetHeight > 0) {
+          ro.disconnect();
+          mapRef.current?.resize();
+        }
+      });
+      ro.observe(container);
+    }
+
     const mapInstance = new maplibregl.Map({
-      container: mapContainerRef.current,
+      container,
       style: {
         version: 8,
         sources: {
@@ -169,6 +186,8 @@ export default function AnalyticsBubbleMap({ topCities, accentColor = '#8b5cf6' 
       center: [118, -2.5],
       zoom: 4.5,
       attributionControl: false,
+      fadeDuration: 0,
+      crossSourceCollisions: false,
     });
 
     mapRef.current = mapInstance;
@@ -181,10 +200,23 @@ export default function AnalyticsBubbleMap({ topCities, accentColor = '#8b5cf6' 
     });
 
     mapInstance.on('load', () => {
+      // Force a resize after load to prevent rendering hang
+      requestAnimationFrame(() => {
+        mapInstance.resize();
+      });
       setLoaded(true);
     });
 
+    // Handle container resize
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapRef.current) {
+        mapRef.current.resize();
+      }
+    });
+    resizeObserver.observe(container);
+
     return () => {
+      resizeObserver.disconnect();
       popupsRef.current.forEach(popup => popup.remove());
       popupsRef.current = [];
       markersRef.current.forEach(marker => marker.remove());
@@ -192,7 +224,7 @@ export default function AnalyticsBubbleMap({ topCities, accentColor = '#8b5cf6' 
       mapInstance.remove();
       mapRef.current = null;
     };
-  }, [mapContainerRef, updateMarkerSizes]);
+  }, [mapContainerRef]);
 
   // Add bubble markers
   useEffect(() => {
@@ -301,6 +333,7 @@ export default function AnalyticsBubbleMap({ topCities, accentColor = '#8b5cf6' 
     });
 
     // Fit bounds — tighter zoom for precision
+    // Use setTimeout + resize to prevent initial load hang
     if (resolvedCities.length > 0) {
       const bounds = new maplibregl.LngLatBounds();
       resolvedCities.forEach(city => {
@@ -309,11 +342,18 @@ export default function AnalyticsBubbleMap({ topCities, accentColor = '#8b5cf6' 
 
       if (!bounds.isEmpty()) {
         const padding = resolvedCities.length === 1 ? 80 : 40;
-        mapRef.current!.fitBounds(bounds, {
-          padding,
-          maxZoom: resolvedCities.length === 1 ? 10 : 8,
-          duration: 800,
-        });
+        // Delay fitBounds to after render to prevent hang
+        setTimeout(() => {
+          if (mapRef.current) {
+            mapRef.current.resize();
+            mapRef.current.fitBounds(bounds, {
+              padding,
+              maxZoom: resolvedCities.length === 1 ? 10 : 8,
+              duration: 0,
+              essential: true,
+            });
+          }
+        }, 100);
       }
     }
   }, [loaded, resolvedCities, maxCount, bubbleColors]);
