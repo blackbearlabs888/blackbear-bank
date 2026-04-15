@@ -124,7 +124,9 @@
   
   /* Mobile-first touch targets */
   button, a, input, select, textarea {
-    min-height: 44px;
+    min-height: 0;
+    min-width: 0;
+    height: revert-layer;
   }
 
   /* Exclude toggle switch from min-height */
