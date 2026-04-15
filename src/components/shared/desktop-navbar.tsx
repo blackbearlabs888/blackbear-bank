@@ -125,7 +125,7 @@ export function DesktopNavbar() {
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2.5 tap-highlight group">
               {config.logoUrl && !logoError ? (
-                <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center p-1 dark:bg-transparent dark:border-transparent transition-transform duration-300 group-hover:scale-105">
+                <div className="w-8 h-8 rounded-lg bg-black border border-border flex items-center justify-center p-1 dark:bg-transparent dark:border-transparent transition-transform duration-300 group-hover:scale-105">
                   <img
                     src={config.logoUrl}
                     alt={config.websiteTitle}

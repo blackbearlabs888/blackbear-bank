@@ -100,7 +100,7 @@ export function Footer() {
           <div className="flex flex-col items-center md:items-start gap-2.5">
             <Link href="/" className="flex items-center gap-2.5 group">
               {config.logoUrl && !logoError ? (
-                <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center p-1 dark:bg-transparent dark:border-transparent transition-transform group-hover:scale-105">
+                <div className="w-8 h-8 rounded-lg bg-black border border-border flex items-center justify-center p-1 dark:bg-transparent dark:border-transparent transition-transform group-hover:scale-105">
                   <img
                     src={config.logoUrl}
                     alt={siteName}

@@ -245,9 +245,9 @@ export default function PartnerTransactionsPage() {
           <Button
             onClick={() => setNewTxOpen(true)}
             size="sm"
-            className="bg-primary text-primary-foreground rounded-lg h-9 px-4 font-medium hover:bg-primary/90"
+            className="bg-primary text-primary-foreground rounded-xl h-9 px-3.5 text-xs font-medium hover:bg-primary/90 flex items-center justify-center gap-1.5"
           >
-            <Plus className="w-4 h-4 mr-1.5" />
+            <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Tambah</span>
           </Button>
           <Button
@@ -536,7 +536,7 @@ export default function PartnerTransactionsPage() {
             <div className="rounded-xl border border-border/50 bg-card/50 p-3 sm:p-3.5 space-y-2.5">
               <div className="flex justify-between px-1">
                 {[1, 2, 3, 4, 5, 6].map(i => (
-                  <Skeleton key={i} className="w-10 h-10 rounded-full flex-shrink-0" />
+                  <Skeleton key={i} className="w-9 h-9 rounded-full flex-shrink-0" />
                 ))}
               </div>
             </div>

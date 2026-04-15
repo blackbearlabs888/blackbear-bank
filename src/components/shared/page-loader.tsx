@@ -54,7 +54,7 @@ export default function PageLoader({ logoUrl, siteTitle = 'Black Bear' }: PageLo
         <div className="relative mb-6">
           {/* Subtle glow behind logo */}
           <div className="absolute inset-0 scale-150 blur-2xl bg-primary/15 rounded-full animate-pulse" />
-          <div className="relative w-20 h-20 rounded-2xl overflow-hidden border border-border/50 shadow-lg shadow-primary/10 flex items-center justify-center bg-muted p-1.5">
+          <div className="relative w-20 h-20 rounded-2xl overflow-hidden border border-border/50 shadow-lg shadow-primary/10 flex items-center justify-center bg-black p-1.5 dark:bg-muted">
             <img
               src={logoUrl}
               alt={siteTitle}
