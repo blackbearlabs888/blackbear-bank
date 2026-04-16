@@ -257,13 +257,7 @@ export default function PartnerCustomersPage() {
             </div>
           </div>
           <div className="px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4 sm:pt-2">
-            {/* Segmentasi badges */}
-            <div className="flex flex-wrap gap-2 mb-3 hide-scrollbar overflow-x-auto">
-              <SegmentBadge label="VIP" count={stats?.vipCount || 0} color="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400" icon={Crown} />
-              <SegmentBadge label="Regular" count={stats?.regularCount || 0} color="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" icon={Users} />
-              <SegmentBadge label="New" count={stats?.newCount || 0} color="bg-violet-100 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400" icon={Star} />
-              <SegmentBadge label="Blacklist" count={stats?.blacklistCount || 0} color="bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400" icon={Ban} />
-            </div>
+            
 
             {/* Progress bar */}
             <div className="h-3 rounded-full overflow-hidden flex bg-muted hide-scrollbar mb-4">
@@ -283,6 +277,14 @@ export default function PartnerCustomersPage() {
                   )}
                 </>
               )}
+            </div> 
+           
+           {/* Segmentasi badges */}
+            <div className="flex flex-wrap gap-2 mb-3 hide-scrollbar">
+              <SegmentBadge label="VIP" count={stats?.vipCount || 0} color="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400" icon={Crown} />
+              <SegmentBadge label="Regular" count={stats?.regularCount || 0} color="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" icon={Users} />
+              <SegmentBadge label="New" count={stats?.newCount || 0} color="bg-violet-100 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400" icon={Star} />
+              <SegmentBadge label="Blacklist" count={stats?.blacklistCount || 0} color="bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400" icon={Ban} />
             </div>
 
             {/* Top Lokasi — Map */}
