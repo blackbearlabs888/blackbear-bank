@@ -245,96 +245,103 @@ export default function PartnerCustomersPage() {
         </div>
       </div>
 
-      {/* Segmentasi & Top Lokasi — Merged Card */}
-      <div className="rounded-xl dash-card overflow-hidden">
-        <div className="px-3 pt-3 sm:px-4 sm:pt-4">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-            <h3 className="text-xs sm:text-sm font-semibold text-foreground">Segmentasi &amp; Lokasi</h3>
+      {/* Main Grid: Segmentasi/Lokasi 40% — Customer List 60% */}
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-4">
+
+        {/* LEFT — Segmentasi & Top Lokasi */}
+        <div className="rounded-xl dash-card overflow-hidden lg:sticky lg:top-4 lg:self-start">
+          <div className="px-3 pt-3 sm:px-4 sm:pt-4">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+              <h3 className="text-xs sm:text-sm font-semibold text-foreground">Segmentasi &amp; Lokasi</h3>
+            </div>
+          </div>
+          <div className="px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4 sm:pt-2">
+            {/* Segmentasi badges */}
+            <div className="flex flex-wrap gap-2 mb-3 hide-scrollbar overflow-x-auto">
+              <SegmentBadge label="VIP" count={stats?.vipCount || 0} color="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400" icon={Crown} />
+              <SegmentBadge label="Regular" count={stats?.regularCount || 0} color="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" icon={Users} />
+              <SegmentBadge label="New" count={stats?.newCount || 0} color="bg-violet-100 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400" icon={Star} />
+              <SegmentBadge label="Blacklist" count={stats?.blacklistCount || 0} color="bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400" icon={Ban} />
+            </div>
+
+            {/* Progress bar */}
+            <div className="h-3 rounded-full overflow-hidden flex bg-muted hide-scrollbar mb-4">
+              {stats && stats.totalCustomers > 0 && (
+                <>
+                  {stats.vipCount > 0 && (
+                    <div className="bg-amber-400 h-full" style={{ width: `${(stats.vipCount / stats.totalCustomers) * 100}%` }} />
+                  )}
+                  {stats.regularCount > 0 && (
+                    <div className="bg-gray-400 h-full" style={{ width: `${(stats.regularCount / stats.totalCustomers) * 100}%` }} />
+                  )}
+                  {stats.newCount > 0 && (
+                    <div className="bg-violet-400 h-full" style={{ width: `${(stats.newCount / stats.totalCustomers) * 100}%` }} />
+                  )}
+                  {stats.blacklistCount > 0 && (
+                    <div className="bg-red-400 h-full" style={{ width: `${(stats.blacklistCount / stats.totalCustomers) * 100}%` }} />
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Top Lokasi — Map */}
+            {stats?.topCities && stats.topCities.length > 0 ? (
+              <AnalyticsBubbleMap topCities={stats.topCities} accentColor="#8b5cf6" />
+            ) : (
+              <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
+                Belum ada data lokasi
+              </div>
+            )}
           </div>
         </div>
-        <div className="px-3 pb-3 pt-1.5 sm:px-4 sm:pb-4 sm:pt-2">
-          {/* Segmentasi badges */}
-          <div className="flex flex-wrap gap-2 mb-3 hide-scrollbar overflow-x-auto">
-            <SegmentBadge label="VIP" count={stats?.vipCount || 0} color="bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400" icon={Crown} />
-            <SegmentBadge label="Regular" count={stats?.regularCount || 0} color="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" icon={Users} />
-            <SegmentBadge label="New" count={stats?.newCount || 0} color="bg-violet-100 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400" icon={Star} />
-            <SegmentBadge label="Blacklist" count={stats?.blacklistCount || 0} color="bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400" icon={Ban} />
+
+        {/* RIGHT — Search + Customer List + Pagination */}
+        <div className="space-y-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Cari nama, no. WA, atau kota..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9 text-xs rounded-lg"
+            />
           </div>
 
-          {/* Progress bar */}
-          <div className="h-3 rounded-full overflow-hidden flex bg-muted hide-scrollbar mb-4">
-            {stats && stats.totalCustomers > 0 && (
-              <>
-                {stats.vipCount > 0 && (
-                  <div className="bg-amber-400 h-full" style={{ width: `${(stats.vipCount / stats.totalCustomers) * 100}%` }} />
-                )}
-                {stats.regularCount > 0 && (
-                  <div className="bg-gray-400 h-full" style={{ width: `${(stats.regularCount / stats.totalCustomers) * 100}%` }} />
-                )}
-                {stats.newCount > 0 && (
-                  <div className="bg-violet-400 h-full" style={{ width: `${(stats.newCount / stats.totalCustomers) * 100}%` }} />
-                )}
-                {stats.blacklistCount > 0 && (
-                  <div className="bg-red-400 h-full" style={{ width: `${(stats.blacklistCount / stats.totalCustomers) * 100}%` }} />
-                )}
-              </>
+          {/* Customer List */}
+          <div className="space-y-3">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{totalItems} customer</p>
+            {loading ? (
+              [...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
+            ) : filteredCustomers.length > 0 ? (
+              filteredCustomers.map((customer) => (
+                <CustomerCard
+                  key={customer.id}
+                  customer={customer}
+                  onClick={() => openCustomerDetail(customer)}
+                />
+              ))
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Tidak ada customer ditemukan</p>
+              </div>
             )}
           </div>
 
-          {/* Top Lokasi — Map */}
-          {stats?.topCities && stats.topCities.length > 0 ? (
-            <AnalyticsBubbleMap topCities={stats.topCities} accentColor="#8b5cf6" />
-          ) : (
-            <div className="h-[140px] sm:h-[180px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
-              Belum ada data lokasi
-            </div>
+          {/* Pagination */}
+          {!loading && totalPages > 1 && (
+            <SimplePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setCurrentPage}
+            />
           )}
         </div>
       </div>
-
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Cari nama, no. WA, atau kota..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 h-9 text-xs rounded-lg"
-        />
-      </div>
-
-      {/* Customer List */}
-      <div className="space-y-3">
-        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{totalItems} customer</p>
-        {loading ? (
-          [...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
-        ) : filteredCustomers.length > 0 ? (
-          filteredCustomers.map((customer) => (
-            <CustomerCard 
-              key={customer.id} 
-              customer={customer} 
-              onClick={() => openCustomerDetail(customer)}
-            />
-          ))
-        ) : (
-          <div className="text-center py-12 text-muted-foreground">
-            <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Tidak ada customer ditemukan</p>
-          </div>
-        )}
-      </div>
-
-      {/* Pagination */}
-      {!loading && totalPages > 1 && (
-        <SimplePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          itemsPerPage={ITEMS_PER_PAGE}
-          onPageChange={setCurrentPage}
-        />
-      )}
 
       {/* Customer Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
