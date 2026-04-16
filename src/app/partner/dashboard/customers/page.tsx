@@ -269,8 +269,8 @@ export default function PartnerCustomersPage() {
                 Belum ada data lokasi
               </div>
             )}
-          </div>
-        </div>  
+
+   
         
         {/* Progress bar */}
             <div className="h-3 rounded-full overflow-hidden flex bg-muted hide-scrollbar mb-4">
@@ -299,6 +299,8 @@ export default function PartnerCustomersPage() {
               <SegmentBadge label="New" count={stats?.newCount || 0} color="bg-violet-100 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400" icon={Star} />
               <SegmentBadge label="Blacklist" count={stats?.blacklistCount || 0} color="bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400" icon={Ban} />
             </div>
+          </div>
+        </div>
 
         {/* RIGHT — Search + Customer List + Pagination */}
         <div className="space-y-4">
