@@ -431,9 +431,6 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                               <p className="text-white/30 text-[8px] sm:text-[9px] tracking-widest uppercase">Gestun Pro</p>
                             </div>
                           </div>
-                          <div className="w-10 h-10 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
-                            <Wifi className="w-4 h-4 text-white/40" />
-                          </div>
                         </div>
 
                         {/* Chip */}
@@ -458,14 +455,14 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                           </div>
                           <div className="text-right">
                             <p className="text-white/20 text-[9px] sm:text-[10px] uppercase tracking-[0.2em] mb-1">Member Since</p>
-                            <p className="text-white/70 text-xs sm:text-sm font-mono">2024</p>
+                            <p className="text-white/70 text-xs sm:text-sm font-mono">2023</p>
                           </div>
                         </div>
 
                         {/* Premium badge — top right floating */}
                         <div className="absolute top-3 right-3">
                           <div className="px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-400/20 to-amber-500/20 border border-amber-400/30 backdrop-blur-sm">
-                            <p className="text-[9px] sm:text-[10px] font-bold text-amber-300 tracking-widest uppercase">★ Premium</p>
+                            <p className="text-[9px] sm:text-[10px] font-bold text-amber-300 tracking-widest uppercase">★ VIP</p>
                           </div>
                         </div>
                       </div>
@@ -473,11 +470,11 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   </div>
 
                   {/* Floating badges — within bounds, no overflow */}
-                  <div className="hidden sm:flex absolute top-1 right-1 w-8 h-8 bg-emerald-500/10 border border-emerald-500/20 rounded-lg backdrop-blur-sm items-center justify-center animate-bounce-soft z-20">
-                    <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                  <div className="hidden sm:flex absolute -top-1 -right-1 w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-lg backdrop-blur-sm items-center justify-center animate-bounce-soft z-20">
+                    <TrendingUp className="w-4 h-4 text-emerald-500" />
                   </div>
-                  <div className="hidden sm:flex absolute bottom-1 left-1 w-8 h-8 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-lg backdrop-blur-sm items-center justify-center animate-bounce-soft z-20" style={{ animationDelay: '1s' }}>
-                    <Wallet className="w-3 h-3 text-fuchsia-500" />
+                  <div className="hidden sm:flex absolute -bottom-1 -left-1 w-12 h-12 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-lg backdrop-blur-sm items-center justify-center animate-bounce-soft z-20" style={{ animationDelay: '1s' }}>
+                    <Wallet className="w-4 h-4 text-fuchsia-500" />
                   </div>
                 </div>
               </div>
