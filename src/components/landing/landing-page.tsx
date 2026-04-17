@@ -298,12 +298,12 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   {/* Badge */}
                   <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/15 bg-primary/5 text-primary text-sm font-medium shadow-sm shadow-primary/5">
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Layanan Gestun #1 Terpercaya</span>
+                    <span>Layanan Gestun No #1</span>
                   </div>
                   {/* Trust badge with pulse */}
                   <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 text-xs font-semibold animate-trust-pulse">
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Terpercaya</span>
+                    <span>Terbaik</span>
                   </div>
                 </div>
 
