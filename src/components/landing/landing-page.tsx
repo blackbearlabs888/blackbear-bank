@@ -280,7 +280,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         <AnnouncementBar announcements={announcements} />
 
         {/* ==================== HERO SECTION ==================== */}
-        <section className="relative overflow-hidden min-h-dvh">
+        <section className="relative overflow-hidden min-h-auto">
           {/* Background gradient blobs */}
           <div className="absolute inset-0 -z-10 overflow-hidden">
             <div className="absolute top-10 -left-32 w-[500px] h-[400px] bg-primary/8 rounded-full blur-[100px] animate-pulse-soft" />
@@ -290,7 +290,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
             <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }} />
           </div>
 
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-24 md:pt-24 md:pb-16 flex flex-col min-h-dvh">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-6 md:pt-24 md:pb-16 flex flex-col min-h-auto">
             <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center flex-1">
               {/* Left: Text Content */}
               <div className="text-center lg:text-left space-y-4">
@@ -486,7 +486,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         </section>
 
         {/* ==================== STATS SECTION ==================== */}
-        <section className="relative py-8">
+        <section className="relative sm:py-4 lg:py-8">
           {/* Radial gradient background behind stats grid */}
           <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.06] via-primary/[0.02] to-fuchsia-500/[0.04]" />
           {/* Radial glow accent */}
