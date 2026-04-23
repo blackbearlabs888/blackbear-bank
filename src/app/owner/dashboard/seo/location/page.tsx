@@ -100,6 +100,7 @@ export default function LocationManagementPage() {
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [deletingLocation, setDeletingLocation] = useState<Location | null>(null);
   const [formData, setFormData] = useState(emptyForm);
+  const slugManuallyEdited = useRef(false);
 
   // Trigger hydration on mount
   useEffect(() => {
@@ -156,18 +157,26 @@ export default function LocationManagementPage() {
     setFormData(prev => ({
       ...prev,
       name,
-      slug: prev.slug || generateSlug(name),
+      // Auto-generate slug from name unless user has manually edited it (or we're editing an existing location)
+      slug: (slugManuallyEdited.current || editingLocation) ? prev.slug : generateSlug(name),
     }));
+  };
+
+  const handleSlugChange = (slug: string) => {
+    slugManuallyEdited.current = true;
+    setFormData(prev => ({ ...prev, slug }));
   };
 
   const openCreateDialog = () => {
     setEditingLocation(null);
     setFormData(emptyForm);
+    slugManuallyEdited.current = false;
     setShowDialog(true);
   };
 
   const openEditDialog = (location: Location) => {
     setEditingLocation(location);
+    slugManuallyEdited.current = true; // Editing existing location, don't auto-generate slug
     setFormData({
       name: location.name,
       slug: location.slug,
@@ -512,7 +521,7 @@ export default function LocationManagementPage() {
                 <Label>Slug *</Label>
                 <Input
                   value={formData.slug}
-                  onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                  onChange={(e) => handleSlugChange(e.target.value)}
                   placeholder="jakarta"
                 />
               </div>
