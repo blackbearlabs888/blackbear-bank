@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       };
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id';
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
     
     const title = location.metaTitle || `Gestun ${location.name} - Layanan Tarik Tunai Terpercaya`;
     const description = location.metaDescription || location.description || `Layanan gestun dan tarik tunai terpercaya di ${location.name}. Proses cepat, aman, dan transparan.`;
@@ -106,5 +106,76 @@ export default async function LocationDetailPage({ params }: { params: Promise<{
     notFound();
   }
 
-  return <LocationDetailClient location={location} />;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
+
+  // LocalBusiness JSON-LD for this specific location
+  const localBusinessJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    '@id': `${siteUrl}/lokasi/${location.slug}`,
+    name: `Black Bear - ${location.name}`,
+    description: location.description || `Layanan gestun dan tarik tunai terpercaya di ${location.name}. Proses cepat, aman, dan transparan.`,
+    url: `${siteUrl}/lokasi/${location.slug}`,
+    image: location.featuredImage || `${siteUrl}/og-lokasi.png`,
+    telephone: '+6281234567890',
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: location.name,
+      addressCountry: 'ID',
+    },
+    ...(location.latitude && location.longitude ? {
+      geo: {
+        '@type': 'GeoCoordinates',
+        latitude: location.latitude,
+        longitude: location.longitude,
+      },
+    } : {}),
+    openingHours: 'Mo-Su 00:00-23:59',
+    priceRange: '$$',
+    serviceType: ['Gestun', 'Tarik Tunai Kartu Kredit', 'Tarik Tunai Paylater', 'COD'],
+    areaServed: {
+      '@type': 'City',
+      name: location.name,
+    },
+  };
+
+  // Breadcrumb JSON-LD
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: siteUrl,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Lokasi',
+        item: `${siteUrl}/lokasi`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: location.name,
+        item: `${siteUrl}/lokasi/${location.slug}`,
+      },
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <LocationDetailClient location={location} />
+    </>
+  );
 }

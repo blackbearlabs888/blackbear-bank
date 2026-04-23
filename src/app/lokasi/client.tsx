@@ -40,7 +40,7 @@ export default function LocationListingClient({ initialLocations }: LocationList
   const [hoveredLocation, setHoveredLocation] = useState<string | null>(null);
   
   const siteName = config.websiteTitle || 'Black Bear';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
 
   // Filter locations based on search
   const filteredLocations = initialLocations.filter(location => {

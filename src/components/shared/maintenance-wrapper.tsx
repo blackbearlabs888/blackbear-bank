@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useSyncExternalStore, useMemo } from 'react';
+import { useEffect, useCallback, useSyncExternalStore, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { useSiteConfig } from '@/hooks/use-site-config';
@@ -19,12 +19,16 @@ interface MaintenanceWrapperProps {
   children: React.ReactNode;
 }
 
+// Safety timeout: if loading takes too long, force-show content
+const LOADING_TIMEOUT_MS = 4000;
+
 export function MaintenanceWrapper({ children }: MaintenanceWrapperProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, isAuthenticated, hydrate } = useAuthStore();
   const hasHydrated = useAuthHydrated();
   const { config, loading } = useSiteConfig();
+  const [forceShow, setForceShow] = useState(false);
 
   // Trigger hydration on mount
   useEffect(() => {
@@ -32,6 +36,18 @@ export function MaintenanceWrapper({ children }: MaintenanceWrapperProps) {
       hydrate();
     }
   }, [hasHydrated, hydrate]);
+
+  // Safety timeout: force show content after LOADING_TIMEOUT_MS to prevent stuck screen
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setForceShow(true);
+    }, LOADING_TIMEOUT_MS);
+    // Clear timer once loading is done
+    if (hasHydrated && !loading) {
+      clearTimeout(timer);
+    }
+    return () => clearTimeout(timer);
+  }, [hasHydrated, loading]);
 
   // Pages that should always be accessible even during maintenance
   const alwaysAccessiblePages = useMemo(() => [
@@ -90,8 +106,11 @@ export function MaintenanceWrapper({ children }: MaintenanceWrapperProps) {
     }
   }, [hasHydrated, loading, config.maintenanceMode, isAuthenticated, user, pathname, router, alwaysAccessiblePages, ownerPages]);
 
-  // Show loading skeleton while checking
+  // Show loading skeleton while checking (but respect force timeout)
   if (!hasHydrated || loading) {
+    if (forceShow) {
+      return <>{children}</>;
+    }
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md space-y-4">

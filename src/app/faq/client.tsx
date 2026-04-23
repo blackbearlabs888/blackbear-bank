@@ -62,7 +62,7 @@ export default function FAQClient({ initialFaqs }: FAQClientProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   
   const siteName = config.websiteTitle || 'Black Bear';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
 
   // Group FAQs by category
   const groupedFaqs = initialFaqs.reduce((acc, faq) => {

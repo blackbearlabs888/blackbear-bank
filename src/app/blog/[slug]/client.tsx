@@ -62,7 +62,7 @@ export default function BlogDetailClient({ post }: BlogDetailClientProps) {
   const [copied, setCopied] = useState(false);
   
   const siteName = config.websiteTitle || 'Black Bear';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
   const postUrl = `${siteUrl}/blog/${post.slug}`;
 
   const handleCopyLink = async () => {

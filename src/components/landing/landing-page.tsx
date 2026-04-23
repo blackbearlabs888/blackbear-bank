@@ -17,7 +17,6 @@ import { AnimatedCounter } from '@/components/landing/animated-counter';
 import { FadeInSection } from '@/components/landing/fade-in-section';
 import { OrganizationJsonLd, FAQJsonLd } from '@/components/seo/json-ld';
 import AnnouncementBar from '@/components/landing/announcement-bar';
-import WhatsAppFab from '@/components/landing/whatsapp-fab';
 
 /* ====== Dynamic Imports for Below-Fold Components ====== */
 
@@ -138,6 +137,7 @@ interface FAQ {
   id: string;
   question: string;
   answer: string;
+  category?: string;
 }
 
 interface Announcement {
@@ -176,6 +176,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
   const [cardTilt, setCardTilt] = useState<React.CSSProperties>({});
   const [scrollProgress, setScrollProgress] = useState(0);
   const [allFaqOpen, setAllFaqOpen] = useState(false);
+  const [activeFaqCategory, setActiveFaqCategory] = useState('semua');
   const [typedText, setTypedText] = useState('');
   const subtitleRef = useRef<HTMLParagraphElement>(null);
   const marqueeRow1Ref = useRef<HTMLDivElement>(null);
@@ -259,6 +260,10 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
     setPtLogoErrors(prev => new Set(prev).add(ptId));
   }, []);
 
+  // Get unique FAQ categories
+  const faqCategories = ['semua', ...Array.from(new Set(faqs.map(f => f.category || 'umum')))];
+  const filteredFaqs = activeFaqCategory === 'semua' ? faqs : faqs.filter(f => (f.category || 'umum') === activeFaqCategory);
+
   return (
     <>
       <OrganizationJsonLd />
@@ -280,17 +285,22 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         <AnnouncementBar announcements={announcements} />
 
         {/* ==================== HERO SECTION ==================== */}
-        <section className="relative overflow-hidden min-h-auto">
-          {/* Background gradient blobs */}
+        <section className="relative overflow-hidden min-h-auto" id="hero">
+          {/* Enhanced background gradient with mesh overlay */}
           <div className="absolute inset-0 -z-10 overflow-hidden">
-            <div className="absolute top-10 -left-32 w-[500px] h-[400px] bg-primary/8 rounded-full blur-[100px] animate-pulse-soft" />
-            <div className="absolute top-1/3 -right-20 w-[400px] h-[400px] bg-fuchsia-500/6 rounded-full blur-[100px] animate-pulse-soft" style={{ animationDelay: '3s' }} />
-            <div className="absolute -bottom-10 left-1/3 w-[300px] h-[300px] bg-purple-500/5 rounded-full blur-[80px] animate-pulse-soft" style={{ animationDelay: '6s' }} />
+            {/* Base gradient — richer purple/fuchsia tones */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.07] via-fuchsia-500/[0.04] to-purple-500/[0.06]" />
+            {/* Animated mesh blobs */}
+            <div className="absolute top-10 -left-32 w-[500px] h-[400px] bg-primary/10 rounded-full blur-[100px] animate-pulse-soft" />
+            <div className="absolute top-1/3 -right-20 w-[400px] h-[400px] bg-fuchsia-500/8 rounded-full blur-[100px] animate-pulse-soft" style={{ animationDelay: '3s' }} />
+            <div className="absolute -bottom-10 left-1/3 w-[300px] h-[300px] bg-purple-500/6 rounded-full blur-[80px] animate-pulse-soft" style={{ animationDelay: '6s' }} />
+            {/* Subtle diagonal accent line */}
+            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-bl from-primary/[0.03] via-transparent to-transparent rotate-12" />
             {/* Noise texture overlay */}
             <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }} />
           </div>
 
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-6 md:pt-24 md:pb-16 flex flex-col min-h-auto">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8 md:pt-28 md:pb-20 flex flex-col min-h-auto">
             <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center flex-1">
               {/* Left: Text Content */}
               <div className="text-center lg:text-left space-y-4">
@@ -326,18 +336,18 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   <Button
                     asChild
                     size="lg"
-                    className="gradient-primary text-white rounded-xl h-12 px-4 sm:px-8 text-sm font-medium shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/25 hover:scale-[1.04] active:scale-[0.97] transition-all duration-300"
+                    className="cta-shimmer-hover gradient-primary text-white rounded-xl h-12 px-4 sm:px-8 text-sm font-medium shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.04] active:scale-[0.97] transition-all duration-300"
                   >
                     <Link href="/order">
-                      <Zap className="w-4 h-4" />
-                      <span className="sm:inline hidden"></span>Order Sekarang
+                      <Zap className="w-4 h-4 relative z-[2]" />
+                      <span className="sm:inline hidden relative z-[2]"></span><span className="relative z-[2]">Order Sekarang</span>
                     </Link>
                   </Button>
                   <Button
                     asChild
                     variant="outline"
                     size="lg"
-                    className="rounded-xl h-12 px-4 sm:px-8 text-sm font-medium border-border/60 hover:bg-accent hover:shadow-lg hover:scale-[1.04] active:scale-[0.97] transition-all duration-300"
+                    className="rounded-xl h-12 px-4 sm:px-8 text-sm font-medium border-border/60 hover:bg-accent hover:border-primary/30 hover:shadow-lg hover:scale-[1.04] active:scale-[0.97] transition-all duration-300"
                   >
                     <Link href="/track">
                       <Truck className="w-4 h-4" />
@@ -483,7 +493,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         </section>
 
         {/* ==================== STATS SECTION ==================== */}
-        <section className="relative sm:py-4 lg:py-8">
+        <section className="relative py-6 sm:py-8 lg:py-12">
           {/* Radial gradient background behind stats grid */}
           <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.06] via-primary/[0.02] to-fuchsia-500/[0.04]" />
           {/* Radial glow accent */}
@@ -530,7 +540,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
 
         {/* ==================== PAYMENT TYPES — Running Text Cards ==================== */}
         {paymentTypes.length > 0 && (
-          <section className="relative py-12 md:py-20 below-fold-auto" id="payment-types">
+          <section className="relative py-16 md:py-24 below-fold-auto" id="payment-types">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               {/* Section Header */}
               <div className="text-center mb-8">
@@ -658,7 +668,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         <div className="section-divider" />
 
         {/* ==================== SERVICES — Desktop: Feature Cards Row ==================== */}
-        <section className="relative py-12 md:py-20 below-fold-auto">
+        <section className="relative py-16 md:py-24 below-fold-auto">
           <FadeInSection className="container mx-auto px-4 sm:px-6 lg:px-8">
             {/* Section Header */}
             <div className="text-center mb-6">
@@ -992,33 +1002,39 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
           <section className="relative py-12 md:py-20 bg-muted/30 below-fold-auto">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               {/* Section Header */}
-              <div className="text-center mb-10">
+              <div className="text-center mb-8">
                 <p className="text-sm font-medium text-primary mb-3">FAQ</p>
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  <h2 className="text-3xl md:text-4xl font-bold tracking-tight section-header-underline">
-                    Pertanyaan yang Sering Diajukan
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={() => setAllFaqOpen(!allFaqOpen)}
-                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mt-1.5"
-                    aria-label={allFaqOpen ? 'Tutup semua FAQ' : 'Lihat semua FAQ'}
-                  >
-                    <span>{allFaqOpen ? 'Tutup Semua' : 'Lihat Semua'}</span>
-                    {allFaqOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </button>
-                </div>
-                <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 section-header-underline">
+                  Pertanyaan yang Sering Diajukan
+                </h2>
+                <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed mb-6">
                   Temukan jawaban untuk pertanyaan umum tentang layanan kami.
                 </p>
+
+                {/* Category Filter Tabs */}
+                <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
+                  {faqCategories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => { setActiveFaqCategory(cat); setAllFaqOpen(false); }}
+                      className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
+                        activeFaqCategory === cat
+                          ? 'gradient-primary text-white shadow-md shadow-primary/20'
+                          : 'bg-background border border-border/60 text-muted-foreground hover:border-primary/30 hover:text-primary'
+                      }`}
+                    >
+                      {cat === 'semua' ? 'Semua' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Desktop: 2-column grid */}
               <div className="hidden md:grid md:grid-cols-2 gap-4 max-w-5xl mx-auto">
-                {faqs.map((faq, index) => (
+                {filteredFaqs.map((faq, index) => (
                   <Card key={faq.id} className="faq-card-hover border-border/50 bg-background py-0 gap-0 overflow-hidden">
                     <Accordion
-                      key={String(allFaqOpen)}
+                      key={`${String(allFaqOpen)}-${activeFaqCategory}`}
                       type={allFaqOpen ? 'multiple' : 'single'}
                       collapsible
                       defaultValue={allFaqOpen ? [faq.id] : undefined}
@@ -1044,10 +1060,10 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
 
               {/* Mobile: single column */}
               <div className="md:hidden max-w-2xl mx-auto space-y-3">
-                {faqs.map((faq, index) => (
+                {filteredFaqs.map((faq, index) => (
                   <Card key={faq.id} className="faq-card-hover border-border/50 bg-background py-0 gap-0 overflow-hidden">
                     <Accordion
-                      key={String(allFaqOpen)}
+                      key={`${String(allFaqOpen)}-${activeFaqCategory}`}
                       type={allFaqOpen ? 'multiple' : 'single'}
                       collapsible
                       defaultValue={allFaqOpen ? [faq.id] : undefined}
@@ -1266,7 +1282,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         <div className="section-divider" />
 
         {/* ==================== CTA SECTION — Clean & Different from Partner ==================== */}
-        <section className="relative py-12 md:py-20 overflow-hidden below-fold-auto">
+        <section className="relative py-16 md:py-24 overflow-hidden below-fold-auto">
           {/* Dot grid pattern background */}
           <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, var(--color-primary) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
           {/* Floating orbs */}
@@ -1330,7 +1346,6 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         <div className="section-divider" />
         <CitiesSection />
 
-        <WhatsAppFab />
         <ScrollToTop />
         <ExitIntentBanner />
         <SocialProofToast />

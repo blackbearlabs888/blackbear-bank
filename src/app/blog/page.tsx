@@ -312,13 +312,13 @@ export default function BlogListingPage() {
             '@type': 'Blog',
             name: `Blog ${siteName}`,
             description: `Artikel, tips, dan tutorial dari ${siteName}`,
-            url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id'}/blog`,
+            url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc'}/blog`,
             publisher: {
               '@type': 'Organization',
               name: siteName,
               logo: {
                 '@type': 'ImageObject',
-                url: config.logoUrl || `${process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id'}/logo.png`,
+                url: config.logoUrl || `${process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc'}/logo.png`,
               },
             },
           }),

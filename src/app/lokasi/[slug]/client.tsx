@@ -57,7 +57,7 @@ export default function LocationDetailClient({ location }: LocationDetailClientP
   const { config } = useSiteConfig();
   
   const siteName = config.websiteTitle || 'Black Bear';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
   const locationUrl = `${siteUrl}/lokasi/${location.slug}`;
 
   const handleOrderWhatsApp = () => {

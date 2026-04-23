@@ -8,7 +8,7 @@ import { useSiteConfig } from '@/hooks/use-site-config';
  */
 export function OrganizationJsonLd() {
   const { config } = useSiteConfig();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
   const siteName = config.websiteTitle || 'Black Bear';
   
   const jsonLd = {
@@ -162,7 +162,7 @@ export function FAQJsonLd() {
  * Breadcrumb Schema
  */
 export function BreadcrumbJsonLd({ items }: { items: Array<{ name: string; url: string }> }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
   
   const breadcrumbData = {
     '@context': 'https://schema.org',
@@ -188,7 +188,7 @@ export function BreadcrumbJsonLd({ items }: { items: Array<{ name: string; url: 
  */
 export function LocalBusinessJsonLd() {
   const { config } = useSiteConfig();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
   const siteName = config.websiteTitle || 'Black Bear';
   
   const jsonLd = {

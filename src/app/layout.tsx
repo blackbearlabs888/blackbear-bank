@@ -9,6 +9,7 @@ import { DashboardMobileNav } from "@/components/shared/dashboard-mobile-nav";
 import { ConditionalFooter } from "@/components/shared/conditional-footer";
 import { MaintenanceWrapper } from "@/components/shared/maintenance-wrapper";
 import PageLoader from "@/components/shared/page-loader";
+import WhatsAppFab from "@/components/landing/whatsapp-fab";
 import { db } from "@/lib/db";
 
 const inter = Inter({
@@ -25,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
     const websiteTitle = profile?.websiteTitle || "Black Bear";
     const metaTitle = profile?.metaTitle || `${websiteTitle} - Layanan Tarik Tunai Terpercaya`;
     const metaDescription = profile?.metaDescription || "Layanan tarik tunai profesional untuk Kartu Kredit & Paylater dengan proses cepat dan aman. Tarik tunai kartu kredit, GoPay Paylater, Shopee Paylater, dan berbagai metode pembayaran lainnya.";
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blackbear.id";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blackbear.cc";
     const logoUrl = profile?.logoUrl || `${siteUrl}/logo.png`;
     
     return {
@@ -122,7 +123,7 @@ export async function generateMetadata(): Promise<Metadata> {
     };
   } catch (error) {
     // Fallback to defaults if database fails
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blackbear.id";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blackbear.cc";
     return {
       metadataBase: new URL(siteUrl),
       title: "Black Bear - Layanan Tarik Tunai Terpercaya",
@@ -191,6 +192,7 @@ export default async function RootLayout({
             </div>
             <MobileBottomNav />
             <DashboardMobileNav />
+            <WhatsAppFab />
             <Toaster position="top-center" />
           </MaintenanceWrapper>
         </ThemeProvider>

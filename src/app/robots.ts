@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -15,7 +15,7 @@ export default function robots(): MetadataRoute.Robots {
           '/register',
           '/dashboard/',
           '/maintenance',
-          '/*?*', // Disallow URLs with query parameters
+          '/login',
         ],
       },
       {
@@ -28,7 +28,15 @@ export default function robots(): MetadataRoute.Robots {
           '/register',
           '/dashboard/',
           '/maintenance',
+          '/login',
         ],
+        googleBot: {
+          index: true,
+          follow: true,
+          'max-video-preview': -1,
+          'max-image-preview': 'large',
+          'max-snippet': -1,
+        },
       },
       {
         userAgent: 'Bingbot',
@@ -40,6 +48,7 @@ export default function robots(): MetadataRoute.Robots {
           '/register',
           '/dashboard/',
           '/maintenance',
+          '/login',
         ],
       },
     ],
