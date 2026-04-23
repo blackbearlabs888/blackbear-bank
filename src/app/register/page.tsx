@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
@@ -57,16 +57,18 @@ function AnimatedBackground() {
         }}
       />
       
-      {/* Floating particles */}
-      {[...Array(8)].map((_, i) => (
-        <FloatingParticle
-          key={i}
-          delay={i * 0.8}
-          duration={8 + Math.random() * 4}
-          size={4 + Math.random() * 8}
-          left={10 + (i * 12)}
-        />
-      ))}
+      {/* Floating particles - useMemo to prevent hydration mismatch */}
+      {useMemo(() => (
+        [...Array(8)].map((_, i) => (
+          <FloatingParticle
+            key={i}
+            delay={i * 0.8}
+            duration={8 + (i * 0.47)}
+            size={4 + (i * 0.93)}
+            left={10 + (i * 12)}
+          />
+        ))
+      ), [])}
       
       {/* Decorative orbs */}
       <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-primary/10 rounded-full blur-[80px] animate-pulse" />
@@ -144,7 +146,15 @@ export default function RegisterPage() {
   // Security: Honeypot & Cooldown
   const [honeypotValue, setHoneypotValue] = useState('');
   const [submitCooldown, setSubmitCooldown] = useState(0);
-  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cooldown timer decrement
+  useEffect(() => {
+    if (submitCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setSubmitCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [submitCooldown]);
 
   const siteName = config.websiteTitle || 'Black Bear';
 
@@ -238,6 +248,7 @@ export default function RegisterPage() {
       // Handle rate limit (429)
       if (response.status === 429) {
         setError(data.error || 'Terlalu banyak percobaan. Tunggu beberapa saat.');
+        setSubmitCooldown(60); // 60 second cooldown on rate limit
         setLoading(false);
         return;
       }

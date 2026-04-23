@@ -149,6 +149,21 @@ export function getClientIp(request: Request): string {
   return 'unknown';
 }
 
+/**
+ * Convenience wrapper: rate limit by request (extracts IP automatically)
+ */
+export async function rateLimit(
+  request: Request,
+  keyPrefix: string,
+  config?: Partial<RateLimitConfig>
+): Promise<RateLimitResult> {
+  const ip = getClientIp(request);
+  return checkRateLimit(ip, {
+    keyPrefix,
+    ...config,
+  });
+}
+
 // Preset configurations for common use cases
 export const RATE_LIMITS = {
   /** Order creation: 5 orders per 5 minutes */

@@ -14,6 +14,15 @@ function getInitialVisibility(): boolean {
 export default function CookieConsent() {
   // Initialize from localStorage directly — no useEffect needed for initial state
   const [isVisible, setIsVisible] = useState(getInitialVisibility);
+  const [isAnimated, setIsAnimated] = useState(false);
+
+  // Trigger entrance animation after mount
+  useEffect(() => {
+    if (isVisible) {
+      const timer = requestAnimationFrame(() => setIsAnimated(true));
+      return () => cancelAnimationFrame(timer);
+    }
+  }, [isVisible]);
 
   // Dispatch visibility state for other components (whatsapp-fab, footer, etc.)
   useEffect(() => {
@@ -41,7 +50,7 @@ export default function CookieConsent() {
       {/* Mobile: floating bottom bar above mobile nav */}
       <div className="fixed bottom-0 left-0 right-0 z-[60] pointer-events-none md:hidden">
         <div className="pointer-events-auto">
-          <div className="mx-3 mb-[73px] max-w-lg safe-area-bottom">
+          <div className={`mx-3 mb-[73px] max-w-lg safe-area-bottom transition-all duration-500 ease-out ${isAnimated ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
             <div className="relative bg-background/95 backdrop-blur-xl border border-border/60 rounded-2xl shadow-2xl shadow-black/10 p-4">
               {/* Glow */}
               <div className="absolute -inset-px bg-gradient-to-r from-primary/10 via-fuchsia-500/10 to-primary/10 rounded-2xl -z-10 blur-sm" />
@@ -95,7 +104,7 @@ export default function CookieConsent() {
 
       {/* Desktop: floating bottom-right card */}
       <div className="hidden md:block fixed bottom-6 right-6 z-[60] pointer-events-none">
-        <div className="pointer-events-auto">
+        <div className={`pointer-events-auto transition-all duration-500 ease-out ${isAnimated ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
           <div className="relative w-80 bg-background/95 backdrop-blur-xl border border-border/60 rounded-2xl shadow-2xl shadow-black/10 p-5">
             {/* Glow */}
             <div className="absolute -inset-px bg-gradient-to-r from-primary/10 via-fuchsia-500/10 to-primary/10 rounded-2xl -z-10 blur-sm" />

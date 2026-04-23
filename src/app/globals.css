@@ -1257,32 +1257,6 @@ input[type="text"][inputmode="numeric"]::-webkit-inner-spin-button {
               0 2px 8px -2px rgba(139, 92, 246, 0.15);
 }
 
-/* Gradient border glow on payment cards on hover */
-.payment-card-glow {
-  position: relative;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.payment-card-glow::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: linear-gradient(135deg, oklch(0.55 0.25 295 / 0), oklch(0.6 0.22 310 / 0), oklch(0.55 0.25 295 / 0));
-  z-index: -1;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-
-.payment-card-glow:hover::before {
-  opacity: 1;
-}
-
-.dark .payment-card-glow::before {
-  background: linear-gradient(135deg, oklch(0.7 0.22 295 / 0), oklch(0.65 0.2 310 / 0), oklch(0.7 0.22 295 / 0));
-}
-
 /* Section header animated underline — grows from center on scroll into view */
 .section-header-underline {
   position: relative;
@@ -1507,6 +1481,52 @@ select:focus {
 @keyframes trustPulse {
   0%, 100% { box-shadow: 0 0 0 0 oklch(0.6 0.18 160 / 0.3); }
   50% { box-shadow: 0 0 0 6px oklch(0.6 0.18 160 / 0); }
+}
+
+/* ===== Counter Gradient Text & Shimmer ===== */
+.counter-gradient-text {
+  background: linear-gradient(135deg, var(--color-primary), #d946ef, var(--color-primary));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: counterGradientShimmer 3s ease-in-out infinite;
+}
+
+@keyframes counterGradientShimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.counter-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: counterShimmerSweep 1.2s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes counterShimmerSweep {
+  0% { background-position: 200% 0; opacity: 0; }
+  20% { opacity: 1; }
+  100% { background-position: -200% 0; opacity: 0; }
+}
+
+.dark .counter-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: counterShimmerSweep 1.2s ease-out forwards;
 }
 
 .animate-trust-pulse {

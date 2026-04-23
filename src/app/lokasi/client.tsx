@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -12,10 +13,11 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { MapPin, ArrowRight, Search, Navigation, ExternalLink } from 'lucide-react';
+import { MapPin, ArrowRight, Search, Navigation, ExternalLink, Globe, MessageCircle } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import MapProvider from '@/components/map/map-provider';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 interface Location {
   id: string;
@@ -194,12 +196,13 @@ export default function LocationListingClient({ initialLocations }: LocationList
           <div className="max-w-md mx-auto">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <input
+              <Input
                 type="text"
                 placeholder="Cari lokasi..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                aria-label="Cari lokasi layanan"
+                className="pl-10 h-11 rounded-xl border-border/60 bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
               />
             </div>
           </div>
@@ -210,16 +213,54 @@ export default function LocationListingClient({ initialLocations }: LocationList
       <section className="py-12">
         <div className="container mx-auto px-4">
           {filteredLocations.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                <MapPin className="w-8 h-8 text-muted-foreground" />
+            <div className="text-center py-20">
+              <div className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-muted/50 flex items-center justify-center">
+                <div className="relative">
+                  <Globe className="w-9 h-9 text-muted-foreground/40" />
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+                    <MapPin className="w-3 h-3 text-primary/40" />
+                  </div>
+                </div>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Lokasi Tidak Ditemukan</h3>
-              <p className="text-muted-foreground max-w-md mx-auto">
+              <h3 className="text-xl font-semibold mb-2">
+                {searchQuery ? 'Lokasi Tidak Ditemukan' : 'Belum Ada Lokasi'}
+              </h3>
+              <p className="text-muted-foreground max-w-md mx-auto mb-6">
                 {searchQuery
-                  ? 'Tidak ada lokasi yang sesuai dengan pencarian Anda.'
-                  : 'Lokasi layanan akan segera hadir di kota Anda.'}
+                  ? 'Tidak ada lokasi yang sesuai dengan pencarian Anda. Coba kata kunci lain.'
+                  : 'Lokasi layanan akan segera hadir di kota Anda. Kami tersedia secara online.'}
               </p>
+              {searchQuery ? (
+                <Button
+                  variant="outline"
+                  onClick={() => setSearchQuery('')}
+                  className="rounded-xl"
+                >
+                  Reset Pencarian
+                </Button>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <Button asChild>
+                    <Link href="/order">
+                      Order Sekarang
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Link>
+                  </Button>
+                  {config.footerWhatsapp && (
+                    <Button variant="outline" asChild>
+                      <a
+                        href={`https://wa.me/${config.footerWhatsapp}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="gap-2"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        Hubungi Kami
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -242,14 +283,14 @@ export default function LocationListingClient({ initialLocations }: LocationList
                       onMouseEnter={() => setHoveredLocation(location.id)}
                       onMouseLeave={() => setHoveredLocation(null)}
                     >
-                      <Card className={`h-full overflow-hidden transition-all duration-300 border-border/50 hover:border-orange-500/30 ${isHovered ? 'ring-2 ring-orange-500/30 shadow-lg' : 'hover:shadow-lg'}`}>
+                      <Card className={`h-full overflow-hidden border-t-2 border-t-primary/20 hover:border-t-primary hover:shadow-lg transition-all duration-300 border-border/50 hover:border-orange-500/30 motion-safe:hover:scale-[1.02] ${isHovered ? 'ring-2 ring-orange-500/30 shadow-lg' : ''}`}>
                         {/* Featured Image or Color Bar */}
                         <div className="relative h-40 bg-muted overflow-hidden">
                           {location.featuredImage ? (
                             <img
                               src={location.featuredImage}
                               alt={`Gestun ${location.name}`}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-500/20 to-orange-600/10">
@@ -279,7 +320,7 @@ export default function LocationListingClient({ initialLocations }: LocationList
                             <span className="text-xs text-orange-500 font-medium">
                               Gestun {location.name}
                             </span>
-                            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-orange-500 transition-colors" />
+                            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-orange-500 transition-colors group-hover:translate-x-0.5" />
                           </div>
                         </CardContent>
                       </Card>
@@ -313,9 +354,4 @@ export default function LocationListingClient({ initialLocations }: LocationList
       </section>
     </div>
   );
-}
-
-// Helper function for conditional classnames
-function cn(...classes: (string | boolean | undefined | null)[]) {
-  return classes.filter(Boolean).join(' ');
 }

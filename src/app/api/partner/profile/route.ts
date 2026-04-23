@@ -112,6 +112,8 @@ export async function PATCH(request: NextRequest) {
         where: { id: user.id },
         data: { password: hashedPassword },
       });
+      // Revoke all sessions after password change
+      await db.session.deleteMany({ where: { userId: user.id } });
 
       return NextResponse.json({
         success: true,

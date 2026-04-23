@@ -29,13 +29,8 @@ export async function POST(request: NextRequest) {
       select: { city: true, name: true },
     });
 
-    console.log('Found partners:', partners.length);
-    console.log('Partner cities:', partners.map(p => ({ name: p.name, city: p.city })));
-
     // Get unique cities (trim and filter empty)
     const uniqueCities = [...new Set(partners.map(p => p.city.trim()).filter(Boolean))];
-    
-    console.log('Unique cities:', uniqueCities);
 
     if (uniqueCities.length === 0) {
       return NextResponse.json({
@@ -68,18 +63,15 @@ export async function POST(request: NextRequest) {
       if (existingSlugs.has(slug)) {
         skipped++;
         skippedLocations.push(city);
-        console.log(`Skipping ${city} - already exists with slug ${slug}`);
         continue;
       }
 
       try {
         // Get full city data (coordinates, province, island) from library
         const cityData = getCityData(city);
-        console.log(`City data for ${city}:`, cityData);
         
         // Generate SEO content with province if available
         const content = generateLocationContent(city, cityData?.province);
-        console.log(`Generated content for ${city}`);
 
         // Create location with full content
         await db.location.create({
@@ -99,7 +91,6 @@ export async function POST(request: NextRequest) {
         
         created++;
         createdLocations.push(city);
-        console.log(`Created location for ${city}`);
         
         if (!cityData?.lat || !cityData?.lng) {
           noCoords++;

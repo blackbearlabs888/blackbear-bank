@@ -77,7 +77,18 @@ export async function PUT(
 
     const location = await db.location.update({
       where: { id: existingLocation.id },
-      data: body,
+      data: {
+        city: body.city,
+        slug: body.slug,
+        description: body.description,
+        featuredImage: body.featuredImage,
+        metaTitle: body.metaTitle,
+        metaDescription: body.metaDescription,
+        address: body.address,
+        phone: body.phone,
+        whatsapp: body.whatsapp,
+        isActive: body.isActive,
+      },
     });
 
     return NextResponse.json({

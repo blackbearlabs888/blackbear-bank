@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 
 // PATCH /api/testimonials/[id] - Update testimonial (approve, feature, etc.)
 export async function PATCH(
@@ -7,6 +8,20 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Auth check
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Tidak terautentikasi' },
+        { status: 401 }
+      );
+    }
+    if (user.role !== 'owner') {
+      return NextResponse.json(
+        { success: false, error: 'Hanya owner yang dapat mengubah testimoni' },
+        { status: 403 }
+      );
+    }
     const { id } = await params;
     const body = await request.json();
     const { isApproved, isFeatured } = body;
@@ -49,6 +64,20 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Auth check
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Tidak terautentikasi' },
+        { status: 401 }
+      );
+    }
+    if (user.role !== 'owner') {
+      return NextResponse.json(
+        { success: false, error: 'Hanya owner yang dapat menghapus testimoni' },
+        { status: 403 }
+      );
+    }
     const { id } = await params;
 
     const testimonial = await db.testimonial.findUnique({

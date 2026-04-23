@@ -1,25 +1,20 @@
 import { db } from '@/lib/db';
 import { cookies } from 'next/headers';
-import { randomBytes, createHash } from 'crypto';
+import { randomBytes } from 'crypto';
+import bcrypt from 'bcryptjs';
+
+const SALT_ROUNDS = 12;
 
 // Password hashing
 export async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16).toString('hex');
-  const hash = createHash('sha256')
-    .update(password + salt)
-    .digest('hex');
-  return `${salt}:${hash}`;
+  return bcrypt.hash(password, SALT_ROUNDS);
 }
 
 export async function verifyPassword(
   password: string,
   storedPassword: string
 ): Promise<boolean> {
-  const [salt, hash] = storedPassword.split(':');
-  const computedHash = createHash('sha256')
-    .update(password + salt)
-    .digest('hex');
-  return hash === computedHash;
+  return bcrypt.compare(password, storedPassword);
 }
 
 // Session management
@@ -108,7 +103,7 @@ export function validateEmail(email: string): boolean {
 }
 
 export function validatePassword(password: string): boolean {
-  return password.length >= 6;
+  return password.length >= 8;
 }
 
 export function validatePhone(phone: string): boolean {
