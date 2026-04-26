@@ -314,18 +314,6 @@ function GestunGuide() {
   );
 }
 
-// Phone number formatter: 08xx-xxxx-xxxx
-const formatPhone = (value: string): string => {
-  const digits = value.replace(/\D/g, '').slice(0, 13);
-  if (digits.length <= 4) return digits;
-  if (digits.length <= 8) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
-  return `${digits.slice(0, 4)}-${digits.slice(4, 8)}-${digits.slice(8)}`;
-};
-
-const stripPhoneFormatting = (value: string): string => {
-  return value.replace(/\D/g, '');
-};
-
 // Step 1: Recipient Data
 function StepRecipient({ 
   formData, 
@@ -338,17 +326,9 @@ function StepRecipient({
 }) {
   const isValid = formData.name && formData.phone;
   const [searchPhone, setSearchPhone] = useState('');
-  const [phoneDisplay, setPhoneDisplay] = useState('');
   const [loadingLookup, setLoadingLookup] = useState(false);
   const [lookupError, setLookupError] = useState('');
   const [foundCustomer, setFoundCustomer] = useState<{name: string; transactions: number} | null>(null);
-
-  // Sync display with formData.phone on mount (e.g. auto-filled)
-  useEffect(() => {
-    if (formData.phone && !phoneDisplay) {
-      setPhoneDisplay(formatPhone(formData.phone));
-    }
-  }, [formData.phone]);
 
   // Auto-lookup when phone number is entered (debounced)
   const handleLookupCustomer = async () => {
@@ -370,9 +350,7 @@ function StepRecipient({
         // Auto-fill all customer data
         const customer = data.data;
         onChange('name', customer.name || '');
-        const customerPhone = customer.phone || formData.phone;
-        onChange('phone', customerPhone);
-        setPhoneDisplay(formatPhone(customerPhone));
+        onChange('phone', customer.phone || formData.phone);
         
         // Handle bank - check if in list or use custom
         const customerBank = customer.bankName || '';
@@ -498,15 +476,11 @@ function StepRecipient({
             </Label>
             <Input
               type="tel"
-              placeholder="08xx-xxxx-xxxx"
-              value={phoneDisplay}
-              onChange={(e) => {
-                const formatted = formatPhone(e.target.value);
-                setPhoneDisplay(formatted);
-                onChange('phone', stripPhoneFormatting(formatted));
-              }}
+              placeholder="08xxx atau 628xxx"
+              value={formData.phone}
+              onChange={(e) => onChange('phone', e.target.value.replace(/[^0-9]/g, '').slice(0, 15))}
               className="h-10 sm:h-11 rounded-xl bg-white/50 dark:bg-black/20 border-2 focus:border-primary transition-colors"
-              maxLength={16}
+              maxLength={15}
             />
           </div>
         </div>

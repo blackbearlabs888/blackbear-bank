@@ -139,8 +139,8 @@ export default function PartnerSettingsPage() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error('Password minimal 6 karakter');
+    if (newPassword.length < 8) {
+      toast.error('Password minimal 8 karakter');
       return;
     }
 
@@ -558,7 +558,7 @@ export default function PartnerSettingsPage() {
                 type={showPasswords ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Min. 6 karakter"
+                placeholder="Min. 8 karakter"
                 className="h-9 text-xs rounded-lg"
               />
             </div>

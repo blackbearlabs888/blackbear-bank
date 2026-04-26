@@ -265,7 +265,7 @@ export async function sendDailyReport(
 💰 Total Volume: ${formatCurrency(data.totalVolume)}
 💵 Profit: ${formatCurrency(data.totalProfit)}
 
-<ins>Info Lainnya:</ins>
+<ins>Info Lainnya:</uns>
 👤 Pelanggan Baru: ${data.newCustomers}
 ⏳ Pending: ${data.pendingTransactions}
 

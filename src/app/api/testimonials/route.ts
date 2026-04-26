@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toNumber } from '@/lib/db';
 import { sendTelegramMessage, formatCurrency } from '@/lib/telegram';
-import { rateLimit } from '@/lib/rate-limit';
-import { sanitizeString, FIELD_LIMITS } from '@/lib/sanitize';
 
 // GET /api/testimonials - Fetch testimonials (with optional filters)
 export async function GET(request: NextRequest) {
@@ -87,26 +85,8 @@ export async function GET(request: NextRequest) {
 // POST /api/testimonials - Submit a new testimonial
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting: 5 requests per 15 minutes
-    const { success } = await rateLimit(request, 'testimonial_submit', {
-      maxRequests: 5,
-      windowMs: 15 * 60 * 1000,
-    });
-    if (!success) {
-      return NextResponse.json(
-        { success: false, error: 'Terlalu banyak permintaan. Silakan coba lagi nanti.' },
-        { status: 429 }
-      );
-    }
-
     const body = await request.json();
-
-    // Sanitize inputs
-    const customerName = sanitizeString(body.customerName);
-    const review = sanitizeString(body.review);
-    const customerTitle = sanitizeString(body.customerTitle);
-    const rating = Math.min(5, Math.max(1, Math.round(Number(body.rating) || 0)));
-    const transactionId = sanitizeString(body.transactionId);
+    const { transactionId, rating, review, customerName } = body;
 
     // Validate required fields
     if (!transactionId || !rating || !customerName) {

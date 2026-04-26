@@ -99,7 +99,7 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      const isValidPassword = await verifyPassword(currentPassword, userWithPassword.password);
+      const isValidPassword = await verifyPassword(currentPassword, userWithPassword.password, user.id);
       if (!isValidPassword) {
         return NextResponse.json(
           { success: false, error: 'Password saat ini tidak valid' },
@@ -112,8 +112,6 @@ export async function PATCH(request: NextRequest) {
         where: { id: user.id },
         data: { password: hashedPassword },
       });
-      // Revoke all sessions after password change
-      await db.session.deleteMany({ where: { userId: user.id } });
 
       return NextResponse.json({
         success: true,

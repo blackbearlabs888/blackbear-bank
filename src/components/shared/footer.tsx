@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { MessageCircle, ArrowUp, Heart, ExternalLink, Shield, Zap, Clock } from 'lucide-react';
+import { MessageCircle, Heart, ExternalLink, Shield, Zap, Clock } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
-import { useCookieBannerVisible } from '@/hooks/use-cookie-banner-visible';
 import { cn } from '@/lib/utils';
 
 function SocialIcon({ href, icon, label, hoverColor }: {
@@ -21,9 +20,8 @@ function SocialIcon({ href, icon, label, hoverColor }: {
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center text-muted-foreground",
-        "transition-all duration-300 ease-out hover:scale-110 active:scale-95",
-        "hover:shadow-md hover:-translate-y-0.5",
+        "w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center transition-all duration-200 text-muted-foreground",
+        "hover:scale-105 active:scale-95",
         hoverColor
       )}
       aria-label={label}
@@ -93,8 +91,8 @@ export function Footer() {
 
   return (
     <footer className="relative bg-background mt-auto">
-      {/* Separator line above footer */}
-      <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+      {/* Gradient top border */}
+      <div className="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center max-w-5xl mx-auto">
           {/* Brand */}
@@ -232,82 +230,6 @@ export function Footer() {
         </div>
       </div>
 
-      <ScrollToTop />
     </footer>
-  );
-}
-
-function ScrollToTop() {
-  const [visible, setVisible] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const cookieBannerVisible = useCookieBannerVisible();
-
-  useEffect(() => {
-    let ticking = false;
-    const onScroll = () => {
-      const scrollY = window.scrollY;
-      setVisible(scrollY > 400);
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-          setProgress(docHeight > 0 ? scrollY / docHeight : 0);
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  const shouldShow = visible && !cookieBannerVisible;
-
-  // SVG circle properties
-  const size = 44;
-  const strokeWidth = 2.5;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - progress * circumference;
-
-  return (
-    <button
-      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      className={cn(
-        "fixed bottom-20 right-4 w-11 h-11 rounded-full gradient-primary text-white shadow-lg flex items-center justify-center z-40 active:scale-90 transition-all duration-300",
-        shouldShow ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
-      )}
-      aria-label="Scroll to top"
-    >
-      {/* Progress Ring */}
-      <svg
-        className="absolute inset-0 w-full h-full -rotate-90"
-        width={size}
-        height={size}
-      >
-        {/* Background track */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="rgba(255,255,255,0.15)"
-          strokeWidth={strokeWidth}
-        />
-        {/* Progress arc */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="rgba(255,255,255,0.6)"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className="transition-[stroke-dashoffset] duration-200 ease-out"
-        />
-      </svg>
-      <ArrowUp className="w-4 h-4 relative z-10" />
-    </button>
   );
 }

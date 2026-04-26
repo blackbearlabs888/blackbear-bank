@@ -24,9 +24,9 @@ export async function PATCH(
     // Trim and validate password
     const trimmedPassword = typeof newPassword === 'string' ? newPassword.trim() : '';
 
-    if (!trimmedPassword || trimmedPassword.length < 6) {
+    if (!trimmedPassword || trimmedPassword.length < 8) {
       return NextResponse.json(
-        { success: false, error: 'Password minimal 6 karakter' },
+        { success: false, error: 'Password minimal 8 karakter' },
         { status: 400 }
       );
     }

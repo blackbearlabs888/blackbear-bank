@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, verifyPassword, hashPassword } from '@/lib/auth';
 import { db } from '@/lib/db';
 
 // GET owner profile
@@ -75,7 +75,51 @@ export async function PATCH(request: NextRequest) {
       footerYoutube,
       footerThreads,
       maintenanceMode,
+      // Password change
+      currentPassword,
+      newPassword,
     } = body;
+
+    // Handle password change
+    if (currentPassword && newPassword) {
+      if (newPassword.length < 8) {
+        return NextResponse.json(
+          { success: false, error: 'Password baru minimal 8 karakter' },
+          { status: 400 }
+        );
+      }
+
+      const userWithPassword = await db.user.findUnique({
+        where: { id: user.id },
+        select: { password: true },
+      });
+
+      if (!userWithPassword) {
+        return NextResponse.json(
+          { success: false, error: 'User tidak ditemukan' },
+          { status: 404 }
+        );
+      }
+
+      const isValidPassword = await verifyPassword(currentPassword, userWithPassword.password, user.id);
+      if (!isValidPassword) {
+        return NextResponse.json(
+          { success: false, error: 'Password saat ini tidak valid' },
+          { status: 400 }
+        );
+      }
+
+      const hashedPassword = await hashPassword(newPassword);
+      await db.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Password berhasil diubah',
+      });
+    }
 
     // Get existing profile
     let profile = await db.ownerProfile.findFirst();
@@ -99,7 +143,7 @@ export async function PATCH(request: NextRequest) {
     if (footerThreads !== undefined) profileUpdateData.footerThreads = footerThreads || null;
     if (maintenanceMode !== undefined) profileUpdateData.maintenanceMode = maintenanceMode;
 
-    // Build update data for User table
+    // Build update data for User table (skip if password change handled above)
     const userUpdateData: Record<string, unknown> = {};
     
     // Update user name and avatar in User table as well

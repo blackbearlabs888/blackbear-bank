@@ -145,7 +145,7 @@ export function DesktopNavbar() {
             <nav className="hidden md:flex items-center gap-0.5">
               {!isAuthenticated ? (
                 publicLinks.map((link) => {
-                  const isActive = pathname === link.href || (link.href !== '/' && pathname?.startsWith(link.href));
+                  const isActive = pathname === link.href;
                   return (
                     <Link
                       key={link.href}
@@ -332,8 +332,8 @@ export function DesktopNavbar() {
               <button
                 onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
                 className={cn(
-                  "w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center hover:bg-muted transition-all duration-300 hover:scale-105 active:scale-95",
-                  isDashboardPage ? "hidden" : ""
+                  "w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center hover:bg-muted transition-colors",
+                  isDashboardPage && "md:hidden hidden"
                 )}
                 aria-label="Toggle theme"
               >

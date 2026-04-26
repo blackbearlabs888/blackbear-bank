@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser, hashPassword } from '@/lib/auth';
 import { db, toNumber } from '@/lib/db';
 import { randomBytes } from 'crypto';
-import { sanitizeString } from '@/lib/sanitize';
 
 // Helper to serialize partner data
 function serializePartner(partner: Record<string, unknown>) {
@@ -173,21 +172,20 @@ export async function PATCH(
     if (target !== undefined) updateData.target = parseFloat(target);
     if (tier !== undefined) updateData.tier = tier;
     if (status !== undefined) updateData.status = status;
-    if (notes !== undefined) updateData.notes = sanitizeString(notes);
+    if (notes !== undefined) updateData.notes = notes;
     if (commission !== undefined) updateData.commission = parseFloat(commission);
     if (badge !== undefined) updateData.badge = badge;
 
     // Handle partner info updates
     if (name !== undefined) {
-      const sanitizedName = sanitizeString(name);
-      updateData.name = sanitizedName;
-      userData.name = sanitizedName;
+      updateData.name = name;
+      userData.name = name;
     }
-    if (phone !== undefined) updateData.phone = sanitizeString(phone);
-    if (bankName !== undefined) updateData.bankName = sanitizeString(bankName);
-    if (bankAccount !== undefined) updateData.bankAccount = sanitizeString(bankAccount);
-    if (bankHolder !== undefined) updateData.bankHolder = sanitizeString(bankHolder);
-    if (city !== undefined) updateData.city = sanitizeString(city);
+    if (phone !== undefined) updateData.phone = phone;
+    if (bankName !== undefined) updateData.bankName = bankName;
+    if (bankAccount !== undefined) updateData.bankAccount = bankAccount;
+    if (bankHolder !== undefined) updateData.bankHolder = bankHolder;
+    if (city !== undefined) updateData.city = city;
 
     // Update user if needed
     if (Object.keys(userData).length > 0) {

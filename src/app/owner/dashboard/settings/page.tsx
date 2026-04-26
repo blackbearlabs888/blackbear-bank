@@ -32,6 +32,7 @@ import {
   Image as ImageIcon,
   ExternalLink,
   Eye,
+  EyeOff,
   Monitor,
   Youtube,
   Bell,
@@ -41,6 +42,7 @@ import {
   Link2,
   Trash2,
   RefreshCw,
+  KeyRound,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
@@ -145,6 +147,14 @@ export default function OwnerSettingsPage() {
     lastErrorDate?: number;
     lastErrorMessage?: string;
   } | null>(null);
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   // Trigger hydration on mount
   useEffect(() => {
@@ -387,6 +397,49 @@ export default function OwnerSettingsPage() {
       });
     } finally {
       setTestingTelegram(false);
+    }
+  };
+
+  // Change owner password
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword) {
+      toast.error('Semua field harus diisi');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('Password baru tidak cocok');
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error('Password baru minimal 8 karakter');
+      return;
+    }
+    if (currentPassword === newPassword) {
+      toast.error('Password baru harus berbeda dari sebelumnya');
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      const response = await fetch('/api/owner/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success('Password berhasil diubah');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        toast.error(result.error || 'Gagal mengubah password');
+      }
+    } catch {
+      toast.error('Terjadi kesalahan');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -1439,6 +1492,120 @@ export default function OwnerSettingsPage() {
                   size="md"
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Change Password Card */}
+          <Card className="rounded-xl dash-card overflow-hidden">
+            <CardHeader className="pb-2">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Keamanan</p>
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-primary" />
+                Ubah Password
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* Current Password */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Password Saat Ini</Label>
+                <div className="relative">
+                  <Input
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Masukkan password saat ini"
+                    className="h-9 text-xs rounded-lg pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* New Password */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Password Baru</Label>
+                <div className="relative">
+                  <Input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Min. 8 karakter"
+                    className="h-9 text-xs rounded-lg pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Konfirmasi Password Baru</Label>
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Ulangi password baru"
+                  className={cn(
+                    "h-9 text-xs rounded-lg",
+                    confirmPassword && confirmPassword !== newPassword && "border-destructive"
+                  )}
+                />
+                {confirmPassword && confirmPassword !== newPassword && (
+                  <p className="text-[10px] text-destructive">Password tidak cocok</p>
+                )}
+              </div>
+
+              {/* Password Strength Indicator */}
+              {newPassword && (
+                <div className="space-y-1.5">
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4].map((level) => (
+                      <div
+                        key={level}
+                        className={cn(
+                          "h-1 flex-1 rounded-full transition-colors",
+                          newPassword.length >= level * 3
+                            ? newPassword.length >= 12
+                              ? "bg-emerald-500"
+                              : newPassword.length >= 8
+                                ? "bg-amber-500"
+                                : "bg-red-500"
+                            : "bg-muted"
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <p className={cn(
+                    "text-[10px]",
+                    newPassword.length >= 12 ? "text-emerald-600" : newPassword.length >= 8 ? "text-amber-600" : "text-red-500"
+                  )}>
+                    {newPassword.length < 8 ? "Terlalu pendek" : newPassword.length < 12 ? "Cukup kuat" : "Kuat"}
+                  </p>
+                </div>
+              )}
+
+              <Button
+                onClick={handleChangePassword}
+                disabled={passwordLoading || !currentPassword || !newPassword || !confirmPassword}
+                className="w-full h-9 text-xs font-medium rounded-lg"
+              >
+                {passwordLoading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <KeyRound className="w-4 h-4 mr-2" />
+                )}
+                Ubah Password
+              </Button>
             </CardContent>
           </Card>
 

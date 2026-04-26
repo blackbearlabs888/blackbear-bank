@@ -5,7 +5,6 @@ import {
   createSession, 
   setSessionCookie,
   validateEmail,
-  validatePassword
 } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
 
@@ -38,12 +37,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!validatePassword(password)) {
-      return NextResponse.json(
-        { success: false, error: 'Password minimal 6 karakter' },
-        { status: 400 }
-      );
-    }
+    // NOTE: validatePassword is intentionally NOT checked here.
+    // Login only verifies against the stored hash — format validation is meaningless
+    // because old users may have shorter passwords from the legacy SHA-256 system.
+    // Password strength validation belongs in registration and password change only.
 
     if (!['owner', 'partner'].includes(role)) {
       return NextResponse.json(
@@ -65,8 +62,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify password
-    const isValid = await verifyPassword(password, user.password);
+    // Verify password (with auto-migration from legacy SHA-256 to bcrypt)
+    const isValid = await verifyPassword(password, user.password, user.id);
     if (!isValid) {
       return NextResponse.json(
         { success: false, error: 'Email atau password salah' },

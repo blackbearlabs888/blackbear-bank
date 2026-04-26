@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import { db } from '@/lib/db';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.blackbear.cc';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
 
   // Static pages - all public-facing pages
   const getStaticPages = (): MetadataRoute.Sitemap => [
@@ -11,12 +11,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 1,
-    },
-    {
-      url: `${siteUrl}/login`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.7,
     },
     {
       url: `${siteUrl}/order`,
@@ -28,7 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${siteUrl}/track`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
-      priority: 0.9,
+      priority: 0.8,
     },
     {
       url: `${siteUrl}/blog`,
@@ -46,7 +40,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${siteUrl}/lokasi`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
-      priority: 0.7,
+      priority: 0.8,
     },
   ];
 
@@ -70,7 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${siteUrl}/blog/${post.slug}`,
       lastModified: post.updatedAt,
       changeFrequency: 'weekly' as const,
-      priority: 0.7,
+      priority: 0.8,
       ...(post.featuredImage ? {
         images: [{
           loc: post.featuredImage,
@@ -79,7 +73,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       } : {}),
     }));
 
-    // Location pages
+    // Location pages - higher priority for local SEO
     const locationPages: MetadataRoute.Sitemap = locations.map((location) => ({
       url: `${siteUrl}/lokasi/${location.slug}`,
       lastModified: location.updatedAt,
