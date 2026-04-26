@@ -182,7 +182,6 @@ export async function PATCH(
 
     // Prepare update data
     const updateData: Record<string, unknown> = {};
-    const statsOperations: any[] = [];
     
     if (status !== undefined) {
       const validStatuses = ['pending', 'verification', 'process', 'success', 'failed'];
@@ -202,26 +201,22 @@ export async function PATCH(
         
         if (!wasSuccess && willBeSuccess) {
           // Transaction is now successful - increment partner stats
-          statsOperations.push(
-            db.partner.update({
-              where: { id: existingTransaction.partnerId },
-              data: {
-                totalProfit: { increment: existingTransaction.partnerProfit },
-                totalVolume: { increment: existingTransaction.nominal },
-              },
-            })
-          );
+          await db.partner.update({
+            where: { id: existingTransaction.partnerId },
+            data: {
+              totalProfit: { increment: existingTransaction.partnerProfit },
+              totalVolume: { increment: existingTransaction.nominal },
+            },
+          });
         } else if (wasSuccess && !willBeSuccess) {
           // Transaction is no longer successful - decrement partner stats
-          statsOperations.push(
-            db.partner.update({
-              where: { id: existingTransaction.partnerId },
-              data: {
-                totalProfit: { decrement: existingTransaction.partnerProfit },
-                totalVolume: { decrement: existingTransaction.nominal },
-              },
-            })
-          );
+          await db.partner.update({
+            where: { id: existingTransaction.partnerId },
+            data: {
+              totalProfit: { decrement: existingTransaction.partnerProfit },
+              totalVolume: { decrement: existingTransaction.nominal },
+            },
+          });
         }
       }
     }
@@ -244,12 +239,10 @@ export async function PATCH(
         }
         // Reverse old partner stats if different and was successful
         if (existingTransaction.partnerId && existingTransaction.partnerId !== effectivePartnerId && existingTransaction.status === 'success') {
-          statsOperations.push(
-            db.partner.update({
-              where: { id: existingTransaction.partnerId },
-              data: { totalProfit: { decrement: existingTransaction.partnerProfit }, totalVolume: { decrement: existingTransaction.nominal } },
-            })
-          );
+          await db.partner.update({
+            where: { id: existingTransaction.partnerId },
+            data: { totalProfit: { decrement: existingTransaction.partnerProfit }, totalVolume: { decrement: existingTransaction.nominal } },
+          });
         }
         // Calculate new partner profit
         const partnerRate = toNumber(partner.commission) || 0;
@@ -261,22 +254,18 @@ export async function PATCH(
         updateData.ownerProfit = newOwnerProfit;
         // Apply new partner stats if was successful
         if (existingTransaction.status === 'success') {
-          statsOperations.push(
-            db.partner.update({
-              where: { id: effectivePartnerId },
-              data: { totalProfit: { increment: newPartnerProfit }, totalVolume: { increment: existingTransaction.nominal } },
-            })
-          );
+          await db.partner.update({
+            where: { id: effectivePartnerId },
+            data: { totalProfit: { increment: newPartnerProfit }, totalVolume: { increment: existingTransaction.nominal } },
+          });
         }
       } else {
         // Remove partner - reverse old partner stats if was successful
         if (existingTransaction.partnerId && existingTransaction.status === 'success') {
-          statsOperations.push(
-            db.partner.update({
-              where: { id: existingTransaction.partnerId },
-              data: { totalProfit: { decrement: existingTransaction.partnerProfit }, totalVolume: { decrement: existingTransaction.nominal } },
-            })
-          );
+          await db.partner.update({
+            where: { id: existingTransaction.partnerId },
+            data: { totalProfit: { decrement: existingTransaction.partnerProfit }, totalVolume: { decrement: existingTransaction.nominal } },
+          });
         }
         const currentNetMargin = toNumber(existingTransaction.netMargin);
         updateData.partnerId = null;
@@ -357,25 +346,21 @@ export async function PATCH(
       // Update customer total volume if nominal changed
       if (nominal !== undefined && newNominal !== oldNominal) {
         const volumeDiff = newNominal - oldNominal;
-        statsOperations.push(
-          db.customer.update({
-            where: { id: existingTransaction.customerId },
-            data: {
-              totalVolume: { increment: volumeDiff },
-            },
-          })
-        );
+        await db.customer.update({
+          where: { id: existingTransaction.customerId },
+          data: {
+            totalVolume: { increment: volumeDiff },
+          },
+        });
 
         // Update partner total volume if transaction was successful
         if (existingTransaction.partnerId && existingTransaction.status === 'success') {
-          statsOperations.push(
-            db.partner.update({
-              where: { id: existingTransaction.partnerId },
-              data: {
-                totalVolume: { increment: volumeDiff },
-              },
-            })
-          );
+          await db.partner.update({
+            where: { id: existingTransaction.partnerId },
+            data: {
+              totalVolume: { increment: volumeDiff },
+            },
+          });
         }
       }
     }
@@ -542,21 +527,17 @@ export async function PATCH(
       updateData.totalReceived = totalReceived;
     }
 
-    // Update transaction atomically with all stats operations
-    const results = await db.$transaction([
-      ...statsOperations,
-      db.transaction.update({
-        where: { id },
-        data: updateData,
-        include: {
-          customer: true,
-          paymentType: true,
-          marketplace: true,
-          partner: true,
-        },
-      }),
-    ]);
-    const transaction = results[results.length - 1];
+    // Update transaction
+    const transaction = await db.transaction.update({
+      where: { id },
+      data: updateData,
+      include: {
+        customer: true,
+        paymentType: true,
+        marketplace: true,
+        partner: true,
+      },
+    });
 
     // Create notification for status update
     if (status && status !== existingTransaction.status) {
@@ -717,28 +698,30 @@ export async function DELETE(
       );
     }
 
-    // Atomically reverse customer stats, partner stats, and delete transaction
-    await db.$transaction([
-      db.customer.update({
-        where: { id: existingTransaction.customerId },
+    // Reverse customer stats
+    await db.customer.update({
+      where: { id: existingTransaction.customerId },
+      data: {
+        totalVolume: { decrement: existingTransaction.nominal },
+        totalTransactions: { decrement: 1 },
+      },
+    });
+
+    // Reverse partner stats if exists and was successful
+    if (existingTransaction.partnerId && existingTransaction.status === 'success') {
+      await db.partner.update({
+        where: { id: existingTransaction.partnerId },
         data: {
           totalVolume: { decrement: existingTransaction.nominal },
-          totalTransactions: { decrement: 1 },
+          totalProfit: { decrement: existingTransaction.partnerProfit },
         },
-      }),
-      ...(existingTransaction.partnerId && existingTransaction.status === 'success'
-        ? [db.partner.update({
-            where: { id: existingTransaction.partnerId },
-            data: {
-              totalVolume: { decrement: existingTransaction.nominal },
-              totalProfit: { decrement: existingTransaction.partnerProfit },
-            },
-          })]
-        : []),
-      db.transaction.delete({
-        where: { id },
-      }),
-    ]);
+      });
+    }
+
+    // Delete transaction
+    await db.transaction.delete({
+      where: { id },
+    });
 
     return NextResponse.json({
       success: true,

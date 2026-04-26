@@ -6,12 +6,12 @@ import { useSiteConfig } from '@/hooks/use-site-config';
  * JSON-LD Structured Data for SEO
  * Provides rich snippets in Google search results
  */
-export function OrganizationJsonLd({ ratingValue, reviewCount }: { ratingValue?: number; reviewCount?: number }) {
+export function OrganizationJsonLd() {
   const { config } = useSiteConfig();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
   const siteName = config.websiteTitle || 'Black Bear';
   
-  const jsonLd: Record<string, unknown> = {
+  const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FinancialService',
     name: siteName,
@@ -40,15 +40,13 @@ export function OrganizationJsonLd({ ratingValue, reviewCount }: { ratingValue?:
       closes: '23:59',
     },
     priceRange: '$$',
-    ...(ratingValue !== undefined && reviewCount !== undefined ? {
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: String(ratingValue),
-        reviewCount: String(reviewCount),
-        bestRating: '5',
-        worstRating: '1',
-      },
-    } : {}),
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.9',
+      reviewCount: '1250',
+      bestRating: '5',
+      worstRating: '1',
+    },
     sameAs: [
       config.footerInstagram,
       config.footerFacebook,

@@ -16,7 +16,6 @@ export function AnimatedCounter({
   formatter,
 }: AnimatedCounterProps) {
   const [value, setValue] = useState(0);
-  const [finished, setFinished] = useState(false);
   const hasStarted = useRef(false);
   const elementRef = useRef<HTMLDivElement>(null);
 
@@ -39,7 +38,6 @@ export function AnimatedCounter({
         requestAnimationFrame(animate);
       } else {
         setValue(target);
-        setFinished(true);
       }
     };
 
@@ -77,14 +75,6 @@ export function AnimatedCounter({
   }, [startOnView]);
 
   return (
-    <span
-      ref={elementRef}
-      className={`relative inline-block ${finished ? 'counter-gradient-text' : ''}`}
-    >
-      {finished && (
-        <span className="counter-shimmer" />
-      )}
-      {formatter(value)}
-    </span>
+    <span ref={elementRef}>{formatter(value)}</span>
   );
 }

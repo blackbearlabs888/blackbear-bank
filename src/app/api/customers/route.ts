@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { db, toNumber } from '@/lib/db';
 import { checkCustomerDuplicate, normalizePhone } from '@/lib/customer-utils';
-import { sanitizeString } from '@/lib/sanitize';
 
 // GET customers with pagination
 export async function GET(request: NextRequest) {
@@ -119,14 +118,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const name = sanitizeString(body.name);
-    const phone = body.phone;
-    const bankName = sanitizeString(body.bankName);
-    const bankAccount = sanitizeString(body.bankAccount);
-    const bankHolder = sanitizeString(body.bankHolder);
-    const city = sanitizeString(body.city);
-    const label = sanitizeString(body.label);
-    const updateExisting = body.updateExisting;
+    const { name, phone, bankName, bankAccount, bankHolder, city, label, updateExisting } = body;
 
     // Validation
     if (!name || !phone) {

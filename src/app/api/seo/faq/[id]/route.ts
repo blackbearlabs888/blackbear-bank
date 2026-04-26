@@ -64,13 +64,7 @@ export async function PUT(
 
     const updatedFaq = await db.fAQ.update({
       where: { id },
-      data: {
-        question: body.question,
-        answer: body.answer,
-        category: body.category,
-        order: body.order,
-        isActive: body.isActive,
-      },
+      data: body,
     });
 
     return NextResponse.json({

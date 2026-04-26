@@ -1,16 +1,28 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ArrowUp } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { useCookieBannerVisible } from '@/hooks/use-cookie-banner-visible';
 
 export default function ScrollToTop() {
-  const [isVisible, setIsVisible] = useState(false);
   const [scrollPercent, setScrollPercent] = useState(0);
+  const pathname = usePathname();
   const cookieBannerVisible = useCookieBannerVisible();
-  const hasInit = useRef(false);
 
+  // Don't show on dashboard/auth pages
+  const isHiddenPage =
+    pathname?.startsWith('/owner/') ||
+    pathname?.startsWith('/partner/') ||
+    pathname?.startsWith('/dashboard') ||
+    pathname?.startsWith('/login') ||
+    pathname?.startsWith('/register') ||
+    pathname?.startsWith('/maintenance');
+
+  // Track scroll position via scroll event callback
   useEffect(() => {
+    if (isHiddenPage) return;
+
     let ticking = false;
     const onScroll = () => {
       if (!ticking) {
@@ -20,10 +32,6 @@ export default function ScrollToTop() {
           if (docHeight > 0) {
             setScrollPercent(Math.min((scrollTop / docHeight) * 100, 100));
           }
-          if (!hasInit.current) {
-            hasInit.current = true;
-          }
-          setIsVisible(scrollTop > 600);
           ticking = false;
         });
         ticking = true;
@@ -31,28 +39,40 @@ export default function ScrollToTop() {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
+  }, [pathname, isHiddenPage]);
+
+  const isVisible = scrollPercent > 2;
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  // Cookie banner only renders on public pages, so only offset on those pages
+  const isPublicPage = pathname === '/' || pathname === '/faq' || pathname?.startsWith('/blog') || pathname?.startsWith('/lokasi');
+  const shouldOffsetCookie = cookieBannerVisible && isPublicPage;
 
-  // Hide when cookie banner is visible on mobile
-  if (!isVisible) return null;
-  if (cookieBannerVisible) return null;
+  // Align right with WA FAB: right-4 sm:right-5 md:right-6
+  // Stack vertically above WA FAB with 16px gap
+  // Mobile: FAB at bottom-24 (96px) + 52px height + 16px gap = 164px → bottom-40 (160px) ≈ bottom-[10.5rem]
+  // Desktop: FAB at md:bottom-6 (24px) + 56px height + 16px gap = 96px → md:bottom-24 (96px)
+  const btnBottom = shouldOffsetCookie
+    ? 'bottom-[21rem]'       // above WA FAB when cookie visible on mobile
+    : 'bottom-[10.5rem]';    // above WA FAB normally on mobile
+  const btnBottomMd = shouldOffsetCookie
+    ? 'md:bottom-[16.5rem]'  // above WA FAB when cookie visible on desktop
+    : 'md:bottom-24';        // above WA FAB normally on desktop
+
+  if (!isVisible || isHiddenPage) return null;
 
   // SVG progress ring calculations
-  const radius = 20;
+  const radius = 18;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (scrollPercent / 100) * circumference;
 
   return (
     <button
       onClick={scrollToTop}
-      className="fixed z-40
-        bottom-24 right-4
-        md:bottom-8 md:right-6
-        w-10 h-10 md:w-11 md:h-11
+      className={`fixed z-[61] right-4 sm:right-5 md:right-6 ${btnBottom} ${btnBottomMd}
+        w-11 h-11
         rounded-full
         bg-background/90 backdrop-blur-sm border border-border/60
         shadow-lg shadow-black/10
@@ -60,11 +80,10 @@ export default function ScrollToTop() {
         text-muted-foreground hover:text-primary
         hover:border-primary/30 hover:shadow-md hover:shadow-primary/10
         transition-all duration-300
-        hover:-translate-y-0.5 active:scale-95
-        animate-fade-in"
+        hover:-translate-y-0.5 active:scale-95`}
       aria-label="Scroll to top"
     >
-      <ArrowUp className="w-4 h-4 md:w-[18px] md:h-[18px] relative z-10" />
+      <ArrowUp className="w-4 h-4 relative z-10" />
       {/* Progress ring */}
       <svg
         className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none"
@@ -86,7 +105,7 @@ export default function ScrollToTop() {
           cy="22"
           r={radius}
           fill="none"
-          stroke="url(#progressGradient)"
+          stroke="url(#scrollProgressGradient)"
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeDasharray={circumference}
@@ -94,7 +113,7 @@ export default function ScrollToTop() {
           className="transition-[stroke-dashoffset] duration-150 ease-out"
         />
         <defs>
-          <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <linearGradient id="scrollProgressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="var(--color-primary)" />
             <stop offset="100%" stopColor="#d946ef" />
           </linearGradient>

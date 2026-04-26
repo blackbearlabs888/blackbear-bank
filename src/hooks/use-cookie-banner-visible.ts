@@ -7,6 +7,13 @@ import { useState, useEffect, useSyncExternalStore, useCallback } from 'react';
 
 const listeners = new Set<() => void>();
 
+// Initialize synchronously from localStorage BEFORE any component reads the snapshot.
+// This fixes the race condition where WhatsAppFab/ScrollToTop mount before
+// CookieConsent's useEffect dispatches the visibility state.
+if (typeof window !== 'undefined' && window.__cookieBannerVisible === undefined) {
+  window.__cookieBannerVisible = !localStorage.getItem('cookie-consent');
+}
+
 function emitChange() {
   listeners.forEach((listener) => listener());
 }

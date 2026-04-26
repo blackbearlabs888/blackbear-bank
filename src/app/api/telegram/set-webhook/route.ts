@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
 
 /**
  * Set or remove Telegram webhook
@@ -11,21 +10,6 @@ import { getCurrentUser } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    // Auth check - owner only
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Tidak terautentikasi' },
-        { status: 401 }
-      );
-    }
-    if (user.role !== 'owner') {
-      return NextResponse.json(
-        { success: false, error: 'Hanya owner yang dapat mengatur webhook' },
-        { status: 403 }
-      );
-    }
-
     const settings = await db.notificationSettings.findFirst();
     const botToken = settings?.telegramBotToken;
 
@@ -89,21 +73,6 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   try {
-    // Auth check - owner only
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Tidak terautentikasi' },
-        { status: 401 }
-      );
-    }
-    if (user.role !== 'owner') {
-      return NextResponse.json(
-        { success: false, error: 'Hanya owner yang dapat mengatur webhook' },
-        { status: 403 }
-      );
-    }
-
     const settings = await db.notificationSettings.findFirst();
     const botToken = settings?.telegramBotToken;
 
@@ -142,21 +111,6 @@ export async function DELETE() {
 
 export async function GET() {
   try {
-    // Auth check - owner only
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Tidak terautentikasi' },
-        { status: 401 }
-      );
-    }
-    if (user.role !== 'owner') {
-      return NextResponse.json(
-        { success: false, error: 'Hanya owner yang dapat mengatur webhook' },
-        { status: 403 }
-      );
-    }
-
     const settings = await db.notificationSettings.findFirst();
     const botToken = settings?.telegramBotToken;
 

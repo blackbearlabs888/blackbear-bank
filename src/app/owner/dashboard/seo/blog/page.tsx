@@ -132,7 +132,6 @@ export default function BlogManagementPage() {
   const [deletingPost, setDeletingPost] = useState<BlogPost | null>(null);
   const [previewPost, setPreviewPost] = useState<BlogPost | null>(null);
   const [formData, setFormData] = useState(emptyForm);
-  const slugManuallyEdited = useRef(false);
 
   // Trigger hydration on mount
   useEffect(() => {
@@ -219,26 +218,18 @@ export default function BlogManagementPage() {
     setFormData(prev => ({
       ...prev,
       title,
-      // Auto-generate slug from title unless user has manually edited it (or we're editing an existing post)
-      slug: (slugManuallyEdited.current || editingPost) ? prev.slug : generateSlug(title),
+      slug: prev.slug || generateSlug(title),
     }));
-  };
-
-  const handleSlugChange = (slug: string) => {
-    slugManuallyEdited.current = true;
-    setFormData(prev => ({ ...prev, slug }));
   };
 
   const openCreateDialog = () => {
     setEditingPost(null);
     setFormData(emptyForm);
-    slugManuallyEdited.current = false;
     setShowDialog(true);
   };
 
   const openEditDialog = (post: BlogPost) => {
     setEditingPost(post);
-    slugManuallyEdited.current = true; // Editing existing post, don't auto-generate slug
     setFormData({
       title: post.title,
       slug: post.slug,
@@ -601,7 +592,7 @@ export default function BlogManagementPage() {
                 <Label className="text-xs">Slug *</Label>
                 <Input
                   value={formData.slug}
-                  onChange={(e) => handleSlugChange(e.target.value)}
+                  onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
                   placeholder="judul-artikel"
                   className="h-9 text-xs rounded-lg"
                 />

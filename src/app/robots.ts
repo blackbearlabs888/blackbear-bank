@@ -15,7 +15,7 @@ export default function robots(): MetadataRoute.Robots {
           '/register',
           '/dashboard/',
           '/maintenance',
-          '/*?*', // Disallow URLs with query parameters
+          '/login',
         ],
       },
       {
@@ -28,7 +28,15 @@ export default function robots(): MetadataRoute.Robots {
           '/register',
           '/dashboard/',
           '/maintenance',
+          '/login',
         ],
+        googleBot: {
+          index: true,
+          follow: true,
+          'max-video-preview': -1,
+          'max-image-preview': 'large',
+          'max-snippet': -1,
+        },
       },
       {
         userAgent: 'Bingbot',
@@ -40,6 +48,7 @@ export default function robots(): MetadataRoute.Robots {
           '/register',
           '/dashboard/',
           '/maintenance',
+          '/login',
         ],
       },
     ],

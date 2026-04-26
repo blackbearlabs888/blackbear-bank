@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getPhoneVariations, normalizePhone } from '@/lib/customer-utils';
-import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
 
 // Lookup customer by phone number to prevent duplicates
 export async function GET(request: NextRequest) {
   try {
-    // Rate limiting: 10 requests per minute per IP
-    const ip = getClientIp(request);
-    const rateLimitResult = checkRateLimit(ip, RATE_LIMITS.CUSTOMER_LOOKUP);
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { success: false, error: `Rate limit exceeded. Coba lagi dalam ${rateLimitResult.retryAfter} detik.` },
-        { status: 429 }
-      );
-    }
-
     const { searchParams } = new URL(request.url);
     const phone = searchParams.get('phone');
 
