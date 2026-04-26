@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { MapPin, ChevronRight, Search, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { FadeInSection } from '@/components/landing/fade-in-section';
+import { Input } from '@/components/ui/input';
 
 interface City {
   name: string;
@@ -73,6 +74,9 @@ export default function CitiesSection() {
 
   const hasMore = !searchQuery.trim() && filteredCities.length > INITIAL_SHOW;
 
+  // Use a stable display count to avoid "0+" flash
+  const displayCount = loading ? 100 : cities.length;
+
   return (
     <section className="relative py-12 md:py-20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -87,7 +91,18 @@ export default function CitiesSection() {
               Layanan di Seluruh Indonesia
             </h2>
             <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
-              Tersedia di {cities.length}+ kota besar di Indonesia. Transaksi aman dari mana saja.
+              Tersedia di{' '}
+              {loading ? (
+                <span className="inline-flex items-center gap-1">
+                  <span className="inline-block w-12 h-4 bg-muted rounded-full overflow-hidden relative">
+                    <span className="absolute inset-0 bg-gradient-to-r from-transparent via-muted-foreground/20 to-transparent animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
+                  </span>
+                  <span className="text-muted-foreground">+ kota</span>
+                </span>
+              ) : (
+                <span className="font-semibold text-foreground">{displayCount}+ kota</span>
+              )}{' '}
+              besar di Indonesia. Transaksi aman dari mana saja.
             </p>
           </div>
 
@@ -95,12 +110,13 @@ export default function CitiesSection() {
           <div className="max-w-md mx-auto mb-8">
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-              <input
+              <Input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari kota Anda..."
-                className="w-full h-11 pl-10 pr-4 text-sm rounded-xl border border-border/60 bg-background/80 backdrop-blur-sm focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all outline-none placeholder:text-muted-foreground/40"
+                aria-label="Cari kota layanan"
+                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 backdrop-blur-sm focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/40"
               />
             </div>
           </div>
@@ -120,7 +136,7 @@ export default function CitiesSection() {
                     <Link
                       key={city.slug}
                       href={`/lokasi/${city.slug}`}
-                      className="group relative flex items-center gap-2.5 px-4 py-3.5 rounded-xl border border-border/40 bg-background/80 backdrop-blur-sm hover:border-primary/25 hover:bg-primary/[0.03] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/5"
+                      className="group relative flex items-center gap-2.5 px-4 py-3.5 rounded-xl border border-border/40 bg-background/80 backdrop-blur-sm hover:border-primary/25 hover:bg-primary/[0.03] transition-all duration-300 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md motion-safe:hover:shadow-primary/5 motion-safe:hover:ring-1 motion-safe:hover:ring-primary/10"
                       style={{
                         animationDelay: `${i * 30}ms`,
                       }}

@@ -2,25 +2,25 @@ import { Metadata } from 'next';
 import { db } from '@/lib/db';
 import LandingPage from '@/components/landing/landing-page';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
-
-export const metadata: Metadata = {
-  title: 'Jasa Gestun & Tarik Tunai Kartu Kredit - Proses Cepat Aman',
-  description: 'Layanan tarik tunai kartu kredit dan paylater terpercaya di Indonesia. Gestun BCA, Mandiri, BRI, GoPay Paylater, Shopee Paylater. Proses 15-30 menit, fee transparan, dana langsung cair.',
-  keywords: [
-    'jasa gestun', 'tarik tunai kartu kredit', 'gestun online', 'gestun aman',
-    'tarik tunai BCA', 'tarik tunai Mandiri', 'gestun BRI', 'gestun BNI',
-    'GoPay Paylater gestun', 'Shopee Paylater gestun', 'Akulaku gestun',
-    'gestun Jakarta', 'gestun Surabaya', 'gestun Bandung',
-    'tarik tunai online', 'jasa tarik tunai terpercaya',
-    'gestun cepat', 'gestun murah', 'gestun 24 jam',
-  ],
-  alternates: {
-    canonical: siteUrl,
-  },
-};
-
 export const revalidate = 60; // Revalidate every 60 seconds
+
+export async function generateMetadata(): Promise<Metadata> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
+  return {
+    title: 'Black Bear - Jasa Gestun & Tarik Tunai Kartu Kredit Terpercaya',
+    description: 'Layanan gestun dan tarik tunai kartu kredit & paylater terpercaya di Indonesia. Proses cepat, aman, dan fee transparan. Tersedia di 30+ kota.',
+    keywords: 'gestun, tarik tunai kartu kredit, gestun kartu kredit, tarik tunai paylater, gestun aman, black bear',
+    openGraph: {
+      title: 'Black Bear - Jasa Gestun & Tarik Tunai Kartu Kredit Terpercaya',
+      description: 'Layanan gestun dan tarik tunai kartu kredit & paylater terpercaya di Indonesia. Proses cepat, aman, dan fee transparan.',
+      url: siteUrl,
+      type: 'website',
+    },
+    alternates: {
+      canonical: siteUrl,
+    },
+  };
+}
 
 async function getPaymentTypes() {
   try {
@@ -51,13 +51,12 @@ async function getFaqs() {
     const faqs = await db.fAQ.findMany({
       where: { isActive: true },
       orderBy: { order: 'asc' },
-      take: 20,
+      take: 5,
     });
     return faqs.map(f => ({
       id: f.id,
       question: f.question,
       answer: f.answer,
-      category: f.category,
     }));
   } catch {
     return [];

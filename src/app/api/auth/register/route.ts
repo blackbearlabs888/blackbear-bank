@@ -10,9 +10,19 @@ import {
 } from '@/lib/auth';
 import { sendTelegramNotification } from '@/lib/telegram';
 import { normalizePhone, getPhoneVariations } from '@/lib/customer-utils';
+import { rateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: 3 attempts per hour
+    const { success } = await rateLimit(request, 'register', { maxRequests: 3, windowMs: 60 * 60 * 1000 });
+    if (!success) {
+      return NextResponse.json(
+        { success: false, error: 'Terlalu banyak percobaan registrasi. Silakan coba lagi nanti.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { 
       name, 
@@ -39,8 +49,6 @@ export async function POST(request: NextRequest) {
     if (!city) missingFields.push('city');
 
     if (missingFields.length > 0) {
-      console.log('Missing fields:', missingFields);
-      console.log('Request body:', body);
       return NextResponse.json(
         { success: false, error: `Field berikut harus diisi: ${missingFields.join(', ')}` },
         { status: 400 }

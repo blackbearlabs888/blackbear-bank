@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { HelpCircle, Search, MessageCircle } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
+import { Input } from '@/components/ui/input';
 
 interface FAQ {
   id: string;
@@ -63,6 +64,18 @@ export default function FAQClient({ initialFaqs }: FAQClientProps) {
   
   const siteName = config.websiteTitle || 'Black Bear';
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
+
+  // Highlight matching text in search
+  const highlightText = (text: string, search: string) => {
+    if (!search.trim()) return text;
+    const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    const parts = text.split(regex);
+    const lowerSearch = search.toLowerCase();
+    return parts.map((part, i) =>
+      part.toLowerCase() === lowerSearch ? <mark key={i} className="bg-yellow-200 dark:bg-yellow-900/50 rounded px-0.5">{part}</mark> : part
+    );
+  };
 
   // Group FAQs by category
   const groupedFaqs = initialFaqs.reduce((acc, faq) => {
@@ -198,12 +211,13 @@ export default function FAQClient({ initialFaqs }: FAQClientProps) {
               {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
+                <Input
                   type="text"
                   placeholder="Cari pertanyaan..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="pl-10"
+                  aria-label="Cari pertanyaan"
                 />
               </div>
 
@@ -279,7 +293,7 @@ export default function FAQClient({ initialFaqs }: FAQClientProps) {
                               </span>
                             </AccordionTrigger>
                             <AccordionContent className="px-6 text-muted-foreground leading-relaxed">
-                              {faq.answer}
+                              {highlightText(faq.answer, searchQuery)}
                             </AccordionContent>
                           </AccordionItem>
                         ))}

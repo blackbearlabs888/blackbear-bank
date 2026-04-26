@@ -9,9 +9,6 @@ import { DashboardMobileNav } from "@/components/shared/dashboard-mobile-nav";
 import { ConditionalFooter } from "@/components/shared/conditional-footer";
 import { MaintenanceWrapper } from "@/components/shared/maintenance-wrapper";
 import PageLoader from "@/components/shared/page-loader";
-import WhatsAppFab from "@/components/landing/whatsapp-fab";
-import ScrollToTop from "@/components/landing/scroll-to-top";
-import GlobalFloatingComponents from "@/components/shared/global-floating-components";
 import { db } from "@/lib/db";
 
 const inter = Inter({
@@ -143,14 +140,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#1a1520" },
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },
   ],
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default async function RootLayout({
@@ -194,9 +189,6 @@ export default async function RootLayout({
             </div>
             <MobileBottomNav />
             <DashboardMobileNav />
-            <ScrollToTop />
-            <WhatsAppFab />
-            <GlobalFloatingComponents />
             <Toaster position="top-center" />
           </MaintenanceWrapper>
         </ThemeProvider>

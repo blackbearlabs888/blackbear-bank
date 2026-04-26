@@ -2,55 +2,22 @@ import { Metadata } from 'next';
 import { db } from '@/lib/db';
 import LocationListingClient from './client';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
-
 // Generate metadata for SEO
 export async function generateMetadata(): Promise<Metadata> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
+  
   return {
-    title: 'Lokasi Layanan Gestun & Tarik Tunai di Seluruh Indonesia',
-    description: 'Temukan lokasi layanan gestun dan tarik tunai Black Bear di berbagai kota di Indonesia. Tersedia di Jakarta, Surabaya, Bandung, Medan, Semarang, dan kota lainnya. Layanan cepat, aman, terpercaya.',
-    keywords: [
-      'lokasi gestun', 'tarik tunai lokasi', 'gestun Jakarta', 'gestun Surabaya',
-      'gestun Bandung', 'gestun Medan', 'gestun Semarang', 'gestun Makassar',
-      'tarik tunai Jakarta', 'tarik tunai Surabaya', 'gestun di Indonesia',
-      'layanan gestun terdekat', 'gestun online Indonesia',
-      'jasa gestun kota', 'tarik tunai seluruh Indonesia',
-    ],
+    title: 'Lokasi Layanan Gestun & Tarik Tunai - Black Bear',
+    description: 'Temukan lokasi layanan gestun dan tarik tunai Black Bear di berbagai kota di Indonesia. Layanan cepat, aman, dan terpercaya.',
+    keywords: 'gestun, tarik tunai, lokasi gestun, gestun jakarta, gestun surabaya, gestun bandung, tarik tunai kartu kredit, layanan tarik tunai',
     openGraph: {
-      title: 'Lokasi Layanan Gestun & Tarik Tunai di Seluruh Indonesia | Black Bear',
-      description: 'Temukan lokasi layanan gestun dan tarik tunai Black Bear di berbagai kota di Indonesia. Layanan cepat, aman, dan terpercaya.',
-      url: `${siteUrl}/lokasi`,
-      type: 'website',
-      locale: 'id_ID',
-      siteName: 'Black Bear',
-      images: [
-        {
-          url: `${siteUrl}/og-lokasi.png`,
-          width: 1200,
-          height: 630,
-          alt: 'Lokasi Layanan Gestun Black Bear di Seluruh Indonesia',
-        },
-      ],
-    },
-    twitter: {
-      card: 'summary_large_image',
       title: 'Lokasi Layanan Gestun & Tarik Tunai | Black Bear',
       description: 'Temukan lokasi layanan gestun dan tarik tunai Black Bear di berbagai kota di Indonesia.',
-      images: [`${siteUrl}/og-lokasi.png`],
+      url: `${siteUrl}/lokasi`,
+      type: 'website',
     },
     alternates: {
       canonical: `${siteUrl}/lokasi`,
-    },
-    robots: {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        'max-video-preview': -1,
-        'max-image-preview': 'large',
-        'max-snippet': -1,
-      },
     },
   };
 }

@@ -3,21 +3,22 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-// CookieConsent moved to root layout for global visibility
-// import CookieConsent from '@/components/landing/cookie-consent';
+import CookieConsent from '@/components/landing/cookie-consent';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import {
   CreditCard, Wallet, Truck, Shield, Clock, Users, ArrowRight,
-  Zap, Star, TrendingUp, MessageCircle, Wifi,
-  Smartphone, Sparkles, ChevronDown, ChevronUp, CheckCircle2, Check
+  Zap, Star, TrendingUp, MessageCircle,
+  Smartphone, Sparkles, ChevronDown, ChevronUp, CheckCircle2, Check, Banknote,
+  BadgeCheck, Headphones
 } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { AnimatedCounter } from '@/components/landing/animated-counter';
 import { FadeInSection } from '@/components/landing/fade-in-section';
 import { OrganizationJsonLd, FAQJsonLd } from '@/components/seo/json-ld';
 import AnnouncementBar from '@/components/landing/announcement-bar';
+import WhatsAppFab from '@/components/landing/whatsapp-fab';
 
 /* ====== Dynamic Imports for Below-Fold Components ====== */
 
@@ -69,14 +70,13 @@ const LiveActivityFeed = dynamic(
 
 
 
-// SocialProofToast moved to root layout for global visibility
-// const SocialProofToast = dynamic(
-//   () => import('@/components/landing/social-proof-toast'),
-//   {
-//     loading: () => null,
-//     ssr: false,
-//   }
-// );
+const SocialProofToast = dynamic(
+  () => import('@/components/landing/social-proof-toast'),
+  {
+    loading: () => null,
+    ssr: false,
+  }
+);
 
 // RateComparisonTable removed — replaced by payment type running cards + rate calculator
 
@@ -87,7 +87,6 @@ const ExitIntentBanner = dynamic(
     ssr: false,
   }
 );
-
 
 const CitiesSection = dynamic(
   () => import('@/components/landing/cities-section'),
@@ -132,7 +131,6 @@ interface FAQ {
   id: string;
   question: string;
   answer: string;
-  category?: string;
 }
 
 interface Announcement {
@@ -171,7 +169,6 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
   const [cardTilt, setCardTilt] = useState<React.CSSProperties>({});
   const [scrollProgress, setScrollProgress] = useState(0);
   const [allFaqOpen, setAllFaqOpen] = useState(false);
-  const [activeFaqCategory, setActiveFaqCategory] = useState('semua');
   const [typedText, setTypedText] = useState('');
   const subtitleRef = useRef<HTMLParagraphElement>(null);
   const marqueeRow1Ref = useRef<HTMLDivElement>(null);
@@ -255,10 +252,6 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
     setPtLogoErrors(prev => new Set(prev).add(ptId));
   }, []);
 
-  // Get unique FAQ categories
-  const faqCategories = ['semua', ...Array.from(new Set(faqs.map(f => f.category || 'umum')))];
-  const filteredFaqs = activeFaqCategory === 'semua' ? faqs : faqs.filter(f => (f.category || 'umum') === activeFaqCategory);
-
   return (
     <>
       <OrganizationJsonLd />
@@ -274,28 +267,23 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         }}
       />
 
-      <div className="relative animate-fade-in overflow-hidden">
+      <div className="relative motion-safe:animate-fade-in overflow-hidden">
 
         {/* ==================== ANNOUNCEMENT BAR ==================== */}
         <AnnouncementBar announcements={announcements} />
 
         {/* ==================== HERO SECTION ==================== */}
-        <section className="relative overflow-hidden min-h-auto" id="hero">
-          {/* Enhanced background gradient with mesh overlay */}
+        <section className="relative overflow-hidden min-h-auto">
+          {/* Background gradient blobs */}
           <div className="absolute inset-0 -z-10 overflow-hidden">
-            {/* Base gradient — richer purple/fuchsia tones */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.07] via-fuchsia-500/[0.04] to-purple-500/[0.06]" />
-            {/* Animated mesh blobs */}
-            <div className="absolute top-10 -left-32 w-[500px] h-[400px] bg-primary/10 rounded-full blur-[100px] animate-pulse-soft" />
-            <div className="absolute top-1/3 -right-20 w-[400px] h-[400px] bg-fuchsia-500/8 rounded-full blur-[100px] animate-pulse-soft" style={{ animationDelay: '3s' }} />
-            <div className="absolute -bottom-10 left-1/3 w-[300px] h-[300px] bg-purple-500/6 rounded-full blur-[80px] animate-pulse-soft" style={{ animationDelay: '6s' }} />
-            {/* Subtle diagonal accent line */}
-            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-bl from-primary/[0.03] via-transparent to-transparent rotate-12" />
+            <div className="absolute top-10 -left-32 w-[500px] h-[400px] bg-primary/8 rounded-full blur-[100px] motion-safe:animate-pulse-soft" />
+            <div className="absolute top-1/3 -right-20 w-[400px] h-[400px] bg-fuchsia-500/6 rounded-full blur-[100px] motion-safe:animate-pulse-soft" style={{ animationDelay: '3s' }} />
+            <div className="absolute -bottom-10 left-1/3 w-[300px] h-[300px] bg-purple-500/5 rounded-full blur-[80px] motion-safe:animate-pulse-soft" style={{ animationDelay: '6s' }} />
             {/* Noise texture overlay */}
             <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }} />
           </div>
 
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8 md:pt-28 md:pb-20 flex flex-col min-h-auto">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-6 md:pt-24 md:pb-16 flex flex-col min-h-auto">
             <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center flex-1">
               {/* Left: Text Content */}
               <div className="text-center lg:text-left space-y-4">
@@ -306,7 +294,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                     <span>Layanan Gestun No #1</span>
                   </div>
                   {/* Trust badge with pulse */}
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 text-xs font-semibold animate-trust-pulse">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 text-xs font-semibold motion-safe:animate-trust-pulse">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>Terbaik</span>
                   </div>
@@ -322,7 +310,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   </h1>
                   <p ref={subtitleRef} className="text-sm sm:text-xl text-muted-foreground max-w-xs sm:max-w-lg mx-auto lg:mx-0 leading-relaxed min-h-[2.75rem] sm:min-h-[4rem]">
                     {typedText}
-                    <span className="inline-block w-[2px] h-[1.1em] bg-primary/70 ml-0.5 align-middle animate-typewriter-blink" />
+                    <span className="inline-block w-[2px] h-[1.1em] bg-primary/70 ml-0.5 align-middle motion-safe:animate-typewriter-blink" />
                   </p>
                 </div>
 
@@ -331,22 +319,22 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   <Button
                     asChild
                     size="lg"
-                    className="cta-shimmer-hover gradient-primary text-white rounded-xl h-12 px-4 sm:px-8 text-sm font-medium shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.04] active:scale-[0.97] transition-all duration-300"
+                    className="gradient-primary text-white rounded-xl h-12 px-4 sm:px-8 text-sm font-medium shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/25 hover:scale-[1.04] active:scale-[0.97] transition-all duration-300"
                   >
                     <Link href="/order">
-                      <Zap className="w-4 h-4 relative z-[2]" />
-                      <span className="sm:inline hidden relative z-[2]"></span><span className="relative z-[2]">Order Sekarang</span>
+                      <Zap className="w-4 h-4" />
+                      Order Sekarang
                     </Link>
                   </Button>
                   <Button
                     asChild
                     variant="outline"
                     size="lg"
-                    className="rounded-xl h-12 px-4 sm:px-8 text-sm font-medium border-border/60 hover:bg-accent hover:border-primary/30 hover:shadow-lg hover:scale-[1.04] active:scale-[0.97] transition-all duration-300"
+                    className="rounded-xl h-12 px-4 sm:px-8 text-sm font-medium border-border/60 hover:bg-accent hover:shadow-lg hover:scale-[1.04] active:scale-[0.97] transition-all duration-300"
                   >
                     <Link href="/track">
                       <Truck className="w-4 h-4" />
-                      <span className="sm:inline hidden"></span>Track Order
+                      Track Order
                     </Link>
                   </Button>
                 </div>
@@ -396,7 +384,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   }}
                 >
                   {/* Glow behind card — smaller inset on mobile */}
-                  <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-r from-primary/20 via-fuchsia-500/15 to-purple-500/20 rounded-[2rem] blur-lg sm:blur-xl animate-pulse-soft" />
+                  <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-r from-primary/20 via-fuchsia-500/15 to-purple-500/20 rounded-[2rem] blur-lg sm:blur-xl motion-safe:animate-pulse-soft" />
 
                   {/* Animated gradient border */}
                   <div className="hero-card-border" style={cardTilt}>
@@ -424,7 +412,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                           <div className="flex items-center gap-1.5">
                             {config.logoUrl && !logoError ? (
                               <div className="w-8 h-8 rounded-md overflow-hidden">
-                                <img src={config.logoUrl} alt="" className="w-full h-full object-contain" onError={() => setLogoError(true)} />
+                                <img src={config.logoUrl} alt={config.websiteTitle || "Black Bear"} className="w-full h-full object-contain" onError={() => setLogoError(true)} />
                               </div>
                             ) : (
                               <div className="w-8 h-8 rounded-md gradient-primary flex items-center justify-center">
@@ -432,7 +420,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                               </div>
                             )}
                             <div>
-                              <p className="text-white text-[10px] sm:text-xs font-bold tracking-wide leading-tight">BLACKBEAR</p>
+                              <p className="text-white text-[10px] sm:text-xs font-bold tracking-wide leading-tight">{(config.websiteTitle || 'BLACKBEAR').toUpperCase()}</p>
                               <p className="text-white/30 text-[8px] sm:text-[9px] tracking-widest uppercase">Gestun Pro</p>
                             </div>
                           </div>
@@ -475,10 +463,10 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   </div>
 
                   {/* Floating badges — within bounds, no overflow */}
-                  <div className="hidden sm:flex absolute -top-1 -right-1 w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-lg backdrop-blur-sm items-center justify-center animate-bounce-soft z-20">
+                  <div className="hidden sm:flex absolute -top-1 -right-1 w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-lg backdrop-blur-sm items-center justify-center motion-safe:animate-bounce-soft z-20">
                     <TrendingUp className="w-4 h-4 text-emerald-500" />
                   </div>
-                  <div className="hidden sm:flex absolute -bottom-1 -left-1 w-12 h-12 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-lg backdrop-blur-sm items-center justify-center animate-bounce-soft z-20" style={{ animationDelay: '1s' }}>
+                  <div className="hidden sm:flex absolute -bottom-1 -left-1 w-12 h-12 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-lg backdrop-blur-sm items-center justify-center motion-safe:animate-bounce-soft z-20" style={{ animationDelay: '1s' }}>
                     <Wallet className="w-4 h-4 text-fuchsia-500" />
                   </div>
                 </div>
@@ -488,7 +476,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         </section>
 
         {/* ==================== STATS SECTION ==================== */}
-        <section className="relative py-6 sm:py-8 lg:py-12">
+        <section className="relative py-8 sm:py-12">
           {/* Radial gradient background behind stats grid */}
           <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.06] via-primary/[0.02] to-fuchsia-500/[0.04]" />
           {/* Radial glow accent */}
@@ -535,7 +523,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
 
         {/* ==================== PAYMENT TYPES — Running Text Cards ==================== */}
         {paymentTypes.length > 0 && (
-          <section className="relative py-16 md:py-24 below-fold-auto" id="payment-types">
+          <section className="relative py-12 md:py-20 below-fold-auto" id="payment-types">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               {/* Section Header */}
               <div className="text-center mb-8">
@@ -663,7 +651,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         <div className="section-divider" />
 
         {/* ==================== SERVICES — Desktop: Feature Cards Row ==================== */}
-        <section className="relative py-16 md:py-24 below-fold-auto">
+        <section className="relative py-12 md:py-20 below-fold-auto">
           <FadeInSection className="container mx-auto px-4 sm:px-6 lg:px-8">
             {/* Section Header */}
             <div className="text-center mb-6">
@@ -989,6 +977,32 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
           </FadeInSection>
         </section>
 
+        {/* ==================== TRUST & SECURITY ==================== */}
+        <section className="py-16 md:py-24 px-4 bg-muted/30">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Dipercaya Ribuan Pelanggan</h2>
+              <p className="text-muted-foreground max-w-xl mx-auto">Keamanan dan kenyamanan Anda adalah prioritas utama kami</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+              {[
+                { icon: Shield, title: "Aman & Terenkripsi", desc: "Data dilindungi enkripsi SSL 256-bit" },
+                { icon: Clock, title: "Proses Cepat", desc: "Dana cair dalam hitungan menit" },
+                { icon: BadgeCheck, title: "Terverifikasi", desc: "Layanan resmi dan terdaftar" },
+                { icon: Headphones, title: "Support 24/7", desc: "Tim siap membantu kapan saja" },
+              ].map((item, i) => (
+                <div key={i} className="text-center p-4 rounded-2xl bg-background shadow-sm border hover:shadow-md hover:border-primary/20 transition-all duration-300">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <item.icon className="w-6 h-6 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-sm mb-1">{item.title}</h3>
+                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ==================== TESTIMONIALS SECTION ==================== */}
         <TestimonialsSection />
 
@@ -997,39 +1011,33 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
           <section className="relative py-12 md:py-20 bg-muted/30 below-fold-auto">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               {/* Section Header */}
-              <div className="text-center mb-8">
+              <div className="text-center mb-10">
                 <p className="text-sm font-medium text-primary mb-3">FAQ</p>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 section-header-underline">
-                  Pertanyaan yang Sering Diajukan
-                </h2>
-                <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed mb-6">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <h2 className="text-3xl md:text-4xl font-bold tracking-tight section-header-underline">
+                    Pertanyaan yang Sering Diajukan
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setAllFaqOpen(!allFaqOpen)}
+                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mt-1.5"
+                    aria-label={allFaqOpen ? 'Tutup semua FAQ' : 'Lihat semua FAQ'}
+                  >
+                    <span>{allFaqOpen ? 'Tutup Semua' : 'Lihat Semua'}</span>
+                    {allFaqOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
                   Temukan jawaban untuk pertanyaan umum tentang layanan kami.
                 </p>
-
-                {/* Category Filter Tabs */}
-                <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
-                  {faqCategories.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => { setActiveFaqCategory(cat); setAllFaqOpen(false); }}
-                      className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
-                        activeFaqCategory === cat
-                          ? 'gradient-primary text-white shadow-md shadow-primary/20'
-                          : 'bg-background border border-border/60 text-muted-foreground hover:border-primary/30 hover:text-primary'
-                      }`}
-                    >
-                      {cat === 'semua' ? 'Semua' : cat.charAt(0).toUpperCase() + cat.slice(1)}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               {/* Desktop: 2-column grid */}
               <div className="hidden md:grid md:grid-cols-2 gap-4 max-w-5xl mx-auto">
-                {filteredFaqs.map((faq, index) => (
+                {faqs.map((faq, index) => (
                   <Card key={faq.id} className="faq-card-hover border-border/50 bg-background py-0 gap-0 overflow-hidden">
                     <Accordion
-                      key={`${String(allFaqOpen)}-${activeFaqCategory}`}
+                      key={String(allFaqOpen)}
                       type={allFaqOpen ? 'multiple' : 'single'}
                       collapsible
                       defaultValue={allFaqOpen ? [faq.id] : undefined}
@@ -1055,10 +1063,10 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
 
               {/* Mobile: single column */}
               <div className="md:hidden max-w-2xl mx-auto space-y-3">
-                {filteredFaqs.map((faq, index) => (
+                {faqs.map((faq, index) => (
                   <Card key={faq.id} className="faq-card-hover border-border/50 bg-background py-0 gap-0 overflow-hidden">
                     <Accordion
-                      key={`${String(allFaqOpen)}-${activeFaqCategory}`}
+                      key={String(allFaqOpen)}
                       type={allFaqOpen ? 'multiple' : 'single'}
                       collapsible
                       defaultValue={allFaqOpen ? [faq.id] : undefined}
@@ -1277,12 +1285,12 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         <div className="section-divider" />
 
         {/* ==================== CTA SECTION — Clean & Different from Partner ==================== */}
-        <section className="relative py-16 md:py-24 overflow-hidden below-fold-auto">
+        <section className="relative py-12 md:py-20 overflow-hidden below-fold-auto">
           {/* Dot grid pattern background */}
           <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, var(--color-primary) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
           {/* Floating orbs */}
-          <div className="absolute top-1/4 -left-16 w-48 h-48 bg-primary/10 rounded-full blur-[80px] animate-pulse-soft" />
-          <div className="absolute bottom-1/4 -right-16 w-48 h-48 bg-fuchsia-500/8 rounded-full blur-[80px] animate-pulse-soft" style={{ animationDelay: '3s' }} />
+          <div className="absolute top-1/4 -left-16 w-48 h-48 bg-primary/10 rounded-full blur-[80px] motion-safe:animate-pulse-soft" />
+          <div className="absolute bottom-1/4 -right-16 w-48 h-48 bg-fuchsia-500/8 rounded-full blur-[80px] motion-safe:animate-pulse-soft" style={{ animationDelay: '3s' }} />
 
           <FadeInSection className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="max-w-4xl mx-auto">
@@ -1341,7 +1349,10 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         <div className="section-divider" />
         <CitiesSection />
 
+        <WhatsAppFab />
         <ExitIntentBanner />
+        <SocialProofToast />
+        <CookieConsent />
       </div>
     </>
   );

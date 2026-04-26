@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
 import { Cookie, X, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { dispatchCookieBannerVisible } from '@/hooks/use-cookie-banner-visible';
@@ -12,33 +11,25 @@ function getInitialVisibility(): boolean {
   return !localStorage.getItem('cookie-consent');
 }
 
-// Only show on public pages: landing, blog, lokasi, FAQ
-function isPublicPage(pathname: string | null): boolean {
-  if (!pathname) return false;
-  return (
-    pathname === '/' ||
-    pathname === '/faq' ||
-    pathname.startsWith('/blog') ||
-    pathname.startsWith('/lokasi')
-  );
-}
-
 export default function CookieConsent() {
-  const pathname = usePathname();
-
-  // Only show on public pages
-  const isPublic = isPublicPage(pathname);
-
   // Initialize from localStorage directly — no useEffect needed for initial state
   const [isVisible, setIsVisible] = useState(getInitialVisibility);
+  const [isAnimated, setIsAnimated] = useState(false);
 
-  // Dispatch visibility state for other components (whatsapp-fab, scroll-to-top, etc.)
-  // Only dispatch when cookie banner is actually visible AND on a public page
+  // Trigger entrance animation after mount
   useEffect(() => {
-    if (isVisible && isPublic) {
+    if (isVisible) {
+      const timer = requestAnimationFrame(() => setIsAnimated(true));
+      return () => cancelAnimationFrame(timer);
+    }
+  }, [isVisible]);
+
+  // Dispatch visibility state for other components (whatsapp-fab, footer, etc.)
+  useEffect(() => {
+    if (isVisible) {
       dispatchCookieBannerVisible(true);
     }
-  }, [isVisible, isPublic]);
+  }, [isVisible]);
 
   const handleClose = () => {
     localStorage.setItem('cookie-consent', JSON.stringify({ accepted: false, date: new Date().toISOString() }));
@@ -52,14 +43,14 @@ export default function CookieConsent() {
     dispatchCookieBannerVisible(false);
   };
 
-  if (!isVisible || !isPublic) return null;
+  if (!isVisible) return null;
 
   return (
     <>
       {/* Mobile: floating bottom bar above mobile nav */}
       <div className="fixed bottom-0 left-0 right-0 z-[60] pointer-events-none md:hidden">
         <div className="pointer-events-auto">
-          <div className="mx-3 mb-[73px] max-w-lg safe-area-bottom">
+          <div className={`mx-3 mb-[73px] max-w-lg safe-area-bottom transition-all duration-500 ease-out ${isAnimated ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
             <div className="relative bg-background/95 backdrop-blur-xl border border-border/60 rounded-2xl shadow-2xl shadow-black/10 p-4">
               {/* Glow */}
               <div className="absolute -inset-px bg-gradient-to-r from-primary/10 via-fuchsia-500/10 to-primary/10 rounded-2xl -z-10 blur-sm" />
@@ -113,7 +104,7 @@ export default function CookieConsent() {
 
       {/* Desktop: floating bottom-right card */}
       <div className="hidden md:block fixed bottom-6 right-6 z-[60] pointer-events-none">
-        <div className="pointer-events-auto">
+        <div className={`pointer-events-auto transition-all duration-500 ease-out ${isAnimated ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
           <div className="relative w-80 bg-background/95 backdrop-blur-xl border border-border/60 rounded-2xl shadow-2xl shadow-black/10 p-5">
             {/* Glow */}
             <div className="absolute -inset-px bg-gradient-to-r from-primary/10 via-fuchsia-500/10 to-primary/10 rounded-2xl -z-10 blur-sm" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -32,6 +32,12 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
   const [amount, setAmount] = useState<string>('1000000');
   const [isCalculated, setIsCalculated] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [amountError, setAmountError] = useState<string>('');
+  const [displayedOnlineFee, setDisplayedOnlineFee] = useState(0);
+  const [displayedCodFee, setDisplayedCodFee] = useState(0);
+  const [displayedOnlineReceive, setDisplayedOnlineReceive] = useState(0);
+  const [displayedCodReceive, setDisplayedCodReceive] = useState(0);
+  const animRefs = useRef<(ReturnType<typeof requestAnimationFrame> | null)[]>([null, null, null, null]);
 
   const useDropdown = paymentTypes.length > 3;
 
@@ -50,11 +56,38 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
   const handleAmountChange = (val: string) => {
     const formatted = val.replace(/\D/g, '');
     setAmount(formatted);
+    setAmountError('');
     setIsCalculated(false);
     setShowResults(false);
   };
 
+  // Animated number counter — each animation gets its own ref index to avoid mutual cancellation
+  const animateNumber = useCallback((index: number, from: number, to: number, setter: (v: number) => void, duration: number = 400) => {
+    const start = performance.now();
+    if (animRefs.current[index]) cancelAnimationFrame(animRefs.current[index]);
+    const step = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      setter(Math.round(from + (to - from) * eased));
+      if (progress < 1) {
+        animRefs.current[index] = requestAnimationFrame(step);
+      }
+    };
+    animRefs.current[index] = requestAnimationFrame(step);
+  }, []);
+
+  useEffect(() => {
+    return () => { animRefs.current.forEach((r) => { if (r) cancelAnimationFrame(r); }); };
+  }, []);
+
   const calculate = () => {
+    const nominal = parseAmount(amount);
+    if (nominal < 100000) {
+      setAmountError('Nominal minimal Rp100.000');
+      return;
+    }
+    setAmountError('');
     setIsCalculated(true);
     // Trigger animation on next frame
     requestAnimationFrame(() => {
@@ -65,11 +98,16 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
   const reset = useCallback(() => {
     setSelectedType(null);
     setAmount('1000000');
+    setAmountError('');
     setIsCalculated(false);
     setShowResults(false);
+    setDisplayedOnlineFee(0);
+    setDisplayedCodFee(0);
+    setDisplayedOnlineReceive(0);
+    setDisplayedCodReceive(0);
   }, []);
 
-  const getResults = () => {
+  const results = useMemo(() => {
     if (!effectiveSelectedType || !amount) return null;
 
     const nominal = parseAmount(amount);
@@ -136,9 +174,22 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
       codDiscountedReceive,
       minTransaction: pt.minTransaction,
     };
-  };
+  }, [amount, effectiveSelectedType]);
 
-  const results = getResults();
+  // Animate numbers when results become visible
+  useEffect(() => {
+    if (showResults && results) {
+      animateNumber(0, 0, results.onlineFee, setDisplayedOnlineFee);
+      animateNumber(1, 0, results.codFee, setDisplayedCodFee);
+      animateNumber(2, 0, results.onlineReceive, setDisplayedOnlineReceive);
+      animateNumber(3, 0, results.codReceive, setDisplayedCodReceive);
+    }
+  }, [showResults, results, animateNumber]);
+
+  const fmtOnlineFee = displayedOnlineFee || (results?.onlineFee ?? 0);
+  const fmtCodFee = displayedCodFee || (results?.codFee ?? 0);
+  const fmtOnlineReceive = displayedOnlineReceive || (results?.onlineReceive ?? 0);
+  const fmtCodReceive = displayedCodReceive || (results?.codReceive ?? 0);
 
   return (
     <section className="relative py-12 md:py-20">
@@ -165,7 +216,8 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
           <div className="max-w-2xl mx-auto relative">
             {/* Subtle glow behind card */}
             <div className="absolute -inset-4 bg-gradient-to-r from-primary/8 via-fuchsia-500/6 to-purple-500/8 rounded-3xl blur-2xl pointer-events-none" />
-            <Card className="relative border-border/50 overflow-hidden">
+            <Card className="relative border-border/50 overflow-hidden transition-all duration-500 motion-safe:group-hover/calculator:shadow-lg motion-safe:group-hover/calculator:shadow-primary/5 motion-safe:group-hover/calculator:border-primary/20" style={{ '--tw-group-hover': 'none' } as React.CSSProperties}>
+              <div className="group/calculator">
               {/* Shimmer gradient top border */}
               <div className="h-[3px] w-full overflow-hidden">
                 <div className="shimmer-gradient-bar h-full w-full" />
@@ -294,7 +346,8 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                       value={amount ? formatCurrency(parseAmount(amount)) : ''}
                       onChange={(e) => handleAmountChange(e.target.value)}
                       placeholder="Masukkan nominal..."
-                      className="w-full h-13 pl-12 pr-4 text-lg font-semibold rounded-xl border-2 border-border/60 bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                      aria-label="Nominal transaksi dalam Rupiah"
+                      className={`w-full h-13 pl-12 pr-4 text-lg font-semibold rounded-xl border-2 bg-background transition-all outline-none ${amountError ? 'border-destructive/60 focus:border-destructive focus:ring-2 focus:ring-destructive/20' : 'border-border/60 focus:border-primary focus:ring-2 focus:ring-primary/20'}`}
                     />
                   </div>
                   <div className="flex gap-2">
@@ -303,6 +356,7 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                         key={preset}
                         onClick={() => {
                           setAmount(String(preset));
+                          setAmountError('');
                           setIsCalculated(false);
                           setShowResults(false);
                         }}
@@ -327,11 +381,19 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                     onClick={reset}
                     variant="outline"
                     className="rounded-xl h-12 px-4 text-sm font-medium border-border/60 hover:bg-accent transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]"
-                    aria-label="Reset"
+                    aria-label="Reset kalkulator"
                   >
                     <RotateCcw className="w-4 h-4" />
                   </Button>
                 </div>
+
+                {/* Amount Error */}
+                {amountError && (
+                  <p className="text-xs text-destructive font-medium flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5" />
+                    {amountError}
+                  </p>
+                )}
 
                 {/* Results */}
                 {isCalculated && results && (
@@ -375,14 +437,14 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                             {results.hasDiscount && results.meetsMinTransaction ? (
                               <div className="flex items-center gap-2">
                                 <span className="font-semibold text-muted-foreground line-through text-xs">
-                                  Rp{formatCurrency(results.onlineFee)}
+                                  Rp{formatCurrency(fmtOnlineFee)}
                                 </span>
                                 <span className="font-semibold text-destructive">
                                   -Rp{formatCurrency(results.onlineDiscountedFee)}
                                 </span>
                               </div>
                             ) : (
-                              <span className="font-semibold text-destructive">-Rp{formatCurrency(results.onlineFee)}</span>
+                              <span className="font-semibold text-destructive">-Rp{formatCurrency(fmtOnlineFee)}</span>
                             )}
                           </div>
 
@@ -406,12 +468,12 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                               {results.hasDiscount && results.meetsMinTransaction && results.onlineDiscountAmount > 0 ? (
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-xs text-muted-foreground line-through">
-                                    Rp{formatCurrency(results.onlineReceive)}
+                                    Rp{formatCurrency(fmtOnlineReceive)}
                                   </span>
                                   Rp{formatCurrency(results.onlineDiscountedReceive)}
                                 </div>
                               ) : (
-                                `Rp${formatCurrency(results.onlineReceive)}`
+                                `Rp${formatCurrency(fmtOnlineReceive)}`
                               )}
                             </span>
                           </div>
@@ -432,14 +494,14 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                             {results.hasDiscount && results.meetsMinTransaction ? (
                               <div className="flex items-center gap-2">
                                 <span className="font-semibold text-muted-foreground line-through text-xs">
-                                  Rp{formatCurrency(results.codFee)}
+                                  Rp{formatCurrency(fmtCodFee)}
                                 </span>
                                 <span className="font-semibold text-destructive">
                                   -Rp{formatCurrency(results.codDiscountedFee)}
                                 </span>
                               </div>
                             ) : (
-                              <span className="font-semibold text-destructive">-Rp{formatCurrency(results.codFee)}</span>
+                              <span className="font-semibold text-destructive">-Rp{formatCurrency(fmtCodFee)}</span>
                             )}
                           </div>
 
@@ -463,12 +525,12 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                               {results.hasDiscount && results.meetsMinTransaction && results.codDiscountAmount > 0 ? (
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-xs text-muted-foreground line-through">
-                                    Rp{formatCurrency(results.codReceive)}
+                                    Rp{formatCurrency(fmtCodReceive)}
                                   </span>
                                   Rp{formatCurrency(results.codDiscountedReceive)}
                                 </div>
                               ) : (
-                                `Rp${formatCurrency(results.codReceive)}`
+                                `Rp${formatCurrency(fmtCodReceive)}`
                               )}
                             </span>
                           </div>
@@ -504,6 +566,7 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                   </div>
                 )}
               </CardContent>
+              </div>
             </Card>
           </div>
         </FadeInSection>

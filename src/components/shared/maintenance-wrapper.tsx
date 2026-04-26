@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useSyncExternalStore, useMemo, useState } from 'react';
+import { useEffect, useCallback, useSyncExternalStore, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { useSiteConfig } from '@/hooks/use-site-config';
@@ -25,7 +25,6 @@ export function MaintenanceWrapper({ children }: MaintenanceWrapperProps) {
   const { user, isAuthenticated, hydrate } = useAuthStore();
   const hasHydrated = useAuthHydrated();
   const { config, loading } = useSiteConfig();
-  const [forceShow, setForceShow] = useState(false);
 
   // Trigger hydration on mount
   useEffect(() => {
@@ -34,23 +33,11 @@ export function MaintenanceWrapper({ children }: MaintenanceWrapperProps) {
     }
   }, [hasHydrated, hydrate]);
 
-  // Safety timeout: force show content after 6s to prevent permanently stuck loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setForceShow(true);
-    }, 6000);
-    if (hasHydrated && !loading) {
-      clearTimeout(timer);
-    }
-    return () => clearTimeout(timer);
-  }, [hasHydrated, loading]);
-
   // Pages that should always be accessible even during maintenance
   const alwaysAccessiblePages = useMemo(() => [
     '/maintenance',
     '/login',
     '/register',
-    '/api/',
   ], []);
 
   // Owner dashboard pages that owner can access during maintenance
@@ -58,20 +45,17 @@ export function MaintenanceWrapper({ children }: MaintenanceWrapperProps) {
     '/owner/',
   ], []);
 
-  // Check if current page is accessible
+  // Compute if current page is accessible
   const isAccessible = useMemo(() => {
+    if (!hasHydrated || loading) return true; // Return true during loading to prevent blank
+
     // Always accessible pages
     if (alwaysAccessiblePages.some(page => pathname?.startsWith(page))) {
       return true;
     }
 
-    // During loading, assume accessible (avoid flash of maintenance screen)
-    if (loading) {
-      return !config?.maintenanceMode;
-    }
-
     // Check maintenance mode
-    if (config?.maintenanceMode) {
+    if (config.maintenanceMode) {
       // Owner can access their dashboard pages
       if (isAuthenticated && user?.role === 'owner') {
         if (ownerPages.some(page => pathname?.startsWith(page))) {
@@ -82,24 +66,21 @@ export function MaintenanceWrapper({ children }: MaintenanceWrapperProps) {
     }
 
     return true;
-  }, [loading, config?.maintenanceMode, pathname, alwaysAccessiblePages, isAuthenticated, user, ownerPages]);
+  }, [hasHydrated, loading, config.maintenanceMode, isAuthenticated, user, pathname, alwaysAccessiblePages, ownerPages]);
 
   // Handle redirects
   useEffect(() => {
-    // Wait until site config has loaded (or timed out) before redirecting
-    if (loading && !forceShow) return;
+    if (!hasHydrated || loading) return;
 
     // Check if maintenance mode is enabled
-    if (config?.maintenanceMode) {
-      // Skip redirect for always accessible pages
-      if (alwaysAccessiblePages.some(page => pathname?.startsWith(page))) return;
-
-      // Owner can access their dashboard pages
-      if (isAuthenticated && user?.role === 'owner' && ownerPages.some(page => pathname?.startsWith(page))) return;
-
-      // Redirect everyone else to maintenance page
-      if (pathname !== '/maintenance') {
-        router.replace('/maintenance');
+    if (config.maintenanceMode) {
+      // Redirect to maintenance page for non-owner or public pages
+      if (!alwaysAccessiblePages.some(page => pathname?.startsWith(page))) {
+        if (!(isAuthenticated && user?.role === 'owner' && ownerPages.some(page => pathname?.startsWith(page)))) {
+          if (!pathname?.startsWith('/maintenance')) {
+            router.replace('/maintenance');
+          }
+        }
       }
     } else {
       // If not in maintenance mode, redirect away from maintenance page
@@ -107,10 +88,10 @@ export function MaintenanceWrapper({ children }: MaintenanceWrapperProps) {
         router.replace('/');
       }
     }
-  }, [loading, forceShow, config?.maintenanceMode, isAuthenticated, user, pathname, router, alwaysAccessiblePages, ownerPages]);
+  }, [hasHydrated, loading, config.maintenanceMode, isAuthenticated, user, pathname, router, alwaysAccessiblePages, ownerPages]);
 
-  // Show loading skeleton while checking (but respect force timeout)
-  if (loading && !forceShow) {
+  // Show loading skeleton while checking
+  if (!hasHydrated || loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md space-y-4">
@@ -124,7 +105,7 @@ export function MaintenanceWrapper({ children }: MaintenanceWrapperProps) {
   }
 
   // On maintenance page but not in maintenance mode (will redirect)
-  if (pathname === '/maintenance' && !config?.maintenanceMode) {
+  if (pathname === '/maintenance' && !config.maintenanceMode) {
     return null;
   }
 

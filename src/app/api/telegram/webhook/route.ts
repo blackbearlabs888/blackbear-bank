@@ -225,10 +225,47 @@ async function handleStatus(chatId: number, orderId: string, newStatus: string) 
     return;
   }
 
-  await db.transaction.update({
-    where: { orderId },
-    data: { status },
-  });
+  // Build atomic transaction operations including partner stats updates
+  const operations: any[] = [];
+
+  // Handle partner stats when status changes to/from success
+  if (tx.partnerId) {
+    const wasSuccess = oldStatus === 'success';
+    const willBeSuccess = status === 'success';
+
+    if (!wasSuccess && willBeSuccess) {
+      // Transaction is now successful - increment partner stats
+      operations.push(
+        db.partner.update({
+          where: { id: tx.partnerId },
+          data: {
+            totalProfit: { increment: tx.partnerProfit },
+            totalVolume: { increment: tx.nominal },
+          },
+        })
+      );
+    } else if (wasSuccess && !willBeSuccess) {
+      // Transaction is no longer successful - decrement partner stats
+      operations.push(
+        db.partner.update({
+          where: { id: tx.partnerId },
+          data: {
+            totalProfit: { decrement: tx.partnerProfit },
+            totalVolume: { decrement: tx.nominal },
+          },
+        })
+      );
+    }
+  }
+
+  operations.push(
+    db.transaction.update({
+      where: { orderId },
+      data: { status },
+    })
+  );
+
+  await db.$transaction(operations);
 
   await reply(chatId,
     `✅ Status transaksi diupdate!\n\n` +
@@ -247,7 +284,7 @@ async function handleNominal(chatId: number, orderId: string, amountStr: string)
 
   const tx = await db.transaction.findUnique({
     where: { orderId },
-    include: { paymentType: true, marketplace: true },
+    include: { paymentType: true, marketplace: true, partner: true, customer: true },
   });
 
   if (!tx) {
@@ -276,18 +313,52 @@ async function handleNominal(chatId: number, orderId: string, amountStr: string)
   const newOwnerProfit = Math.round(amount * profitRatio);
   const newPartnerProfit = Math.round(amount * partnerRatio);
 
-  await db.transaction.update({
-    where: { orderId },
-    data: {
-      nominal: amount,
-      paymentFee: fee,
-      platformFee: mpFee,
-      netMargin,
-      totalReceived: amount - fee,
-      ownerProfit: newOwnerProfit,
-      partnerProfit: newPartnerProfit,
-    },
-  });
+  // Build atomic transaction operations
+  const operations: any[] = [];
+
+  // If status is success, update partner totalProfit and customer totalVolume
+  if (tx.status === 'success' && amount !== oldNominal) {
+    const nominalDiff = amount - oldNominal;
+    const partnerProfitDiff = newPartnerProfit - toNumber(tx.partnerProfit);
+
+    if (tx.partnerId) {
+      operations.push(
+        db.partner.update({
+          where: { id: tx.partnerId },
+          data: {
+            totalProfit: { increment: partnerProfitDiff },
+            totalVolume: { increment: nominalDiff },
+          },
+        })
+      );
+    }
+
+    operations.push(
+      db.customer.update({
+        where: { id: tx.customerId },
+        data: {
+          totalVolume: { increment: nominalDiff },
+        },
+      })
+    );
+  }
+
+  operations.push(
+    db.transaction.update({
+      where: { orderId },
+      data: {
+        nominal: amount,
+        paymentFee: fee,
+        platformFee: mpFee,
+        netMargin,
+        totalReceived: amount - fee,
+        ownerProfit: newOwnerProfit,
+        partnerProfit: newPartnerProfit,
+      },
+    })
+  );
+
+  await db.$transaction(operations);
 
   await reply(chatId,
     `✅ Nominal transaksi diupdate!\n\n` +

@@ -12,7 +12,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { MapPin, ArrowLeft, ArrowRight, MessageCircle, CreditCard, Wallet, Shield, Clock, CheckCircle } from 'lucide-react';
+import { MapPin, ArrowLeft, ArrowRight, MessageCircle, CreditCard, Wallet, Shield, Clock, CheckCircle, CalendarClock } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
 
 interface Location {
@@ -284,7 +284,7 @@ export default function LocationDetailClient({ location }: LocationDetailClientP
       </section>
 
       {/* Content Section */}
-      {location.content && (
+      {location.content ? (
         <section className="py-8">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
@@ -302,6 +302,43 @@ export default function LocationDetailClient({ location }: LocationDetailClientP
                     "
                     dangerouslySetInnerHTML={{ __html: location.content.replace(/\n/g, '<br />') }}
                   />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="py-8">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              <Card className="border-border/50 bg-muted/20">
+                <CardContent className="p-8 md:p-10 text-center">
+                  <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <CalendarClock className="w-7 h-7 text-primary/60" />
+                  </div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-3">
+                    <CalendarClock className="w-3 h-3" />
+                    Segera Hadir
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Konten untuk {location.name} Segera Hadir</h3>
+                  <p className="text-sm text-muted-foreground max-w-md mx-auto mb-5">
+                    Kami sedang menyiapkan informasi lengkap tentang layanan gestun di {location.name}. 
+                    Sementara itu, Anda bisa langsung melakukan order atau menghubungi kami.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Button asChild size="sm">
+                      <Link href="/order">
+                        <ArrowRight className="w-4 h-4 mr-1.5" />
+                        Order Sekarang
+                      </Link>
+                    </Button>
+                    {config.footerWhatsapp && (
+                      <Button variant="outline" size="sm" onClick={handleOrderWhatsApp} className="gap-1.5">
+                        <MessageCircle className="w-4 h-4" />
+                        WhatsApp
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>

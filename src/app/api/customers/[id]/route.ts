@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { sanitizeString } from '@/lib/sanitize';
 
 export async function PATCH(
   request: NextRequest,
@@ -34,14 +35,14 @@ export async function PATCH(
 
     const updateData: Record<string, unknown> = {};
     
-    if (name !== undefined) updateData.name = name;
-    if (phone !== undefined) updateData.phone = phone;
-    if (bankName !== undefined) updateData.bankName = bankName;
-    if (bankAccount !== undefined) updateData.bankAccount = bankAccount;
-    if (bankHolder !== undefined) updateData.bankHolder = bankHolder;
-    if (city !== undefined) updateData.city = city;
-    if (label !== undefined) updateData.label = label;
-    if (notes !== undefined) updateData.notes = notes;
+    if (name !== undefined) updateData.name = sanitizeString(name);
+    if (phone !== undefined) updateData.phone = sanitizeString(phone);
+    if (bankName !== undefined) updateData.bankName = sanitizeString(bankName);
+    if (bankAccount !== undefined) updateData.bankAccount = sanitizeString(bankAccount);
+    if (bankHolder !== undefined) updateData.bankHolder = sanitizeString(bankHolder);
+    if (city !== undefined) updateData.city = sanitizeString(city);
+    if (label !== undefined) updateData.label = sanitizeString(label);
+    if (notes !== undefined) updateData.notes = sanitizeString(notes);
 
     const customer = await db.customer.update({
       where: { id },

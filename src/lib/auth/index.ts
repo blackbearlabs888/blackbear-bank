@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { cookies } from 'next/headers';
-import { randomBytes, createHash } from 'crypto';
+import { randomBytes } from 'crypto';
 import bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 12;
@@ -10,52 +10,10 @@ export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, SALT_ROUNDS);
 }
 
-/**
- * Check if stored password uses legacy SHA-256 format (salt:hex)
- */
-function isLegacySha256(storedPassword: string): boolean {
-  return storedPassword.includes(':') && !storedPassword.startsWith('$2');
-}
-
-/**
- * Verify legacy SHA-256 password
- */
-function verifyLegacySha256(password: string, storedPassword: string): boolean {
-  const [salt, hash] = storedPassword.split(':');
-  if (!salt || !hash) return false;
-  const computedHash = createHash('sha256').update(password + salt).digest('hex');
-  return hash === computedHash;
-}
-
-/**
- * Verify password with auto-migration from legacy SHA-256 to bcrypt.
- * On first successful login with SHA-256 hash, automatically re-hashes to bcrypt.
- */
 export async function verifyPassword(
   password: string,
-  storedPassword: string,
-  userId?: string
+  storedPassword: string
 ): Promise<boolean> {
-  // Legacy SHA-256 format (salt:hex) — verify and auto-migrate to bcrypt
-  if (isLegacySha256(storedPassword)) {
-    const isValid = verifyLegacySha256(password, storedPassword);
-    if (isValid && userId) {
-      // Re-hash with bcrypt in the background
-      try {
-        const bcryptHash = await hashPassword(password);
-        await db.user.update({
-          where: { id: userId },
-          data: { password: bcryptHash },
-        });
-        console.log(`[auth] Auto-migrated user ${userId} from SHA-256 to bcrypt`);
-      } catch (error) {
-        console.error('[auth] Failed to migrate password:', error);
-      }
-    }
-    return isValid;
-  }
-
-  // Modern bcrypt format
   return bcrypt.compare(password, storedPassword);
 }
 

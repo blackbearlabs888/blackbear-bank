@@ -86,7 +86,18 @@ export async function PUT(
     }
 
     // Handle publish status change
-    const updateData: Record<string, unknown> = { ...body };
+    const updateData: Record<string, unknown> = {
+      title: body.title,
+      slug: body.slug,
+      excerpt: body.excerpt,
+      content: body.content,
+      featuredImage: body.featuredImage,
+      metaTitle: body.metaTitle,
+      metaDescription: body.metaDescription,
+      status: body.status,
+      author: body.author,
+      tags: body.tags,
+    };
     if (body.isPublished === true && !existingPost.isPublished) {
       updateData.publishedAt = new Date();
     }

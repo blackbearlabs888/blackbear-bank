@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     if (!validatePassword(password)) {
       return NextResponse.json(
-        { success: false, error: 'Password minimal 8 karakter' },
+        { success: false, error: 'Password minimal 6 karakter' },
         { status: 400 }
       );
     }
@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify password (with auto-migration from legacy SHA-256 to bcrypt)
-    const isValid = await verifyPassword(password, user.password, user.id);
+    // Verify password
+    const isValid = await verifyPassword(password, user.password);
     if (!isValid) {
       return NextResponse.json(
         { success: false, error: 'Email atau password salah' },

@@ -14,9 +14,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { Calendar, Eye, Search, Filter } from 'lucide-react';
+import { Calendar, Eye, Search, Filter, Clock, ArrowRight, BookOpen } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { SimplePagination } from '@/components/ui/pagination';
+import { Input } from '@/components/ui/input';
 
 interface BlogPost {
   id: string;
@@ -30,6 +31,7 @@ interface BlogPost {
   viewCount: number;
   publishedAt: Date | string | null;
   createdAt: Date | string;
+  content?: string;
 }
 
 interface PaginationData {
@@ -54,6 +56,17 @@ const categoryColors: Record<string, string> = {
   berita: 'bg-orange-500/10 text-orange-600 hover:bg-orange-500/20',
 };
 
+const getReadingTime = (content: string) => {
+  // If content has HTML or substantial text, use word count
+  const cleaned = content.replace(/<[^>]*>/g, '').trim();
+  if (cleaned.length > 100) {
+    const words = cleaned.split(/\s+/).filter(Boolean).length;
+    return Math.max(1, Math.ceil(words / 200));
+  }
+  // Fallback: character-based estimate from excerpt
+  return Math.max(1, Math.ceil(content.length / 1000));
+};
+
 function formatDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('id-ID', {
@@ -75,9 +88,11 @@ export default function BlogListingPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [fetchError, setFetchError] = useState(false);
 
   const fetchPosts = useCallback(async (page: number = 1) => {
     setLoading(true);
+    setFetchError(false);
     try {
       const params = new URLSearchParams({
         public: 'true',
@@ -107,6 +122,7 @@ export default function BlogListingPage() {
       }
     } catch (error) {
       console.error('Failed to fetch blog posts:', error);
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -125,6 +141,26 @@ export default function BlogListingPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Error Banner */}
+      {fetchError && !loading && (
+        <div className="bg-destructive/5 border-b border-destructive/20">
+          <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+            <p className="text-sm text-destructive flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              Gagal memuat artikel. Periksa koneksi internet Anda.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchPosts(pagination.page)}
+              className="h-7 text-xs border-destructive/30 text-destructive hover:bg-destructive/10"
+            >
+              Coba Lagi
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="relative py-16 md:py-20 overflow-hidden">
         {/* Background */}
@@ -167,12 +203,13 @@ export default function BlogListingPage() {
             {/* Search */}
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
+              <Input
                 type="text"
                 placeholder="Cari artikel..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="pl-10"
+                aria-label="Cari artikel blog"
               />
             </div>
 
@@ -218,23 +255,80 @@ export default function BlogListingPage() {
               ))}
             </div>
           ) : posts.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                <Search className="w-8 h-8 text-muted-foreground" />
+            <div className="text-center py-20">
+              {/* Empty state illustration */}
+              <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-muted/50 flex items-center justify-center">
+                <div className="relative">
+                  <BookOpen className="w-10 h-10 text-muted-foreground/40" />
+                  <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Search className="w-2.5 h-2.5 text-primary/40" />
+                  </div>
+                </div>
               </div>
               <h3 className="text-xl font-semibold mb-2">Belum Ada Artikel</h3>
-              <p className="text-muted-foreground max-w-md mx-auto">
+              <p className="text-muted-foreground max-w-md mx-auto mb-6">
                 {searchQuery || selectedCategory
                   ? 'Tidak ditemukan artikel yang sesuai dengan filter Anda.'
                   : 'Artikel akan segera hadir. Silakan kembali lagi nanti.'}
               </p>
+              {(searchQuery || selectedCategory) && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory('');
+                  }}
+                  className="rounded-xl"
+                >
+                  Reset Filter
+                </Button>
+              )}
             </div>
           ) : (
             <>
+              {/* Featured Post Hero */}
+              {posts.length > 0 && (
+                <div className="mb-8 animate-fade-in">
+                  <Link href={`/blog/${posts[0].slug}`} className="group block relative overflow-hidden rounded-2xl">
+                    <div className="aspect-[21/9] relative">
+                      {posts[0].featuredImage ? (
+                        <img src={posts[0].featuredImage} alt={posts[0].title} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-purple-500/20">
+                          <span className="text-6xl font-bold text-primary/30">{posts[0].title.charAt(0)}</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+                        <Badge variant="secondary" className="mb-3">Featured</Badge>
+                        <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">{posts[0].title}</h2>
+                        <p className="text-white/70 line-clamp-2 max-w-2xl">{posts[0].excerpt}</p>
+                        <div className="flex items-center gap-4 mt-3 text-sm text-white/60">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span>{posts[0].publishedAt ? formatDate(posts[0].publishedAt) : formatDate(posts[0].createdAt)}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{getReadingTime(posts[0].content || posts[0].excerpt || '')} menit</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>{posts[0].viewCount}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              )}
+
+              {/* Remaining Posts Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {posts.map((post) => (
-                  <Link key={post.id} href={`/blog/${post.slug}`} className="group">
-                    <Card className="h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/30">
+                {posts.slice(1).map((post, index) => (
+                  <div key={post.id} className="animate-fade-in" style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}>
+                  <Link href={`/blog/${post.slug}`} className="group block h-full">
+                    <Card className="h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/30 motion-safe:hover:-translate-y-1">
                       {/* Featured Image */}
                       <div className="relative h-48 bg-muted overflow-hidden">
                         {post.featuredImage ? (
@@ -257,18 +351,18 @@ export default function BlogListingPage() {
                         </div>
                       </div>
 
-                      <CardContent className="p-6">
+                      <CardContent className="p-6 flex flex-col">
                         <h2 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors line-clamp-2">
                           {post.title}
                         </h2>
                         
                         {post.excerpt && (
-                          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                          <p className="text-sm text-muted-foreground mb-4 line-clamp-2 flex-1">
                             {post.excerpt}
                           </p>
                         )}
 
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-3.5 h-3.5" />
                             <span>
@@ -278,13 +372,24 @@ export default function BlogListingPage() {
                             </span>
                           </div>
                           <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{getReadingTime(post.content || post.excerpt || '')} menit</span>
+                          </div>
+                          <div className="flex items-center gap-1">
                             <Eye className="w-3.5 h-3.5" />
                             <span>{post.viewCount}</span>
                           </div>
                         </div>
+
+                        {/* Read More Button */}
+                        <div className="flex items-center gap-1.5 text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-1 group-hover:translate-x-0">
+                          <span>Baca Selengkapnya</span>
+                          <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                        </div>
                       </CardContent>
                     </Card>
                   </Link>
+                  </div>
                 ))}
               </div>
 
