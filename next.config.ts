@@ -1,9 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Vercel handles build output automatically
-  // Uncomment below for Docker/self-hosted deployment:
-  // output: "standalone",
+  output: "standalone",
 
   typescript: {
     ignoreBuildErrors: true,
@@ -19,3 +17,4 @@ const nextConfig: NextConfig = {
 
 // Force restart for Prisma schema update
 export default nextConfig;
+
