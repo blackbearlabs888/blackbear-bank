@@ -7,9 +7,19 @@ import {
   validateEmail,
   validatePassword
 } from '@/lib/auth';
+import { rateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: 5 attempts per 15 minutes
+    const { success } = await rateLimit(request, 'login', { maxRequests: 5, windowMs: 15 * 60 * 1000 });
+    if (!success) {
+      return NextResponse.json(
+        { success: false, error: 'Terlalu banyak percobaan login. Silakan coba lagi dalam 15 menit.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { email, password, role } = body;
 
@@ -30,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     if (!validatePassword(password)) {
       return NextResponse.json(
-        { success: false, error: 'Password minimal 6 karakter' },
+        { success: false, error: 'Password minimal 8 karakter' },
         { status: 400 }
       );
     }
@@ -55,8 +65,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify password
-    const isValid = await verifyPassword(password, user.password);
+    // Verify password (with auto-migration from legacy SHA-256 to bcrypt)
+    const isValid = await verifyPassword(password, user.password, user.id);
     if (!isValid) {
       return NextResponse.json(
         { success: false, error: 'Email atau password salah' },
