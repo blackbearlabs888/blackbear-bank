@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Eye, EyeOff, User, Building2, Loader2, ArrowLeft, Shield, 
   Sparkles, Star, TrendingUp, Wallet, ChevronRight,
-  Lock, Mail, CheckCircle2, XCircle
+  Lock, Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSiteConfig } from '@/hooks/use-site-config';
@@ -50,18 +50,16 @@ function AnimatedBackground() {
         }}
       />
       
-      {/* Floating particles - useMemo to prevent hydration mismatch */}
-      {useMemo(() =>
-        [...Array(8)].map((_, i) => (
-          <FloatingParticle
-            key={i}
-            delay={i * 0.8}
-            duration={8 + (i * 0.47)}
-            size={4 + (i * 0.93)}
-            left={10 + (i * 12)}
-          />
-        ))
-      , [])}
+      {/* Floating particles */}
+      {[...Array(8)].map((_, i) => (
+        <FloatingParticle
+          key={i}
+          delay={i * 0.8}
+          duration={8 + Math.random() * 4}
+          size={4 + Math.random() * 8}
+          left={10 + (i * 12)}
+        />
+      ))}
       
       {/* Decorative orbs */}
       <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-primary/10 rounded-full blur-[80px] animate-pulse" />
@@ -83,25 +81,6 @@ function FeatureCard({ icon: Icon, title, description }: { icon: React.ElementTy
       </div>
     </div>
   );
-}
-
-// Password strength utilities
-function getPasswordStrength(password: string): number {
-  let strength = 0;
-  if (password.length >= 6) strength++;
-  if (password.length >= 10) strength++;
-  if (/[A-Z]/.test(password) && /[a-z]/.test(password)) strength++;
-  if (/[0-9]/.test(password)) strength++;
-  if (/[^A-Za-z0-9]/.test(password)) strength++;
-  return Math.min(strength, 4);
-}
-
-function getPasswordStrengthLabel(password: string): string {
-  const strength = getPasswordStrength(password);
-  if (strength <= 1) return 'Lemah — tambahkan huruf besar & angka';
-  if (strength === 2) return 'Cukup — tambahkan karakter spesial';
-  if (strength === 3) return 'Kuat — password Anda aman';
-  return 'Sangat kuat — excellent!';
 }
 
 export default function LoginPage() {
@@ -386,13 +365,13 @@ export default function LoginPage() {
                   <div className="relative">
                     <Input
                       id="email"
-                      type="text"
-                      placeholder="Email atau username"
-                      autoComplete="username"
+                      type="email"
+                      placeholder="email@contoh.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       className="h-11 sm:h-12 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors pl-4"
+                      autoComplete="email"
                     />
                   </div>
                 </div>
@@ -429,28 +408,6 @@ export default function LoginPage() {
                       )}
                     </Button>
                   </div>
-                  {/* Password Strength Indicator */}
-                  {password.length > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4].map((level) => {
-                          const isActive = getPasswordStrength(password) >= level;
-                          const color = level <= 1 ? 'bg-destructive' : level <= 2 ? 'bg-orange-500' : level <= 3 ? 'bg-amber-500' : 'bg-emerald-500';
-                          return (
-                            <div
-                              key={level}
-                              className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                                isActive ? color : 'bg-muted'
-                              }`}
-                            />
-                          );
-                        })}
-                      </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        {getPasswordStrengthLabel(password)}
-                      </p>
-                    </div>
-                  )}
                 </div>
 
                 {/* Submit Button */}
