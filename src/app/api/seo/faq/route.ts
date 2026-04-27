@@ -10,11 +10,11 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
 
     const where: Record<string, unknown> = {};
-    
+
     if (isPublic) {
       where.isActive = true;
     }
-    
+
     if (category) {
       where.category = category;
     }
@@ -51,7 +51,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { question, answer, category, order, isActive } = body;
 
-    // Validate required fields
     if (!question || !answer) {
       return NextResponse.json(
         { success: false, error: 'Question dan answer wajib diisi' },

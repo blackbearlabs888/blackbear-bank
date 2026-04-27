@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { db } from '@/lib/db';
 import FAQClient from './client';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
@@ -54,8 +55,9 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+// Fetch FAQs directly from DB via Prisma (server-side).
+// This works on ALL deployments — no localhost HTTP call needed.
 export default async function FAQPage() {
-  // Fetch FAQs server-side for SEO
   let faqs: Array<{
     id: string;
     question: string;
@@ -64,19 +66,14 @@ export default async function FAQPage() {
     order: number;
     isActive: boolean;
   }> = [];
-  
-  try {
-    const response = await fetch(
-      `http://localhost:3000/api/seo/faq?public=true`,
-      { cache: 'no-store' }
-    );
-    const result = await response.json();
 
-    if (result.success && result.data) {
-      faqs = result.data;
-    }
+  try {
+    faqs = await db.fAQ.findMany({
+      where: { isActive: true },
+      orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+    });
   } catch (error) {
-    console.error('Failed to fetch FAQs:', error);
+    console.error('[FAQ] Failed to fetch FAQs from DB:', error);
   }
 
   return <FAQClient initialFaqs={faqs} />;
