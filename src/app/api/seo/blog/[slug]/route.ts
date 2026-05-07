@@ -33,7 +33,10 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: post,
+      data: {
+        ...post,
+        viewCount: Number(post.viewCount),
+      },
     });
   } catch (error) {
     console.error('Get blog post error:', error);
@@ -98,7 +101,10 @@ export async function PUT(
 
     return NextResponse.json({
       success: true,
-      data: post,
+      data: {
+        ...post,
+        viewCount: Number(post.viewCount),
+      },
       message: 'Blog post berhasil diupdate',
     });
   } catch (error) {
