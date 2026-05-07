@@ -12,7 +12,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const incrementView = searchParams.get('view') === 'true';
 
-    const post = await db.BlogPost.findUnique({
+    const post = await db.blogPost.findUnique({
       where: { slug },
     });
 
@@ -25,7 +25,7 @@ export async function GET(
 
     // Increment view count for public views
     if (incrementView && post.isPublished) {
-      await db.BlogPost.update({
+      await db.blogPost.update({
         where: { id: post.id },
         data: { viewCount: { increment: 1 } },
       });
@@ -33,10 +33,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: {
-        ...post,
-        viewCount: Number(post.viewCount),
-      },
+      data: post,
     });
   } catch (error) {
     console.error('Get blog post error:', error);
@@ -64,7 +61,7 @@ export async function PUT(
     const { slug } = await params;
     const body = await request.json();
 
-    const existingPost = await db.BlogPost.findUnique({
+    const existingPost = await db.blogPost.findUnique({
       where: { slug },
     });
 
@@ -77,7 +74,7 @@ export async function PUT(
 
     // If changing slug, check if new slug exists
     if (body.slug && body.slug !== slug) {
-      const slugExists = await db.BlogPost.findUnique({
+      const slugExists = await db.blogPost.findUnique({
         where: { slug: body.slug },
       });
       if (slugExists) {
@@ -94,17 +91,14 @@ export async function PUT(
       updateData.publishedAt = new Date();
     }
 
-    const post = await db.BlogPost.update({
+    const post = await db.blogPost.update({
       where: { id: existingPost.id },
       data: updateData,
     });
 
     return NextResponse.json({
       success: true,
-      data: {
-        ...post,
-        viewCount: Number(post.viewCount),
-      },
+      data: post,
       message: 'Blog post berhasil diupdate',
     });
   } catch (error) {
@@ -132,7 +126,7 @@ export async function DELETE(
 
     const { slug } = await params;
 
-    const post = await db.BlogPost.findUnique({
+    const post = await db.blogPost.findUnique({
       where: { slug },
     });
 
