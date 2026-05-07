@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   
   try {
     const response = await fetch(
-      `http://localhost:3000/api/seo/blog/${slug}`,
+      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/seo/blog/${slug}`,
       { cache: 'no-store' }
     );
     const result = await response.json();
@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     }
 
     const post: BlogPost = result.data;
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id';
     
     return {
       title: post.metaTitle || `${post.title} | Blog`,
@@ -80,7 +80,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export async function generateStaticParams() {
   try {
     const response = await fetch(
-      `http://localhost:3000/api/seo/blog?public=true&limit=100`
+      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/seo/blog?public=true&limit=100`
     );
     const result = await response.json();
 
@@ -104,7 +104,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
   
   try {
     const response = await fetch(
-      `http://localhost:3000/api/seo/blog/${slug}`,
+      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/seo/blog/${slug}`,
       { cache: 'no-store' }
     );
     const result = await response.json();
@@ -115,7 +115,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
       // Track view count
       if (post.isPublished) {
         fetch(
-          `http://localhost:3000/api/seo/blog/${slug}?view=true`,
+          `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/seo/blog/${slug}?view=true`,
           { method: 'GET' }
         ).catch(() => {});
       }
@@ -128,76 +128,5 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
     notFound();
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
-
-  // Article JSON-LD structured data
-  const articleJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: post.title,
-    description: post.excerpt || post.content.substring(0, 160),
-    image: post.featuredImage || `${siteUrl}/og-blog.png`,
-    datePublished: post.publishedAt ? new Date(post.publishedAt).toISOString() : new Date(post.createdAt).toISOString(),
-    dateModified: new Date(post.updatedAt).toISOString(),
-    author: {
-      '@type': 'Organization',
-      name: post.author || 'Black Bear',
-      url: siteUrl,
-    },
-    publisher: {
-      '@type': 'Organization',
-      name: 'Black Bear',
-      logo: {
-        '@type': 'ImageObject',
-        url: `${siteUrl}/logo.png`,
-      },
-    },
-    mainEntityOfPage: {
-      '@type': 'WebPage',
-      '@id': `${siteUrl}/blog/${post.slug}`,
-    },
-    keywords: post.keywords || 'gestun, tarik tunai, kartu kredit, paylater',
-    articleSection: post.category,
-    wordCount: post.content.split(/\s+/).length,
-  };
-
-  // Breadcrumb JSON-LD
-  const breadcrumbJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Home',
-        item: siteUrl,
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: 'Blog',
-        item: `${siteUrl}/blog`,
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name: post.title,
-        item: `${siteUrl}/blog/${post.slug}`,
-      },
-    ],
-  };
-
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
-      <BlogDetailClient post={post} />
-    </>
-  );
+  return <BlogDetailClient post={post} />;
 }
