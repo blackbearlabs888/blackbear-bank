@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useTheme } from 'next-themes';
+import dynamic from 'next/dynamic';
+
 import { useAuthStore } from '@/store/auth-store';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,8 +19,6 @@ import {
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Sun,
-  Moon,
   LogOut,
   LayoutDashboard,
   Menu,
@@ -39,6 +38,8 @@ import {
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useSiteConfig } from '@/hooks/use-site-config';
+
+const ThemeToggle = dynamic(() => import('@/components/shared/theme-toggle'), { ssr: false });
 
 const publicLinks = [
   { href: '/', label: 'Home' },
@@ -89,7 +90,7 @@ const partnerLinks = [
 
 export function DesktopNavbar() {
   const pathname = usePathname();
-  const { resolvedTheme, setTheme } = useTheme();
+
   const { user, isAuthenticated, logout } = useAuthStore();
   const { config, getInitials } = useSiteConfig();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -329,20 +330,9 @@ export function DesktopNavbar() {
 
             {/* Right side */}
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-                className={cn(
-                  "w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center hover:bg-muted transition-colors",
-                  isDashboardPage && "md:hidden hidden"
-                )}
-                aria-label="Toggle theme"
-              >
-                {resolvedTheme === 'dark' ? (
-                  <Sun className="h-4 w-4 text-foreground" />
-                ) : (
-                  <Moon className="h-4 w-4 text-foreground" />
-                )}
-              </button>
+              <div className={cn(isDashboardPage && "md:hidden hidden")}>
+                <ThemeToggle />
+              </div>
 
               {isAuthenticated ? (
                 <DropdownMenu>

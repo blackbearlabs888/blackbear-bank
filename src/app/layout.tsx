@@ -13,6 +13,8 @@ import WhatsAppFab from "@/components/landing/whatsapp-fab";
 import ScrollToTop from "@/components/landing/scroll-to-top";
 import GlobalFloatingComponents from "@/components/shared/global-floating-components";
 import { db } from "@/lib/db";
+import { ServerSiteConfigProvider } from "@/lib/server-site-config";
+import type { SiteConfig } from "@/hooks/use-site-config";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -158,16 +160,36 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Fetch site config for page loader logo
+  // Fetch site config for page loader logo + server context
   let siteLogoUrl: string | null = null;
   let siteTitle: string = 'Black Bear';
+  let siteConfig: SiteConfig = {
+    websiteTitle: 'Black Bear',
+    logoUrl: null, faviconUrl: null, metaTitle: null, metaDescription: null,
+    footerEmail: null, footerWhatsapp: null, footerInstagram: null,
+    footerFacebook: null, footerTiktok: null, footerYoutube: null,
+    footerThreads: null, maintenanceMode: false,
+  };
   try {
-    const profile = await db.ownerProfile.findFirst({
-      select: { logoUrl: true, websiteTitle: true },
-    });
+    const profile = await db.ownerProfile.findFirst();
     if (profile) {
       siteLogoUrl = profile.logoUrl;
       siteTitle = profile.websiteTitle || 'Black Bear';
+      siteConfig = {
+        websiteTitle: profile.websiteTitle || 'Black Bear',
+        logoUrl: profile.logoUrl,
+        faviconUrl: profile.faviconUrl,
+        metaTitle: profile.metaTitle,
+        metaDescription: profile.metaDescription,
+        footerEmail: profile.footerEmail,
+        footerWhatsapp: profile.footerWhatsapp,
+        footerInstagram: profile.footerInstagram,
+        footerFacebook: profile.footerFacebook,
+        footerTiktok: profile.footerTiktok,
+        footerYoutube: profile.footerYoutube,
+        footerThreads: profile.footerThreads,
+        maintenanceMode: profile.maintenanceMode,
+      };
     }
   } catch {
     // Fallback to defaults
@@ -183,6 +205,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <ServerSiteConfigProvider config={siteConfig}>
           <PageLoader logoUrl={siteLogoUrl} siteTitle={siteTitle} />
           <MaintenanceWrapper>
             <div className="min-h-screen flex flex-col">
@@ -199,6 +222,7 @@ export default async function RootLayout({
             <GlobalFloatingComponents />
             <Toaster position="top-center" />
           </MaintenanceWrapper>
+          </ServerSiteConfigProvider>
         </ThemeProvider>
       </body>
     </html>

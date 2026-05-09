@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useServerSiteConfig } from '@/lib/server-site-config';
 
 export interface SiteConfig {
   websiteTitle: string;
@@ -40,8 +41,10 @@ let cacheTimestamp = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export function useSiteConfig() {
-  const [config, setConfig] = useState<SiteConfig>(cachedConfig || defaultConfig);
-  const [loading, setLoading] = useState(!cachedConfig);
+  // Use server-provided config as initial state (no API fetch delay for logo/title)
+  const serverConfig = useServerSiteConfig();
+  const [config, setConfig] = useState<SiteConfig>(serverConfig.config);
+  const [loading, setLoading] = useState(false); // Start false since we have server data
   const [error, setError] = useState<string | null>(null);
 
   const fetchConfig = useCallback(async (forceRefresh = false) => {
@@ -81,6 +84,8 @@ export function useSiteConfig() {
   }, [fetchConfig]);
 
   useEffect(() => {
+    // Still fetch in background to keep config fresh
+    // But initial render uses server-provided data (no delay)
     fetchConfig();
   }, [fetchConfig]);
 
