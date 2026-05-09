@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import dynamic from 'next/dynamic';
 import {
   FileText,
   Plus,
@@ -48,6 +50,8 @@ import {
   ScanEye,
   X,
   Clock,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -78,6 +82,13 @@ interface Pagination {
   total: number;
   totalPages: number;
 }
+
+const RichTextEditor = dynamic(() => import('@/components/shared/rich-text-editor'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[350px] rounded-xl border border-border/60 bg-muted/30 animate-pulse" />
+  ),
+});
 
 const CATEGORY_OPTIONS = [
   { value: 'artikel', label: 'Artikel' },
@@ -132,6 +143,7 @@ export default function BlogManagementPage() {
   const [deletingPost, setDeletingPost] = useState<BlogPost | null>(null);
   const [previewPost, setPreviewPost] = useState<BlogPost | null>(null);
   const [formData, setFormData] = useState(emptyForm);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Trigger hydration on mount
   useEffect(() => {
@@ -225,6 +237,7 @@ export default function BlogManagementPage() {
   const openCreateDialog = () => {
     setEditingPost(null);
     setFormData(emptyForm);
+    setIsFullscreen(false);
     setShowDialog(true);
   };
 
@@ -244,6 +257,7 @@ export default function BlogManagementPage() {
       author: post.author || '',
       isPublished: post.isPublished,
     });
+    setIsFullscreen(false);
     setShowDialog(true);
   };
 
@@ -567,16 +581,45 @@ export default function BlogManagementPage() {
       </Card>
 
       {/* ── Create/Edit Dialog ── */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-0">
-            <DialogTitle>{editingPost ? 'Edit Artikel' : 'Tambah Artikel Baru'}</DialogTitle>
-            <DialogDescription>
-              {editingPost ? 'Ubah detail artikel' : 'Buat artikel baru untuk blog'}
-            </DialogDescription>
+      <Dialog open={showDialog} onOpenChange={(open) => { if (!open) setIsFullscreen(false); setShowDialog(open); }}>
+        <DialogContent
+          showCloseButton={false}
+          className={cn(
+            "p-0 gap-0 overflow-hidden flex flex-col transition-all duration-300",
+            !isFullscreen && "max-w-3xl max-h-[85vh]"
+          )}
+          style={isFullscreen ? { width: '100vw', height: '100vh', maxWidth: '100vw', maxHeight: '100vh', borderRadius: 0 } : undefined}
+        >
+          <DialogHeader className="px-6 pt-6 pb-0 flex flex-row items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <DialogTitle>{editingPost ? 'Edit Artikel' : 'Tambah Artikel Baru'}</DialogTitle>
+              <DialogDescription>
+                {editingPost ? 'Ubah detail artikel' : 'Buat artikel baru untuk blog'}
+              </DialogDescription>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0 ml-3 mt-0.5">
+              <button
+                type="button"
+                onClick={() => setIsFullscreen(!isFullscreen)}
+                className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+                  "hover:bg-muted text-muted-foreground hover:text-foreground"
+                )}
+                title={isFullscreen ? 'Keluar Fullscreen' : 'Fullscreen'}
+              >
+                {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
+              <DialogPrimitive.Close
+                data-slot="dialog-close"
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-muted text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+                <span className="sr-only">Close</span>
+              </DialogPrimitive.Close>
+            </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          <div className={cn("flex-1 overflow-y-auto px-6 py-4 space-y-4", isFullscreen && "max-w-4xl mx-auto w-full")}>
             {/* Title & Slug */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -614,12 +657,10 @@ export default function BlogManagementPage() {
             {/* Content */}
             <div className="space-y-2">
               <Label className="text-xs">Konten *</Label>
-              <Textarea
-                value={formData.content}
-                onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                placeholder="Tulis konten artikel di sini..."
-                rows={10}
-                className="font-mono text-xs rounded-lg"
+              <RichTextEditor
+                content={formData.content}
+                onChange={(html) => setFormData(prev => ({ ...prev, content: html }))}
+                placeholder="Tulis konten artikel di sini... Gunakan toolbar untuk memformat."
               />
             </div>
 
@@ -958,7 +999,7 @@ function BlogPreviewDialog({
                   prose-pre:bg-muted prose-pre:border prose-pre:text-sm
                   prose-img:rounded-xl prose-img:shadow-lg
                 "
-                dangerouslySetInnerHTML={{ __html: post.content.replace(/\n/g, '<br />') }}
+                dangerouslySetInnerHTML={{ __html: post.content.includes('<') ? post.content : post.content.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br />').replace(/^/, '<p>').replace(/$/, '</p>') }}
               />
             </div>
           </div>
