@@ -101,12 +101,31 @@ function extractHeadings(html: string): { id: string; text: string; level: numbe
   return headings;
 }
 
-// Convert raw text/markdown-like content to proper HTML with paragraphs and spacing
+// Process content into properly formatted HTML with guaranteed paragraph spacing
 function markdownToHtml(content: string): string {
   let html = content;
 
-  // Already has HTML tags — just add heading IDs
+  // Already has HTML tags (from Tiptap editor)
   if (/<h[1-6][^>]*>/i.test(html) || /<p[^>]*>/i.test(html)) {
+    // Ensure paragraphs have explicit spacing via data attributes
+    html = html.replace(/<p>/g, '<p data-blog-p>');
+    html = html.replace(/<p\s+([^>]*)>/g, '<p $1 data-blog-p>');
+    return addHeadingIds(html);
+  }
+
+  // Has some inline HTML tags (bold, italic, links, etc.) but no block tags
+  // This means content is plain text with possible inline formatting
+  if (/<(strong|em|a|br|code|span|b|i|u|mark)[^>]*>/i.test(html)) {
+    // Split by newlines to create paragraphs
+    const blocks = html.split(/\n+/);
+    html = blocks
+      .map(block => {
+        const trimmed = block.trim();
+        if (!trimmed) return '';
+        return `<p data-blog-p>${trimmed}</p>`;
+      })
+      .filter(Boolean)
+      .join('\n');
     return addHeadingIds(html);
   }
 
@@ -126,7 +145,7 @@ function markdownToHtml(content: string): string {
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
   // Blockquotes (>)
-  html = html.replace(/^> (.+)$/gm, '<blockquote><p>$1</p></blockquote>');
+  html = html.replace(/^> (.+)$/gm, '<blockquote><p data-blog-p>$1</p></blockquote>');
 
   // Unordered lists (- or *)
   html = html.replace(/^[*-] (.+)$/gm, '<li>$1</li>');
@@ -146,7 +165,7 @@ function markdownToHtml(content: string): string {
     // Already a block element
     if (/^<(h[1-6]|ul|ol|li|pre|blockquote|hr|div)/i.test(trimmed)) return trimmed;
     // Convert single newlines to <br> within paragraphs
-    return `<p>${trimmed.replace(/\n/g, '<br />')}</p>`;
+    return `<p data-blog-p>${trimmed.replace(/\n/g, '<br />')}</p>`;
   }).join('\n');
 
   // Add heading IDs
@@ -430,6 +449,7 @@ export default function BlogDetailClient({ post }: BlogDetailClientProps) {
                     prose-pre:bg-muted prose-pre:border prose-pre:border-border/50 prose-pre:rounded-xl prose-pre:shadow-sm
                     prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8
                     prose-hr:border-border/30 prose-hr:my-10
+                    blog-prose-fallback
                   "
                   dangerouslySetInnerHTML={{ __html: processedContent }}
                 />
