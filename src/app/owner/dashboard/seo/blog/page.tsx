@@ -461,39 +461,39 @@ export default function BlogManagementPage() {
         </div>
 
         {/* ══════ STATS GRID ══════ */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
           <StatCard
             label="Total Artikel"
             value={stats.total}
             icon={<FileText className="w-4 h-4" />}
-            gradient="from-violet-500/10 to-fuchsia-500/10 dark:from-violet-500/15 dark:to-fuchsia-500/15"
             iconBg="bg-violet-500/10 dark:bg-violet-500/20"
             iconColor="text-violet-600 dark:text-violet-400"
+            ring="ring-violet-500/20 dark:ring-violet-500/10"
           />
           <StatCard
             label="Published"
             value={stats.published}
             icon={<Globe className="w-4 h-4" />}
-            gradient="from-emerald-500/10 to-teal-500/10 dark:from-emerald-500/15 dark:to-teal-500/15"
             iconBg="bg-emerald-500/10 dark:bg-emerald-500/20"
             iconColor="text-emerald-600 dark:text-emerald-400"
+            ring="ring-emerald-500/20 dark:ring-emerald-500/10"
             sublabel={stats.total > 0 ? `${Math.round((stats.published / stats.total) * 100)}%` : undefined}
           />
           <StatCard
             label="Draft"
             value={stats.drafts}
             icon={<Clock className="w-4 h-4" />}
-            gradient="from-amber-500/10 to-orange-500/10 dark:from-amber-500/15 dark:to-orange-500/15"
             iconBg="bg-amber-500/10 dark:bg-amber-500/20"
             iconColor="text-amber-600 dark:text-amber-400"
+            ring="ring-amber-500/20 dark:ring-amber-500/10"
           />
           <StatCard
             label="Total Views"
             value={formatNumber(stats.totalViews)}
             icon={<TrendingUp className="w-4 h-4" />}
-            gradient="from-rose-500/10 to-pink-500/10 dark:from-rose-500/15 dark:to-pink-500/15"
             iconBg="bg-rose-500/10 dark:bg-rose-500/20"
             iconColor="text-rose-600 dark:text-rose-400"
+            ring="ring-rose-500/20 dark:ring-rose-500/10"
             sublabel={stats.topPost ? `Top: ${stats.topPost.title.slice(0, 20)}...` : undefined}
           />
         </div>
@@ -1044,34 +1044,42 @@ function StatCard({
   label,
   value,
   icon,
-  gradient,
   iconBg,
   iconColor,
+  ring,
   sublabel,
 }: {
   label: string;
   value: string | number;
   icon: React.ReactNode;
-  gradient: string;
   iconBg: string;
   iconColor: string;
+  ring: string;
   sublabel?: string;
 }) {
   return (
-    <Card className="rounded-xl border-border/50 overflow-hidden hover:shadow-md transition-all duration-300 group">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className={cn("p-2 rounded-lg", iconBg)}>
+    <Card className={cn(
+      "rounded-2xl border-border/40 overflow-hidden transition-all duration-300 hover:shadow-md",
+      ring
+    )}>
+      <CardContent className="p-3.5 sm:p-4">
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "p-2 rounded-xl flex-shrink-0 transition-transform duration-300 group-hover:scale-110",
+            iconBg
+          )}>
             <div className={iconColor}>{icon}</div>
           </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xl sm:text-2xl font-bold tracking-tight leading-none">{value}</p>
+            <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground uppercase tracking-wider mt-1">{label}</p>
+          </div>
+          {sublabel && (
+            <div className="flex-shrink-0 px-2 py-0.5 rounded-full bg-muted/60">
+              <span className="text-[10px] font-semibold text-muted-foreground">{sublabel}</span>
+            </div>
+          )}
         </div>
-        <div className="mt-3">
-          <p className="text-2xl font-bold tracking-tight">{value}</p>
-          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mt-0.5">{label}</p>
-        </div>
-        {sublabel && (
-          <p className="text-[10px] text-muted-foreground/70 mt-1.5 truncate">{sublabel}</p>
-        )}
       </CardContent>
     </Card>
   );
@@ -1118,101 +1126,68 @@ function TableView({
   onCopySlug: (slug: string) => void;
 }) {
   return (
-    <Card className="rounded-xl border-border/50 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b bg-muted/30">
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground uppercase tracking-wider text-[10px]">Artikel</th>
-              <th className="text-left px-3 py-3 font-medium text-muted-foreground uppercase tracking-wider text-[10px] hidden md:table-cell">Kategori</th>
-              <th className="text-left px-3 py-3 font-medium text-muted-foreground uppercase tracking-wider text-[10px] hidden lg:table-cell">Author</th>
-              <th className="text-center px-3 py-3 font-medium text-muted-foreground uppercase tracking-wider text-[10px]">Views</th>
-              <th className="text-center px-3 py-3 font-medium text-muted-foreground uppercase tracking-wider text-[10px] hidden sm:table-cell">Status</th>
-              <th className="text-left px-3 py-3 font-medium text-muted-foreground uppercase tracking-wider text-[10px] hidden md:table-cell">Tanggal</th>
-              <th className="text-right px-3 py-3 font-medium text-muted-foreground uppercase tracking-wider text-[10px] w-10"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {posts.map((post, idx) => (
-              <tr
-                key={post.id}
-                className="hover:bg-muted/20 transition-colors group cursor-pointer animate-fade-in"
-                style={{ animationDelay: `${Math.min(idx * 30, 300)}ms` }}
-                onClick={() => onPreview(post)}
-              >
-                {/* Article info */}
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex-shrink-0 hidden sm:block">
-                      {post.featuredImage ? (
-                        <img src={post.featuredImage} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-fuchsia-500/10">
-                          <FileText className="w-4 h-4 text-muted-foreground/40" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium truncate max-w-[250px] sm:max-w-[350px]">{post.title}</p>
-                      <p className="text-[10px] text-muted-foreground font-mono truncate mt-0.5 max-w-[200px] sm:max-w-[300px]">
-                        /blog/{post.slug}
-                      </p>
-                    </div>
+    <>
+      {/* ── Mobile: Card list ── */}
+      <div className="md:hidden space-y-2">
+        {posts.map((post, idx) => (
+          <Card
+            key={post.id}
+            className="rounded-2xl border-border/40 overflow-hidden hover:shadow-md transition-all duration-300 cursor-pointer animate-fade-in active:scale-[0.98]"
+            style={{ animationDelay: `${Math.min(idx * 30, 300)}ms` }}
+            onClick={() => onPreview(post)}
+          >
+            <div className="flex gap-3 p-3">
+              {/* Thumbnail */}
+              <div className="w-14 h-14 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+                {post.featuredImage ? (
+                  <img src={post.featuredImage} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-fuchsia-500/10">
+                    <FileText className="w-5 h-5 text-muted-foreground/20" />
                   </div>
-                </td>
-
-                {/* Category */}
-                <td className="px-3 py-3 hidden md:table-cell">
-                  <Badge variant="secondary" className={cn("text-[9px] px-2 py-0.5 rounded-full font-medium", CATEGORY_OPTIONS.find(c => c.value === post.category)?.color)}>
-                    {CATEGORY_OPTIONS.find(c => c.value === post.category)?.label || post.category}
-                  </Badge>
-                </td>
-
-                {/* Author */}
-                <td className="px-3 py-3 hidden lg:table-cell">
-                  <span className="text-muted-foreground">{post.author || '-'}</span>
-                </td>
-
-                {/* Views */}
-                <td className="px-3 py-3 text-center">
-                  <span className="font-mono font-medium">{formatNumber(post.viewCount)}</span>
-                </td>
-
-                {/* Status */}
-                <td className="px-3 py-3 text-center hidden sm:table-cell">
-                  <span className={cn(
-                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold",
-                    post.isPublished
-                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                  )}>
-                    <div className={cn(
-                      "w-1.5 h-1.5 rounded-full",
-                      post.isPublished ? "bg-emerald-500" : "bg-amber-500"
-                    )} />
-                    {post.isPublished ? 'Live' : 'Draft'}
-                  </span>
-                </td>
-
-                {/* Date */}
-                <td className="px-3 py-3 text-muted-foreground hidden md:table-cell">
-                  {formatDate(post.createdAt)}
-                </td>
-
-                {/* Actions */}
-                <td className="px-3 py-3 text-right">
+                )}
+              </div>
+              {/* Content */}
+              <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className={cn(
+                      "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-semibold flex-shrink-0",
+                      post.isPublished
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    )}>
+                      <div className="w-1 h-1 rounded-full bg-current" />
+                      {post.isPublished ? 'Live' : 'Draft'}
+                    </span>
+                    <Badge className={cn("text-[8px] px-1.5 py-0 rounded-full", CATEGORY_OPTIONS.find(c => c.value === post.category)?.color)}>
+                      {CATEGORY_OPTIONS.find(c => c.value === post.category)?.label || post.category}
+                    </Badge>
+                  </div>
+                  <h3 className="font-semibold text-[13px] leading-tight truncate">{post.title}</h3>
+                  <p className="text-[10px] text-muted-foreground font-mono truncate mt-0.5">/blog/{post.slug}</p>
+                </div>
+                <div className="flex items-center justify-between mt-1.5">
+                  <div className="flex items-center gap-2.5 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-0.5">
+                      <Eye className="w-2.5 h-2.5" />{formatNumber(post.viewCount)}
+                    </span>
+                    <span className="flex items-center gap-0.5">
+                      <Calendar className="w-2.5 h-2.5" />{formatDate(post.createdAt)}
+                    </span>
+                    {post.author && (
+                      <span className="flex items-center gap-0.5 truncate max-w-[60px]">
+                        <User className="w-2.5 h-2.5" />{post.author}
+                      </span>
+                    )}
+                  </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreHorizontal className="w-4 h-4" />
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={(e) => e.stopPropagation()}>
+                        <MoreHorizontal className="w-3.5 h-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuContent align="end" className="w-40">
                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPreview(post); }} className="text-xs gap-2">
                         <ScanEye className="w-3.5 h-3.5" /> Preview
                       </DropdownMenuItem>
@@ -1224,7 +1199,7 @@ function TableView({
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="text-xs gap-2">
                         <a href={`/blog/${post.slug}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                          <ExternalLink className="w-3.5 h-3.5" /> Buka di Browser
+                          <ExternalLink className="w-3.5 h-3.5" /> Buka
                         </a>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -1236,13 +1211,140 @@ function TableView({
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
       </div>
-    </Card>
+
+      {/* ── Desktop: Table ── */}
+      <Card className="hidden md:block rounded-xl border-border/40 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b bg-muted/30">
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground uppercase tracking-wider text-[10px]">Artikel</th>
+                <th className="text-left px-3 py-3 font-medium text-muted-foreground uppercase tracking-wider text-[10px]">Kategori</th>
+                <th className="text-left px-3 py-3 font-medium text-muted-foreground uppercase tracking-wider text-[10px] hidden lg:table-cell">Author</th>
+                <th className="text-center px-3 py-3 font-medium text-muted-foreground uppercase tracking-wider text-[10px]">Views</th>
+                <th className="text-center px-3 py-3 font-medium text-muted-foreground uppercase tracking-wider text-[10px]">Status</th>
+                <th className="text-left px-3 py-3 font-medium text-muted-foreground uppercase tracking-wider text-[10px] hidden lg:table-cell">Tanggal</th>
+                <th className="text-right px-3 py-3 font-medium text-muted-foreground uppercase tracking-wider text-[10px] w-10"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {posts.map((post, idx) => (
+                <tr
+                  key={post.id}
+                  className="hover:bg-muted/20 transition-colors group cursor-pointer animate-fade-in"
+                  style={{ animationDelay: `${Math.min(idx * 30, 300)}ms` }}
+                  onClick={() => onPreview(post)}
+                >
+                  {/* Article info */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                        {post.featuredImage ? (
+                          <img src={post.featuredImage} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-fuchsia-500/10">
+                            <FileText className="w-4 h-4 text-muted-foreground/40" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate max-w-[250px] lg:max-w-[350px]">{post.title}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[200px] lg:max-w-[300px] mt-0.5">
+                          /blog/{post.slug}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Category */}
+                  <td className="px-3 py-3">
+                    <Badge variant="secondary" className={cn("text-[9px] px-2 py-0.5 rounded-full font-medium", CATEGORY_OPTIONS.find(c => c.value === post.category)?.color)}>
+                      {CATEGORY_OPTIONS.find(c => c.value === post.category)?.label || post.category}
+                    </Badge>
+                  </td>
+
+                  {/* Author */}
+                  <td className="px-3 py-3 hidden lg:table-cell">
+                    <span className="text-muted-foreground">{post.author || '-'}</span>
+                  </td>
+
+                  {/* Views */}
+                  <td className="px-3 py-3 text-center">
+                    <span className="font-mono font-medium">{formatNumber(post.viewCount)}</span>
+                  </td>
+
+                  {/* Status */}
+                  <td className="px-3 py-3 text-center">
+                    <span className={cn(
+                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold",
+                      post.isPublished
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    )}>
+                      <div className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        post.isPublished ? "bg-emerald-500" : "bg-amber-500"
+                      )} />
+                      {post.isPublished ? 'Live' : 'Draft'}
+                    </span>
+                  </td>
+
+                  {/* Date */}
+                  <td className="px-3 py-3 text-muted-foreground hidden lg:table-cell">
+                    {formatDate(post.createdAt)}
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-3 py-3 text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPreview(post); }} className="text-xs gap-2">
+                          <ScanEye className="w-3.5 h-3.5" /> Preview
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(post); }} className="text-xs gap-2">
+                          <Pencil className="w-3.5 h-3.5" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onCopySlug(post.slug); }} className="text-xs gap-2">
+                          <Copy className="w-3.5 h-3.5" /> Copy Link
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild className="text-xs gap-2">
+                          <a href={`/blog/${post.slug}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                            <ExternalLink className="w-3.5 h-3.5" /> Buka di Browser
+                          </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => { e.stopPropagation(); onDelete(post); }}
+                          className="text-xs gap-2 text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Hapus
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </>
   );
 }
 
@@ -1261,95 +1363,172 @@ function GridView({
   onCopySlug: (slug: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3 lg:gap-4">
       {posts.map((post, idx) => (
         <Card
           key={post.id}
-          className="rounded-xl border-border/50 overflow-hidden hover:shadow-md transition-all duration-300 group cursor-pointer animate-fade-in"
+          className="rounded-2xl border-border/40 overflow-hidden hover:shadow-md transition-all duration-300 group cursor-pointer animate-fade-in active:scale-[0.98]"
           style={{ animationDelay: `${Math.min(idx * 50, 300)}ms` }}
           onClick={() => onPreview(post)}
         >
-          {/* Thumbnail */}
-          <div className="relative h-36 bg-muted overflow-hidden">
-            {post.featuredImage ? (
-              <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-fuchsia-500/10">
-                <FileText className="w-10 h-10 text-muted-foreground/20" />
+          {/* ── Mobile: Horizontal compact layout ── */}
+          <div className="sm:hidden">
+            <div className="flex gap-3 p-3">
+              {/* Thumbnail */}
+              <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+                {post.featuredImage ? (
+                  <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-fuchsia-500/10">
+                    <FileText className="w-6 h-6 text-muted-foreground/20" />
+                  </div>
+                )}
               </div>
-            )}
-            {/* Status overlay */}
-            <div className="absolute top-2.5 left-2.5">
-              <span className={cn(
-                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold backdrop-blur-sm",
-                post.isPublished
-                  ? "bg-emerald-500/90 text-white"
-                  : "bg-amber-500/90 text-white"
-              )}>
-                <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                {post.isPublished ? 'Published' : 'Draft'}
-              </span>
-            </div>
-            {/* Category */}
-            <div className="absolute top-2.5 right-2.5">
-              <Badge className={cn("text-[9px] px-2 py-0.5 rounded-full backdrop-blur-sm", CATEGORY_OPTIONS.find(c => c.value === post.category)?.color)}>
-                {CATEGORY_OPTIONS.find(c => c.value === post.category)?.label || post.category}
-              </Badge>
+              {/* Content */}
+              <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className={cn(
+                      "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-semibold flex-shrink-0",
+                      post.isPublished
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    )}>
+                      <div className="w-1 h-1 rounded-full bg-current" />
+                      {post.isPublished ? 'Live' : 'Draft'}
+                    </span>
+                    <Badge className={cn("text-[8px] px-1.5 py-0 rounded-full", CATEGORY_OPTIONS.find(c => c.value === post.category)?.color)}>
+                      {CATEGORY_OPTIONS.find(c => c.value === post.category)?.label || post.category}
+                    </Badge>
+                  </div>
+                  <h3 className="font-semibold text-[13px] leading-tight truncate">{post.title}</h3>
+                  {post.excerpt && (
+                    <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{post.excerpt}</p>
+                  )}
+                </div>
+                <div className="flex items-center justify-between mt-1.5">
+                  <div className="flex items-center gap-2.5 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-0.5">
+                      <Eye className="w-2.5 h-2.5" />{formatNumber(post.viewCount)}
+                    </span>
+                    <span className="flex items-center gap-0.5">
+                      <Calendar className="w-2.5 h-2.5" />{formatDate(post.createdAt)}
+                    </span>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={(e) => e.stopPropagation()}>
+                        <MoreHorizontal className="w-3.5 h-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPreview(post); }} className="text-xs gap-2">
+                        <ScanEye className="w-3.5 h-3.5" /> Preview
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(post); }} className="text-xs gap-2">
+                        <Pencil className="w-3.5 h-3.5" /> Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onCopySlug(post.slug); }} className="text-xs gap-2">
+                        <Copy className="w-3.5 h-3.5" /> Copy Link
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={(e) => { e.stopPropagation(); onDelete(post); }}
+                        className="text-xs gap-2 text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Hapus
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
             </div>
           </div>
 
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-sm truncate mb-1">{post.title}</h3>
-            {post.excerpt && (
-              <p className="text-[11px] text-muted-foreground line-clamp-2 mb-3">{post.excerpt}</p>
-            )}
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Eye className="w-3 h-3" />
-                  {formatNumber(post.viewCount)}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  {formatDate(post.createdAt)}
+          {/* ── Desktop/Tablet: Vertical card layout ── */}
+          <div className="hidden sm:block">
+            {/* Thumbnail */}
+            <div className="relative h-36 bg-muted overflow-hidden">
+              {post.featuredImage ? (
+                <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover sm:group-hover:scale-105 transition-transform duration-500" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-fuchsia-500/10">
+                  <FileText className="w-10 h-10 text-muted-foreground/20" />
+                </div>
+              )}
+              {/* Status overlay */}
+              <div className="absolute top-2.5 left-2.5">
+                <span className={cn(
+                  "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold backdrop-blur-sm",
+                  post.isPublished
+                    ? "bg-emerald-500/90 text-white"
+                    : "bg-amber-500/90 text-white"
+                )}>
+                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                  {post.isPublished ? 'Published' : 'Draft'}
                 </span>
               </div>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={(e) => e.stopPropagation()}>
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPreview(post); }} className="text-xs gap-2">
-                    <ScanEye className="w-3.5 h-3.5" /> Preview
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(post); }} className="text-xs gap-2">
-                    <Pencil className="w-3.5 h-3.5" /> Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onCopySlug(post.slug); }} className="text-xs gap-2">
-                    <Copy className="w-3.5 h-3.5" /> Copy Link
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={(e) => { e.stopPropagation(); onDelete(post); }}
-                    className="text-xs gap-2 text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Hapus
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Category */}
+              <div className="absolute top-2.5 right-2.5">
+                <Badge className={cn("text-[9px] px-2 py-0.5 rounded-full backdrop-blur-sm", CATEGORY_OPTIONS.find(c => c.value === post.category)?.color)}>
+                  {CATEGORY_OPTIONS.find(c => c.value === post.category)?.label || post.category}
+                </Badge>
+              </div>
             </div>
 
-            {post.author && (
-              <div className="flex items-center gap-1.5 mt-2 pt-2 border-t text-[10px] text-muted-foreground">
-                <User className="w-3 h-3" />
-                {post.author}
+            <CardContent className="p-4">
+              <h3 className="font-semibold text-sm truncate mb-1">{post.title}</h3>
+              {post.excerpt && (
+                <p className="text-[11px] text-muted-foreground line-clamp-2 mb-3">{post.excerpt}</p>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Eye className="w-3 h-3" />
+                    {formatNumber(post.viewCount)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {formatDate(post.createdAt)}
+                  </span>
+                </div>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPreview(post); }} className="text-xs gap-2">
+                      <ScanEye className="w-3.5 h-3.5" /> Preview
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(post); }} className="text-xs gap-2">
+                      <Pencil className="w-3.5 h-3.5" /> Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onCopySlug(post.slug); }} className="text-xs gap-2">
+                      <Copy className="w-3.5 h-3.5" /> Copy Link
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={(e) => { e.stopPropagation(); onDelete(post); }}
+                      className="text-xs gap-2 text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Hapus
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-            )}
-          </CardContent>
+
+              {post.author && (
+                <div className="flex items-center gap-1.5 mt-2 pt-2 border-t text-[10px] text-muted-foreground">
+                  <User className="w-3 h-3" />
+                  {post.author}
+                </div>
+              )}
+            </CardContent>
+          </div>
         </Card>
       ))}
     </div>
