@@ -20,6 +20,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { HelpCircle, Search, MessageCircle, Shield, Clock, CreditCard, TrendingUp } from 'lucide-react';
+import { safeJsonLd } from '@/lib/json-ld-safe';
 
 interface FAQ {
   id: string;
@@ -123,7 +124,7 @@ export default function FAQClient({ initialFaqs }: FAQClientProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: safeJsonLd({
             '@context': 'https://schema.org',
             '@type': 'FAQPage',
             mainEntity: allFaqsForJsonLd.map(faq => ({
@@ -137,7 +138,7 @@ export default function FAQClient({ initialFaqs }: FAQClientProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: safeJsonLd({
             '@context': 'https://schema.org',
             '@type': 'BreadcrumbList',
             itemListElement: [

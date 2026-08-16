@@ -5,6 +5,20 @@ import bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 12;
 
+/**
+ * Generate a random password using cryptographically secure randomBytes.
+ * Uses an unambiguous character set (no 0/O, 1/l/I confusion).
+ */
+export function generateRandomPassword(length: number = 10): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const bytes = randomBytes(length);
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(bytes[i] % chars.length);
+  }
+  return password;
+}
+
 // Password hashing
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, SALT_ROUNDS);

@@ -55,6 +55,9 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+// Phase 4: ISR — location list changes infrequently, revalidate every hour.
+export const revalidate = 3600;
+
 export default async function LocationListingPage() {
   // Fetch locations directly from database
   let locations: Array<{

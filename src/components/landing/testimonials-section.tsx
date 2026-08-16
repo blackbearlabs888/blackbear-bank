@@ -186,16 +186,10 @@ function MobileSwipeCarousel({ testimonials }: { testimonials: PublicTestimonial
   );
 }
 
-// Star distribution bars with scroll-triggered animation
-const starDistribution = [
-  { stars: 5, percent: 80 },
-  { stars: 4, percent: 15 },
-  { stars: 3, percent: 3 },
-  { stars: 2, percent: 1 },
-  { stars: 1, percent: 1 },
-];
-
-function StarRatingBars() {
+// Star distribution bars with scroll-triggered animation.
+// In Phase 4 this is computed from the actual testimonial set rather than
+// hardcoded — we no longer publish a fake distribution.
+function StarRatingBars({ distribution }: { distribution: { stars: number; percent: number }[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -217,9 +211,11 @@ function StarRatingBars() {
     return () => observer.disconnect();
   }, []);
 
+  if (distribution.length === 0) return null;
+
   return (
     <div ref={containerRef} className="mx-auto max-w-[200px] sm:max-w-[240px] space-y-1.5 mb-4">
-      {starDistribution.map((item, i) => (
+      {distribution.map((item, i) => (
         <div key={item.stars} className="flex items-center gap-2">
           <div className="flex items-center gap-0.5 w-10 flex-shrink-0">
             <span className="text-[11px] font-medium text-muted-foreground w-3 text-right">{item.stars}</span>
@@ -281,31 +277,58 @@ export default function TestimonialsSection() {
     return arr;
   };
 
+  // Compute a real aggregate from the testimonial set we actually have.
+  // We do NOT publish a hardcoded rating/review count — that would be a fake
+  // trust signal. Only show the aggregate when we have at least 5 verified
+  // testimonials; otherwise we hide the rating block entirely.
+  const verified = loaded ? testimonials : [];
+  const ratingCount = verified.length;
+  const showAggregate = ratingCount >= 5;
+  const avgRating = showAggregate
+    ? verified.reduce((s, t) => s + (t.rating || 0), 0) / ratingCount
+    : 0;
+  const avgLabel = avgRating.toFixed(1).replace(/\.0$/, '');
+  const starDistribution = showAggregate
+    ? [5, 4, 3, 2, 1].map((stars) => {
+        const count = verified.filter((t) => Math.round(t.rating || 0) === stars).length;
+        return {
+          stars,
+          percent: ratingCount > 0 ? Math.round((count / ratingCount) * 100) : 0,
+        };
+      })
+    : [];
+
   return (
     <section className="relative py-12 md:py-20 z-10" aria-labelledby="testimonials-heading">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 mb-8">
         <div className="text-center">
-          {/* Rating number */}
-          <div className="mb-2 flex items-center justify-center gap-2">
-            <div className="flex items-baseline">
-              <span className="text-3xl md:text-4xl font-bold text-foreground tracking-tight">4.9</span>
-              <span className="text-lg md:text-xl text-muted-foreground font-medium">/5</span>
+          {/* Rating number — only shown when backed by real, verified testimonials */}
+          {showAggregate && (
+            <div className="mb-2 flex items-center justify-center gap-2">
+              <div className="flex items-baseline">
+                <span className="text-3xl md:text-4xl font-bold text-foreground tracking-tight">{avgLabel}</span>
+                <span className="text-lg md:text-xl text-muted-foreground font-medium">/5</span>
+              </div>
+              <span className="text-sm text-muted-foreground">({ratingCount} ulasan)</span>
             </div>
-            <span className="text-sm text-muted-foreground">(2,847 ulasan)</span>
-          </div>
-          {/* Star rating with glow */}
-          <div className="relative inline-flex mb-1">
-            <div className="absolute inset-0 bg-amber-400/20 blur-md rounded-full" />
-            <div className="relative flex items-center gap-0.5">
-              {[1, 2, 3, 4].map((s) => (
-                <Star key={s} className="w-4 h-4 md:w-5 md:h-5 fill-amber-500 text-amber-500" />
-              ))}
-              <Star className="w-4 h-4 md:w-5 md:h-5 fill-amber-500 text-amber-500 scale-90" />
+          )}
+          {/* Star rating with glow — only shown when backed by real testimonials */}
+          {showAggregate && (
+            <div className="relative inline-flex mb-1">
+              <div className="absolute inset-0 bg-amber-400/20 blur-md rounded-full" />
+              <div className="relative flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star
+                    key={s}
+                    className={`w-4 h-4 md:w-5 md:h-5 ${s <= Math.round(avgRating) ? 'fill-amber-500 text-amber-500' : 'text-muted-foreground/30'}`}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Star Distribution Bars */}
-          <StarRatingBars />
+          {/* Star Distribution Bars — computed from real testimonials */}
+          <StarRatingBars distribution={starDistribution} />
 
           <h2 id="testimonials-heading" className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
             Apa Kata{' '}
@@ -314,7 +337,9 @@ export default function TestimonialsSection() {
             </span>
           </h2>
           <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
-            Ribuan pelanggan puas dengan layanan kami. Berikut pengalaman mereka.
+            {showAggregate
+              ? `Berdasarkan ${ratingCount} ulasan pelanggan terverifikasi. Berikut pengalaman mereka.`
+              : 'Berikut pengalaman pelanggan kami.'}
           </p>
         </div>
       </div>

@@ -1,16 +1,35 @@
 /**
- * Prebuild script for Vercel deployment.
- * 
- * Detects environment and:
- * 1. Swaps Prisma schema (SQLite ↔ PostgreSQL)
- * 2. Generates Prisma client
- * 3. Pushes schema to database
- * 4. Seeds the database if needed
- * 
- * Usage: npx tsx prebuild.ts (called from build command)
+ * Prebuild script — SAFE BY DEFAULT (Phase 1.2 — Finding 6)
+ *
+ * Default behaviour: NON-MUTATING. The build pipeline must NEVER perform
+ * database mutation (`prisma db push`, `prisma migrate dev`, seed). The
+ * only allowed operations are:
+ *   1. Swap Prisma schema file (SQLite ↔ PostgreSQL) — file copy only.
+ *   2. `prisma generate` — generates the client; touches no database.
+ *   3. (Optional) `prisma migrate deploy` — but ONLY when explicitly
+ *      requested via the separate `db:migrate:deploy` script. This prebuild
+ *      script does NOT run it.
+ *
+ * Database mutation commands are intentionally separated:
+ *   - `bun run db:push`        — dev only, mutates dev DB
+ *   - `bun run db:migrate:deploy` — production, applies pending migrations
+ *   - `bun run db:seed:dev`    — dev only, inserts seed data
+ *
+ * Removed: silent try/catch around `prisma db push` and `prisma/seed.ts`
+ *          that previously masked failures and made the build non-fail-closed.
+ *
+ * Removed: `prisma/seed.ts` invocation entirely. The file did not exist,
+ *          causing every previous build to fail at this step (silently
+ *          swallowed by try/catch). Seed is now `db:seed:dev`.
+ *
+ * Removed: dev-credentials log on every build. Credentials are never
+ *          printed by `build`.
+ *
+ * Usage: `bun run build` → calls this script via `prebuild` script.
  */
+
 import { execSync } from 'child_process';
-import { existsSync, copyFileSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, copyFileSync } from 'fs';
 import { join } from 'path';
 
 const ROOT_DIR = process.cwd();
@@ -45,8 +64,8 @@ function isProductionPostgres(): boolean {
 }
 
 async function main() {
-  log('Starting prebuild...');
-  
+  log('Starting prebuild (NON-MUTATING by default)...');
+
   const usePostgres = isProductionPostgres();
   log(`Environment detected: ${usePostgres ? 'PostgreSQL (production/Vercel)' : 'SQLite (development)'}`);
 
@@ -56,7 +75,7 @@ async function main() {
     log('Backed up current schema.prisma');
   }
 
-  // Swap schema
+  // Swap schema file (file copy only — no DB mutation)
   if (usePostgres) {
     if (!existsSync(POSTGRES_SCHEMA)) {
       logError('PostgreSQL schema not found at prisma/schema.postgres.prisma');
@@ -73,32 +92,23 @@ async function main() {
     logSuccess('Swapped to SQLite schema');
   }
 
-  // Generate Prisma client
+  // Generate Prisma client (no DB mutation)
   log('Generating Prisma client...');
   run('npx prisma generate');
+  logSuccess('Prisma client generated');
 
-  // Push schema to database (no --accept-data-loss to protect existing data)
-  log('Pushing schema to database...');
-  try {
-    run('npx prisma db push');
-  } catch (error) {
-    log('Schema push had warnings (existing data preserved)');
-  }
+  // NOTE: NO `prisma db push`, NO `prisma migrate dev`, NO seed.
+  // Those are intentionally NOT part of the build pipeline.
+  //
+  //   Database deployment is a separate, explicit operation:
+  //     - dev:       `bun run db:push`
+  //     - prod:      `bun run db:migrate:deploy`
+  //     - dev seed:  `bun run db:seed:dev`
+  //
+  // Do not add SKIP_DB_MUTATION as a guard — the default is already
+  // non-mutating, which is the correct production posture.
 
-  // Seed database
-  log('Seeding database...');
-  try {
-    run('npx tsx prisma/seed.ts');
-    logSuccess('Database seeded successfully');
-  } catch (error) {
-    log('Seed completed (some records may already exist)');
-  }
-
-  logSuccess('Prebuild completed successfully!');
-  console.log('');
-  log('Login credentials:');
-  console.log('  Owner:   owner@blackbear.id / owner123');
-  console.log('  Partner: partner@blackbear.cc / partner123');
+  logSuccess('Prebuild completed (no database mutation performed).');
 }
 
 main().catch((error) => {

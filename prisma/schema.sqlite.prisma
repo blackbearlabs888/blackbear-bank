@@ -151,21 +151,78 @@ model Transaction {
   status          String    @default("pending") // pending, verification, process, success, failed
   notes           String?   // catatan dari owner
   transactionLink String?   // link untuk transaksi dari owner
-  
+
+  // ── Phase 2: Transaction Snapshot + Idempotency ──
+  // Snapshot fields persist calculation inputs at transaction time so future
+  // config changes (PaymentType/Marketplace/Partner commission edits) do not
+  // alter historical transactions. All nullable — legacy rows stay NULL.
+  // calculationVersion defaults to 0 (legacy). Phase 2 write paths explicitly
+  // set it to 1. NO mass backfill — legacy rows remain 0 automatically.
+  partnerCommissionPercent  Float?   // snapshot of Partner.commission at creation/mutation time
+  paymentTypeName           String?  // snapshot of PaymentType.name at creation time
+  marketplaceName           String?  // snapshot of Marketplace.name at creation time (null when no marketplace)
+  feeConfigSnapshot         String?  // JSON string of fee-input config used at calculation time
+  calculationVersion        Int      @default(0) // 0 = legacy (pre-Phase 2), 1 = Phase 2 snapshot
+
+  // Idempotency fields — client-supplied replay key prevents duplicate
+  // transaction creation on network retry. NULL for legacy rows and for
+  // authenticated flows that don't supply a key (backward compatible).
+  idempotencyKey            String?  @unique // client UUID; NULL = no replay protection
+  idempotencyHash           String?  // SHA-256 hex of canonicalized request payload
+
+  // ── Phase 5: Anti-Fraud & Commission Protection ──
+  fraudRiskScore            Int       @default(0)
+  fraudRiskLevel            String    @default("low")
+  fraudStatus               String    @default("clear")
+  fraudReasons              String?
+  commissionStatus          String    @default("pending")
+  commissionApprovedAmount  Float     @default(0)
+  fraudReviewedAt           DateTime?
+  fraudReviewedBy           String?
+  fraudReviewNote           String?
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  
+
   // Relations
   customer        Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
   partner         Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
   paymentType     PaymentType @relation(fields: [paymentTypeId], references: [id])
   marketplace     Marketplace? @relation(fields: [marketplaceId], references: [id], onDelete: SetNull)
   testimonial     Testimonial?
-  
+  fraudEvents     FraudReviewEvent[]
+
   @@index([customerId])
   @@index([partnerId])
   @@index([status])
+  @@index([fraudStatus])
+  @@index([commissionStatus])
   @@map("transactions")
+}
+
+// ==================== PHASE 5: FRAUD REVIEW EVENT (append-only) ====================
+
+model FraudReviewEvent {
+  id             String   @id @default(cuid())
+  transactionId  String
+  partnerId      String?
+  action         String
+  previousStatus String?
+  newStatus      String
+  riskScore      Int
+  reasons        String?
+  actorType      String
+  actorId        String?
+  note           String?
+  createdAt      DateTime @default(now())
+
+  transaction    Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+  @@index([partnerId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("fraud_review_events")
 }
 
 // ==================== PAYMENT & FEE MANAGEMENT ====================

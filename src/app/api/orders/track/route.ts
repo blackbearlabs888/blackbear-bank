@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toNumber } from '@/lib/db';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+
+// Rate limit: 30 track requests per minute (prevents order ID enumeration)
+const TRACK_RATE_LIMIT = {
+  maxRequests: 30,
+  windowMs: 60 * 1000,
+  blockDurationMs: 5 * 60 * 1000,
+  keyPrefix: 'track',
+};
 
 /**
  * Filter out partner-to-owner private messages from notes
@@ -59,6 +68,23 @@ function maskBankHolder(holder: string | null): string | null {
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const ip = getClientIp(request);
+    const rateCheck = checkRateLimit(ip, TRACK_RATE_LIMIT);
+    if (!rateCheck.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Terlalu banyak permintaan. Coba lagi dalam beberapa saat.',
+          retryAfter: rateCheck.retryAfter,
+        },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(rateCheck.retryAfter || 0) },
+        }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('orderId');
 

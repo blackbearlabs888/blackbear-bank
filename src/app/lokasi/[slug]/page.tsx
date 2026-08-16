@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
+import { sanitizeHtml } from '@/lib/sanitize-html';
+import { safeJsonLd } from '@/lib/json-ld-safe';
 import LocationDetailClient from './client';
 
 interface Location {
@@ -67,6 +69,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
+// Phase 4: ISR — location detail pages change infrequently, revalidate hourly.
+export const revalidate = 3600;
+
 // Generate static params for build
 export async function generateStaticParams() {
   try {
@@ -96,7 +101,12 @@ export default async function LocationDetailPage({ params }: { params: Promise<{
     });
 
     if (result) {
-      location = result;
+      // Defense-in-depth: sanitize HTML content on read so legacy rows
+      // written before write-time sanitization are also safe.
+      location = {
+        ...result,
+        content: result.content ? sanitizeHtml(result.content) : null,
+      };
     }
   } catch (error) {
     console.error('Failed to fetch location:', error);
@@ -169,11 +179,11 @@ export default async function LocationDetailPage({ params }: { params: Promise<{
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(localBusinessJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }}
       />
       <LocationDetailClient location={location} />
     </>

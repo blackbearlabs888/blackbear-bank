@@ -1,43 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toNumber } from '@/lib/db';
-import { generateOrderId, calculatePaymentFee } from '@/lib/auth';
+import { generateOrderId } from '@/lib/auth';
+import { calculateTransaction, CALCULATION_VERSION_PHASE2 } from '@/lib/transaction/fee';
+import {
+  prepareIdempotency,
+  isUniqueConstraintViolation,
+} from '@/lib/transaction/idempotency';
 import { sendTelegramNotification, formatCurrency } from '@/lib/telegram';
 import { checkCustomerDuplicate, normalizePhone } from '@/lib/customer-utils';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
-import { 
-  sanitizeName, 
-  sanitizePhone, 
-  sanitizeBankAccount, 
+import { persistFraudAssessment } from '@/lib/fraud/service';
+import {
+  sanitizeName,
+  sanitizePhone,
+  sanitizeBankAccount,
   sanitizeCity,
   sanitizeString,
-  validateLength, 
-  validateNominal, 
+  validateLength,
+  validateNominal,
   isValidCuid,
   isValidMethodTransaction,
   isHoneypotTriggered,
-  FIELD_LIMITS
+  FIELD_LIMITS,
 } from '@/lib/sanitize';
+import { withObservability } from '@/lib/observability/request-id';
+import {
+  logWarn,
+  logError,
+  logTransactionEvent,
+} from '@/lib/observability/logger';
+import {
+  apiError,
+  apiErrorFrom,
+  apiValidationError,
+  apiRateLimited,
+  ErrorCode,
+} from '@/lib/observability/errors';
 
-export async function POST(request: NextRequest) {
+export const POST = withObservability(async (request: NextRequest) => {
   try {
     // ── Rate Limiting ──
     const clientIp = getClientIp(request);
     const rateLimitResult = checkRateLimit(clientIp, RATE_LIMITS.ORDER_CREATE);
-    
+
     if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: `Terlalu banyak request. Coba lagi dalam ${rateLimitResult.retryAfter} detik.` 
-        },
-        { 
-          status: 429,
-          headers: {
-            'Retry-After': String(rateLimitResult.retryAfter),
-            'X-RateLimit-Remaining': '0',
-          }
-        }
-      );
+      return apiRateLimited(rateLimitResult.retryAfter);
     }
 
     // ── Request Body Validation ──
@@ -45,10 +52,7 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json(
-        { success: false, error: 'Format request tidak valid' },
-        { status: 400 }
-      );
+      return apiValidationError('Format request tidak valid');
     }
 
     // ── Honeypot Check (anti-bot) ──
@@ -86,83 +90,68 @@ export async function POST(request: NextRequest) {
 
     // ── Required Field Validation ──
     if (!sanitizedName || !sanitizedPhone || !nominal || !paymentTypeId || !methodTransaction) {
-      return NextResponse.json(
-        { success: false, error: 'Field wajib harus diisi: nama, no HP, nominal, tipe pembayaran, metode transaksi' },
-        { status: 400 }
-      );
+      return apiValidationError('Field wajib harus diisi: nama, no HP, nominal, tipe pembayaran, metode transaksi');
     }
 
     // ── Field Length Validation ──
     const nameCheck = validateLength(sanitizedName, FIELD_LIMITS.NAME_MIN, FIELD_LIMITS.NAME_MAX);
     if (!nameCheck.valid) {
-      return NextResponse.json({ success: false, error: `Nama: ${nameCheck.error}` }, { status: 400 });
+      return apiValidationError(`Nama: ${nameCheck.error}`);
     }
 
     const phoneCheck = validateLength(sanitizedPhone, FIELD_LIMITS.PHONE_MIN, FIELD_LIMITS.PHONE_MAX);
     if (!phoneCheck.valid) {
-      return NextResponse.json({ success: false, error: `No HP: ${phoneCheck.error}` }, { status: 400 });
+      return apiValidationError(`No HP: ${phoneCheck.error}`);
     }
 
     if (sanitizedBank) {
       const bankCheck = validateLength(sanitizedBank, 1, FIELD_LIMITS.BANK_NAME_MAX);
       if (!bankCheck.valid) {
-        return NextResponse.json({ success: false, error: `Bank: ${bankCheck.error}` }, { status: 400 });
+        return apiValidationError(`Bank: ${bankCheck.error}`);
       }
     }
 
     if (sanitizedBankAccount) {
       const bankAcctCheck = validateLength(sanitizedBankAccount, FIELD_LIMITS.BANK_ACCOUNT_MIN, FIELD_LIMITS.BANK_ACCOUNT_MAX);
       if (!bankAcctCheck.valid) {
-        return NextResponse.json({ success: false, error: `No Rekening: ${bankAcctCheck.error}` }, { status: 400 });
+        return apiValidationError(`No Rekening: ${bankAcctCheck.error}`);
       }
     }
 
     if (sanitizedBankHolder) {
       const bankHolderCheck = validateLength(sanitizedBankHolder, FIELD_LIMITS.NAME_MIN, FIELD_LIMITS.BANK_HOLDER_MAX);
       if (!bankHolderCheck.valid) {
-        return NextResponse.json({ success: false, error: `Nama Rekening: ${bankHolderCheck.error}` }, { status: 400 });
+        return apiValidationError(`Nama Rekening: ${bankHolderCheck.error}`);
       }
     }
 
     if (sanitizedCity) {
       const cityCheck = validateLength(sanitizedCity, 2, FIELD_LIMITS.CITY_MAX);
       if (!cityCheck.valid) {
-        return NextResponse.json({ success: false, error: `Kota: ${cityCheck.error}` }, { status: 400 });
+        return apiValidationError(`Kota: ${cityCheck.error}`);
       }
     }
 
     // ── Nominal Validation ──
     const nominalResult = validateNominal(nominal);
     if (!nominalResult.valid || !nominalResult.value) {
-      return NextResponse.json(
-        { success: false, error: nominalResult.error || 'Nominal tidak valid' },
-        { status: 400 }
-      );
+      return apiValidationError(nominalResult.error || 'Nominal tidak valid');
     }
     const safeNominal = nominalResult.value;
 
     // ── Payment Type ID Validation ──
     if (!isValidCuid(String(paymentTypeId))) {
-      return NextResponse.json(
-        { success: false, error: 'Tipe pembayaran tidak valid' },
-        { status: 400 }
-      );
+      return apiValidationError('Tipe pembayaran tidak valid');
     }
 
     // ── Method Transaction Validation ──
     if (!isValidMethodTransaction(String(methodTransaction))) {
-      return NextResponse.json(
-        { success: false, error: 'Metode transaksi tidak valid' },
-        { status: 400 }
-      );
+      return apiValidationError('Metode transaksi tidak valid');
     }
 
     // ── Partner ID Validation (optional) ──
     if (sanitizedPartnerId && !isValidCuid(sanitizedPartnerId)) {
-      return NextResponse.json(
-        { success: false, error: 'ID partner tidak valid' },
-        { status: 400 }
-      );
+      return apiValidationError('ID partner tidak valid');
     }
 
     // ── Get payment type (must be active) ──
@@ -171,107 +160,262 @@ export async function POST(request: NextRequest) {
     });
 
     if (!paymentType) {
-      return NextResponse.json(
-        { success: false, error: 'Tipe pembayaran tidak valid' },
-        { status: 400 }
-      );
-    }
-
-    // ── Calculate payment fee ──
-    const paymentFee = calculatePaymentFee(
-      safeNominal,
-      {
-        onlineFeePercent: toNumber(paymentType.onlineFeePercent),
-        onlineFeeFlat: toNumber(paymentType.onlineFeeFlat),
-        codFeePercent: toNumber(paymentType.codFeePercent),
-        codFeeFlat: toNumber(paymentType.codFeeFlat),
-        threshold: toNumber(paymentType.threshold),
-      },
-      String(methodTransaction) as 'Online' | 'COD'
-    );
-    const totalReceived = safeNominal - paymentFee;
-
-    // ── Normalize phone and check for existing customer ──
-    const normalizedPhone = normalizePhone(sanitizedPhone);
-    const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, sanitizedName);
-    
-    let customer;
-    
-    if (duplicateCheck.isDuplicate && duplicateCheck.existingCustomer) {
-      customer = await db.customer.update({
-        where: { id: duplicateCheck.existingCustomer.id },
-        data: {
-          name: sanitizedName,
-          phone: normalizedPhone,
-          bankName: sanitizedBank || duplicateCheck.existingCustomer.bankName,
-          bankAccount: sanitizedBankAccount || duplicateCheck.existingCustomer.bankAccount,
-          bankHolder: sanitizedBankHolder || duplicateCheck.existingCustomer.bankHolder,
-          city: sanitizedCity || duplicateCheck.existingCustomer.city,
-          totalVolume: { increment: safeNominal },
-          totalTransactions: { increment: 1 },
-        },
-      });
-    } else {
-      customer = await db.customer.create({
-        data: {
-          name: sanitizedName,
-          phone: normalizedPhone,
-          bankName: sanitizedBank || null,
-          bankAccount: sanitizedBankAccount || null,
-          bankHolder: sanitizedBankHolder || null,
-          city: sanitizedCity || null,
-          label: 'New',
-          addedBy: 'public',
-          totalVolume: safeNominal,
-          totalTransactions: 1,
-        },
-      });
+      return apiValidationError('Tipe pembayaran tidak valid');
     }
 
     // ── Validate partner if provided ──
     let partnerData = null;
-    let partnerRate = 0;
     if (sanitizedPartnerId) {
       partnerData = await db.partner.findUnique({
         where: { id: sanitizedPartnerId },
       });
-      if (partnerData && partnerData.status === 'active') {
-        partnerRate = Number(partnerData.commission) || 0;
+      if (!partnerData || partnerData.status !== 'active') {
+        partnerData = null;
       }
     }
 
-    // ── Calculate partner profit ──
-    const partnerProfitAmount = partnerData && partnerRate > 0 ? paymentFee * (partnerRate / 100) : 0;
-    const ownerProfitAmount = paymentFee - partnerProfitAmount;
+    // ── Consolidated fee calculation (Phase 2 single source) ──
+    const calc = calculateTransaction({
+      nominal: safeNominal,
+      paymentType: paymentType as unknown as Parameters<typeof calculateTransaction>[0]['paymentType'],
+      marketplace: null, // public orders never have marketplace
+      partner: partnerData ? { commission: partnerData.commission } : null,
+      methodTransaction: String(methodTransaction),
+    });
+
+    // ── Idempotency check ──
+    const idem = prepareIdempotency(request.headers, body);
+    if (idem.key) {
+      const existing = await db.transaction.findUnique({
+        where: { idempotencyKey: idem.key },
+        include: { customer: true, paymentType: true, partner: true },
+      });
+      if (existing) {
+        if (existing.idempotencyHash !== idem.hash) {
+          // Idempotency key reuse with different payload — conflict
+          logTransactionEvent('transaction.idempotency_conflict', {
+            transactionId: existing.id,
+            orderId: existing.orderId,
+            actorRole: 'public',
+            errorCode: ErrorCode.IDEMPOTENCY_CONFLICT,
+            message: 'Idempotency key reuse with different payload',
+          });
+          return apiError({
+            status: 409,
+            code: ErrorCode.IDEMPOTENCY_CONFLICT,
+            message: 'Idempotency key sudah digunakan untuk payload yang berbeda',
+          });
+        }
+        // Idempotent replay — return the existing transaction
+        logTransactionEvent('transaction.replayed', {
+          transactionId: existing.id,
+          orderId: existing.orderId,
+          actorRole: 'public',
+          message: 'Idempotency replay — returning existing transaction',
+        });
+        return NextResponse.json({
+          success: true,
+          data: {
+            orderId: existing.orderId,
+            nominal: toNumber(existing.nominal),
+            paymentFee: toNumber(existing.paymentFee),
+            totalReceived: toNumber(existing.totalReceived),
+            status: existing.status,
+            customer: existing.customer,
+            paymentType: existing.paymentType?.name,
+            methodTransaction: existing.methodTransaction,
+            createdAt: existing.createdAt,
+          },
+          message: 'Order sudah dibuat sebelumnya (idempotent replay)',
+        });
+      }
+    }
+
+    // ── Normalize phone and check for existing customer ──
+    const normalizedPhone = normalizePhone(sanitizedPhone);
+    const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, sanitizedName);
 
     // ── Generate order ID ──
     const orderId = generateOrderId();
 
-    // ── Create transaction ──
-    const transaction = await db.transaction.create({
-      data: {
-        orderId,
-        customerId: customer.id,
-        nominal: safeNominal,
-        paymentFee,
-        platformFee: 0,
-        netMargin: paymentFee,
-        partnerProfit: partnerProfitAmount,
-        ownerProfit: ownerProfitAmount,
-        totalReceived,
-        paymentTypeId: String(paymentTypeId),
-        methodTransaction: String(methodTransaction),
-        status: 'pending',
-        partnerId: partnerData?.id || null,
-      },
-      include: {
-        customer: true,
-        paymentType: true,
-        partner: true,
-      },
-    });
+    // ── Create transaction + customer stats atomically ──
+    let transaction;
+    try {
+      transaction = await db.$transaction(async (tx) => {
+        // ── Customer upsert with stats increment ──
+        let customer;
+        if (duplicateCheck.isDuplicate && duplicateCheck.existingCustomer) {
+          customer = await tx.customer.update({
+            where: { id: duplicateCheck.existingCustomer.id },
+            data: {
+              name: sanitizedName,
+              phone: normalizedPhone,
+              bankName: sanitizedBank || duplicateCheck.existingCustomer.bankName,
+              bankAccount: sanitizedBankAccount || duplicateCheck.existingCustomer.bankAccount,
+              bankHolder: sanitizedBankHolder || duplicateCheck.existingCustomer.bankHolder,
+              city: sanitizedCity || duplicateCheck.existingCustomer.city,
+              totalVolume: { increment: safeNominal },
+              totalTransactions: { increment: 1 },
+            },
+          });
+        } else {
+          customer = await tx.customer.create({
+            data: {
+              name: sanitizedName,
+              phone: normalizedPhone,
+              bankName: sanitizedBank || null,
+              bankAccount: sanitizedBankAccount || null,
+              bankHolder: sanitizedBankHolder || null,
+              city: sanitizedCity || null,
+              label: 'New',
+              addedBy: 'public',
+              totalVolume: safeNominal,
+              totalTransactions: 1,
+            },
+          });
+        }
 
-    // ── Notification ──
+        // ── Create transaction with snapshot + idempotency ──
+        const createdTx = await tx.transaction.create({
+          data: {
+            orderId,
+            customerId: customer.id,
+            nominal: calc.nominal,
+            paymentFee: calc.paymentFee,
+            originalFee: calc.originalFee,
+            discountPercent: calc.discountPercent,
+            discountAmount: calc.discountAmount,
+            platformFee: calc.platformFee,
+            netMargin: calc.netMargin,
+            partnerProfit: calc.partnerProfit,
+            ownerProfit: calc.ownerProfit,
+            totalReceived: calc.totalReceived,
+            paymentTypeId: String(paymentTypeId),
+            methodTransaction: String(methodTransaction),
+            status: 'pending',
+            partnerId: partnerData?.id || null,
+            // Phase 2 snapshot fields
+            partnerCommissionPercent: calc.partnerCommissionPercent,
+            paymentTypeName: calc.paymentTypeName,
+            marketplaceName: calc.marketplaceName,
+            feeConfigSnapshot: calc.feeConfigSnapshot,
+            calculationVersion: CALCULATION_VERSION_PHASE2,
+            // Idempotency
+            idempotencyKey: idem.key,
+            idempotencyHash: idem.hash,
+            // Phase 5: commissionStatus = not_applicable when no partner.
+            // When a partner IS linked, the fraud assessment below overwrites
+            // this to 'pending' (clear) or 'held' (review).
+            commissionStatus: partnerData?.id ? 'pending' : 'not_applicable',
+          },
+          include: {
+            customer: true,
+            paymentType: true,
+            partner: true,
+          },
+        });
+
+        // ── Phase 5: Run fraud assessment (only when a partner is linked) ──
+        if (partnerData?.id) {
+          await persistFraudAssessment(
+            tx,
+            {
+              transactionId: createdTx.id,
+              orderId: createdTx.orderId,
+              partnerId: partnerData.id,
+              customerId: customer.id,
+              customer: {
+                phone: customer.phone,
+                bankAccount: customer.bankAccount,
+                bankHolder: customer.bankHolder,
+                name: customer.name,
+                city: customer.city,
+                createdAt: customer.createdAt,
+              },
+              transactionCreatedAt: createdTx.createdAt,
+            },
+            { actorType: 'system' },
+          );
+
+          // Re-fetch to include fraud fields in the response.
+          const refreshed = await tx.transaction.findUniqueOrThrow({
+            where: { id: createdTx.id },
+            include: {
+              customer: true,
+              paymentType: true,
+              partner: true,
+            },
+          });
+          return refreshed;
+        }
+
+        return createdTx;
+      });
+
+      // ── Phase 3 observability: emit order.created (DB transaction committed) ──
+      logTransactionEvent('order.created', {
+        transactionId: transaction.id,
+        orderId: transaction.orderId,
+        actorRole: 'public',
+        monetary: {
+          nominal: calc.nominal,
+          paymentFee: calc.paymentFee,
+          partnerProfit: calc.partnerProfit,
+          ownerProfit: calc.ownerProfit,
+        },
+      });
+    } catch (error) {
+      // Handle concurrent idempotency key insertion (P2002 unique constraint)
+      if (isUniqueConstraintViolation(error) && idem.key) {
+        const existing = await db.transaction.findUnique({
+          where: { idempotencyKey: idem.key },
+          include: { customer: true, paymentType: true, partner: true },
+        });
+        if (existing && existing.idempotencyHash === idem.hash) {
+          // Concurrent duplicate insert — replay existing
+          logTransactionEvent('transaction.replayed', {
+            transactionId: existing.id,
+            orderId: existing.orderId,
+            actorRole: 'public',
+            message: 'Idempotency replay — returning existing transaction (P2002 race)',
+          });
+          return NextResponse.json({
+            success: true,
+            data: {
+              orderId: existing.orderId,
+              nominal: toNumber(existing.nominal),
+              paymentFee: toNumber(existing.paymentFee),
+              totalReceived: toNumber(existing.totalReceived),
+              status: existing.status,
+              customer: existing.customer,
+              paymentType: existing.paymentType?.name,
+              methodTransaction: existing.methodTransaction,
+              createdAt: existing.createdAt,
+            },
+            message: 'Order sudah dibuat sebelumnya (idempotent replay)',
+          });
+        }
+        if (existing && existing.idempotencyHash !== idem.hash) {
+          logTransactionEvent('transaction.idempotency_conflict', {
+            transactionId: existing.id,
+            orderId: existing.orderId,
+            actorRole: 'public',
+            errorCode: ErrorCode.IDEMPOTENCY_CONFLICT,
+            message: 'Idempotency key reuse with different payload (P2002 race)',
+          });
+          return apiError({
+            status: 409,
+            code: ErrorCode.IDEMPOTENCY_CONFLICT,
+            message: 'Idempotency key sudah digunakan untuk payload yang berbeda',
+          });
+        }
+      }
+      throw error;
+    }
+
+    // ── Notification (outside transaction — fail-after-commit, non-critical) ──
+    // DB transaction has already committed above. Telegram send failure MUST NOT
+    // roll back the order — log a warn and continue.
     try {
       await db.notification.create({
         data: {
@@ -298,28 +442,50 @@ export async function POST(request: NextRequest) {
         });
 
         if (notifSettings?.telegramEnabled && notifSettings.telegramBotToken && notifSettings.telegramChatId && notifSettings.notifyNewTransaction) {
-          await sendTelegramNotification(
-            notifSettings.telegramBotToken,
-            notifSettings.telegramChatId,
-            {
-              type: 'new_order',
-              title: '💳 Order Baru dari Public',
-              message: `Order ID: ${orderId}`,
-              additionalData: {
-                'Pelanggan': sanitizedName,
-                'Telepon': normalizedPhone,
-                'Nominal': formatCurrency(toNumber(safeNominal)),
-                'Fee': formatCurrency(paymentFee),
-                'Tipe': paymentType.name,
-                'Metode': String(methodTransaction),
-                ...(partnerData ? { 'Partner': partnerData.name } : {}),
-              },
-            }
-          );
+          // ── Telegram send (HTTP) — fail-after-commit pattern ──
+          // If this throws, the order is already persisted. Log a warn, do NOT
+          // roll back the DB transaction.
+          try {
+            await sendTelegramNotification(
+              notifSettings.telegramBotToken,
+              notifSettings.telegramChatId,
+              {
+                type: 'new_order',
+                title: '💳 Order Baru dari Public',
+                message: `Order ID: ${orderId}`,
+                additionalData: {
+                  'Pelanggan': sanitizedName,
+                  'Telepon': normalizedPhone,
+                  'Nominal': formatCurrency(toNumber(safeNominal)),
+                  'Fee': formatCurrency(calc.paymentFee),
+                  'Tipe': paymentType.name,
+                  'Metode': String(methodTransaction),
+                  ...(partnerData ? { 'Partner': partnerData.name } : {}),
+                },
+              }
+            );
+          } catch (telegramError) {
+            logWarn({
+              event: 'telegram.send_failed',
+              errorCode: ErrorCode.TELEGRAM_SEND_FAILED,
+              message: 'Telegram notification failed after successful order creation',
+              orderId,
+              transactionId: transaction.id,
+              data: { orderId },
+            });
+          }
         }
       }
     } catch (notifError) {
-      console.error('Failed to create notification:', notifError);
+      // In-app notification record creation failed — non-critical, log and continue.
+      logWarn({
+        event: 'notification.create_failed',
+        errorCode: ErrorCode.INTERNAL_ERROR,
+        message: 'Failed to create in-app notification record',
+        orderId,
+        transactionId: transaction.id,
+        data: { orderId },
+      });
     }
 
     return NextResponse.json(
@@ -345,10 +511,11 @@ export async function POST(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error('Create order error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
-      { status: 500 }
-    );
+    logError({
+      event: 'order.create_failed',
+      errorCode: ErrorCode.TRANSACTION_CREATE_FAILED,
+      data: { error },
+    });
+    return apiErrorFrom(error, ErrorCode.TRANSACTION_CREATE_FAILED, 'Gagal membuat order');
   }
-}
+});

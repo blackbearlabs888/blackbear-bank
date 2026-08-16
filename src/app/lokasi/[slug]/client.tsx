@@ -70,102 +70,17 @@ export default function LocationDetailClient({ location }: LocationDetailClientP
     }
   };
 
-  // Generate LocalBusiness JSON-LD
-  const localBusinessJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'LocalBusiness',
-    '@id': `${locationUrl}#localbusiness`,
-    name: `${siteName} ${location.name}`,
-    description: location.description || `Layanan gestun dan tarik tunai terpercaya di ${location.name}`,
-    url: locationUrl,
-    image: location.featuredImage || config.logoUrl || undefined,
-    telephone: config.footerWhatsapp ? `+62${config.footerWhatsapp.replace(/^0/, '')}` : undefined,
-    email: config.footerEmail || undefined,
-    address: {
-      '@type': 'PostalAddress',
-      addressLocality: location.name,
-      addressCountry: 'ID',
-    },
-    geo: {
-      '@type': 'GeoCoordinates',
-      latitude: '-6.2088',
-      longitude: '106.8456',
-    },
-    openingHours: 'Mo-Su 00:00-23:59',
-    priceRange: '$$',
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.9',
-      reviewCount: '500',
-    },
-    areaServed: {
-      '@type': 'City',
-      name: location.name,
-    },
-    hasOfferCatalog: {
-      '@type': 'OfferCatalog',
-      name: 'Layanan Tarik Tunai',
-      itemListElement: [
-        {
-          '@type': 'Offer',
-          itemOffered: {
-            '@type': 'Service',
-            name: 'Gestun Kartu Kredit',
-            description: `Layanan tarik tunai kartu kredit di ${location.name}`,
-          },
-        },
-        {
-          '@type': 'Offer',
-          itemOffered: {
-            '@type': 'Service',
-            name: 'Gestun Paylater',
-            description: `Layanan tarik tunai paylater di ${location.name}`,
-          },
-        },
-      ],
-    },
-  };
-
-  // Breadcrumb JSON-LD
-  const breadcrumbJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Home',
-        item: siteUrl,
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: 'Lokasi',
-        item: `${siteUrl}/lokasi`,
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name: location.name,
-        item: locationUrl,
-      },
-    ],
-  };
+  // Phase 4: LocalBusiness + Breadcrumb JSON-LD are emitted by the server
+  // component (page.tsx) — removed here to avoid duplicate structured data.
 
   // Parse keywords for tags
   const keywords = location.keywords ? location.keywords.split(',').map(k => k.trim()) : [];
 
   return (
     <div className="min-h-screen bg-background">
-      {/* JSON-LD Structured Data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
+      {/* Phase 4: JSON-LD (LocalBusiness + Breadcrumb) is now emitted by the
+          server component (page.tsx) to avoid duplicate structured data.
+          Previously both server and client rendered the same scripts. */}
 
       {/* Hero Section */}
       <section className="relative py-16 md:py-20 overflow-hidden">
@@ -244,7 +159,10 @@ export default function LocationDetailClient({ location }: LocationDetailClientP
                 <img
                   src={location.featuredImage}
                   alt={`Gestun ${location.name}`}
+                  width={1200}
+                  height={400}
                   className="w-full h-auto max-h-[400px] object-cover"
+                  loading="lazy"
                 />
               </div>
             </div>

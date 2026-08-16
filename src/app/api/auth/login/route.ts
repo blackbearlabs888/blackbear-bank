@@ -1,22 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { 
-  verifyPassword, 
-  createSession, 
+import {
+  verifyPassword,
+  createSession,
   setSessionCookie,
   validateEmail,
 } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
+import { withObservability, updateActor } from '@/lib/observability/request-id';
+import { logInfo, logWarn, logError } from '@/lib/observability/logger';
+import {
+  apiValidationError,
+  apiUnauthenticated,
+  apiRateLimited,
+  apiErrorFrom,
+} from '@/lib/observability/errors';
 
-export async function POST(request: NextRequest) {
+export const POST = withObservability(async (request: NextRequest) => {
   try {
     // Rate limiting: 5 attempts per 15 minutes
-    const { success } = await rateLimit(request, 'login', { maxRequests: 5, windowMs: 15 * 60 * 1000 });
+    const { success } = await rateLimit(request, 'login', {
+      maxRequests: 5,
+      windowMs: 15 * 60 * 1000,
+    });
     if (!success) {
-      return NextResponse.json(
-        { success: false, error: 'Terlalu banyak percobaan login. Silakan coba lagi dalam 15 menit.' },
-        { status: 429 }
-      );
+      return apiRateLimited(15 * 60);
     }
 
     const body = await request.json();
@@ -24,17 +32,11 @@ export async function POST(request: NextRequest) {
 
     // Validation
     if (!email || !password || !role) {
-      return NextResponse.json(
-        { success: false, error: 'Semua field harus diisi' },
-        { status: 400 }
-      );
+      return apiValidationError('Semua field harus diisi');
     }
 
     if (!validateEmail(email)) {
-      return NextResponse.json(
-        { success: false, error: 'Format email tidak valid' },
-        { status: 400 }
-      );
+      return apiValidationError('Format email tidak valid');
     }
 
     // NOTE: validatePassword is intentionally NOT checked here.
@@ -43,10 +45,7 @@ export async function POST(request: NextRequest) {
     // Password strength validation belongs in registration and password change only.
 
     if (!['owner', 'partner'].includes(role)) {
-      return NextResponse.json(
-        { success: false, error: 'Role tidak valid' },
-        { status: 400 }
-      );
+      return apiValidationError('Role tidak valid');
     }
 
     // Find user
@@ -56,32 +55,50 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Email atau password salah' },
-        { status: 401 }
-      );
+      // Do NOT log which email failed — could enable user enumeration.
+      logWarn({
+        event: 'auth.login_failed',
+        errorCode: 'INVALID_CREDENTIALS',
+        message: 'Login failed — invalid credentials',
+      });
+      return apiUnauthenticated();
     }
 
     // Verify password (with auto-migration from legacy SHA-256 to bcrypt)
     const isValid = await verifyPassword(password, user.password, user.id);
     if (!isValid) {
-      return NextResponse.json(
-        { success: false, error: 'Email atau password salah' },
-        { status: 401 }
-      );
+      logWarn({
+        event: 'auth.login_failed',
+        errorCode: 'INVALID_CREDENTIALS',
+        message: 'Login failed — invalid credentials',
+      });
+      return apiUnauthenticated();
     }
 
     // Verify role
     if (user.role !== role) {
-      return NextResponse.json(
-        { success: false, error: 'Role tidak sesuai dengan akun' },
-        { status: 401 }
-      );
+      logWarn({
+        event: 'auth.login_failed',
+        errorCode: 'INVALID_CREDENTIALS',
+        message: 'Login failed — invalid credentials',
+      });
+      return apiUnauthenticated();
     }
 
     // Create session
     const sessionId = await createSession(user.id);
     await setSessionCookie(sessionId);
+
+    // Enrich observability context with authenticated actor
+    updateActor(user.role, user.id);
+
+    // Log successful login — no PII (email/password never logged)
+    logInfo({
+      event: 'auth.login_success',
+      actorRole: user.role,
+      actorId: user.id,
+      message: 'Login successful',
+    });
 
     // Return user data
     const { password: _, ...userWithoutPassword } = user;
@@ -93,10 +110,11 @@ export async function POST(request: NextRequest) {
       message: 'Login berhasil',
     });
   } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
-      { status: 500 }
-    );
+    logError({
+      event: 'auth.login_error',
+      message: 'Login handler threw',
+      data: { error },
+    });
+    return apiErrorFrom(error);
   }
-}
+});

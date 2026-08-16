@@ -39,6 +39,7 @@ import {
   Edit,
   Activity,
   Award,
+  AlertTriangle,
 } from 'lucide-react';
 import { formatCurrency, formatShortDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -1416,6 +1417,10 @@ function EditPartnerDialog({
 function NewPartnerDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Temporary password shown ONCE after partner creation. Kept only in
+  // component state (NOT persisted — no localStorage/sessionStorage/Zustand).
+  // Cleared when the dialog closes so it cannot be recovered.
+  const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -1428,6 +1433,37 @@ function NewPartnerDialog({ onCreated }: { onCreated: () => void }) {
     commission: '30',
     target: '5000000',
   });
+
+  // Clear password whenever the dialog is closed (acknowledged or not).
+  // This is the only way the password leaves the API response — once the
+  // dialog closes, the password is gone from the UI.
+  const handleClose = (next: boolean) => {
+    if (!next) {
+      setTemporaryPassword(null);
+      // Reset form only after password is acknowledged & dismissed
+      if (!temporaryPassword) {
+        setFormData({
+          name: '', email: '', phone: '', bankName: '',
+          bankAccount: '', bankHolder: '', city: '',
+          tier: 'Bronze', commission: '30', target: '5000000',
+        });
+      }
+    }
+    setOpen(next);
+  };
+
+  // Explicit "I've saved it" acknowledgment. Clears password, closes dialog,
+  // and refreshes the partner list.
+  const handleAcknowledgePassword = () => {
+    setTemporaryPassword(null);
+    setOpen(false);
+    setFormData({
+      name: '', email: '', phone: '', bankName: '',
+      bankAccount: '', bankHolder: '', city: '',
+      tier: 'Bronze', commission: '30', target: '5000000',
+    });
+    onCreated();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1446,21 +1482,18 @@ function NewPartnerDialog({ onCreated }: { onCreated: () => void }) {
 
       const result = await response.json();
       if (result.success) {
-        setOpen(false);
-        onCreated();
-        setFormData({
-          name: '',
-          email: '',
-          phone: '',
-          bankName: '',
-          bankAccount: '',
-          bankHolder: '',
-          city: '',
-          tier: 'Bronze',
-          commission: '30',
-          target: '5000000',
-        });
-        toast.success('Partner berhasil dibuat');
+        // DO NOT close the dialog yet. The temporary password must be shown
+        // exactly once and acknowledged by the owner before the dialog can
+        // be dismissed. Password lives only in component state — never in
+        // URL, never in toast, never in persistent storage.
+        if (result.temporaryPassword) {
+          setTemporaryPassword(result.temporaryPassword);
+          toast.success('Partner berhasil dibuat — simpan password sementara di bawah');
+        } else {
+          // Defensive: API should always return a temp password on create.
+          // If it doesn't, do not silently proceed — surface the issue.
+          toast.error('Password sementara tidak diterima dari server. Hubungi admin.');
+        }
       } else {
         toast.error(result.error || 'Gagal membuat partner');
       }
@@ -1473,7 +1506,7 @@ function NewPartnerDialog({ onCreated }: { onCreated: () => void }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogTrigger asChild>
         <Button size="sm" className="bg-primary text-primary-foreground rounded-lg h-9 px-4 font-medium hover:bg-primary/90">
           <UserPlus className="w-4 h-4 mr-1.5" />
@@ -1482,9 +1515,59 @@ function NewPartnerDialog({ onCreated }: { onCreated: () => void }) {
       </DialogTrigger>
       <DialogContent className="max-w-md max-h-[85vh] p-0 gap-0 overflow-hidden">
         <DialogHeader className="p-4 pb-0">
-          <DialogTitle className="text-base sm:text-lg">Partner Baru</DialogTitle>
-          <DialogDescription>Tambahkan mitra baru ke sistem</DialogDescription>
+          <DialogTitle className="text-base sm:text-lg">
+            {temporaryPassword ? 'Password Sementara' : 'Partner Baru'}
+          </DialogTitle>
+          <DialogDescription>
+            {temporaryPassword
+              ? 'Simpan password sekarang — tidak dapat dilihat kembali'
+              : 'Tambahkan mitra baru ke sistem'}
+          </DialogDescription>
         </DialogHeader>
+
+        {/* === TEMPORARY PASSWORD REVEAL === */}
+        {/* Shown exactly once after creation. Cannot be re-fetched. */}
+        {temporaryPassword && (
+          <div className="p-4 space-y-3">
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+              <div className="flex items-start gap-2 mb-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                  Simpan password ini sekarang. Password tidak dapat dilihat kembali.
+                </p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-background border border-border">
+                <p className="text-[10px] text-muted-foreground mb-0.5">Password sementara partner:</p>
+                <div className="flex items-center gap-2">
+                  <code className="text-sm font-mono font-bold break-all">{temporaryPassword}</code>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[10px] rounded-lg flex-shrink-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(temporaryPassword);
+                      toast.success('Password disalin');
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                className="flex-1 bg-primary text-primary-foreground rounded-xl h-10 text-xs font-semibold hover:bg-primary/90"
+                onClick={handleAcknowledgePassword}
+              >
+                Saya sudah menyimpan password
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {!temporaryPassword && (
         <form onSubmit={handleSubmit} className="p-4 space-y-3 overflow-y-auto max-h-[75vh]">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -1627,7 +1710,7 @@ function NewPartnerDialog({ onCreated }: { onCreated: () => void }) {
           </div>
 
           <div className="flex gap-2 pt-2">
-            <Button type="button" variant="outline" className="flex-1 h-9 text-xs font-medium rounded-lg" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" className="flex-1 h-9 text-xs font-medium rounded-lg" onClick={() => handleClose(false)}>
               Batal
             </Button>
             <Button type="submit" className="flex-1 bg-primary text-primary-foreground rounded-xl h-10 text-xs font-semibold hover:bg-primary/90" disabled={loading}>
@@ -1635,6 +1718,7 @@ function NewPartnerDialog({ onCreated }: { onCreated: () => void }) {
             </Button>
           </div>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );

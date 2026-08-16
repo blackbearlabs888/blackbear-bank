@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { getCityData, generateLocationContent } from '@/lib/city-utils';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 
 function generateSlug(name: string): string {
   return name
@@ -82,12 +83,14 @@ export async function POST(request: NextRequest) {
         console.log(`Generated content for ${city}`);
 
         // Create location with full content
+        // Defense-in-depth: sanitize generated HTML even though it comes
+        // from a trusted internal generator.
         await db.location.create({
           data: {
             name: city,
             slug,
             description: content.description,
-            content: content.content,
+            content: sanitizeHtml(content.content),
             metaTitle: content.metaTitle,
             metaDescription: content.metaDescription,
             keywords: content.keywords,

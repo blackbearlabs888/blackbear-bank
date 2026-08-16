@@ -103,6 +103,8 @@ export function Footer() {
                   <img
                     src={config.logoUrl}
                     alt={siteName}
+                    width={32}
+                    height={32}
                     className="w-full h-full object-contain"
                     onError={() => setLogoError(true)}
                   />

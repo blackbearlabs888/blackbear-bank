@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 
 // GET - List all blog posts
 export async function GET(request: NextRequest) {
@@ -124,7 +125,10 @@ export async function POST(request: NextRequest) {
       data: {
         title,
         slug,
-        content,
+        // Sanitize HTML at write-time to prevent stored XSS. Allowlist-based
+        // via DOMPurify — strips <script>, on* handlers, javascript:/data:
+        // URLs, and any tag/attr outside the TipTap-aligned allowlist.
+        content: sanitizeHtml(content),
         excerpt,
         featuredImage,
         metaTitle,

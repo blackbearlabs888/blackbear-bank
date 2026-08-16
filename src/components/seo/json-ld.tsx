@@ -1,6 +1,7 @@
 'use client';
 
 import { useSiteConfig } from '@/hooks/use-site-config';
+import { safeJsonLd } from '@/lib/json-ld-safe';
 
 /**
  * JSON-LD Structured Data for SEO
@@ -40,13 +41,9 @@ export function OrganizationJsonLd() {
       closes: '23:59',
     },
     priceRange: '$$',
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.9',
-      reviewCount: '1250',
-      bestRating: '5',
-      worstRating: '1',
-    },
+    // NOTE: aggregateRating removed in Phase 4 — we do not publish a verified
+    // aggregate rating/review count, so emitting one would be a fake signal
+    // that damages trust. Re-add ONLY when backed by verified review data.
     sameAs: [
       config.footerInstagram,
       config.footerFacebook,
@@ -94,7 +91,7 @@ export function OrganizationJsonLd() {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
     />
   );
 }
@@ -128,7 +125,7 @@ export function FAQJsonLd() {
         name: 'Apakah layanan ini aman?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Ya, layanan kami 100% aman dan terpercaya. Kami memiliki ribuan pelanggan dengan rating 4.9 dari 5. Setiap transaksi dapat dilacak melalui sistem tracking order kami.',
+          text: 'Ya, layanan kami aman dan terpercaya. Setiap transaksi dapat dilacak melalui sistem tracking order kami, dan data Anda disimpan dengan enkripsi.',
         },
       },
       {
@@ -153,7 +150,7 @@ export function FAQJsonLd() {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(faqData) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(faqData) }}
     />
   );
 }
@@ -178,7 +175,7 @@ export function BreadcrumbJsonLd({ items }: { items: Array<{ name: string; url: 
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbData) }}
     />
   );
 }
@@ -222,7 +219,7 @@ export function LocalBusinessJsonLd() {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
     />
   );
 }

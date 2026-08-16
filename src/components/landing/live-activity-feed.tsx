@@ -3,7 +3,10 @@
 import { useMemo } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 
-const fakeTransactions = [
+// Phase 4: These are ILLUSTRATIVE sample transactions, not real activity.
+// They must never be presented as live verified activity. The badge label
+// below explicitly says "Ilustrasi" so users are not misled.
+const sampleTransactions = [
   { name: 'R*** dari Jakarta', amount: 'Rp 5.000.000', time: '2 menit lalu' },
   { name: 'A*** dari Surabaya', amount: 'Rp 3.200.000', time: '5 menit lalu' },
   { name: 'S*** dari Bandung', amount: 'Rp 8.500.000', time: '8 menit lalu' },
@@ -26,7 +29,7 @@ const fakeTransactions = [
   { name: 'S*** dari Palangkaraya', amount: 'Rp 3.120.000', time: '12 menit lalu' },
 ];
 
-function TickerItem({ tx, separator }: { tx: typeof fakeTransactions[0]; separator: boolean }) {
+function TickerItem({ tx, separator }: { tx: typeof sampleTransactions[0]; separator: boolean }) {
   return (
     <div className="flex items-center gap-2 px-3 sm:px-5 py-2.5 whitespace-nowrap">
       {separator && <span className="text-white/10 text-sm">|</span>}
@@ -42,18 +45,23 @@ function TickerItem({ tx, separator }: { tx: typeof fakeTransactions[0]; separat
 
 export default function LiveActivityFeed() {
   // Double items for seamless loop
-  const doubled = useMemo(() => [...fakeTransactions, ...fakeTransactions], []);
+  const doubled = useMemo(() => [...sampleTransactions, ...sampleTransactions], []);
 
   return (
-    <div className="relative overflow-hidden bg-gray-900 dark:bg-gray-950 border-y border-white/5">
-      {/* LIVE badge — absolute positioned so it floats above the ticker */}
+    <div
+      className="relative overflow-hidden bg-gray-900 dark:bg-gray-950 border-y border-white/5"
+      role="region"
+      aria-label="Contoh ilustrasi transaksi"
+    >
+      {/* Illustration badge — absolute positioned so it floats above the ticker.
+          Explicitly labeled "Ilustrasi" so users know these are sample, not live, transactions. */}
       <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center px-3 md:px-4 bg-gradient-to-r from-gray-900 via-gray-900/95 to-transparent dark:from-gray-950 dark:via-gray-950/95">
         <div className="flex items-center gap-1.5">
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
           </span>
-          <span className="text-[10px] font-bold text-white/90 uppercase tracking-wider">Live</span>
+          <span className="text-[10px] font-bold text-white/90 uppercase tracking-wider">Ilustrasi</span>
         </div>
       </div>
 
@@ -71,3 +79,4 @@ export default function LiveActivityFeed() {
     </div>
   );
 }
+

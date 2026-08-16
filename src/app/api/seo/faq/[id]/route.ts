@@ -62,9 +62,17 @@ export async function PUT(
       );
     }
 
+    // Field allowlist — only known FAQ fields are accepted
+    const updateData: Record<string, unknown> = {};
+    if (typeof body.question === 'string') updateData.question = body.question;
+    if (typeof body.answer === 'string') updateData.answer = body.answer;
+    if (typeof body.category === 'string') updateData.category = body.category;
+    if (typeof body.order === 'number') updateData.order = body.order;
+    if (typeof body.isActive === 'boolean') updateData.isActive = body.isActive;
+
     const updatedFaq = await db.fAQ.update({
       where: { id },
-      data: body,
+      data: updateData,
     });
 
     return NextResponse.json({

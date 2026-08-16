@@ -1,10 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { db, toNumber } from '@/lib/db';
-import { generateOrderId, calculatePaymentFee, calculateMarginBreakdown } from '@/lib/auth';
+import { generateOrderId } from '@/lib/auth';
 import { sendTelegramNotification, formatCurrency } from '@/lib/telegram';
 import { checkCustomerDuplicate, normalizePhone } from '@/lib/customer-utils';
 import { sanitizeName, sanitizePhone, sanitizeBankAccount, sanitizeCity, sanitizeString, validateLength, isValidCuid, isValidMethodTransaction, FIELD_LIMITS } from '@/lib/sanitize';
+import { calculateTransaction, CALCULATION_VERSION_PHASE2 } from '@/lib/transaction/fee';
+import {
+  prepareIdempotency,
+  isUniqueConstraintViolation,
+} from '@/lib/transaction/idempotency';
+import { persistFraudAssessment } from '@/lib/fraud/service';
+import { withObservability, updateActor } from '@/lib/observability/request-id';
+import {
+  logWarn,
+  logError,
+  logInfo,
+  logTransactionEvent,
+} from '@/lib/observability/logger';
+import {
+  apiError,
+  apiErrorFrom,
+  apiValidationError,
+  apiUnauthenticated,
+  ErrorCode,
+} from '@/lib/observability/errors';
 
 // Helper to serialize transaction with Decimal fields
 function serializeTransaction(tx: Record<string, unknown>) {
@@ -20,6 +40,13 @@ function serializeTransaction(tx: Record<string, unknown>) {
     partnerProfit: toNumber(tx.partnerProfit),
     ownerProfit: toNumber(tx.ownerProfit),
     totalReceived: toNumber(tx.totalReceived),
+    // Phase 5: fraud + commission fields
+    fraudRiskScore: typeof tx.fraudRiskScore === 'number' ? tx.fraudRiskScore : 0,
+    fraudRiskLevel: typeof tx.fraudRiskLevel === 'string' ? tx.fraudRiskLevel : 'low',
+    fraudStatus: typeof tx.fraudStatus === 'string' ? tx.fraudStatus : 'clear',
+    fraudReasons: tx.fraudReasons ?? null,
+    commissionStatus: typeof tx.commissionStatus === 'string' ? tx.commissionStatus : 'pending',
+    commissionApprovedAmount: toNumber(tx.commissionApprovedAmount),
     customer: tx.customer ? {
       ...tx.customer as object,
       totalVolume: toNumber((tx.customer as Record<string, unknown>).totalVolume),
@@ -51,16 +78,14 @@ function serializeTransaction(tx: Record<string, unknown>) {
 }
 
 // GET transactions with pagination
-export async function GET(request: NextRequest) {
+export const GET = withObservability(async (request: NextRequest) => {
   try {
     const user = await getCurrentUser();
 
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Tidak terautentikasi' },
-        { status: 401 }
-      );
+      return apiUnauthenticated();
     }
+    updateActor(user.role, user.id);
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -123,25 +148,24 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Get transactions error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
-      { status: 500 }
-    );
+    logError({
+      event: 'transaction.list_failed',
+      errorCode: ErrorCode.INTERNAL_ERROR,
+      data: { error },
+    });
+    return apiErrorFrom(error, ErrorCode.INTERNAL_ERROR, 'Terjadi kesalahan server');
   }
-}
+});
 
 // POST create transaction
-export async function POST(request: NextRequest) {
+export const POST = withObservability(async (request: NextRequest) => {
   try {
     const user = await getCurrentUser();
 
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Tidak terautentikasi' },
-        { status: 401 }
-      );
+      return apiUnauthenticated();
     }
+    updateActor(user.role, user.id);
 
     const body = await request.json();
     const {
@@ -170,26 +194,17 @@ export async function POST(request: NextRequest) {
 
     // Validation
     if (!nominal || !paymentTypeId || !methodTransaction) {
-      return NextResponse.json(
-        { success: false, error: 'Field wajib harus diisi' },
-        { status: 400 }
-      );
+      return apiValidationError('Field wajib harus diisi');
     }
 
     // For existing customer, customerId is required
     if (!isNewCustomer && !customerId) {
-      return NextResponse.json(
-        { success: false, error: 'Customer harus dipilih' },
-        { status: 400 }
-      );
+      return apiValidationError('Customer harus dipilih');
     }
 
     // For new customer, name and phone are required
     if (isNewCustomer && (!sanitizedName || !sanitizedPhone)) {
-      return NextResponse.json(
-        { success: false, error: 'Nama dan nomor customer harus diisi' },
-        { status: 400 }
-      );
+      return apiValidationError('Nama dan nomor customer harus diisi');
     }
 
     // Get payment type
@@ -198,90 +213,77 @@ export async function POST(request: NextRequest) {
     });
 
     if (!paymentType) {
-      return NextResponse.json(
-        { success: false, error: 'Tipe pembayaran tidak valid' },
-        { status: 400 }
-      );
+      return apiValidationError('Tipe pembayaran tidak valid');
     }
 
     // Get marketplace if provided
-    // Accept 'none' or '' as signals to not use marketplace
-    let platformFee = 0;
     const effectiveMarketplaceId = (marketplaceId && marketplaceId !== 'none') ? marketplaceId : null;
-
+    let marketplace = null;
     if (effectiveMarketplaceId) {
-      const marketplace = await db.marketplace.findUnique({
+      marketplace = await db.marketplace.findUnique({
         where: { id: effectiveMarketplaceId },
       });
-      if (marketplace) {
-        // Convert Decimal to number safely (handles Neon PostgreSQL Decimal type)
-        let mpFeePercent = toNumber(marketplace.feePercent);
-        const mpFeeFlat = toNumber(marketplace.feeFlat);
-        // Safety: normalize fee percent if > 100 (database precision issue fix)
-        if (mpFeePercent > 100) {
-          mpFeePercent = mpFeePercent / 1000;
-        }
-        platformFee = toNumber(nominal) * (mpFeePercent / 100) + mpFeeFlat;
-      }
     }
 
     // Get partner
     let actualPartnerId = partnerId || null;
-    let partnerRate = 0;
+    let partner = null;
 
     if (user.role === 'partner') {
-      const partner = await db.partner.findUnique({
+      partner = await db.partner.findUnique({
         where: { userId: user.id },
       });
-      actualPartnerId = partner?.id;
-      partnerRate = partner?.commission || 0;
+      actualPartnerId = partner?.id || null;
     } else if (partnerId) {
-      const partner = await db.partner.findUnique({
+      partner = await db.partner.findUnique({
         where: { id: partnerId },
       });
-      partnerRate = partner?.commission || 0;
     }
 
-    // Calculate fees
-    // Convert Decimal values to numbers for PostgreSQL compatibility
-    const ptDiscountPercent = toNumber(paymentType.discountPercent) || 0;
-    const ptDiscountNominal = toNumber(paymentType.discountNominal) || 0;
-    const ptMinTransaction = toNumber(paymentType.minTransaction) || 0;
+    // ── Consolidated fee calculation (Phase 2 single source) ──
+    const calc = calculateTransaction({
+      nominal: toNumber(nominal),
+      paymentType: paymentType as unknown as Parameters<typeof calculateTransaction>[0]['paymentType'],
+      marketplace: marketplace ? { name: marketplace.name, feePercent: marketplace.feePercent, feeFlat: marketplace.feeFlat } : null,
+      partner: partner ? { commission: partner.commission } : null,
+      methodTransaction,
+    });
 
-    const originalFee = calculatePaymentFee(
-      toNumber(nominal),
-      {
-        onlineFeePercent: toNumber(paymentType.onlineFeePercent),
-        onlineFeeFlat: toNumber(paymentType.onlineFeeFlat),
-        codFeePercent: toNumber(paymentType.codFeePercent),
-        codFeeFlat: toNumber(paymentType.codFeeFlat),
-        threshold: toNumber(paymentType.threshold),
-      },
-      methodTransaction
-    );
-
-    // Apply discount from payment type if eligible
-    let discountAmount = 0;
-    let appliedDiscountPercent = 0;
-    const nominalNum = toNumber(nominal);
-    const meetsMinTransaction = ptMinTransaction <= 0 || nominalNum >= ptMinTransaction;
-
-    if (meetsMinTransaction && (ptDiscountPercent > 0 || ptDiscountNominal > 0)) {
-      if (ptDiscountPercent > 0) {
-        discountAmount = originalFee * (ptDiscountPercent / 100);
-        appliedDiscountPercent = ptDiscountPercent;
-      } else if (ptDiscountNominal > 0) {
-        discountAmount = Math.min(ptDiscountNominal, originalFee);
-        appliedDiscountPercent = (discountAmount / originalFee) * 100;
+    // ── Idempotency check ──
+    const idem = prepareIdempotency(request.headers, body);
+    if (idem.key) {
+      const existing = await db.transaction.findUnique({
+        where: { idempotencyKey: idem.key },
+        include: { customer: true, paymentType: true, partner: true, marketplace: true },
+      });
+      if (existing) {
+        if (existing.idempotencyHash !== idem.hash) {
+          logTransactionEvent('transaction.idempotency_conflict', {
+            transactionId: existing.id,
+            orderId: existing.orderId,
+            actorRole: user.role,
+            errorCode: ErrorCode.IDEMPOTENCY_CONFLICT,
+            message: 'Idempotency key reuse with different payload',
+          });
+          return apiError({
+            status: 409,
+            code: ErrorCode.IDEMPOTENCY_CONFLICT,
+            message: 'Idempotency key sudah digunakan untuk payload yang berbeda',
+          });
+        }
+        logTransactionEvent('transaction.replayed', {
+          transactionId: existing.id,
+          orderId: existing.orderId,
+          actorRole: user.role,
+          message: 'Idempotency replay — returning existing transaction',
+        });
+        return NextResponse.json({
+          success: true,
+          data: serializeTransaction(existing as unknown as Record<string, unknown>),
+          message: 'Transaksi sudah dibuat sebelumnya (idempotent replay)',
+        });
       }
     }
-
-    const paymentFee = Math.max(0, originalFee - discountAmount);
-    const { netMargin, partnerProfit, ownerProfit } = calculateMarginBreakdown(
-      paymentFee,
-      platformFee,
-      toNumber(partnerRate)
-    );
 
     // Generate order ID
     const orderId = generateOrderId();
@@ -289,96 +291,211 @@ export async function POST(request: NextRequest) {
     // Default status: "process" for owner, "pending" for partner/public
     const defaultStatus = user.role === 'owner' ? 'process' : 'pending';
 
-    // Handle customer - create new or use existing
-    let finalCustomerId = customerId;
+    // ── Create transaction + customer stats atomically ──
+    let transaction;
+    try {
+      transaction = await db.$transaction(async (tx) => {
+        // Handle customer - create new or use existing
+        let finalCustomerId = customerId;
 
-    if (isNewCustomer) {
-      // Normalize phone number
-      const normalizedPhone = normalizePhone(sanitizedPhone);
-      
-      // Check for duplicate customer (by phone OR name)
-      const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, sanitizedName);
+        if (isNewCustomer) {
+          const normalizedPhone = normalizePhone(sanitizedPhone);
+          const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, sanitizedName);
 
-      if (duplicateCheck.isDuplicate && duplicateCheck.existingCustomer) {
-        // Use existing customer - update with new info if provided
-        finalCustomerId = duplicateCheck.existingCustomer.id;
-        
-        // Update customer info if new data provided
-        await db.customer.update({
+          if (duplicateCheck.isDuplicate && duplicateCheck.existingCustomer) {
+            finalCustomerId = duplicateCheck.existingCustomer.id;
+            await tx.customer.update({
+              where: { id: finalCustomerId },
+              data: {
+                name: sanitizedName,
+                phone: normalizedPhone,
+                city: sanitizedCity || undefined,
+                bankName: sanitizedBankName || undefined,
+                bankAccount: sanitizedBankAccount || undefined,
+                bankHolder: sanitizedBankHolder || undefined,
+                partnerId: user.role === 'partner' ? actualPartnerId : undefined,
+              },
+            });
+          } else {
+            const newCustomer = await tx.customer.create({
+              data: {
+                name: sanitizedName,
+                phone: normalizedPhone,
+                city: sanitizedCity || null,
+                bankName: sanitizedBankName || null,
+                bankAccount: sanitizedBankAccount || null,
+                bankHolder: sanitizedBankHolder || null,
+                totalVolume: 0,
+                totalTransactions: 0,
+                addedBy: user.role === 'owner' ? 'owner' : 'partner',
+                partnerId: user.role === 'partner' ? actualPartnerId : null,
+              },
+            });
+            finalCustomerId = newCustomer.id;
+          }
+        }
+
+        // Create transaction with snapshot + idempotency
+        const created = await tx.transaction.create({
+          data: {
+            orderId,
+            customerId: finalCustomerId,
+            partnerId: actualPartnerId,
+            nominal: calc.nominal,
+            paymentFee: calc.paymentFee,
+            originalFee: calc.originalFee,
+            discountPercent: calc.discountPercent,
+            discountAmount: calc.discountAmount,
+            platformFee: calc.platformFee,
+            netMargin: calc.netMargin,
+            partnerProfit: calc.partnerProfit,
+            ownerProfit: calc.ownerProfit,
+            totalReceived: calc.totalReceived,
+            paymentTypeId,
+            methodTransaction,
+            marketplaceId: effectiveMarketplaceId,
+            status: defaultStatus,
+            // Phase 2 snapshot fields
+            partnerCommissionPercent: calc.partnerCommissionPercent,
+            paymentTypeName: calc.paymentTypeName,
+            marketplaceName: calc.marketplaceName,
+            feeConfigSnapshot: calc.feeConfigSnapshot,
+            calculationVersion: CALCULATION_VERSION_PHASE2,
+            // Idempotency
+            idempotencyKey: idem.key,
+            idempotencyHash: idem.hash,
+            // Phase 5: commissionStatus = not_applicable when no partner.
+            // When a partner IS linked, the fraud assessment below overwrites
+            // this to 'pending' (clear) or 'held' (review) or 'rejected' (confirmed).
+            commissionStatus: actualPartnerId ? 'pending' : 'not_applicable',
+          },
+          include: {
+            customer: true,
+            paymentType: true,
+            partner: true,
+            marketplace: true,
+          },
+        });
+
+        // Update customer stats (always track customer activity)
+        await tx.customer.update({
           where: { id: finalCustomerId },
           data: {
-            name: sanitizedName,
-            phone: normalizedPhone,
-            city: sanitizedCity || undefined,
-            bankName: sanitizedBankName || undefined,
-            bankAccount: sanitizedBankAccount || undefined,
-            bankHolder: sanitizedBankHolder || undefined,
-            partnerId: user.role === 'partner' ? actualPartnerId : undefined,
+            totalVolume: { increment: toNumber(nominal) },
+            totalTransactions: { increment: 1 },
           },
         });
-      } else {
-        // Create new customer with bank details
-        const newCustomer = await db.customer.create({
-          data: {
-            name: sanitizedName,
-            phone: normalizedPhone,
-            city: sanitizedCity || null,
-            bankName: sanitizedBankName || null,
-            bankAccount: sanitizedBankAccount || null,
-            bankHolder: sanitizedBankHolder || null,
-            totalVolume: 0,
-            totalTransactions: 0,
-            addedBy: user.role === 'owner' ? 'owner' : 'partner',
-            partnerId: user.role === 'partner' ? actualPartnerId : null,
-          },
+
+        // ── Phase 5: Run fraud assessment (only when a partner is linked) ──
+        // Sets fraudRiskScore/Level/Status, fraudReasons, commissionStatus.
+        // Appends a FraudReviewEvent. Auto-suspends partner on critical signal.
+        // For transactions with no partner, commissionStatus stays 'not_applicable'
+        // and no assessment is performed (per directive).
+        if (actualPartnerId) {
+          // Fetch the customer row to get identity for fraud assessment.
+          const customerForFraud = await tx.customer.findUniqueOrThrow({
+            where: { id: finalCustomerId },
+            select: {
+              phone: true,
+              bankAccount: true,
+              bankHolder: true,
+              name: true,
+              city: true,
+              createdAt: true,
+            },
+          });
+          await persistFraudAssessment(
+            tx,
+            {
+              transactionId: created.id,
+              orderId: created.orderId,
+              partnerId: actualPartnerId,
+              customerId: finalCustomerId,
+              customer: {
+                phone: customerForFraud.phone,
+                bankAccount: customerForFraud.bankAccount,
+                bankHolder: customerForFraud.bankHolder,
+                name: customerForFraud.name,
+                city: customerForFraud.city,
+                createdAt: customerForFraud.createdAt,
+              },
+              transactionCreatedAt: created.createdAt,
+            },
+            { actorType: 'system' },
+          );
+
+          // Re-fetch the transaction to include the fraud fields in the response.
+          const refreshed = await tx.transaction.findUniqueOrThrow({
+            where: { id: created.id },
+            include: {
+              customer: true,
+              paymentType: true,
+              partner: true,
+              marketplace: true,
+            },
+          });
+          return refreshed;
+        }
+
+        return created;
+      });
+
+      // ── Phase 3 observability: emit transaction.created (DB committed) ──
+      logTransactionEvent('transaction.created', {
+        transactionId: transaction.id,
+        orderId: transaction.orderId,
+        actorRole: user.role,
+        monetary: {
+          nominal: calc.nominal,
+          paymentFee: calc.paymentFee,
+          partnerProfit: calc.partnerProfit,
+          ownerProfit: calc.ownerProfit,
+        },
+      });
+    } catch (error) {
+      if (isUniqueConstraintViolation(error) && idem.key) {
+        const existing = await db.transaction.findUnique({
+          where: { idempotencyKey: idem.key },
+          include: { customer: true, paymentType: true, partner: true, marketplace: true },
         });
-        finalCustomerId = newCustomer.id;
+        if (existing && existing.idempotencyHash === idem.hash) {
+          // Concurrent duplicate insert — replay existing
+          logTransactionEvent('transaction.replayed', {
+            transactionId: existing.id,
+            orderId: existing.orderId,
+            actorRole: user.role,
+            message: 'Idempotency replay — returning existing transaction (P2002 race)',
+          });
+          return NextResponse.json({
+            success: true,
+            data: serializeTransaction(existing as unknown as Record<string, unknown>),
+            message: 'Transaksi sudah dibuat sebelumnya (idempotent replay)',
+          });
+        }
+        if (existing && existing.idempotencyHash !== idem.hash) {
+          logTransactionEvent('transaction.idempotency_conflict', {
+            transactionId: existing.id,
+            orderId: existing.orderId,
+            actorRole: user.role,
+            errorCode: ErrorCode.IDEMPOTENCY_CONFLICT,
+            message: 'Idempotency key reuse with different payload (P2002 race)',
+          });
+          return apiError({
+            status: 409,
+            code: ErrorCode.IDEMPOTENCY_CONFLICT,
+            message: 'Idempotency key sudah digunakan untuk payload yang berbeda',
+          });
+        }
       }
+      throw error;
     }
-
-    // Create transaction
-    const transaction = await db.transaction.create({
-      data: {
-        orderId,
-        customerId: finalCustomerId,
-        partnerId: actualPartnerId,
-        nominal,
-        paymentFee,
-        originalFee,
-        discountPercent: appliedDiscountPercent,
-        discountAmount,
-        platformFee,
-        netMargin,
-        partnerProfit,
-        ownerProfit,
-        totalReceived: nominal - paymentFee,
-        paymentTypeId,
-        methodTransaction,
-        marketplaceId: effectiveMarketplaceId,
-        status: defaultStatus,
-      },
-      include: {
-        customer: true,
-        paymentType: true,
-        partner: true,
-        marketplace: true,
-      },
-    });
-
-    // Update customer stats (always track customer activity)
-    await db.customer.update({
-      where: { id: finalCustomerId },
-      data: {
-        totalVolume: { increment: nominal },
-        totalTransactions: { increment: 1 },
-      },
-    });
 
     // Note: Partner stats (totalProfit, totalVolume) are only updated when transaction status changes to 'success'
     // This ensures partner targets are based on actual successful transactions
     // See PATCH handler in /api/transactions/[id]/route.ts for the stats update logic
 
     // Create notification for owner about new transaction
+    // (Outside transaction — fail-after-commit, non-critical)
     try {
       const ownerProfile = await db.ownerProfile.findFirst();
       if (ownerProfile) {
@@ -391,7 +508,7 @@ export async function POST(request: NextRequest) {
               orderId: transaction.orderId,
               customerName: transaction.customer?.name,
               nominal: toNumber(nominal),
-              paymentFee: toNumber(paymentFee),
+              paymentFee: calc.paymentFee,
               paymentType: transaction.paymentType?.name,
               partnerName: transaction.partner?.name,
             }),
@@ -407,28 +524,56 @@ export async function POST(request: NextRequest) {
         });
 
         if (notifSettings?.telegramEnabled && notifSettings.telegramBotToken && notifSettings.telegramChatId && notifSettings.notifyNewTransaction) {
-          await sendTelegramNotification(
-            notifSettings.telegramBotToken,
-            notifSettings.telegramChatId,
-            {
-              type: 'new_order',
-              title: '💳 Transaksi Baru',
-              message: `Order ID: ${transaction.orderId}`,
-              additionalData: {
-                'Pelanggan': transaction.customer?.name,
-                'Nominal': formatCurrency(toNumber(nominal)),
-                'Fee': formatCurrency(toNumber(paymentFee)),
-                'Tipe': transaction.paymentType?.name,
-                'Partner': transaction.partner?.name || '-',
-              },
-            }
-          );
+          // ── Telegram send (HTTP) — fail-after-commit pattern ──
+          // DB transaction is already committed above. If Telegram fails, log a
+          // warn and DO NOT roll back.
+          try {
+            await sendTelegramNotification(
+              notifSettings.telegramBotToken,
+              notifSettings.telegramChatId,
+              {
+                type: 'new_order',
+                title: '💳 Transaksi Baru',
+                message: `Order ID: ${transaction.orderId}`,
+                additionalData: {
+                  'Pelanggan': transaction.customer?.name,
+                  'Nominal': formatCurrency(toNumber(nominal)),
+                  'Fee': formatCurrency(calc.paymentFee),
+                  'Tipe': transaction.paymentType?.name,
+                  'Partner': transaction.partner?.name || '-',
+                },
+              }
+            );
+          } catch (telegramError) {
+            logWarn({
+              event: 'telegram.send_failed',
+              errorCode: ErrorCode.TELEGRAM_SEND_FAILED,
+              message: 'Telegram notification failed after successful transaction creation',
+              orderId: transaction.orderId,
+              transactionId: transaction.id,
+              data: { orderId: transaction.orderId },
+            });
+          }
         }
       }
     } catch (notifError) {
-      console.error('Failed to create notification:', notifError);
-      // Don't fail the request if notification fails
+      // In-app notification record creation failed — non-critical, log and continue.
+      logWarn({
+        event: 'notification.create_failed',
+        errorCode: ErrorCode.INTERNAL_ERROR,
+        message: 'Failed to create in-app notification record',
+        orderId: transaction.orderId,
+        transactionId: transaction.id,
+        data: { orderId: transaction.orderId },
+      });
     }
+
+    logInfo({
+      event: 'transaction.notification_complete',
+      message: `Transaction ${transaction.orderId} created by ${user.role}`,
+      orderId: transaction.orderId,
+      transactionId: transaction.id,
+    });
 
     return NextResponse.json({
       success: true,
@@ -436,10 +581,11 @@ export async function POST(request: NextRequest) {
       message: `Transaksi berhasil dibuat dengan status ${defaultStatus}`,
     });
   } catch (error) {
-    console.error('Create transaction error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
-      { status: 500 }
-    );
+    logError({
+      event: 'transaction.create_failed',
+      errorCode: ErrorCode.TRANSACTION_CREATE_FAILED,
+      data: { error },
+    });
+    return apiErrorFrom(error, ErrorCode.TRANSACTION_CREATE_FAILED, 'Gagal membuat transaksi');
   }
-}
+});

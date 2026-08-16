@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.blackbear.cc';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
 
 export const metadata: Metadata = {
   title: 'Login - Masuk ke Dashboard',
@@ -11,6 +11,8 @@ export const metadata: Metadata = {
     description: 'Login ke dashboard Black Bear untuk mengelola transaksi, pantau order, dan kelola keuangan gestun Anda.',
     url: `${siteUrl}/login`,
     type: 'website',
+    locale: 'id_ID',
+    siteName: 'Black Bear',
   },
   twitter: {
     card: 'summary',
@@ -20,9 +22,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${siteUrl}/login`,
   },
+  // Auth page — must NOT be indexed.
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
   },
 };
 

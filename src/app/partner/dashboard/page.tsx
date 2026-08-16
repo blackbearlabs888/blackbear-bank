@@ -34,6 +34,7 @@ import {
   CreditCard,
   Quote,
   Globe,
+  XCircle,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import Link from 'next/link';
@@ -388,6 +389,73 @@ export default function PartnerDashboardPage() {
           alert={stats?.pendingTransactions > 0}
         />
       </div>
+
+      {/* Phase 5: Commission Status Summary (partner-facing, no fraud score/rules) */}
+      {data?.commissionSummary && (
+        <Card className="rounded-xl border border-border/60 shadow-none">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-emerald-500" />
+              Status Komisi Saya
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Ringkasan komisi berdasarkan status transaksi
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="rounded-lg border border-border/50 p-3 bg-blue-50/50 dark:bg-blue-900/10">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Clock className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="text-xs font-medium text-muted-foreground">Diproses</span>
+                </div>
+                <p className="text-sm sm:text-base font-bold">
+                  {formatCurrency((data.commissionSummary as Record<string, { count: number; amount: number }>).pending?.amount || 0)}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {(data.commissionSummary as Record<string, { count: number }>).pending?.count || 0} transaksi
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/50 p-3 bg-emerald-50/50 dark:bg-emerald-900/10">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                  <span className="text-xs font-medium text-muted-foreground">Disetujui</span>
+                </div>
+                <p className="text-sm sm:text-base font-bold">
+                  {formatCurrency((data.commissionSummary as Record<string, { count: number; amount: number }>).approved?.amount || 0)}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {(data.commissionSummary as Record<string, { count: number }>).approved?.count || 0} transaksi
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/50 p-3 bg-amber-50/50 dark:bg-amber-900/10">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="text-xs font-medium text-muted-foreground">Ditahan</span>
+                </div>
+                <p className="text-sm sm:text-base font-bold">
+                  {formatCurrency((data.commissionSummary as Record<string, { count: number; amount: number }>).held?.amount || 0)}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {(data.commissionSummary as Record<string, { count: number }>).held?.count || 0} transaksi
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/50 p-3 bg-red-50/50 dark:bg-red-900/10">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <XCircle className="w-3.5 h-3.5 text-red-500" />
+                  <span className="text-xs font-medium text-muted-foreground">Ditolak</span>
+                </div>
+                <p className="text-sm sm:text-base font-bold">
+                  {formatCurrency((data.commissionSummary as Record<string, { count: number; amount: number }>).rejected?.amount || 0)}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {(data.commissionSummary as Record<string, { count: number }>).rejected?.count || 0} transaksi
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions - Mobile */}
       <div className="grid grid-cols-2 gap-3 sm:hidden">

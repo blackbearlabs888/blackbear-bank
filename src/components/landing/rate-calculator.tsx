@@ -207,6 +207,9 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                                     <img
                                       src={pt.logoUrl}
                                       alt={pt.name}
+                                      width={16}
+                                      height={16}
+                                      loading="lazy"
                                       className="w-4 h-4 object-contain"
                                       onError={(e) => {
                                         (e.target as HTMLImageElement).style.display = 'none';

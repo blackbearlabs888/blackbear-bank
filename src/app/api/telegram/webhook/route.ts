@@ -1,6 +1,98 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toNumber } from '@/lib/db';
 import { sendTelegramMessage } from '@/lib/telegram';
+import { timingSafeEqual } from 'crypto';
+import { calculateTransaction, CALCULATION_VERSION_PHASE2 } from '@/lib/transaction/fee';
+import { applyStatusTransition, adjustVolumeForNominalChange } from '@/lib/transaction/stats';
+import { isValidStatus } from '@/lib/transaction/status-machine';
+import {
+  getRequestId,
+  withObservability,
+  setRequestIdHeader,
+} from '@/lib/observability/request-id';
+import {
+  logWarn,
+  logError,
+  logTransactionEvent,
+} from '@/lib/observability/logger';
+import { apiError, ErrorCode } from '@/lib/observability/errors';
+
+// ==================== WEBHOOK AUTHENTICITY ====================
+
+/**
+ * Verify the X-Telegram-Bot-Api-Secret-Token header sent by Telegram.
+ *
+ * Telegram supports an optional `secret_token` parameter when registering a
+ * webhook (see setWebhook API). When set, Telegram includes the same value in
+ * the `X-Telegram-Bot-Api-Secret-Token` header of every webhook request,
+ * allowing the receiver to reject forged requests that did not originate from
+ * Telegram.
+ *
+ * The expected secret is read from the TELEGRAM_WEBHOOK_SECRET environment
+ * variable (NEVER from the database, NEVER logged).
+ *
+ * FAIL-CLOSED POLICY (Phase 1.2):
+ *  - Production (NODE_ENV === 'production'): the secret MUST be set. If it is
+ *    missing, the webhook is REJECTED with 503 and a safe configuration-error
+ *    log message (the secret value is never logged). No update is processed.
+ *  - Non-production: the secret MUST be set UNLESS the explicit development
+ *    flag `TELEGRAM_WEBHOOK_ALLOW_INSECURE_DEV=true` is present. Without the
+ *    flag, the webhook is REJECTED. This prevents accidental bypass when an
+ *    env file is missing or incomplete.
+ *  - If the secret is set, the request header must be present AND
+ *    constant-time equal to the expected value, otherwise the request is
+ *    rejected with 401.
+ *
+ * Constant-time comparison prevents timing side-channels. The length check is
+ * unavoidable with Node's timingSafeEqual (requires equal-length buffers);
+ * secret length is not considered highly sensitive.
+ *
+ * The `reason` field is for INTERNAL LOGGING ONLY — the HTTP response body
+ * never includes the reason (see POST handler) to avoid information
+ * disclosure.
+ */
+function verifyTelegramSecret(request: NextRequest): { ok: boolean; reason?: string; status?: number } {
+  const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
+  const isProduction = process.env.NODE_ENV === 'production';
+  const allowInsecureDev = process.env.TELEGRAM_WEBHOOK_ALLOW_INSECURE_DEV === 'true';
+
+  if (!expected) {
+    if (isProduction) {
+      // FAIL-CLOSED in production. Safe log: no secret, no env value echoed.
+      console.error(
+        '[Telegram Webhook] REJECTED: TELEGRAM_WEBHOOK_SECRET is not set and NODE_ENV=production. Configure the secret before enabling the webhook.'
+      );
+      return { ok: false, reason: 'secret_not_configured', status: 503 };
+    }
+    if (!allowInsecureDev) {
+      // FAIL-CLOSED in non-production without explicit opt-in flag.
+      console.error(
+        '[Telegram Webhook] REJECTED: TELEGRAM_WEBHOOK_SECRET is not set. Set the secret, or set TELEGRAM_WEBHOOK_ALLOW_INSECURE_DEV=true for local development only.'
+      );
+      return { ok: false, reason: 'secret_not_configured', status: 503 };
+    }
+    // Explicit dev bypass — only when not production AND flag is true.
+    console.warn(
+      '[Telegram Webhook] INSECURE DEV MODE: TELEGRAM_WEBHOOK_ALLOW_INSECURE_DEV=true and no secret set. Webhook authenticity verification is DISABLED. NEVER use this in production.'
+    );
+    return { ok: true };
+  }
+
+  const provided = request.headers.get('x-telegram-bot-api-secret-token');
+  if (!provided) {
+    return { ok: false, reason: 'missing_secret_header', status: 401 };
+  }
+
+  const aBuf = Buffer.from(provided);
+  const bBuf = Buffer.from(expected);
+  if (aBuf.length !== bBuf.length) {
+    return { ok: false, reason: 'invalid_secret', status: 401 };
+  }
+  if (!timingSafeEqual(aBuf, bBuf)) {
+    return { ok: false, reason: 'invalid_secret', status: 401 };
+  }
+  return { ok: true };
+}
 
 // ==================== TYPES ====================
 
@@ -208,12 +300,15 @@ async function handleInfo(chatId: number, orderId: string) {
 /** Handle /status command */
 async function handleStatus(chatId: number, orderId: string, newStatus: string) {
   const status = newStatus.toLowerCase();
-  if (!STATUS_LIST.includes(status)) {
+  if (!isValidStatus(status)) {
     await reply(chatId, `❌ Status tidak valid. Gunakan: <code>pending</code>, <code>verification</code>, <code>process</code>, <code>success</code>, <code>failed</code>`);
     return;
   }
 
-  const tx = await db.transaction.findUnique({ where: { orderId } });
+  const tx = await db.transaction.findUnique({
+    where: { orderId },
+    include: { partner: true, customer: true, paymentType: true, marketplace: true },
+  });
   if (!tx) {
     await reply(chatId, `❌ Transaksi <code>${orderId}</code> tidak ditemukan.`);
     return;
@@ -225,16 +320,56 @@ async function handleStatus(chatId: number, orderId: string, newStatus: string) 
     return;
   }
 
-  await db.transaction.update({
-    where: { orderId },
-    data: { status },
+  // ── Phase 2: Use shared applyStatusTransition (atomic stats mutation) ──
+  // This ensures Telegram /status produces the same partner-stats accounting
+  // as PATCH /api/transactions/[id].
+  const { statusChanged } = await db.$transaction(async (txClient) => {
+    return applyStatusTransition(
+      txClient,
+      {
+        id: tx.id,
+        status: tx.status,
+        partnerId: tx.partnerId,
+        customerId: tx.customerId,
+        nominal: tx.nominal,
+        partnerProfit: tx.partnerProfit,
+      },
+      status,
+    );
   });
 
-  await reply(chatId,
-    `✅ Status transaksi diupdate!\n\n` +
-    `📦 <code>${orderId}</code>\n` +
-    `${STATUS_EMOJI[oldStatus]} ${oldStatus.toUpperCase()} → ${STATUS_EMOJI[status]} <b>${status.toUpperCase()}</b>`
-  );
+  // ── Phase 3: Transaction observability ──
+  // DB transaction has committed at this point. The Telegram reply below is
+  // a best-effort notification — its failure does NOT roll back the DB.
+  if (statusChanged) {
+    logTransactionEvent('transaction.status_changed', {
+      transactionId: tx.id,
+      orderId,
+      actorRole: 'owner',
+      actorId: null,
+      message: `Status changed via Telegram /status: ${oldStatus} → ${status}`,
+      monetary: {
+        nominal: toNumber(tx.nominal),
+        partnerProfit: toNumber(tx.partnerProfit),
+      },
+      extra: { oldStatus, newStatus: status, source: 'telegram' },
+    });
+    await reply(chatId,
+      `✅ Status transaksi diupdate!\n\n` +
+      `📦 <code>${orderId}</code>\n` +
+      `${STATUS_EMOJI[oldStatus]} ${oldStatus.toUpperCase()} → ${STATUS_EMOJI[status]} <b>${status.toUpperCase()}</b>`
+    );
+  } else {
+    logTransactionEvent('transaction.status_noop', {
+      transactionId: tx.id,
+      orderId,
+      actorRole: 'owner',
+      actorId: null,
+      message: `Status unchanged (same-status request): ${status}`,
+      extra: { status, source: 'telegram' },
+    });
+    await reply(chatId, `ℹ️ Transaksi <code>${orderId}</code> sudah dalam status <b>${status.toUpperCase()}</b>.`);
+  }
 }
 
 /** Handle /nominal command */
@@ -247,7 +382,7 @@ async function handleNominal(chatId: number, orderId: string, amountStr: string)
 
   const tx = await db.transaction.findUnique({
     where: { orderId },
-    include: { paymentType: true, marketplace: true },
+    include: { paymentType: true, marketplace: true, partner: true },
   });
 
   if (!tx) {
@@ -255,49 +390,99 @@ async function handleNominal(chatId: number, orderId: string, amountStr: string)
     return;
   }
 
+  if (!tx.paymentType) {
+    await reply(chatId, `❌ Payment type tidak ditemukan untuk transaksi ini.`);
+    return;
+  }
+
   const oldNominal = toNumber(tx.nominal);
 
-  // Recalculate fees based on new nominal
-  const pt = tx.paymentType;
-  const method = tx.methodTransaction || 'Online';
-  const isOnline = method === 'Online';
+  // ── Phase 2: Use consolidated fee calculation (single source of truth) ──
+  // This replaces the inline ratio-preservation logic that diverged from PATCH.
+  const calc = calculateTransaction({
+    nominal: amount,
+    paymentType: tx.paymentType as unknown as Parameters<typeof calculateTransaction>[0]['paymentType'],
+    marketplace: tx.marketplace ? { name: tx.marketplace.name, feePercent: tx.marketplace.feePercent, feeFlat: tx.marketplace.feeFlat } : null,
+    partner: tx.partner ? { commission: tx.partner.commission } : null,
+    methodTransaction: tx.methodTransaction || 'Online',
+  });
 
-  const feePercent = isOnline ? toNumber(pt.onlineFeePercent) : toNumber(pt.codFeePercent);
-  const feeFlat = isOnline ? toNumber(pt.onlineFeeFlat) : toNumber(pt.codFeeFlat);
-  const threshold = toNumber(pt.threshold);
+  // ── Atomic: update transaction + adjust volume stats ──
+  await db.$transaction(async (txClient) => {
+    await txClient.transaction.update({
+      where: { id: tx.id },
+      data: {
+        nominal: calc.nominal,
+        paymentFee: calc.paymentFee,
+        originalFee: calc.originalFee,
+        discountPercent: calc.discountPercent,
+        discountAmount: calc.discountAmount,
+        platformFee: calc.platformFee,
+        netMargin: calc.netMargin,
+        partnerProfit: calc.partnerProfit,
+        ownerProfit: calc.ownerProfit,
+        totalReceived: calc.totalReceived,
+        // Update snapshot fields
+        partnerCommissionPercent: calc.partnerCommissionPercent,
+        paymentTypeName: calc.paymentTypeName,
+        marketplaceName: calc.marketplaceName,
+        feeConfigSnapshot: calc.feeConfigSnapshot,
+        calculationVersion: CALCULATION_VERSION_PHASE2,
+      },
+    });
 
-  const fee = amount > threshold ? amount * (feePercent / 100) : feeFlat;
-  const mpFee = tx.marketplaceId ? amount * (toNumber(tx.marketplace?.feePercent || 0) / 100) + toNumber(tx.marketplace?.feeFlat || 0) : 0;
-  const netMargin = fee - mpFee;
+    // Adjust customer + partner volume for the nominal change
+    if (amount !== oldNominal) {
+      await adjustVolumeForNominalChange(
+        txClient,
+        {
+          id: tx.id,
+          status: tx.status,
+          partnerId: tx.partnerId,
+          customerId: tx.customerId,
+          nominal: tx.nominal,
+          partnerProfit: tx.partnerProfit,
+        },
+        oldNominal,
+        amount,
+      );
+    }
+  });
 
-  // Keep existing profit ratios
-  const profitRatio = oldNominal > 0 ? toNumber(tx.ownerProfit) / oldNominal : 0;
-  const partnerRatio = oldNominal > 0 ? toNumber(tx.partnerProfit) / oldNominal : 0;
-  const newOwnerProfit = Math.round(amount * profitRatio);
-  const newPartnerProfit = Math.round(amount * partnerRatio);
-
-  await db.transaction.update({
-    where: { orderId },
-    data: {
-      nominal: amount,
-      paymentFee: fee,
-      platformFee: mpFee,
-      netMargin,
-      totalReceived: amount - fee,
-      ownerProfit: newOwnerProfit,
-      partnerProfit: newPartnerProfit,
+  // ── Phase 3: Transaction observability (DB committed, reply is best-effort) ──
+  logTransactionEvent('transaction.amount_changed', {
+    transactionId: tx.id,
+    orderId,
+    actorRole: 'owner',
+    actorId: null,
+    message: `Nominal changed via Telegram /nominal: ${oldNominal} → ${amount}`,
+    monetary: {
+      oldNominal,
+      newNominal: amount,
+      paymentFee: calc.paymentFee,
+      partnerProfit: calc.partnerProfit,
+      ownerProfit: calc.ownerProfit,
     },
+    extra: { source: 'telegram' },
   });
 
   await reply(chatId,
     `✅ Nominal transaksi diupdate!\n\n` +
     `📦 <code>${orderId}</code>\n` +
     `💰 ${fmtCurrency(oldNominal)} → <b>${fmtCurrency(amount)}</b>\n` +
-    `💸 Fee: ${fmtCurrency(fee)}`
+    `💸 Fee: ${fmtCurrency(calc.paymentFee)}`
   );
 }
 
-/** Handle /catatan command */
+/** Handle /catatan command
+ *
+ * Phase 3 — APPEND semantics (business decision):
+ *   - `/catatan` APPENDS a new note to the existing notes, it does NOT overwrite.
+ *   - Each appended note includes an ISO timestamp and an [Owner] marker so
+ *     the audit trail shows who added what and when.
+ *   - Previous notes are NEVER deleted or truncated.
+ *   - The mutation is atomic (single UPDATE inside a $transaction).
+ */
 async function handleCatatan(chatId: number, orderId: string, notesText: string) {
   if (!notesText.trim()) {
     await reply(chatId, `❌ Catatan tidak boleh kosong. Contoh: <code>/catatan ${orderId} sudah dibayar</code>`);
@@ -310,15 +495,44 @@ async function handleCatatan(chatId: number, orderId: string, notesText: string)
     return;
   }
 
-  await db.transaction.update({
-    where: { orderId },
-    data: { notes: notesText.trim() },
+  // Build the appended entry: timestamp + [Owner] marker + the new text.
+  // Existing notes (if any) are preserved verbatim and the new entry is
+  // appended on a new line.
+  const timestamp = new Date().toLocaleString('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const newEntry = `[${timestamp}] [Owner] ${notesText.trim()}`;
+  const existingNotes = tx.notes?.trim() ?? '';
+  const updatedNotes = existingNotes
+    ? `${existingNotes}\n${newEntry}`
+    : newEntry;
+
+  // Atomic mutation — single UPDATE. No read-modify-write race.
+  await db.$transaction(async (txClient) => {
+    await txClient.transaction.update({
+      where: { orderId },
+      data: { notes: updatedNotes },
+    });
+  });
+
+  logTransactionEvent('transaction.notes_appended', {
+    transactionId: tx.id,
+    orderId,
+    actorRole: 'owner',
+    actorId: null,
+    message: 'Note appended via Telegram /catatan',
+    extra: { source: 'telegram', entryLength: newEntry.length },
   });
 
   await reply(chatId,
-    `✅ Catatan transaksi diupdate!\n\n` +
+    `✅ Catatan ditambahkan!\n\n` +
     `📦 <code>${orderId}</code>\n` +
-    `📝 ${notesText.trim()}`
+    `📝 ${newEntry}`
   );
 }
 
@@ -366,21 +580,51 @@ async function handleMarketplace(chatId: number, orderId: string, mpName: string
       return;
     }
 
-    const netMargin = toNumber(tx.paymentFee);
-    const partnerRate = tx.partner ? toNumber(tx.partner.commission) : 0;
-    const partnerProfit = netMargin * (partnerRate / 100);
-    const ownerProfit = netMargin - partnerProfit;
+    // ── Phase 2: Use consolidated fee calculation (single source) ──
+    const calc = calculateTransaction({
+      nominal: toNumber(tx.nominal),
+      paymentType: tx.paymentType as unknown as Parameters<typeof calculateTransaction>[0]['paymentType'],
+      marketplace: null,
+      partner: tx.partner ? { commission: tx.partner.commission } : null,
+      methodTransaction: tx.methodTransaction || 'Online',
+    });
 
     await db.transaction.update({
-      where: { orderId },
-      data: { marketplaceId: null, platformFee: 0, netMargin, partnerProfit, ownerProfit },
+      where: { id: tx.id },
+      data: {
+        marketplaceId: null,
+        platformFee: calc.platformFee,
+        netMargin: calc.netMargin,
+        partnerProfit: calc.partnerProfit,
+        ownerProfit: calc.ownerProfit,
+        // Update snapshot fields
+        partnerCommissionPercent: calc.partnerCommissionPercent,
+        marketplaceName: calc.marketplaceName,
+        feeConfigSnapshot: calc.feeConfigSnapshot,
+        calculationVersion: CALCULATION_VERSION_PHASE2,
+      },
+    });
+
+    // ── Phase 3: Transaction observability ──
+    logTransactionEvent('transaction.marketplace_changed', {
+      transactionId: tx.id,
+      orderId,
+      actorRole: 'owner',
+      actorId: null,
+      message: `Marketplace cleared via Telegram /mp: ${tx.marketplace?.name} → (none)`,
+      monetary: {
+        platformFee: calc.platformFee,
+        partnerProfit: calc.partnerProfit,
+        ownerProfit: calc.ownerProfit,
+      },
+      extra: { oldMarketplace: tx.marketplace?.name, newMarketplace: null, source: 'telegram' },
     });
 
     await reply(chatId,
       `🗑️ Marketplace dihapus!\n\n` +
       `📦 <code>${orderId}</code>\n` +
-      `🏪 ${tx.marketplace.name} → <b>Tanpa Marketplace</b>\n` +
-      `💵 Diterima: ${fmtCurrency(toNumber(tx.totalReceived))}`
+      `🏪 ${tx.marketplace?.name} → <b>Tanpa Marketplace</b>\n` +
+      `💵 Diterima: ${fmtCurrency(calc.totalReceived)}`
     );
     return;
   }
@@ -408,29 +652,54 @@ async function handleMarketplace(chatId: number, orderId: string, mpName: string
     return;
   }
 
-  // Calculate new platform fee
-  const nominal = toNumber(tx.nominal);
-  let mpFeePercent = toNumber(mp.feePercent);
-  const mpFeeFlat = toNumber(mp.feeFlat);
-  if (mpFeePercent > 100) mpFeePercent = mpFeePercent / 1000;
-  const newPlatformFee = nominal * (mpFeePercent / 100) + mpFeeFlat;
-  const netMargin = toNumber(tx.paymentFee) - newPlatformFee;
-  const partnerRate = tx.partner ? toNumber(tx.partner.commission) : 0;
-  const partnerProfit = netMargin * (partnerRate / 100);
-  const ownerProfit = netMargin - partnerProfit;
+  // ── Phase 2: Use consolidated fee calculation (single source) ──
+  const calc = calculateTransaction({
+    nominal: toNumber(tx.nominal),
+    paymentType: tx.paymentType as unknown as Parameters<typeof calculateTransaction>[0]['paymentType'],
+    marketplace: { name: mp.name, feePercent: mp.feePercent, feeFlat: mp.feeFlat },
+    partner: tx.partner ? { commission: tx.partner.commission } : null,
+    methodTransaction: tx.methodTransaction || 'Online',
+  });
 
   await db.transaction.update({
-    where: { orderId },
-    data: { marketplaceId: mp.id, platformFee: newPlatformFee, netMargin, partnerProfit, ownerProfit },
+    where: { id: tx.id },
+    data: {
+      marketplaceId: mp.id,
+      platformFee: calc.platformFee,
+      netMargin: calc.netMargin,
+      partnerProfit: calc.partnerProfit,
+      ownerProfit: calc.ownerProfit,
+      // Update snapshot fields
+      partnerCommissionPercent: calc.partnerCommissionPercent,
+      marketplaceName: calc.marketplaceName,
+      feeConfigSnapshot: calc.feeConfigSnapshot,
+      calculationVersion: CALCULATION_VERSION_PHASE2,
+    },
   });
 
   const oldMpName = tx.marketplace?.name || 'Tanpa Marketplace';
+
+  // ── Phase 3: Transaction observability ──
+  logTransactionEvent('transaction.marketplace_changed', {
+    transactionId: tx.id,
+    orderId,
+    actorRole: 'owner',
+    actorId: null,
+    message: `Marketplace changed via Telegram /mp: ${oldMpName} → ${mp.name}`,
+    monetary: {
+      platformFee: calc.platformFee,
+      partnerProfit: calc.partnerProfit,
+      ownerProfit: calc.ownerProfit,
+    },
+    extra: { oldMarketplace: tx.marketplace?.name, newMarketplace: mp.name, source: 'telegram' },
+  });
+
   await reply(chatId,
     `🏪 Marketplace diupdate!\n\n` +
     `📦 <code>${orderId}</code>\n` +
     `🏪 ${oldMpName} → <b>${mp.name}</b>\n` +
-    `💸 Fee MP: ${fmtCurrency(newPlatformFee)}\n` +
-    `💵 Diterima: ${fmtCurrency(nominal - toNumber(tx.paymentFee))}`
+    `💸 Fee MP: ${fmtCurrency(calc.platformFee)}\n` +
+    `💵 Diterima: ${fmtCurrency(calc.totalReceived)}`
   );
 }
 
@@ -713,8 +982,28 @@ async function processCallbackQuery(callbackQuery: TelegramCallbackQuery) {
 
 // ==================== MAIN HANDLER ====================
 
-export async function POST(request: NextRequest) {
+export const POST = withObservability(async (request: NextRequest) => {
   try {
+    // --- Webhook authenticity: verify X-Telegram-Bot-Api-Secret-Token ---
+    // FAIL-CLOSED: in production the secret MUST be set; in non-production the
+    // secret MUST be set unless TELEGRAM_WEBHOOK_ALLOW_INSECURE_DEV=true.
+    // See verifyTelegramSecret above for the full policy. The `reason` is
+    // logged internally but never echoed to the caller.
+    const secretCheck = verifyTelegramSecret(request);
+    if (!secretCheck.ok) {
+      // Structured log with safe reason code (no secret value ever logged).
+      if (secretCheck.reason) {
+        logWarn({
+          event: 'telegram.webhook_rejected',
+          route: 'POST /api/telegram/webhook',
+          errorCode: 'WEBHOOK_AUTH_FAILED',
+          message: 'Webhook authenticity check failed',
+          data: { reason: secretCheck.reason },
+        });
+      }
+      return NextResponse.json({ ok: false }, { status: secretCheck.status ?? 401 });
+    }
+
     const body: TelegramUpdate = await request.json();
 
     // Process callback queries first
@@ -732,12 +1021,25 @@ export async function POST(request: NextRequest) {
     // Acknowledge other updates
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error('[Telegram Webhook] Error:', error);
-    return NextResponse.json({ ok: false, error: 'Internal server error' }, { status: 500 });
+    logError({
+      event: 'telegram.webhook_error',
+      route: 'POST /api/telegram/webhook',
+      errorCode: ErrorCode.INTERNAL_ERROR,
+      message: 'Telegram webhook handler error',
+      data: { error },
+    });
+    return apiError({
+      status: 500,
+      code: ErrorCode.INTERNAL_ERROR,
+      message: 'Internal server error',
+    });
   }
-}
+});
 
 // Allow GET for webhook verification (some platforms need this)
-export async function GET() {
-  return NextResponse.json({ ok: true, message: 'Black Bear Telegram Webhook is active' });
+export async function GET(request: NextRequest) {
+  const requestId = getRequestId(request);
+  const response = NextResponse.json({ ok: true, message: 'Black Bear Telegram Webhook is active' });
+  setRequestIdHeader(response, requestId);
+  return response;
 }

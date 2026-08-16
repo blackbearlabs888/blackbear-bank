@@ -28,6 +28,7 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
+import { safeJsonLd } from '@/lib/json-ld-safe';
 import { toast } from 'sonner';
 import { FadeInSection } from '@/components/landing/fade-in-section';
 
@@ -302,8 +303,8 @@ export default function BlogDetailClient({ post }: BlogDetailClientProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* JSON-LD Structured Data */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(articleJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden">
@@ -342,6 +343,8 @@ export default function BlogDetailClient({ post }: BlogDetailClientProps) {
               <img
                 src={post.featuredImage}
                 alt={post.title}
+                width={1200}
+                height={400}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10" />
@@ -561,6 +564,8 @@ export default function BlogDetailClient({ post }: BlogDetailClientProps) {
                             <img
                               src={relatedPost.featuredImage}
                               alt={relatedPost.title}
+                              width={400}
+                              height={250}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                               loading="lazy"
                             />

@@ -25,6 +25,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
+import { safeJsonLd } from '@/lib/json-ld-safe';
 import { SimplePagination } from '@/components/ui/pagination';
 import { FadeInSection } from '@/components/landing/fade-in-section';
 
@@ -186,6 +187,8 @@ export default function BlogListingPage() {
                   <img
                     src={config.logoUrl}
                     alt={siteName}
+                    width={40}
+                    height={40}
                     className="w-full h-full object-contain"
                     onError={() => setLogoError(true)}
                   />
@@ -342,6 +345,8 @@ export default function BlogListingPage() {
                             <img
                               src={featuredPost.featuredImage}
                               alt={featuredPost.title}
+                              width={1200}
+                              height={750}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                             />
                           ) : (
@@ -372,6 +377,8 @@ export default function BlogListingPage() {
                             <img
                               src={post.featuredImage}
                               alt={post.title}
+                              width={1200}
+                              height={750}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                               loading="lazy"
                             />
@@ -453,7 +460,7 @@ export default function BlogListingPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: safeJsonLd({
             '@context': 'https://schema.org',
             '@type': 'Blog',
             name: `Blog ${siteName}`,

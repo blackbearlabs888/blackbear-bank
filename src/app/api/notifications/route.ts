@@ -276,21 +276,24 @@ export async function POST(request: NextRequest) {
     if (type === 'partner_notification' && transactionId && message) {
       const timestamp = new Date().toLocaleString('id-ID');
       const noteWithTimestamp = `[${timestamp}] ${partnerData?.name || 'Partner'}: ${message}`;
-      
-      // Get current transaction notes
-      const currentTx = await db.transaction.findUnique({
-        where: { id: transactionId },
-        select: { notes: true },
-      });
 
-      // Append new note to existing notes
-      const updatedNotes = currentTx?.notes 
-        ? `${currentTx.notes}\n${noteWithTimestamp}`
-        : noteWithTimestamp;
+      // ── Phase 2: Wrap read-modify-write in $transaction to prevent race ──
+      // Concurrent partner/owner/Telegram writes to notes can lose messages
+      // (last-write-wins). Wrapping in $transaction serializes the read+write.
+      await db.$transaction(async (tx) => {
+        const currentTx = await tx.transaction.findUnique({
+          where: { id: transactionId },
+          select: { notes: true },
+        });
 
-      await db.transaction.update({
-        where: { id: transactionId },
-        data: { notes: updatedNotes },
+        const updatedNotes = currentTx?.notes
+          ? `${currentTx.notes}\n${noteWithTimestamp}`
+          : noteWithTimestamp;
+
+        await tx.transaction.update({
+          where: { id: transactionId },
+          data: { notes: updatedNotes },
+        });
       });
     }
 

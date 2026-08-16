@@ -1,15 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 
 /**
  * Set or remove Telegram webhook
  * POST: Set webhook to current domain
  * DELETE: Remove webhook
  * GET: Get current webhook info
+ *
+ * SECURITY: All three verbs are OWNER ONLY.
+ * The public Telegram webhook receiver at /api/telegram/webhook remains open
+ * for Telegram-originated requests (verified by chatId allowlist inside).
  */
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'owner') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
     const settings = await db.notificationSettings.findFirst();
     const botToken = settings?.telegramBotToken;
 
@@ -28,6 +41,34 @@ export async function POST(request: NextRequest) {
 
     const webhookUrl = `${domain}/api/telegram/webhook`;
 
+    // Read the webhook secret from env (NEVER from DB, NEVER logged).
+    // When provided, Telegram will include it in the
+    // X-Telegram-Bot-Api-Secret-Token header of every webhook request so the
+    // receiver can verify authenticity (see /api/telegram/webhook/route.ts).
+    //
+    // FAIL-CLOSED: in production, refuse to register a webhook without a
+    // secret — otherwise the webhook receiver would reject every Telegram
+    // update (see verifyTelegramSecret). In non-production, allow it only if
+    // the explicit dev-insecure flag is set (matches the receiver policy).
+    const secretToken = process.env.TELEGRAM_WEBHOOK_SECRET;
+    const isProduction = process.env.NODE_ENV === 'production';
+    const allowInsecureDev = process.env.TELEGRAM_WEBHOOK_ALLOW_INSECURE_DEV === 'true';
+
+    if (!secretToken) {
+      if (isProduction) {
+        return NextResponse.json({
+          success: false,
+          error: 'TELEGRAM_WEBHOOK_SECRET belum dikonfigurasi. Webhook tidak akan menerima update tanpa secret di production.',
+        }, { status: 503 });
+      }
+      if (!allowInsecureDev) {
+        return NextResponse.json({
+          success: false,
+          error: 'TELEGRAM_WEBHOOK_SECRET belum dikonfigurasi. Set secret, atau aktifkan TELEGRAM_WEBHOOK_ALLOW_INSECURE_DEV=true untuk development.',
+        }, { status: 503 });
+      }
+    }
+
     // Set webhook on Telegram
     const telegramRes = await fetch(
       `https://api.telegram.org/bot${botToken}/setWebhook`,
@@ -38,6 +79,7 @@ export async function POST(request: NextRequest) {
           url: webhookUrl,
           allowed_updates: ['message', 'callback_query'],
           drop_pending_updates: true,
+          ...(secretToken ? { secret_token: secretToken } : {}),
         }),
       }
     );
@@ -73,6 +115,14 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'owner') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
     const settings = await db.notificationSettings.findFirst();
     const botToken = settings?.telegramBotToken;
 
@@ -111,6 +161,14 @@ export async function DELETE() {
 
 export async function GET() {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'owner') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
     const settings = await db.notificationSettings.findFirst();
     const botToken = settings?.telegramBotToken;
 

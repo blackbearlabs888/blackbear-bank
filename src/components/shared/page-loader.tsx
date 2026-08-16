@@ -8,9 +8,12 @@ interface PageLoaderProps {
 }
 
 export default function PageLoader({ logoUrl, siteTitle = 'Black Bear' }: PageLoaderProps) {
-  const [isVisible, setIsVisible] = useState(true);
+  // Start hidden=false so the loader is visible during the very first paint
+  // (avoids a flash of unstyled content / layout shift before React hydrates).
+  // We dismiss it as soon as the page is interactive — we do NOT artificially
+  // delay LCP. The loader is decorative and must never block the hero text.
+  const [isVisible, setIsVisible] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
 
   // Get initials from site title for fallback
   const initials = siteTitle
@@ -20,26 +23,38 @@ export default function PageLoader({ logoUrl, siteTitle = 'Black Bear' }: PageLo
     .join('')
     .toUpperCase();
 
-  // If there's a logo image, wait for it to load before starting dismiss timer
-  // Otherwise use a shorter timer
+  // Only show the loader if the page is still loading after a tiny threshold
+  // (250ms). This avoids showing the loader on fast navigations / cached pages
+  // where LCP is already painted, while still covering slow first-loads.
   useEffect(() => {
-    const showImage = logoUrl && !imgError;
+    let showTimer: ReturnType<typeof setTimeout> | null = null;
+    let hideTimer: ReturnType<typeof setTimeout> | null = null;
 
-    if (showImage && !imgLoaded) {
-      // Wait for image to load, with a max timeout of 3s
-      const imgTimeout = setTimeout(() => {
-        setImgLoaded(true); // force proceed even if image fails to load
-      }, 3000);
-      return () => clearTimeout(imgTimeout);
+    // If the document is already loaded (cached / fast nav), never show.
+    if (document.readyState === 'complete') {
+      return;
     }
 
-    // Once image is loaded (or no image needed), wait before hiding
-    const delay = showImage ? 1200 : 800;
-    const timer = setTimeout(() => {
+    showTimer = setTimeout(() => {
+      setIsVisible(true);
+    }, 250);
+
+    // Dismiss as soon as the window fires `load` (HTML + critical assets done).
+    // Fallback: force-dismiss at 1500ms regardless, so a stalled asset never
+    // traps the user behind the loader.
+    const dismiss = () => {
+      if (showTimer) clearTimeout(showTimer);
       setIsVisible(false);
-    }, delay);
-    return () => clearTimeout(timer);
-  }, [logoUrl, imgError, imgLoaded]);
+    };
+    window.addEventListener('load', dismiss, { once: true });
+    hideTimer = setTimeout(dismiss, 1500);
+
+    return () => {
+      window.removeEventListener('load', dismiss);
+      if (showTimer) clearTimeout(showTimer);
+      if (hideTimer) clearTimeout(hideTimer);
+    };
+  }, []);
 
   const showImage = logoUrl && !imgError;
 
@@ -58,8 +73,9 @@ export default function PageLoader({ logoUrl, siteTitle = 'Black Bear' }: PageLo
             <img
               src={logoUrl}
               alt={siteTitle}
+              width={80}
+              height={80}
               className="w-full h-full object-contain"
-              onLoad={() => setImgLoaded(true)}
               onError={() => setImgError(true)}
             />
           </div>

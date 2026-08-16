@@ -1,21 +1,23 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { withObservability, updateActor } from '@/lib/observability/request-id';
+import { logError } from '@/lib/observability/logger';
+import { apiUnauthenticated, apiErrorFrom } from '@/lib/observability/errors';
 
-export async function GET() {
+export const GET = withObservability(async (_request: NextRequest) => {
   try {
     const user = await getCurrentUser();
 
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Tidak terautentikasi' },
-        { status: 401 }
-      );
+      return apiUnauthenticated();
     }
+
+    updateActor(user.role, user.id);
 
     // Get all customers (owner sees all, partner sees their own)
     let where: Record<string, unknown> = {};
-    
+
     if (user.role === 'partner') {
       const partner = await db.partner.findUnique({
         where: { userId: user.id },
@@ -78,9 +80,11 @@ export async function GET() {
       },
     });
 
-    const avgTransactionValue = (totalTransactions._sum.totalTransactions || 0) > 0
-      ? (volumeResult._sum.totalVolume || 0) / totalTransactions._sum.totalTransactions
-      : 0;
+    const avgTransactionValue =
+      (totalTransactions._sum.totalTransactions || 0) > 0
+        ? (volumeResult._sum.totalVolume || 0) /
+          totalTransactions._sum.totalTransactions
+        : 0;
 
     // Get top customers by volume
     const topCustomers = await db.customer.findMany({
@@ -102,7 +106,7 @@ export async function GET() {
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
-    
+
     const newThisMonth = await db.customer.count({
       where: {
         ...where,
@@ -129,10 +133,11 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Get customer stats error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
-      { status: 500 }
-    );
+    logError({
+      event: 'customer.stats_error',
+      message: 'Get customer stats handler threw',
+      data: { error },
+    });
+    return apiErrorFrom(error);
   }
-}
+});

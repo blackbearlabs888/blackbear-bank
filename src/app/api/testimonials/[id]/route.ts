@@ -1,15 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 
 // PATCH /api/testimonials/[id] - Update testimonial (approve, feature, etc.)
+// OWNER ONLY — public/partner cannot approve, feature, or delete testimonials
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'owner') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const body = await request.json();
-    const { isApproved, isFeatured } = body;
+
+    // Field allowlist — only isApproved and isFeatured are mutable
+    const updateData: { isApproved?: boolean; isFeatured?: boolean } = {};
+    if (typeof body.isApproved === 'boolean') updateData.isApproved = body.isApproved;
+    if (typeof body.isFeatured === 'boolean') updateData.isFeatured = body.isFeatured;
 
     const testimonial = await db.testimonial.findUnique({
       where: { id },
@@ -24,10 +38,7 @@ export async function PATCH(
 
     const updated = await db.testimonial.update({
       where: { id },
-      data: {
-        ...(isApproved !== undefined && { isApproved }),
-        ...(isFeatured !== undefined && { isFeatured }),
-      },
+      data: updateData,
     });
 
     return NextResponse.json({
@@ -44,11 +55,20 @@ export async function PATCH(
 }
 
 // DELETE /api/testimonials/[id] - Delete a testimonial
+// OWNER ONLY
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'owner') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
 
     const testimonial = await db.testimonial.findUnique({

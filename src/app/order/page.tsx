@@ -328,9 +328,13 @@ function StepRecipient({
   const [searchPhone, setSearchPhone] = useState('');
   const [loadingLookup, setLoadingLookup] = useState(false);
   const [lookupError, setLookupError] = useState('');
-  const [foundCustomer, setFoundCustomer] = useState<{name: string; transactions: number} | null>(null);
+  const [foundCustomer, setFoundCustomer] = useState<{ recognized: boolean } | null>(null);
 
-  // Auto-lookup when phone number is entered (debounced)
+  // Lookup returning customer. Per Phase 1.2 closure, the public lookup
+  // endpoint returns ONLY `{ recognized: boolean }` — no PII is exposed, so
+  // there is nothing to auto-fill. The user types their data manually. The
+  // indicator just acknowledges that the phone is recognised so the user
+  // knows their previous order is on file.
   const handleLookupCustomer = async () => {
     const phone = searchPhone.trim() || formData.phone.trim();
     if (!phone || phone.length < 10) {
@@ -347,27 +351,10 @@ function StepRecipient({
       const data = await response.json();
 
       if (data.success && data.data) {
-        // Auto-fill all customer data
-        const customer = data.data;
-        onChange('name', customer.name || '');
-        onChange('phone', customer.phone || formData.phone);
-        
-        // Handle bank - check if in list or use custom
-        const customerBank = customer.bankName || '';
-        if (customerBank && !banks.includes(customerBank)) {
-          onChange('bank', 'Lainnya');
-          onChange('bankCustom', customerBank);
-        } else {
-          onChange('bank', customerBank);
-          onChange('bankCustom', '');
-        }
-        
-        onChange('bankAccount', customer.bankAccount || '');
-        onChange('bankHolder', customer.bankHolder || '');
-        onChange('city', customer.city || '');
-        setFoundCustomer({ name: customer.name, transactions: customer.totalTransactions });
+        // Only the existence signal is returned — no PII, no auto-fill.
+        setFoundCustomer({ recognized: !!data.data.recognized });
       } else {
-        setLookupError('Nomor belum terdaftar, silakan isi data manual');
+        setLookupError('Terjadi kesalahan. Silakan isi data manual.');
       }
     } catch {
       setLookupError('Terjadi kesalahan. Silakan coba lagi.');
@@ -444,7 +431,9 @@ function StepRecipient({
           {foundCustomer && (
             <p className="text-xs text-green-500 mt-2 flex items-center gap-1">
               <Check className="w-3 h-3" />
-              {foundCustomer.name} - {foundCustomer.transactions} transaksi sebelumnya
+              {foundCustomer.recognized
+                ? 'Nomor dikenali — silakan isi data penerima di bawah ini.'
+                : 'Nomor belum terdaftar — silakan isi data penerima di bawah ini.'}
             </p>
           )}
         </div>
@@ -1320,10 +1309,19 @@ function OrderPage() {
 
     setLoading(true);
 
+    // ── Phase 2: Generate idempotency key for this submission attempt ──
+    // The key is held in-memory only (NOT localStorage/sessionStorage) and
+    // sent as a header. If the network retries, the same key + payload
+    // returns the same transaction instead of creating a duplicate.
+    const idempotencyKey = (crypto as Crypto).randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
     try {
       const response = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': idempotencyKey,
+        },
         body: JSON.stringify({
           ...formData,
           bank: actualBank,

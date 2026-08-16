@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { MapPin, ArrowRight, Search, Navigation, ExternalLink } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
+import { safeJsonLd } from '@/lib/json-ld-safe';
 import MapProvider from '@/components/map/map-provider';
 import { useRouter } from 'next/navigation';
 
@@ -101,11 +102,11 @@ export default function LocationListingClient({ initialLocations }: LocationList
       {/* JSON-LD Structured Data */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(itemListJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }}
       />
 
       {/* Hero Section */}
@@ -249,7 +250,10 @@ export default function LocationListingClient({ initialLocations }: LocationList
                             <img
                               src={location.featuredImage}
                               alt={`Gestun ${location.name}`}
+                              width={400}
+                              height={160}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              loading="lazy"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-500/20 to-orange-600/10">

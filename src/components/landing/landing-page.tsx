@@ -172,7 +172,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
   const [scrollProgress, setScrollProgress] = useState(0);
   const [allFaqOpen, setAllFaqOpen] = useState(false);
   const [activeFaqCategory, setActiveFaqCategory] = useState('semua');
-  const [typedText, setTypedText] = useState('');
+  const [typedText, setTypedText] = useState('Gestun profesional untuk Kartu Kredit & Paylater. Proses instan, rate bersaing, aman & terpercaya.');
   const subtitleRef = useRef<HTMLParagraphElement>(null);
   const marqueeRow1Ref = useRef<HTMLDivElement>(null);
   const marqueeRow2Ref = useRef<HTMLDivElement>(null);
@@ -199,13 +199,20 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
     };
   }, []);
 
-  // Typewriter effect for hero subtitle
+  // Hero subtitle text. Phase 4: the full text is part of the initial HTML
+  // (server-rendered) so crawlers and users without JS still see the SEO
+  // content. The typewriter effect runs only after client hydration and
+  // progressively reveals the same string — no content is hidden from SEO.
+  const heroSubtitle = 'Gestun profesional untuk Kartu Kredit & Paylater. Proses instan, rate bersaing, aman & terpercaya.';
+
+  // Typewriter effect for hero subtitle (client-only progressive enhancement)
   useEffect(() => {
-    const fullText = 'Gestun profesional untuk Kartu Kredit & Paylater. Proses instan, rate bersaing, aman & terpercaya.';
     let i = 0;
+    // Reset to empty on client mount so the typewriter can reveal it.
+    setTypedText('');
     const timer = setInterval(() => {
-      if (i <= fullText.length) {
-        setTypedText(fullText.slice(0, i));
+      if (i <= heroSubtitle.length) {
+        setTypedText(heroSubtitle.slice(0, i));
         i++;
       } else {
         clearInterval(timer);
@@ -363,7 +370,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                    <span>4.9/5 Rating</span>
+                    <span>Rating Pelanggan</span>
                   </div>
                 </div>
               </div>
@@ -424,7 +431,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                           <div className="flex items-center gap-1.5">
                             {config.logoUrl && !logoError ? (
                               <div className="w-8 h-8 rounded-md overflow-hidden">
-                                <img src={config.logoUrl} alt="" className="w-full h-full object-contain" onError={() => setLogoError(true)} />
+                                <img src={config.logoUrl} alt="" width={32} height={32} className="w-full h-full object-contain" onError={() => setLogoError(true)} />
                               </div>
                             ) : (
                               <div className="w-8 h-8 rounded-md gradient-primary flex items-center justify-center">
@@ -488,7 +495,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         </section>
 
         {/* ==================== STATS SECTION ==================== */}
-        <section className="relative py-6 sm:py-8 lg:py-12">
+        <section className="relative py-6 sm:py-8 lg:py-12" aria-label="Ringkasan layanan">
           {/* Radial gradient background behind stats grid */}
           <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.06] via-primary/[0.02] to-fuchsia-500/[0.04]" />
           {/* Radial glow accent */}
@@ -519,6 +526,12 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                 </Card>
               ))}
             </div>
+            {/* Phase 4: explicit illustrative label so the counters above are
+                never mistaken for verified live metrics. Re-enable real
+                counters only when backed by anonymized, verified data. */}
+            <p className="text-center text-[11px] text-muted-foreground/70 mt-3">
+              *Angka ilustrasi untuk menampilkan format metrik layanan.
+            </p>
           </FadeInSection>
         </section>
 
@@ -581,7 +594,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                           )}
                           {hasLogo ? (
                             <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-background/50 border border-border/30">
-                              <img src={pt.logoUrl} alt={pt.name} className="w-full h-full object-contain" onError={() => handlePtLogoError(pt.id)} />
+                              <img src={pt.logoUrl} alt={pt.name} width={32} height={32} loading="lazy" className="w-full h-full object-contain" onError={() => handlePtLogoError(pt.id)} />
                             </div>
                           ) : (
                             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
@@ -632,7 +645,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                           >
                             {hasLogo ? (
                               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-background/50 border border-border/30">
-                                <img src={pt.logoUrl} alt={pt.name} className="w-full h-full object-contain" onError={() => handlePtLogoError(pt.id)} />
+                                <img src={pt.logoUrl} alt={pt.name} width={32} height={32} loading="lazy" className="w-full h-full object-contain" onError={() => handlePtLogoError(pt.id)} />
                               </div>
                             ) : (
                               <div className="w-8 h-8 rounded-lg bg-fuchsia-500/10 flex items-center justify-center flex-shrink-0">
@@ -704,11 +717,11 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                 {
                   icon: Shield,
                   title: 'Aman & Terpercaya',
-                  description: 'Transaksi dilindungi sistem tracking real-time. Proses transparan dan telah dipercaya ribuan pelanggan.',
+                  description: 'Transaksi dilindungi sistem tracking real-time. Proses transparan dan terpercaya.',
                   accent: 'from-emerald-500 to-teal-500',
                   iconBg: 'bg-gradient-to-br from-emerald-500/10 to-teal-500/10',
                   iconColor: 'text-emerald-500',
-                  tags: ['10K+ Pelanggan', '99% Sukses', '<30 Menit'],
+                  tags: ['Tracking Real-time', 'Proses Andal', '<30 Menit'],
                   tagStyle: 'bg-emerald-500/5 text-emerald-500/80 border border-emerald-500/10',
                 },
               ].map((f, i) => (
@@ -762,9 +775,9 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                 {
                   icon: Shield,
                   title: 'Aman & Terpercaya',
-                  description: 'Tracking real-time, proses transparan, ribuan pelanggan puas.',
+                  description: 'Tracking real-time, proses transparan.',
                   iconBg: 'bg-gradient-to-br from-emerald-500/10 to-teal-500/10', iconColor: 'text-emerald-500',
-                  tags: ['10K+ Pelanggan', '99% Sukses'],
+                  tags: ['Tracking Real-time', 'Proses Andal'],
                   tagStyle: 'bg-emerald-500/5 text-emerald-500/80 border border-emerald-500/10',
                 },
               ].map((f, i) => (
@@ -906,8 +919,8 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
               {[
                 { icon: Shield, label: 'SSL Secured', sub: 'Enkripsi 256-bit' },
                 { icon: Clock, label: 'Proses Instan', sub: '15-30 menit' },
-                { icon: Users, label: '10K+ Pelanggan', sub: 'Terpercaya' },
-                { icon: Star, label: 'Rating 4.9/5', sub: 'Dari ulasan nyata' },
+                { icon: Users, label: 'Pelanggan Terpercaya', sub: 'Layanan aktif' },
+                { icon: Star, label: 'Rating Pelanggan', sub: 'Berdasarkan ulasan' },
                 { icon: Zap, label: '24/7 Support', sub: 'Siap membantu' },
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-2.5 group">

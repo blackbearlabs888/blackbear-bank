@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { withObservability } from '@/lib/observability/request-id';
+import { apiErrorFrom, apiValidationError, apiNotFound, ErrorCode } from '@/lib/observability/errors';
+import { logInfo, logWarn } from '@/lib/observability/logger';
 
 /**
  * Normalize phone to 62xxx format (inline to avoid cross-module import issues)
@@ -29,6 +32,11 @@ function safeNormalizePhone(raw: unknown): string {
  * pre-built wa.me redirect URL.
  *
  * Phone numbers NEVER leave the server.
+ *
+ * Phase 3 — Observability:
+ *   - Failures are logged with a safe error code. The target phone number is
+ *     NEVER logged (only whether the contact was 'partner' or 'owner').
+ *   - Request ID is propagated via X-Request-Id.
  */
 
 const CONTACT_RATE_LIMIT = {
@@ -38,23 +46,18 @@ const CONTACT_RATE_LIMIT = {
   keyPrefix: 'contact',
 };
 
-export async function GET(request: NextRequest) {
+export const GET = withObservability(async (request: NextRequest) => {
   try {
     // Rate limiting
     const ip = getClientIp(request);
     const rateCheck = checkRateLimit(ip, CONTACT_RATE_LIMIT);
     if (!rateCheck.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Terlalu banyak permintaan. Coba lagi dalam beberapa saat.',
-          retryAfter: rateCheck.retryAfter,
-        },
-        {
-          status: 429,
-          headers: { 'Retry-After': String(rateCheck.retryAfter) },
-        }
-      );
+      return apiError({
+        status: 429,
+        code: ErrorCode.RATE_LIMITED,
+        message: 'Terlalu banyak permintaan. Coba lagi dalam beberapa saat.',
+        headers: { 'Retry-After': String(rateCheck.retryAfter) },
+      });
     }
 
     const { searchParams } = new URL(request.url);
@@ -63,18 +66,12 @@ export async function GET(request: NextRequest) {
 
     // Validate orderId
     if (!orderId) {
-      return NextResponse.json(
-        { success: false, error: 'Order ID diperlukan' },
-        { status: 400 }
-      );
+      return apiValidationError('Order ID diperlukan');
     }
 
     // Validate contact type
     if (contactType && contactType !== 'partner' && contactType !== 'owner') {
-      return NextResponse.json(
-        { success: false, error: 'Tipe kontak tidak valid' },
-        { status: 400 }
-      );
+      return apiValidationError('Tipe kontak tidak valid');
     }
 
     // Fetch transaction with partner and owner profile
@@ -96,10 +93,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (!transaction) {
-      return NextResponse.json(
-        { success: false, error: 'Order tidak ditemukan' },
-        { status: 404 }
-      );
+      return apiNotFound('Order tidak ditemukan');
     }
 
     // Build the default message
@@ -124,14 +118,25 @@ export async function GET(request: NextRequest) {
     }
 
     if (!waPhone) {
-      return NextResponse.json(
-        { success: false, error: 'Tidak ada kontak WhatsApp yang tersedia' },
-        { status: 404 }
-      );
+      // Phase 3: Log the failure safely — NO phone number is logged.
+      // Only the contact target type and orderId are recorded.
+      logWarn({
+        event: 'whatsapp.contact_unavailable',
+        errorCode: 'CONTACT_NOT_FOUND',
+        message: 'No WhatsApp contact available for this order',
+        data: { orderId, contactTarget: target },
+      });
+      return apiNotFound('Tidak ada kontak WhatsApp yang tersedia');
     }
 
     // Build wa.me URL server-side — phone number never reaches the client
     const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(message)}`;
+
+    logInfo({
+      event: 'whatsapp.contact_link_created',
+      message: 'WhatsApp contact link generated',
+      data: { orderId, contactTarget: target, contactName },
+    });
 
     // Return redirect URL (not the phone number)
     return NextResponse.json({
@@ -144,10 +149,13 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Contact proxy error:', error instanceof Error ? { message: error.message, stack: error.stack } : error);
-    return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
-      { status: 500 }
-    );
+    // Phase 3: safe error — no phone, no stack, no Prisma detail in response.
+    logWarn({
+      event: 'whatsapp.contact_error',
+      errorCode: ErrorCode.INTERNAL_ERROR,
+      message: 'Contact proxy error',
+      data: { error },
+    });
+    return apiErrorFrom(error, ErrorCode.INTERNAL_ERROR, 'Terjadi kesalahan server');
   }
-}
+});

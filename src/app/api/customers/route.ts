@@ -2,18 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { db, toNumber } from '@/lib/db';
 import { checkCustomerDuplicate, normalizePhone } from '@/lib/customer-utils';
+import { withObservability, updateActor } from '@/lib/observability/request-id';
+import { logInfo, logError } from '@/lib/observability/logger';
+import {
+  apiValidationError,
+  apiUnauthenticated,
+  apiErrorFrom,
+} from '@/lib/observability/errors';
 
 // GET customers with pagination
-export async function GET(request: NextRequest) {
+export const GET = withObservability(async (request: NextRequest) => {
   try {
     const user = await getCurrentUser();
 
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Tidak terautentikasi' },
-        { status: 401 }
-      );
+      return apiUnauthenticated();
     }
+
+    updateActor(user.role, user.id);
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
@@ -30,7 +36,7 @@ export async function GET(request: NextRequest) {
       const partner = await db.partner.findUnique({
         where: { userId: user.id },
       });
-      
+
       if (partner) {
         // Get customer IDs from transactions where this partner is involved
         const partnerTransactions = await db.transaction.findMany({
@@ -38,8 +44,10 @@ export async function GET(request: NextRequest) {
           select: { customerId: true },
           distinct: ['customerId'],
         });
-        const customerIdsFromTransactions = partnerTransactions.map(t => t.customerId);
-        
+        const customerIdsFromTransactions = partnerTransactions.map(
+          (t) => t.customerId,
+        );
+
         // Show customers: created by partner OR have transactions with partner
         where.OR = [
           { partnerId: partner.id },
@@ -70,14 +78,14 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               name: true,
-            }
+            },
           },
           _count: {
             select: {
               transactions: true,
-            }
-          }
-        }
+            },
+          },
+        },
       }),
       db.customer.count({ where }),
     ]);
@@ -97,43 +105,52 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Get customers error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
-      { status: 500 }
-    );
+    logError({
+      event: 'customer.list_error',
+      message: 'List customers handler threw',
+      data: { error },
+    });
+    return apiErrorFrom(error);
   }
-}
+});
 
 // POST create customer
-export async function POST(request: NextRequest) {
+export const POST = withObservability(async (request: NextRequest) => {
   try {
     const user = await getCurrentUser();
 
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Tidak terautentikasi' },
-        { status: 401 }
-      );
+      return apiUnauthenticated();
     }
 
+    updateActor(user.role, user.id);
+
     const body = await request.json();
-    const { name, phone, bankName, bankAccount, bankHolder, city, label, updateExisting } = body;
+    const {
+      name,
+      phone,
+      bankName,
+      bankAccount,
+      bankHolder,
+      city,
+      label,
+      updateExisting,
+    } = body;
 
     // Validation
     if (!name || !phone) {
-      return NextResponse.json(
-        { success: false, error: 'Nama dan No. WA wajib diisi' },
-        { status: 400 }
-      );
+      return apiValidationError('Nama dan No. WA wajib diisi');
     }
 
     // Normalize phone number
     const normalizedPhone = normalizePhone(phone);
 
     // Check for duplicate customer (by phone OR name)
-    const duplicateCheck = await checkCustomerDuplicate(normalizedPhone, name);
-    
+    const duplicateCheck = await checkCustomerDuplicate(
+      normalizedPhone,
+      name,
+    );
+
     // If duplicate found, return existing customer (for auto-fill)
     // Don't create duplicate - just return the existing one
     if (duplicateCheck.isDuplicate && duplicateCheck.existingCustomer) {
@@ -145,13 +162,15 @@ export async function POST(request: NextRequest) {
             name,
             phone: normalizedPhone,
             bankName: bankName || duplicateCheck.existingCustomer.bankName,
-            bankAccount: bankAccount || duplicateCheck.existingCustomer.bankAccount,
-            bankHolder: bankHolder || duplicateCheck.existingCustomer.bankHolder,
+            bankAccount:
+              bankAccount || duplicateCheck.existingCustomer.bankAccount,
+            bankHolder:
+              bankHolder || duplicateCheck.existingCustomer.bankHolder,
             city: city || duplicateCheck.existingCustomer.city,
             label: label || duplicateCheck.existingCustomer.label,
           },
         });
-        
+
         return NextResponse.json({
           success: true,
           isExisting: true,
@@ -160,7 +179,7 @@ export async function POST(request: NextRequest) {
           message: `Customer ditemukan dan diupdate: ${duplicateCheck.message}`,
         });
       }
-      
+
       // Just return existing customer without update
       return NextResponse.json({
         success: true,
@@ -174,7 +193,7 @@ export async function POST(request: NextRequest) {
     // Get partner ID if user is partner
     let partnerId = null;
     let addedBy = 'owner'; // default
-    
+
     if (user.role === 'partner') {
       const partner = await db.partner.findUnique({
         where: { userId: user.id },
@@ -198,6 +217,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Log creation event — no PII (phone/bankAccount/bankHolder never logged)
+    logInfo({
+      event: 'customer.created',
+      actorRole: user.role,
+      actorId: user.id,
+      message: 'Customer created',
+    });
+
     return NextResponse.json({
       success: true,
       isExisting: false,
@@ -205,10 +232,11 @@ export async function POST(request: NextRequest) {
       message: 'Customer baru berhasil dibuat',
     });
   } catch (error) {
-    console.error('Create customer error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
-      { status: 500 }
-    );
+    logError({
+      event: 'customer.create_error',
+      message: 'Create customer handler threw',
+      data: { error },
+    });
+    return apiErrorFrom(error);
   }
-}
+});

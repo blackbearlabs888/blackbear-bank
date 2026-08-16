@@ -683,17 +683,23 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
     setLoading(true);
     try {
       const bankNameToSubmit = form.customerBankName === 'Lainnya' ? customBankName : form.customerBankName;
-      
+
+      // ── Phase 2: Generate idempotency key for this submission ──
+      const idempotencyKey = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
       const res = await fetch('/api/transactions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          ...form, 
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify({
+          ...form,
           customerBankName: bankNameToSubmit,
-          nominal: parseFloat(form.nominal), 
-          marketplaceId: null, 
+          nominal: parseFloat(form.nominal),
+          marketplaceId: null,
           partnerId: partnerId,
-          isNewCustomer: isNewCust 
+          isNewCustomer: isNewCust
         }),
       });
       const d = await res.json();

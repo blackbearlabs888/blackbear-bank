@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 
 // GET - Get location by slug
 export async function GET(
@@ -23,7 +24,12 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: location,
+      data: {
+        ...location,
+        // Defense-in-depth: re-sanitize on read so legacy rows written before
+        // write-time sanitization are also safe. No-op for already-clean rows.
+        content: sanitizeHtml(location.content || ''),
+      },
     });
   } catch (error) {
     console.error('Get location error:', error);
@@ -75,9 +81,24 @@ export async function PUT(
       }
     }
 
+    // Field allowlist — only known Location fields are accepted
+    const updateData: Record<string, unknown> = {};
+    if (typeof body.name === 'string') updateData.name = body.name;
+    if (typeof body.slug === 'string') updateData.slug = body.slug;
+    if (typeof body.description === 'string') updateData.description = body.description;
+    // Sanitize HTML content at write-time to prevent stored XSS.
+    if (typeof body.content === 'string') updateData.content = sanitizeHtml(body.content);
+    if (typeof body.featuredImage === 'string' || body.featuredImage === null) updateData.featuredImage = body.featuredImage;
+    if (typeof body.metaTitle === 'string' || body.metaTitle === null) updateData.metaTitle = body.metaTitle;
+    if (typeof body.metaDescription === 'string' || body.metaDescription === null) updateData.metaDescription = body.metaDescription;
+    if (typeof body.keywords === 'string' || body.keywords === null) updateData.keywords = body.keywords;
+    if (typeof body.latitude === 'number') updateData.latitude = body.latitude;
+    if (typeof body.longitude === 'number') updateData.longitude = body.longitude;
+    if (typeof body.isActive === 'boolean') updateData.isActive = body.isActive;
+
     const location = await db.location.update({
       where: { id: existingLocation.id },
-      data: body,
+      data: updateData,
     });
 
     return NextResponse.json({

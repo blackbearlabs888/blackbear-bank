@@ -4,7 +4,10 @@ import { usePathname } from 'next/navigation';
 import { CheckCircle2, X, ArrowRight, Sparkles } from 'lucide-react';
 import { useCookieBannerVisible } from '@/hooks/use-cookie-banner-visible';
 
-const fakeOrders = [
+// Phase 4: ILLUSTRATIVE sample orders. These are not real notifications.
+// The toast title is explicitly labeled "Contoh Ilustrasi" so users are
+// never misled into thinking these are live verified transactions.
+const sampleOrders = [
   { name: 'R***', city: 'Jakarta', amount: 'Rp 5.000.000', time: '2 menit lalu', method: 'BCA' },
   { name: 'A****', city: 'Surabaya', amount: 'Rp 3.500.000', time: '5 menit lalu', method: 'Mandiri' },
   { name: 'D***', city: 'Bandung', amount: 'Rp 8.000.000', time: '3 menit lalu', method: 'BNI' },
@@ -25,10 +28,10 @@ function isPublicPage(pathname: string | null): boolean {
 }
 
 function getRandomOrder(excludeName: string) {
-  let next: (typeof fakeOrders)[number];
+  let next: (typeof sampleOrders)[number];
   do {
-    next = fakeOrders[Math.floor(Math.random() * fakeOrders.length)];
-  } while (next.name === excludeName && fakeOrders.length > 1);
+    next = sampleOrders[Math.floor(Math.random() * sampleOrders.length)];
+  } while (next.name === excludeName && sampleOrders.length > 1);
   return next;
 }
 
@@ -56,7 +59,7 @@ function wait(ms: number) {
 export default function SocialProofToast() {
   const pathname = usePathname();
   const [phase, setPhase] = useState<'hidden' | 'entering' | 'visible' | 'exiting'>('hidden');
-  const [currentOrder, setCurrentOrder] = useState(fakeOrders[0]);
+  const [currentOrder, setCurrentOrder] = useState(sampleOrders[0]);
   const [isDismissed, setIsDismissed] = useState(false);
   const [progress, setProgress] = useState(100);
   const cookieBannerVisible = useCookieBannerVisible();
@@ -182,7 +185,7 @@ export default function SocialProofToast() {
             <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
               <Sparkles className="w-3 h-3 text-white" />
             </div>
-            <span className="text-[11px] font-bold text-white tracking-wide">Transaksi Baru</span>
+            <span className="text-[11px] font-bold text-white tracking-wide">Contoh Ilustrasi</span>
             <button onClick={handleDismiss} className="ml-auto text-white/50 hover:text-white transition-colors" aria-label="Dismiss">
               <X className="w-3.5 h-3.5" />
             </button>
@@ -219,7 +222,7 @@ export default function SocialProofToast() {
             <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
               <Sparkles className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="text-xs font-bold text-white tracking-wide">Transaksi Baru</span>
+            <span className="text-xs font-bold text-white tracking-wide">Contoh Ilustrasi</span>
             <div className="ml-auto flex items-center gap-1.5">
               <span className="text-[10px] text-white/60 font-medium">Baru saja</span>
               <button onClick={handleDismiss} className="text-white/50 hover:text-white transition-colors w-5 h-5 flex items-center justify-center rounded hover:bg-white/10" aria-label="Dismiss">

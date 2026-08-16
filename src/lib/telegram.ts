@@ -1,11 +1,28 @@
 /**
  * Telegram Notification Service
  * Helper functions for sending Telegram notifications
+ *
+ * Phase 3 — Integration Reliability:
+ *   - All outbound Telegram HTTP calls use a timeout (default 5s) via
+ *     AbortController. A hung Telegram API can never block the request thread
+ *     indefinitely.
+ *   - The bot token is NEVER logged. The chat ID is masked (last 4 digits)
+ *     in any log output.
+ *   - Telegram send failures are logged but NEVER roll back an already-
+ *     committed database transaction. The caller is responsible for committing
+ *     the DB transaction BEFORE calling these functions, and for recording a
+ *     Notification row (status='failed') if the send fails, so that the
+ *     message can be retried manually later.
+ *   - No retry queue or new schema is introduced in Phase 3.
  */
+
+import { logInfo, logWarn } from '@/lib/observability/logger';
 
 interface TelegramMessage {
   text: string;
   parse_mode?: 'HTML' | 'Markdown' | 'MarkdownV2';
+  /** Optional caller-provided request ID for log correlation */
+  requestId?: string | null;
 }
 
 interface TelegramResponse {
@@ -22,8 +39,30 @@ interface TelegramResponse {
   error_code?: number;
 }
 
+/** Default timeout for outbound Telegram API calls (5 seconds). */
+const TELEGRAM_TIMEOUT_MS = 5000;
+
 /**
- * Send a message to Telegram via Bot API
+ * Mask a chat ID for log output, keeping only the last 4 digits.
+ * Example: '123456789' → '…6789'
+ *
+ * The full chat ID is NEVER written to logs.
+ */
+export function maskChatId(chatId: string | number): string {
+  const s = String(chatId);
+  if (s.length <= 4) return '…' + s;
+  return '…' + s.slice(-4);
+}
+
+/**
+ * Send a message to Telegram via Bot API.
+ *
+ * Phase 3 guarantees:
+ *   - 5s timeout via AbortController (never hangs).
+ *   - Success/failure logged with masked chat ID (token NEVER logged).
+ *   - Returns a structured response; the caller decides what to do on failure.
+ *     A failed Telegram send does NOT throw — it returns { ok: false } so the
+ *     caller can continue without a try/catch around every call.
  */
 export async function sendTelegramMessage(
   botToken: string,
@@ -31,7 +70,12 @@ export async function sendTelegramMessage(
   message: TelegramMessage
 ): Promise<TelegramResponse> {
   const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-  
+  const maskedChat = maskChatId(chatId);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TELEGRAM_TIMEOUT_MS);
+
+  const startedAt = Date.now();
+
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -44,16 +88,66 @@ export async function sendTelegramMessage(
         parse_mode: message.parse_mode || 'HTML',
         disable_web_page_preview: true,
       }),
+      signal: controller.signal,
     });
 
-    const data = await response.json() as TelegramResponse;
+    const data = (await response.json()) as TelegramResponse;
+    const durationMs = Date.now() - startedAt;
+
+    if (data.ok) {
+      logInfo({
+        event: 'telegram.send_success',
+        requestId: message.requestId ?? null,
+        route: 'telegram.sendMessage',
+        durationMs,
+        message: 'Telegram message sent',
+        data: { chatId: maskedChat, messageId: data.result?.message_id },
+      });
+    } else {
+      logWarn({
+        event: 'telegram.send_failed',
+        requestId: message.requestId ?? null,
+        route: 'telegram.sendMessage',
+        durationMs,
+        errorCode: 'TELEGRAM_API_ERROR',
+        message: 'Telegram API returned an error',
+        data: {
+          chatId: maskedChat,
+          errorCode: data.error_code,
+          description: data.description,
+        },
+      });
+    }
     return data;
   } catch (error) {
-    console.error('Telegram API error:', error);
+    const durationMs = Date.now() - startedAt;
+    const isTimeout =
+      error instanceof Error &&
+      (error.name === 'AbortError' || error.message.includes('aborted'));
+    logWarn({
+      event: 'telegram.send_failed',
+      requestId: message.requestId ?? null,
+      route: 'telegram.sendMessage',
+      durationMs,
+      errorCode: isTimeout ? 'TELEGRAM_TIMEOUT' : 'TELEGRAM_NETWORK_ERROR',
+      message: isTimeout
+        ? 'Telegram send timed out'
+        : 'Telegram network error',
+      data: {
+        chatId: maskedChat,
+        error,
+      },
+    });
     return {
       ok: false,
-      description: error instanceof Error ? error.message : 'Failed to send message',
+      description: isTimeout
+        ? 'Telegram request timed out'
+        : error instanceof Error
+          ? error.message
+          : 'Failed to send message',
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

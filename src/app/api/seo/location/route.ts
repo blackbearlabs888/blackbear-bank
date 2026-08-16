@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 
 // GET - List all locations
 export async function GET(request: NextRequest) {
@@ -78,7 +79,8 @@ export async function POST(request: NextRequest) {
         name,
         slug,
         description,
-        content,
+        // Sanitize HTML content at write-time to prevent stored XSS.
+        content: typeof content === 'string' ? sanitizeHtml(content) : content,
         featuredImage,
         metaTitle,
         metaDescription,

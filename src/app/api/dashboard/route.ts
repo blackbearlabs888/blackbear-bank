@@ -613,6 +613,35 @@ export async function GET(request: NextRequest) {
         },
       });
 
+      // ── Phase 5: Commission summary (partner-facing, no fraud score/rules) ──
+      // Aggregate commission amounts by commissionStatus for this partner's
+      // transactions. Only includes transactions where a partner is linked.
+      const commissionAgg = await db.transaction.groupBy({
+        by: ['commissionStatus'],
+        where: { partnerId: partner.id },
+        _sum: {
+          partnerProfit: true,
+          commissionApprovedAmount: true,
+        },
+        _count: true,
+      });
+
+      const commissionSummary: Record<string, { count: number; amount: number; approvedAmount: number }> = {
+        pending: { count: 0, amount: 0, approvedAmount: 0 },
+        approved: { count: 0, amount: 0, approvedAmount: 0 },
+        held: { count: 0, amount: 0, approvedAmount: 0 },
+        rejected: { count: 0, amount: 0, approvedAmount: 0 },
+        not_applicable: { count: 0, amount: 0, approvedAmount: 0 },
+      };
+      for (const row of commissionAgg) {
+        const key = row.commissionStatus as string;
+        if (commissionSummary[key]) {
+          commissionSummary[key].count = row._count;
+          commissionSummary[key].amount = toNumber(row._sum.partnerProfit);
+          commissionSummary[key].approvedAmount = toNumber(row._sum.commissionApprovedAmount);
+        }
+      }
+
       return NextResponse.json({
         success: true,
         data: {
@@ -630,6 +659,11 @@ export async function GET(request: NextRequest) {
             pendingTransactions,
             newCustomersThisMonth,
           },
+          // Phase 5: partner-facing commission summary.
+          // Labels: Komisi Diproses (pending), Komisi Disetujui (approved),
+          // Komisi Ditahan (held), Komisi Ditolak (rejected).
+          // NO fraud score or rule codes are exposed to partners.
+          commissionSummary,
           leaderboard: leaderboard.map(lb => ({
             ...lb,
             totalProfit: toNumber(lb.totalProfit),

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 
 // GET - Get blog post by slug
 export async function GET(
@@ -35,6 +36,9 @@ export async function GET(
       success: true,
       data: {
         ...post,
+        // Defense-in-depth: re-sanitize on read so legacy rows written before
+        // write-time sanitization are also safe. No-op for already-clean rows.
+        content: sanitizeHtml(post.content || ''),
         viewCount: Number(post.viewCount),
       },
     });
@@ -92,6 +96,10 @@ export async function PUT(
     const updateData: Record<string, unknown> = { ...body };
     if (body.isPublished === true && !existingPost.isPublished) {
       updateData.publishedAt = new Date();
+    }
+    // Sanitize HTML content at write-time to prevent stored XSS.
+    if (typeof updateData.content === 'string') {
+      updateData.content = sanitizeHtml(updateData.content);
     }
 
     const post = await db.blogPost.update({

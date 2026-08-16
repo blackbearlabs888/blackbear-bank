@@ -1,15 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
+import { withObservability } from '@/lib/observability/request-id';
+import { logError } from '@/lib/observability/logger';
+import { apiUnauthenticated, apiErrorFrom } from '@/lib/observability/errors';
 
-export async function GET() {
+export const GET = withObservability(async (_request: NextRequest) => {
   try {
     const user = await getCurrentUser();
 
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Tidak terautentikasi' },
-        { status: 401 }
-      );
+      return apiUnauthenticated();
     }
 
     // Return user without password
@@ -21,10 +21,11 @@ export async function GET() {
       partner: user.partner || null,
     });
   } catch (error) {
-    console.error('Get user error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Terjadi kesalahan server' },
-      { status: 500 }
-    );
+    logError({
+      event: 'auth.me_error',
+      message: 'Get current user handler threw',
+      data: { error },
+    });
+    return apiErrorFrom(error);
   }
-}
+});

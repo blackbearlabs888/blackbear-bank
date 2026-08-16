@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, toNumber } from '@/lib/db';
 import { sendTelegramMessage, formatCurrency } from '@/lib/telegram';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 // GET /api/testimonials - Fetch testimonials (with optional filters)
 export async function GET(request: NextRequest) {
@@ -85,7 +86,24 @@ export async function GET(request: NextRequest) {
 // POST /api/testimonials - Submit a new testimonial
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: 5 testimonials per 10 minutes per IP
+    const ip = getClientIp(request);
+    const rateCheck = checkRateLimit(ip, {
+      maxRequests: 5,
+      windowMs: 10 * 60 * 1000,
+      blockDurationMs: 30 * 60 * 1000,
+      keyPrefix: 'testimonial',
+    });
+    if (!rateCheck.success) {
+      return NextResponse.json(
+        { success: false, error: 'Terlalu banyak testimoni dikirim. Coba lagi nanti.' },
+        { status: 429, headers: { 'Retry-After': String(rateCheck.retryAfter || 0) } }
+      );
+    }
+
     const body = await request.json();
+    // Field allowlist — only these fields are accepted from public input.
+    // isApproved and isFeatured are NEVER settable by public users.
     const { transactionId, rating, review, customerName } = body;
 
     // Validate required fields
@@ -97,12 +115,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate rating range
-    if (rating < 1 || rating > 5) {
+    if (typeof rating !== 'number' || rating < 1 || rating > 5) {
       return NextResponse.json(
         { success: false, error: 'Rating harus antara 1-5' },
         { status: 400 }
       );
     }
+
+    // Sanitize string inputs (basic length limits)
+    const sanitizedCustomerName = String(customerName).slice(0, 200);
+    const sanitizedReview = review ? String(review).slice(0, 2000) : '';
 
     // Check transaction exists and is SUCCESS
     const transaction = await db.transaction.findUnique({
@@ -136,14 +158,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create testimonial
+    // Create testimonial — always unapproved (requires owner moderation)
     const testimonial = await db.testimonial.create({
       data: {
         transactionId: transaction.id,
         customerId: transaction.customerId,
-        customerName: customerName,
+        customerName: sanitizedCustomerName,
         rating: Math.round(rating),
-        review: review || '',
+        review: sanitizedReview,
+        isApproved: false, // Security: new public testimonials require owner approval
+        isFeatured: false,
       },
       include: {
         transaction: {
@@ -157,18 +181,18 @@ export async function POST(request: NextRequest) {
 
     // --- Create owner notification ---
     const stars = '⭐'.repeat(Math.round(rating));
-    const reviewSnippet = review ? `\n📝 "${review.length > 100 ? review.substring(0, 100) + '...' : review}"` : '';
+    const reviewSnippet = sanitizedReview ? `\n📝 "${sanitizedReview.length > 100 ? sanitizedReview.substring(0, 100) + '...' : sanitizedReview}"` : '';
 
     await db.notification.create({
       data: {
         type: 'new_testimonial',
         title: 'Testimoni Baru',
-        message: `${stars} dari ${customerName}`,
+        message: `${stars} dari ${sanitizedCustomerName}`,
         data: JSON.stringify({
           orderId: transaction.orderId,
-          customerName,
+          customerName: sanitizedCustomerName,
           rating: Math.round(rating),
-          review: review || null,
+          review: sanitizedReview || null,
           nominal: toNumber(transaction.nominal),
         }),
         targetType: 'owner',
@@ -183,7 +207,7 @@ export async function POST(request: NextRequest) {
         const tgMessage =
           `${stars} <b>Testimoni Baru!</b>\n\n` +
           `📦 Order: <code>${transaction.orderId}</code>\n` +
-          `👤 ${customerName}\n` +
+          `👤 ${sanitizedCustomerName}\n` +
           `💰 ${formatCurrency(toNumber(transaction.nominal))}\n` +
           `${reviewSnippet}`;
 

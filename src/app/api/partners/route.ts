@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, hashPassword, generateRandomPassword } from '@/lib/auth';
 import { db, toNumber } from '@/lib/db';
-import { hashPassword } from '@/lib/auth';
 
 // Helper to serialize partner data
 function serializePartner(partner: Record<string, unknown>) {
@@ -108,8 +107,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create user with random password
-    const hashedPassword = await hashPassword('partner123');
+    // Create user with a randomly generated password (no hardcoded default)
+    const plainPassword = generateRandomPassword(10);
+    const hashedPassword = await hashPassword(plainPassword);
 
     const newUser = await db.user.create({
       data: {
@@ -140,6 +140,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: newUser.partner ? serializePartner(newUser.partner as unknown as Record<string, unknown>) : null,
+      temporaryPassword: plainPassword, // Returned once so owner can share with partner
       message: 'Partner berhasil dibuat',
     });
   } catch (error) {

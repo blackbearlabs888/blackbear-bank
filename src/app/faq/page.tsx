@@ -55,6 +55,9 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+// Phase 4: ISR — FAQ changes infrequently, revalidate every 5 minutes.
+export const revalidate = 300;
+
 // Fetch FAQs directly from DB via Prisma (server-side).
 // This works on ALL deployments — no localhost HTTP call needed.
 export default async function FAQPage() {

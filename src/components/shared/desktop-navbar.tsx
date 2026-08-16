@@ -34,6 +34,7 @@ import {
   Percent,
   Bell,
   Star,
+  ShieldAlert,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -62,6 +63,7 @@ const ownerMenuGroups = {
     label: 'Transaksi',
     items: [
       { href: '/owner/dashboard/transactions', label: 'Semua Transaksi', icon: Wallet },
+      { href: '/owner/dashboard/fraud-review', label: 'Fraud Review', icon: ShieldAlert },
       { href: '/owner/dashboard/notifications', label: 'Notifikasi', icon: Bell },
       { href: '/owner/dashboard/testimonials', label: 'Testimoni', icon: Star },
     ],
@@ -130,6 +132,8 @@ export function DesktopNavbar() {
                   <img
                     src={config.logoUrl}
                     alt={config.websiteTitle}
+                    width={32}
+                    height={32}
                     className="w-full h-full object-contain"
                     onError={() => setLogoError(true)}
                   />
