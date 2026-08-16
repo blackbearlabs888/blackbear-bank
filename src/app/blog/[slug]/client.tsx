@@ -184,12 +184,16 @@ function addHeadingIds(html: string): string {
 
 interface BlogDetailClientProps {
   post: BlogPost;
+  // Related posts are now fetched server-side (ISR-friendly) and passed
+  // as props. This removes the previous client-side self-fetch to
+  // /api/seo/blog that contributed to the static→dynamic runtime error.
+  relatedPosts?: RelatedPost[];
 }
 
-export default function BlogDetailClient({ post }: BlogDetailClientProps) {
+export default function BlogDetailClient({ post, relatedPosts: initialRelatedPosts = [] }: BlogDetailClientProps) {
   const { config } = useSiteConfig();
   const [copied, setCopied] = useState(false);
-  const [relatedPosts, setRelatedPosts] = useState<RelatedPost[]>([]);
+  const relatedPosts = initialRelatedPosts;
   const [activeHeading, setActiveHeading] = useState('');
 
   const siteName = config.websiteTitle || 'Black Bear';
@@ -201,26 +205,8 @@ export default function BlogDetailClient({ post }: BlogDetailClientProps) {
   const headings = useMemo(() => extractHeadings(processedContent), [processedContent]);
   const readingTime = useMemo(() => estimateReadTime(post.content), [post.content]);
 
-  // Fetch related posts
-  useEffect(() => {
-    async function fetchRelated() {
-      try {
-        const params = new URLSearchParams({
-          public: 'true',
-          limit: '3',
-          category: post.category,
-        });
-        const response = await fetch(`/api/seo/blog?${params.toString()}`);
-        const result = await response.json();
-        if (result.success && result.data) {
-          setRelatedPosts(result.data.filter((p: BlogPost) => p.id !== post.id).slice(0, 3));
-        }
-      } catch (err) {
-        console.error('Failed to fetch related posts:', err);
-      }
-    }
-    fetchRelated();
-  }, [post.category, post.id]);
+  // Related posts are passed from the server (ISR-cached, in initial HTML).
+  // No client-side fetch — see BlogDetailClientProps.relatedPosts.
 
   // Track active heading for TOC
   useEffect(() => {

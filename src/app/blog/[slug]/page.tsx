@@ -1,132 +1,120 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import BlogDetailClient from './client';
+import {
+  getPublishedBlogPostBySlug,
+  getRelatedPublishedPosts,
+  getPublishedBlogSlugs,
+  type PublishedBlogPost,
+  type RelatedBlogPost,
+} from '@/lib/blog/queries';
 
-interface BlogPost {
-  id: string;
-  title: string;
-  slug: string;
-  content: string;
-  excerpt: string | null;
-  featuredImage: string | null;
-  category: string;
-  tags: string | null;
-  author: string | null;
-  viewCount: number;
-  isPublished: boolean;
-  metaTitle: string | null;
-  metaDescription: string | null;
-  keywords: string | null;
-  publishedAt: Date | string | null;
-  createdAt: Date | string;
-  updatedAt: Date | string;
-}
+// ── ISR ───────────────────────────────────────────────────────────────
+// Blog detail pages change infrequently (only on owner edit/publish).
+// Revalidate hourly. dynamicParams stays enabled (default) so newly
+// published articles render on first request without a full deployment.
+//
+// NOTE: This page must NOT use `cache: 'no-store'`, `force-dynamic`,
+// cookies(), headers(), or call its own HTTP API. All data comes from
+// the server-only data service (`@/lib/blog/queries`) via direct Prisma
+// access — fully ISR-compatible.
+export const revalidate = 3600;
 
-// Generate metadata for SEO
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params;
-  
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/seo/blog/${slug}`,
-      { cache: 'no-store' }
-    );
-    const result = await response.json();
-
-    if (!result.success || !result.data) {
-      return {
-        title: 'Artikel Tidak Ditemukan',
-      };
-    }
-
-    const post: BlogPost = result.data;
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.id';
-    
-    return {
-      title: post.metaTitle || `${post.title} | Blog`,
-      description: post.metaDescription || post.excerpt || post.content.substring(0, 160),
-      keywords: post.keywords || undefined,
-      authors: post.author ? [{ name: post.author }] : undefined,
-      openGraph: {
-        type: 'article',
-        title: post.metaTitle || post.title,
-        description: post.metaDescription || post.excerpt || post.content.substring(0, 160),
-        url: `${siteUrl}/blog/${post.slug}`,
-        images: post.featuredImage ? [{ url: post.featuredImage }] : undefined,
-        publishedTime: post.publishedAt ? new Date(post.publishedAt).toISOString() : undefined,
-        modifiedTime: new Date(post.updatedAt).toISOString(),
-        authors: post.author ? [post.author] : undefined,
-        section: post.category,
-        tags: post.tags ? post.tags.split(',').map(t => t.trim()) : undefined,
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: post.metaTitle || post.title,
-        description: post.metaDescription || post.excerpt || post.content.substring(0, 160),
-        images: post.featuredImage ? [post.featuredImage] : undefined,
-      },
-      alternates: {
-        canonical: `${siteUrl}/blog/${post.slug}`,
-      },
-    };
-  } catch {
-    return {
-      title: 'Blog',
-    };
-  }
-}
-
-// Generate static params for build
+// ── generateStaticParams ──────────────────────────────────────────────
+// Pre-render all currently-published posts at build time. Newly published
+// posts (created after build) are handled by dynamicParams at runtime.
 export async function generateStaticParams() {
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/seo/blog?public=true&limit=100`
-    );
-    const result = await response.json();
-
-    if (result.success && result.data) {
-      return result.data.map((post: BlogPost) => ({
-        slug: post.slug,
-      }));
-    }
-  } catch {
-    console.error('Failed to generate static params for blog');
+    return await getPublishedBlogSlugs();
+  } catch (error) {
+    console.error('Failed to generate static params for blog:', error);
+    return [];
   }
-  
-  return [];
 }
 
-export default async function BlogDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+// ── generateMetadata ──────────────────────────────────────────────────
+// Uses the SAME cached server query as the page body — React cache()
+// deduplicates so only ONE Prisma query runs per request for the post.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
   const { slug } = await params;
-  
-  // Fetch blog post server-side for initial render
-  let post: BlogPost | null = null;
-  
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/seo/blog/${slug}`,
-      { cache: 'no-store' }
-    );
-    const result = await response.json();
+  const post = await getPublishedBlogPostBySlug(slug);
 
-    if (result.success && result.data) {
-      post = result.data;
-      
-      // Track view count
-      if (post.isPublished) {
-        fetch(
-          `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/seo/blog/${slug}?view=true`,
-          { method: 'GET' }
-        ).catch(() => {});
-      }
-    }
-  } catch (error) {
-    console.error('Failed to fetch blog post:', error);
+  if (!post) {
+    // Missing or unpublished slug — minimal metadata; the page itself
+    // will call notFound() and return a real 404.
+    return {
+      title: 'Artikel Tidak Ditemukan',
+      robots: { index: false, follow: false },
+    };
   }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
+  const canonical = `${siteUrl}/blog/${post.slug}`;
+  const description =
+    post.metaDescription || post.excerpt || post.content.substring(0, 160);
+  const title = post.metaTitle || `${post.title} | Blog`;
+
+  return {
+    title,
+    description,
+    keywords: post.keywords || undefined,
+    authors: post.author ? [{ name: post.author }] : undefined,
+    openGraph: {
+      type: 'article',
+      title: post.metaTitle || post.title,
+      description,
+      url: canonical,
+      images: post.featuredImage ? [{ url: post.featuredImage }] : undefined,
+      publishedTime: post.publishedAt
+        ? new Date(post.publishedAt).toISOString()
+        : undefined,
+      modifiedTime: new Date(post.updatedAt).toISOString(),
+      authors: post.author ? [post.author] : undefined,
+      section: post.category,
+      tags: post.tags
+        ? post.tags.split(',').map((t) => t.trim()).filter(Boolean)
+        : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: post.metaTitle || post.title,
+      description,
+      images: post.featuredImage ? [post.featuredImage] : undefined,
+    },
+    alternates: {
+      canonical,
+    },
+  };
+}
+
+// ── Page ──────────────────────────────────────────────────────────────
+export default async function BlogDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+
+  // Single Prisma query (deduped with generateMetadata via React cache()).
+  const post: PublishedBlogPost | null = await getPublishedBlogPostBySlug(slug);
+
+  // Missing or unpublished slug → real 404 (not a soft 200 with error UI).
   if (!post) {
     notFound();
   }
 
-  return <BlogDetailClient post={post} />;
+  // Related posts fetched server-side (same category, excluding this post).
+  // Passed to the client as props so they appear in initial HTML (better
+  // SEO, no client-side waterfall, no self-fetch to /api/seo/blog).
+  const relatedPosts: RelatedBlogPost[] = await getRelatedPublishedPosts(
+    post.id,
+    post.category,
+    3
+  );
+
+  return <BlogDetailClient post={post} relatedPosts={relatedPosts} />;
 }
