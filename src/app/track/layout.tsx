@@ -37,15 +37,10 @@ export const metadata: Metadata = {
     canonical: `${siteUrl}/track`,
   },
   robots: {
-    index: true,
+    // /track is a personalized order-lookup tool, not indexable content.
+    // noindex prevents indexing; follow preserves link-equity flow.
+    index: false,
     follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
   },
 };
 

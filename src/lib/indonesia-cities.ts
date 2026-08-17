@@ -260,8 +260,20 @@ export const INDONESIAN_CITIES: Record<string, CityData> = {
   'pelaihari': { lat: -3.6500, lng: 114.7833, province: 'Kalimantan Selatan', island: 'Kalimantan' },
   'kalimantan tengah': { lat: -2.2167, lng: 113.9167, province: 'Kalimantan Tengah', island: 'Kalimantan' },
   'kalteng': { lat: -2.2167, lng: 113.9167, province: 'Kalimantan Tengah', island: 'Kalimantan' },
-  'palangkaraya': { lat: -2.2167, lng: 113.9167, province: 'Kalimantan Tengah', island: 'Kalimantan' },
+  // Canonical: "Palangka Raya" (with space) — official Indonesian government
+  // spelling (peraturan daerah), NOT derived from the palangkaraya.go.id
+  // government domain. normalizeSlug("Palangka Raya") -> "palangka-raya",
+  // which is the canonical landing-page slug.
   'palangka raya': { lat: -2.2167, lng: 113.9167, province: 'Kalimantan Tengah', island: 'Kalimantan' },
+  // Legacy input alias: "Palangkaraya" (no space) — kept as a recognized
+  // input alias so existing partner records with city="Palangkaraya" still
+  // resolve via getCityData() and partner sync does NOT create a new Location
+  // row. This alias is NOT for new slug generation; use canonicalCityName()
+  // (see city-utils.ts) to map this alias back to "Palangka Raya" before
+  // deriving a slug. Production DB may still hold a legacy
+  // /lokasi/palangkaraya row; the merge + 301 plan lives in
+  // docs/SITEMAP-LOCATION-AUDIT.md section 5 (approval gate, not executed).
+  'palangkaraya': { lat: -2.2167, lng: 113.9167, province: 'Kalimantan Tengah', island: 'Kalimantan' },
   'sampit': { lat: -2.5000, lng: 112.9500, province: 'Kalimantan Tengah', island: 'Kalimantan' },
   'pangkalan bun': { lat: -2.6833, lng: 111.6333, province: 'Kalimantan Tengah', island: 'Kalimantan' },
   'kualakapuas': { lat: -3.0000, lng: 114.4000, province: 'Kalimantan Tengah', island: 'Kalimantan' },

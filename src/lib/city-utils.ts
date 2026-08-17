@@ -6,6 +6,50 @@ import { INDONESIAN_CITIES, CityData } from './indonesia-cities';
 // Re-export types
 export type { CityData } from './indonesia-cities';
 
+/**
+ * City alias map — maps legacy/alternate input spellings to the canonical
+ * city name used as the source of truth for slug derivation.
+ *
+ * Canonical names are the official Indonesian government spellings
+ * (peraturan daerah), NOT derived from government domain names.
+ *
+ * Purpose: when partner sync (or any future code path) derives a Location
+ * slug from a partner's free-text city field, it MUST first resolve the
+ * input through canonicalCityName() so that one city produces exactly one
+ * canonical slug (one landing page), even if partners typed the city name
+ * differently. This prevents duplicate Location rows from being created.
+ *
+ * Keys are lowercase, trimmed. Values are the canonical display names
+ * (preserving the official capitalization/spaces).
+ */
+export const CITY_ALIASES: Record<string, string> = {
+  // Canonical: "Palangka Raya" (with space) — official spelling.
+  // Legacy alias "Palangkaraya" (no space) maps back to canonical so sync
+  // does not create a separate /lokasi/palangkaraya row.
+  'palangkaraya': 'Palangka Raya',
+};
+
+/**
+ * Resolve a city input to its canonical name.
+ *
+ * - If the input (lowercased, trimmed) is a known alias, returns the
+ *   canonical name from CITY_ALIASES.
+ * - Otherwise returns the input as-is (trimmed, original casing) so that
+ *   already-canonical names and unknown cities pass through untouched.
+ *
+ * Idempotent: canonicalCityName(canonicalCityName(x)) === canonicalCityName(x)
+ *
+ * Usage (slug derivation chokepoint):
+ *   const canonical = canonicalCityName(partner.city);   // "Palangka Raya"
+ *   const slug = normalizeSlug(canonical);              // "palangka-raya"
+ */
+export function canonicalCityName(input: string): string {
+  if (!input) return input;
+  const key = input.toLowerCase().trim();
+  const alias = CITY_ALIASES[key];
+  return alias ?? input.trim();
+}
+
 // Generate SEO content for a city
 export function generateLocationContent(city: string, province?: string): {
   description: string;

@@ -29,9 +29,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       where: { slug },
     });
 
-    if (!location) {
+    // Inactive locations must not be indexed — treat as not-found for SEO.
+    if (!location || !location.isActive) {
       return {
         title: 'Lokasi Tidak Ditemukan',
+        robots: { index: false, follow: true },
       };
     }
 
@@ -94,13 +96,14 @@ export default async function LocationDetailPage({ params }: { params: Promise<{
   
   // Fetch location directly from database
   let location: Location | null = null;
-  
+
   try {
     const result = await db.location.findUnique({
       where: { slug },
     });
 
-    if (result) {
+    // Inactive locations must not render (soft-404 → notFound()).
+    if (result && result.isActive) {
       // Defense-in-depth: sanitize HTML content on read so legacy rows
       // written before write-time sanitization are also safe.
       location = {
@@ -118,6 +121,16 @@ export default async function LocationDetailPage({ params }: { params: Promise<{
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
 
+  // Fetch the real business phone number from OwnerProfile (not a hardcoded
+  // placeholder) for the LocalBusiness JSON-LD.
+  let businessPhone: string | null = null;
+  try {
+    const ownerProfile = await db.ownerProfile.findFirst();
+    businessPhone = ownerProfile?.footerWhatsapp || null;
+  } catch {
+    // If OwnerProfile is unavailable, omit telephone from JSON-LD.
+  }
+
   // LocalBusiness JSON-LD for this specific location
   const localBusinessJsonLd = {
     '@context': 'https://schema.org',
@@ -127,7 +140,7 @@ export default async function LocationDetailPage({ params }: { params: Promise<{
     description: location.description || `Layanan gestun dan tarik tunai terpercaya di ${location.name}. Proses cepat, aman, dan transparan.`,
     url: `${siteUrl}/lokasi/${location.slug}`,
     image: location.featuredImage || `${siteUrl}/og-lokasi.png`,
-    telephone: '+6281234567890',
+    ...(businessPhone ? { telephone: businessPhone } : {}),
     address: {
       '@type': 'PostalAddress',
       addressLocality: location.name,
