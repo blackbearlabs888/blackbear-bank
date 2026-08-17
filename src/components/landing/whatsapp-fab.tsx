@@ -5,6 +5,7 @@ import { MessageCircle, Clock, Send, X } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { useCookieBannerVisible } from '@/hooks/use-cookie-banner-visible';
 import { cn } from '@/lib/utils';
+import { trackEvent } from '@/lib/analytics/track';
 
 export default function WhatsAppFab() {
   const { config } = useSiteConfig();
@@ -179,7 +180,13 @@ export default function WhatsAppFab() {
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full h-11 bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-xl font-semibold text-sm shadow-lg shadow-[#25D366]/25 transition-all duration-200 active:scale-[0.97]"
-              onClick={() => setPopoverOpen(false)}
+              onClick={() => {
+                // GA4: fire click_wa on actual mobile popover CTA navigation.
+                // (FAB onClick on mobile opens the popover — no event fires there.
+                // This is the actual navigation point, so this is where we track.)
+                trackEvent('click_wa', { page_path: pathname, page_type: 'wa_fab' });
+                setPopoverOpen(false);
+              }}
             >
               <Send className="w-4 h-4" />
               Chat WhatsApp
@@ -237,7 +244,11 @@ export default function WhatsAppFab() {
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2.5 w-full h-12 bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-xl font-semibold text-sm shadow-lg shadow-[#25D366]/25 transition-all duration-200 hover:shadow-xl hover:shadow-[#25D366]/30 active:scale-[0.97]"
-              onClick={() => setPopoverOpen(false)}
+              onClick={() => {
+                // GA4: fire click_wa on actual desktop popover CTA navigation.
+                trackEvent('click_wa', { page_path: pathname, page_type: 'wa_fab' });
+                setPopoverOpen(false);
+              }}
             >
               <Send className="w-4.5 h-4.5" />
               Chat via WhatsApp
@@ -289,7 +300,11 @@ export default function WhatsAppFab() {
               e.preventDefault();
               togglePopover();
             } else {
-              // Desktop: navigate directly to WhatsApp
+              // Desktop: navigate directly to WhatsApp.
+              // GA4: fire click_wa here (desktop direct nav). Mobile branch
+              // opens the popover and the click_wa event is fired by the
+              // popover CTA onClick instead — no double-fire.
+              trackEvent('click_wa', { page_path: pathname, page_type: 'wa_fab' });
               setShowTooltip(false);
             }
           }}

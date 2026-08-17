@@ -12,6 +12,9 @@ import Link from 'next/link';
 // /nominal. Browser-safe (fee.ts imports toNumber from '@/lib/number-utils',
 // which has no @prisma/client dependency). No 6th formula in this component.
 import { calculateTransaction } from '@/lib/transaction/fee';
+// GA4 direct conversion tracking — browser-only, consent-gated, PII-stripped.
+import { trackEvent } from '@/lib/analytics/track';
+import { amountBucket } from '@/lib/analytics/buckets';
 
 interface PaymentTypeOption {
   id: string;
@@ -65,6 +68,21 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
     requestAnimationFrame(() => {
       setShowResults(true);
     });
+    // GA4 conversion: fire use_calculator after the user explicitly clicks
+    // "Hitung Estimasi" (NOT on input change — input changes set
+    // isCalculated=false above). The calculator computes BOTH Online and
+    // COD for the same nominal + payment type, so service_type is omitted
+    // (the event represents a single calculator use, not a single method).
+    // amount_bucket is bucketed (privacy-safe) — never the exact nominal.
+    if (effectiveSelectedType && amount) {
+      const nominal = Number(amount.replace(/\D/g, ''));
+      trackEvent('use_calculator', {
+        page_path: '/',
+        page_type: 'landing',
+        provider: effectiveSelectedType.name,
+        amount_bucket: amountBucket(nominal),
+      });
+    }
   };
 
   const reset = useCallback(() => {

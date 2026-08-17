@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { X, Zap, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useSiteConfig } from '@/hooks/use-site-config';
+import { trackEvent } from '@/lib/analytics/track';
 
 export default function ExitIntentBanner() {
   const { config } = useSiteConfig();
+  const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(false);
   const lastScrollY = useRef(0);
   const hasShown = useRef(false);
@@ -66,7 +69,12 @@ export default function ExitIntentBanner() {
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="flex-1 h-9 text-xs rounded-lg">
-            <a href={waUrl} target="_blank" rel="noopener noreferrer">
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent('click_wa', { page_path: pathname, page_type: 'exit_intent' })}
+            >
               <MessageCircle className="w-3 h-3" />
               Chat WA
             </a>

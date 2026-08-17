@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { MapPin, ArrowLeft, ArrowRight, MessageCircle, CreditCard, Wallet, Shield, Clock, CheckCircle } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
+import { trackEvent } from '@/lib/analytics/track';
 
 interface Location {
   id: string;
@@ -61,8 +62,17 @@ export default function LocationDetailClient({ location }: LocationDetailClientP
   const locationUrl = `${siteUrl}/lokasi/${location.slug}`;
 
   const handleOrderWhatsApp = () => {
+    // GA4: fire click_wa before programmatic window.open (so the event
+    // fires even if the popup is blocked). city = location.name (the
+    // location page the user is on). The WA message text (which includes
+    // the location name) is NEVER passed as a param (allowlist strips it).
+    trackEvent('click_wa', {
+      page_path: `/lokasi/${location.slug}`,
+      page_type: 'lokasi',
+      city: location.name,
+    });
     const message = `Halo, saya ingin melakukan transaksi gestun di ${location.name}`;
-    const url = config.footerWhatsapp 
+    const url = config.footerWhatsapp
       ? `https://wa.me/${config.footerWhatsapp}?text=${encodeURIComponent(message)}`
       : null;
     if (url) {

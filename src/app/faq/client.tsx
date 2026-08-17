@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { HelpCircle, Search, MessageCircle, Shield, Clock, CreditCard, TrendingUp } from 'lucide-react';
 import { safeJsonLd } from '@/lib/json-ld-safe';
+import { trackEvent } from '@/lib/analytics/track';
 
 interface FAQ {
   id: string;
@@ -114,6 +115,10 @@ export default function FAQClient({ initialFaqs }: FAQClientProps) {
   const activeCategories = Object.keys(groupedFaqs);
 
   const handleContactWhatsApp = () => {
+    // GA4: fire click_wa before programmatic window.open (so the event
+    // fires even if the popup is blocked). page_type='faq' identifies the
+    // source; the WA message text is NEVER passed as a param (allowlist).
+    trackEvent('click_wa', { page_path: '/faq', page_type: 'faq' });
     const message = 'Halo, saya ingin bertanya tentang layanan Black Bear';
     window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`, '_blank');
   };

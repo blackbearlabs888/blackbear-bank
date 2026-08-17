@@ -2,15 +2,18 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { MessageCircle, Heart, ExternalLink, Shield, Zap, Clock } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { cn } from '@/lib/utils';
+import { trackEvent } from '@/lib/analytics/track';
 
-function SocialIcon({ href, icon, label, hoverColor }: {
+function SocialIcon({ href, icon, label, hoverColor, onClick }: {
   href?: string;
   icon: React.ReactNode;
   label: string;
   hoverColor: string;
+  onClick?: () => void;
 }) {
   if (!href) return null;
 
@@ -19,6 +22,7 @@ function SocialIcon({ href, icon, label, hoverColor }: {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={onClick}
       className={cn(
         "w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center transition-all duration-200 text-muted-foreground",
         "hover:scale-105 active:scale-95",
@@ -80,6 +84,7 @@ export function Footer() {
 
   const siteName = config.websiteTitle || 'Black Bear';
   const whatsapp = config.footerWhatsapp;
+  const pathname = usePathname();
   const instagram = config.footerInstagram;
   const facebook = config.footerFacebook;
   const tiktok = config.footerTiktok;
@@ -168,6 +173,7 @@ export function Footer() {
                   icon={<MessageCircle className="w-4 h-4" />}
                   label="WhatsApp"
                   hoverColor="hover:text-green-600 hover:bg-green-500/10 hover:border-green-500/30"
+                  onClick={() => trackEvent('click_wa', { page_path: pathname, page_type: 'footer' })}
                 />
                 <SocialIcon
                   href={instagram}
@@ -207,6 +213,7 @@ export function Footer() {
                 href={`https://wa.me/${whatsapp}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackEvent('click_wa', { page_path: pathname, page_type: 'footer' })}
                 className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium text-green-700 dark:text-green-400 hover:bg-green-500/10 transition-colors border border-green-500/20"
               >
                 <MessageCircle className="w-3.5 h-3.5" />

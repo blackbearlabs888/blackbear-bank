@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
+import { trackEvent } from '@/lib/analytics/track';
 
 export default function MaintenancePage() {
   const { config, getInitials } = useSiteConfig();
@@ -242,6 +243,7 @@ export default function MaintenancePage() {
                   href={waUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => trackEvent('click_wa', { page_path: '/maintenance', page_type: 'maintenance' })}
                 >
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Hubungi via WhatsApp

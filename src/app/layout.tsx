@@ -15,6 +15,7 @@ import GlobalFloatingComponents from "@/components/shared/global-floating-compon
 import { db } from "@/lib/db";
 import { ServerSiteConfigProvider } from "@/lib/server-site-config";
 import type { SiteConfig } from "@/hooks/use-site-config";
+import { AnalyticsProvider } from "@/components/analytics/analytics-provider";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -199,6 +200,11 @@ export default async function RootLayout({
       <body
         className={`${inter.variable} antialiased bg-background text-foreground`}
       >
+        {/* Direct GA4 + Conversion Tracking — loaded conditionally on consent.
+            Must mount BEFORE ThemeProvider/children so the gtag.js Script and
+            Consent Mode v2 default-denied behavior are established before any
+            UI renders. No-op when env var absent or consent not granted. */}
+        <AnalyticsProvider />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

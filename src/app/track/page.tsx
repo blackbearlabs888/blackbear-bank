@@ -46,6 +46,7 @@ import {
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { trackEvent } from '@/lib/analytics/track';
 
 interface OrderData {
   orderId: string;
@@ -940,6 +941,11 @@ function TrackOrderContent() {
                       const res = await fetch(`/api/orders/contact?orderId=${order.orderId}`);
                       const data = await res.json();
                       if (data.success && data.data?.redirectUrl) {
+                        // GA4: fire click_wa AFTER server confirms success +
+                        // redirectUrl, BEFORE window.open. orderId is
+                        // forbidden (internal transaction ID) — never passed.
+                        // Phone is server-side only — never reaches client.
+                        trackEvent('click_wa', { page_path: '/track', page_type: 'track' });
                         window.open(data.data.redirectUrl, '_blank', 'noopener,noreferrer');
                       } else {
                         toast.error(data.error || 'Gagal menghubungi kontak');

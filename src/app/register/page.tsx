@@ -19,6 +19,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { CitySearch } from '@/components/ui/city-search';
+import { trackEvent } from '@/lib/analytics/track';
 
 const banks = [
   'BCA', 'Mandiri', 'BRI', 'BNI', 'CIMB Niaga', 'Permata', 'Danamon', 
@@ -121,6 +122,10 @@ export default function RegisterPage() {
   const { isAuthenticated, isLoading, hasHydrated, setUser, setPartner, hydrate } = useAuthStore();
   const { config, getInitials } = useSiteConfig();
   const hasRedirected = useRef(false);
+  // GA4 conversion dedup guard — prevents duplicate partner_registration_success
+  // events if the success branch is entered twice (defence-in-depth even
+  // though router.replace happens immediately after).
+  const hasFiredRegistrationRef = useRef(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -246,6 +251,25 @@ export default function RegisterPage() {
         setError(data.error || 'Registrasi gagal');
         setLoading(false);
         return;
+      }
+
+      // GA4 conversion: fire partner_registration_success DIRECTLY after
+      // server confirms success (per owner directive — NOT via useEffect)
+      // so the event is sent before router.replace takes over.
+      // Skip honeypot submissions (bot-filled the hidden website field).
+      // Server-side honeypot path returns success WITHOUT user/partner,
+      // so the `data.user && data.partner` check also filters those out.
+      // Only allowlisted params pass — formData PII (name/email/phone/bank*)
+      // is stripped by trackEvent's allowlist.
+      const isHoneypot =
+        !!honeypotValue || !data.user || !data.partner;
+      if (!isHoneypot && !hasFiredRegistrationRef.current) {
+        hasFiredRegistrationRef.current = true;
+        trackEvent('partner_registration_success', {
+          page_path: '/register',
+          page_type: 'partner_registration',
+          city: formData.city,
+        });
       }
 
       setUser(data.user);

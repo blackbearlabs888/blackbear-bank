@@ -18,6 +18,7 @@ import { AnimatedCounter } from '@/components/landing/animated-counter';
 import { FadeInSection } from '@/components/landing/fade-in-section';
 import { OrganizationJsonLd, FAQJsonLd } from '@/components/seo/json-ld';
 import AnnouncementBar from '@/components/landing/announcement-bar';
+import { trackEvent } from '@/lib/analytics/track';
 
 /* ====== Dynamic Imports for Below-Fold Components ====== */
 
@@ -1105,7 +1106,12 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   variant="outline"
                   className="rounded-xl px-6 h-10 text-sm font-medium border-primary/30 text-primary hover:bg-primary hover:text-white transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <a href={config.footerWhatsapp ? `https://wa.me/${config.footerWhatsapp}` : '#'} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={config.footerWhatsapp ? `https://wa.me/${config.footerWhatsapp}` : '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackEvent('click_wa', { page_path: '/', page_type: 'landing_hero' })}
+                  >
                     <MessageCircle className="w-4 h-4" />
                     Tanyakan via WhatsApp
                   </a>

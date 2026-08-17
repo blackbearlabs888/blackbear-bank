@@ -53,6 +53,8 @@ import { cn } from '@/lib/utils';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { CitySearch } from '@/components/ui/city-search';
 import { Suspense } from 'react';
+import { trackEvent } from '@/lib/analytics/track';
+import { amountBucket } from '@/lib/analytics/buckets';
 
 interface PaymentType {
   id: string;
@@ -1138,6 +1140,10 @@ function OrderPage() {
   const [honeypotValue, setHoneypotValue] = useState('');
   const [submitCooldown, setSubmitCooldown] = useState(0);
   const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // GA4 conversion dedup guard — prevents duplicate generate_lead events
+  // if the success branch is entered twice (defence-in-depth even though
+  // submit cooldown + idempotency key already prevent duplicate orders).
+  const hasFiredLeadRef = useRef(false);
 
   // Partner referral from URL
   const [partnerInfo, setPartnerInfo] = useState<{ id: string; name: string; tier: string } | null>(null);
@@ -1345,6 +1351,27 @@ function OrderPage() {
         setError(data.error || 'Gagal membuat order');
         setLoading(false);
         return;
+      }
+
+      // GA4 conversion: fire generate_lead DIRECTLY after server confirms
+      // success (per owner directive — NOT via useEffect) so the event
+      // is sent before the success-screen redirect takes over.
+      // Skip honeypot submissions (bot-filled the hidden website field).
+      // Skip the server-side honeypot sentinel orderId 'BB-PENDING'.
+      // Only allowlisted params pass (PII stripped by trackEvent).
+      const isHoneypot =
+        !!honeypotValue || data.data?.orderId === 'BB-PENDING';
+      if (!isHoneypot && !hasFiredLeadRef.current) {
+        hasFiredLeadRef.current = true;
+        const pt = paymentTypes.find((p) => p.id === formData.paymentTypeId);
+        trackEvent('generate_lead', {
+          page_path: '/order',
+          page_type: 'order_form',
+          service_type: formData.methodTransaction, // 'Online' | 'COD' — normalized inside trackEvent
+          provider: pt?.name, // payment type name (NOT customer bank / bank holder)
+          city: formData.city,
+          amount_bucket: amountBucket(nominal), // bucketed — NEVER exact nominal
+        });
       }
 
       setOrderId(data.data.orderId);

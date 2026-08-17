@@ -5,11 +5,18 @@ import { usePathname } from 'next/navigation';
 import { Cookie, X, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { dispatchCookieBannerVisible } from '@/hooks/use-cookie-banner-visible';
+import {
+  setConsentGranted,
+  setConsentDenied,
+  CONSENT_STORAGE_KEY,
+} from '@/lib/analytics/consent';
 
-// Check localStorage (safe because component is ssr: false)
+// Check localStorage (safe because component is ssr: false).
+// Reuses the existing `cookie-consent` storage key — backward-compatible with
+// users who already accepted/rejected in a prior session.
 function getInitialVisibility(): boolean {
   if (typeof window === 'undefined') return false;
-  return !localStorage.getItem('cookie-consent');
+  return !localStorage.getItem(CONSENT_STORAGE_KEY);
 }
 
 // Only show on public pages: landing, blog, lokasi, FAQ
@@ -41,13 +48,21 @@ export default function CookieConsent() {
   }, [isVisible, isPublic]);
 
   const handleClose = () => {
-    localStorage.setItem('cookie-consent', JSON.stringify({ accepted: false, date: new Date().toISOString() }));
+    // Persist denied consent. Reuses the existing `cookie-consent`
+    // localStorage key (backward-compatible) and dispatches a same-tab
+    // change event so the AnalyticsProvider can ensure gtag.js stays
+    // unloaded. AnalyticsProvider subscribes via subscribeToConsentChanges.
+    setConsentDenied();
     setIsVisible(false);
     dispatchCookieBannerVisible(false);
   };
 
   const handleAccept = () => {
-    localStorage.setItem('cookie-consent', JSON.stringify({ accepted: true, date: new Date().toISOString() }));
+    // Persist granted consent. Reuses the existing `cookie-consent`
+    // localStorage key (backward-compatible) and dispatches a same-tab
+    // change event so the AnalyticsProvider can initialize gtag.js,
+    // dataLayer, and call gtag('config', measurementId).
+    setConsentGranted();
     setIsVisible(false);
     dispatchCookieBannerVisible(false);
   };
