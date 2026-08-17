@@ -21,7 +21,13 @@
  * @module transaction/fee
  */
 
-import { toNumber } from '@/lib/db';
+// Browser-safe import: toNumber is now in '@/lib/number-utils' (duck-typed,
+// no @prisma/client dependency). This allows the landing rate calculator
+// (a 'use client' component) to import calculateTransaction without
+// dragging the Prisma client runtime into the browser bundle. Server-side
+// call sites that still import toNumber from '@/lib/db' continue to work
+// via the re-export in db.ts.
+import { toNumber } from '@/lib/number-utils';
 
 // ── Types ──
 

@@ -7,6 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calculator, ArrowRight, Wallet, Info, RotateCcw, CreditCard, Sparkles } from 'lucide-react';
 import { FadeInSection } from '@/components/landing/fade-in-section';
 import Link from 'next/link';
+// Shared fee calculation source — the SAME function used by owner/partner
+// transaction create, public order create, PATCH, preview, and Telegram
+// /nominal. Browser-safe (fee.ts imports toNumber from '@/lib/number-utils',
+// which has no @prisma/client dependency). No 6th formula in this component.
+import { calculateTransaction } from '@/lib/transaction/fee';
 
 interface PaymentTypeOption {
   id: string;
@@ -75,65 +80,64 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
     const nominal = parseAmount(amount);
     const pt = effectiveSelectedType;
 
-    // Online fee calculation
-    const onlineFee = Math.max(
-      Math.floor(nominal * (pt.onlineFeePercent / 100)) + pt.onlineFeeFlat,
-      0
-    );
-    const codFee = Math.max(
-      Math.floor(nominal * (pt.codFeePercent / 100)) + pt.codFeeFlat,
-      0
-    );
-    const onlineReceive = nominal - onlineFee;
-    const codReceive = nominal - codFee;
+    // Use the shared fee calculation source (src/lib/transaction/fee.ts).
+    // This is the SAME function used by owner/partner transaction create,
+    // public order create, PATCH, preview, and Telegram /nominal. No 6th
+    // formula. Business contract enforced by calculateGrossPaymentFee
+    // inside fee.ts:
+    //   nominal <  threshold -> flat fee ONLY
+    //   nominal >= threshold -> percentage fee ONLY
+    // (Never percentage + flat.)
+    const onlineCalc = calculateTransaction({
+      nominal,
+      paymentType: pt,
+      marketplace: null,
+      partner: null,
+      methodTransaction: 'Online',
+    });
+    const codCalc = calculateTransaction({
+      nominal,
+      paymentType: pt,
+      marketplace: null,
+      partner: null,
+      methodTransaction: 'COD',
+    });
 
-    // Discount calculation
-    const meetsMinTransaction = pt.minTransaction <= 0 || nominal >= pt.minTransaction;
-    let onlineDiscountAmount = 0;
-    let codDiscountAmount = 0;
-    let onlineDiscountedFee = onlineFee;
-    let codDiscountedFee = codFee;
-    let onlineDiscountedReceive = onlineReceive;
-    let codDiscountedReceive = codReceive;
+    // Discount label — reflects the CONFIGURED discount, matching
+    // calculateTransaction priority: percent takes precedence over nominal.
+    // (calculateTransaction applies EITHER percent OR nominal, never both.)
     let discountLabel = '';
-
-    if (hasDiscount(pt)) {
-      if (pt.discountPercent > 0) {
-        onlineDiscountAmount = Math.floor(onlineFee * (pt.discountPercent / 100));
-        codDiscountAmount = Math.floor(codFee * (pt.discountPercent / 100));
-        discountLabel = `${pt.discountPercent}%`;
-      }
-      if (pt.discountNominal > 0) {
-        onlineDiscountAmount += pt.discountNominal;
-        codDiscountAmount += pt.discountNominal;
-        if (discountLabel) {
-          discountLabel = `${pt.discountPercent}% + Rp${formatCurrency(pt.discountNominal)}`;
-        } else {
-          discountLabel = `Rp${formatCurrency(pt.discountNominal)}`;
-        }
-      }
-
-      onlineDiscountedFee = Math.max(onlineFee - onlineDiscountAmount, 0);
-      codDiscountedFee = Math.max(codFee - codDiscountAmount, 0);
-      onlineDiscountedReceive = nominal - onlineDiscountedFee;
-      codDiscountedReceive = nominal - codDiscountedFee;
+    if (pt.discountPercent > 0) {
+      discountLabel = `${pt.discountPercent}%`;
+    } else if (pt.discountNominal > 0) {
+      discountLabel = `Rp${formatCurrency(pt.discountNominal)}`;
     }
+
+    // meetsMinTransaction drives the "tambah nominal untuk hemat" hint.
+    // Uses pt.minTransaction (active config) — NOT a hardcoded threshold.
+    const meetsMinTransaction = pt.minTransaction <= 0 || nominal >= pt.minTransaction;
 
     return {
       nominal,
-      onlineFee,
-      codFee,
-      onlineReceive,
-      codReceive,
+      // Gross fee (before discount) — strikethrough when discount applies.
+      onlineFee: onlineCalc.originalFee,
+      codFee: codCalc.originalFee,
+      // Gross receive (before discount) — strikethrough when discount applies.
+      onlineReceive: nominal - onlineCalc.originalFee,
+      codReceive: nominal - codCalc.originalFee,
       meetsMinTransaction,
       hasDiscount: hasDiscount(pt),
       discountLabel,
-      onlineDiscountAmount,
-      codDiscountAmount,
-      onlineDiscountedFee,
-      codDiscountedFee,
-      onlineDiscountedReceive,
-      codDiscountedReceive,
+      // Discount amounts from the shared calculator.
+      onlineDiscountAmount: onlineCalc.discountAmount,
+      codDiscountAmount: codCalc.discountAmount,
+      // Net fee (after discount) — what the customer actually pays.
+      onlineDiscountedFee: onlineCalc.paymentFee,
+      codDiscountedFee: codCalc.paymentFee,
+      // Net receive (after discount) — what the customer actually receives.
+      // totalReceived = nominal - paymentFee (guaranteed by calculateTransaction).
+      onlineDiscountedReceive: onlineCalc.totalReceived,
+      codDiscountedReceive: codCalc.totalReceived,
       minTransaction: pt.minTransaction,
     };
   };
@@ -230,7 +234,7 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                                     )}
                                   </div>
                                   <span className="text-[11px] text-muted-foreground leading-tight">
-                                    Online {pt.onlineFeePercent}% + Rp{formatCurrency(pt.onlineFeeFlat)} · COD {pt.codFeePercent}% + Rp{formatCurrency(pt.codFeeFlat)}
+                                    Online {pt.onlineFeePercent}% · minimum fee Rp{formatCurrency(pt.onlineFeeFlat)} · COD {pt.codFeePercent}% · minimum fee Rp{formatCurrency(pt.codFeeFlat)}
                                   </span>
                                 </div>
                               </div>
