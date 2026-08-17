@@ -81,8 +81,10 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Run on all routes except static assets and Next.js internals
+  // Run on all routes except static assets, Next.js internals, and
+  // metadata routes (robots.txt + sitemap.xml) that should reach the
+  // metadata route handler directly without an Edge middleware hop.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|logo.svg|logo.png|manifest.json|robots.txt).*)',
+    '/((?!_next/static|_next/image|favicon.ico|logo.svg|logo.png|manifest.json|robots.txt|sitemap.xml).*)',
   ],
 };
