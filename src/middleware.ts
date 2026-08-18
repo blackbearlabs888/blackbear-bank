@@ -11,6 +11,27 @@ import type { NextRequest } from 'next/server';
  *   anything (MapLibre, Google Fonts, TipTap, inline JSON-LD scripts, and
  *   inline styles all require permissive directives).
  *
+ *   GA4 allowlist hotfix (Direct GA4, no GTM container, no Google Ads):
+ *     - script-src:  https://www.googletagmanager.com  — hosts gtag.js
+ *       (the Direct GA4 loader). The gtag.js <Script> is rendered ONLY after
+ *       the user Accepts the cookie banner (see AnalyticsProvider), so no
+ *       request to this host fires before consent. GTM container
+ *       (gtm.js?id=GTM-...) is NOT loaded — application code only loads
+ *       gtag.js?id=G-...  CSP cannot distinguish paths on the same host, so
+ *       the allowlist is host-scoped; the application-side guarantee is that
+ *       only the gtag.js URL is ever requested.
+ *     - connect-src: https://www.google-analytics.com + https://*.google-analytics.com
+ *       — the GA4 collect endpoint (/g/collect) where gtag.js POSTs events.
+ *       The regional subdomain wildcard (*.google-analytics.com) covers
+ *       region1.google-analytics.com, region2.google-analytics.com, etc.
+ *       This is a SCOPED wildcard (analytics domain only), NOT a broad
+ *       *.google wildcard.
+ *     - NOT allowed: GTM container domain, Google Ads domains
+ *       (googleadservices.com, doubleclick.net, googlesyndication.com),
+ *       because (a) the implementation uses Direct GA4 (no GTM container)
+ *       and (b) Consent Mode v2 keeps ad_storage / ad_user_data /
+ *       ad_personalization denied at all times (we do not run ads).
+ *
  *   IMPORTANT: There is currently NO `report-uri` or `report-to` directive.
  *   Without a reporting endpoint, violations are NOT collected anywhere, so
  *   they cannot be reviewed. Do NOT claim that violations can be reviewed.
@@ -24,17 +45,23 @@ import type { NextRequest } from 'next/server';
 
 // Permissive-but-improving CSP (Report-Only mode, BASELINE ONLY — no reporting endpoint)
 // Allows: self, inline scripts/styles (JSON-LD, Next.js, TipTap),
-// Google Fonts, MapLibre/CARTO tiles, Telegram API, images from any https
+// Google Fonts, MapLibre/CARTO tiles, Telegram API, images from any https,
+// Direct GA4 (gtag.js loader from googletagmanager.com; collect endpoint
+// on google-analytics.com — granted AFTER cookie consent only).
 //
 // NOTE: No `report-uri` / `report-to` directive is present. See header
 // comment above.
 const CSP_REPORT_ONLY = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  // GA4 allowlist hotfix: gtag.js loader host (rendered after Accept only).
+  // No new unsafe-* added (existing 'unsafe-inline' / 'unsafe-eval' unchanged).
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:",
   "img-src 'self' data: https: blob:",
-  "connect-src 'self' https://api.telegram.org https://*.basemaps.cartocdn.com https://tile.openstreetmap.org wss: ws:",
+  // GA4 allowlist hotfix: collect endpoint. Scoped wildcard to analytics
+  // domain only — NOT a broad *.google wildcard. No Google Ads domains.
+  "connect-src 'self' https://api.telegram.org https://*.basemaps.cartocdn.com https://tile.openstreetmap.org https://www.google-analytics.com https://*.google-analytics.com wss: ws:",
   "worker-src 'self' blob:",
   "frame-ancestors 'self'",
   "base-uri 'self'",
