@@ -96,6 +96,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
+    // SEO Batch 1 — service pillar pages. Self-canonical, indexable,
+    // SSR-first, unique metadata, structured data via safeJsonLd().
+    {
+      url: `${siteUrl}/pencairan-kartu-kredit`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
+      url: `${siteUrl}/pencairan-paylater`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
   ];
 
   // DB queries are wrapped in try/catch only to attach a structured log

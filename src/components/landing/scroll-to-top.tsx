@@ -46,8 +46,10 @@ export default function ScrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // Cookie banner only renders on public pages, so only offset on those pages
-  const isPublicPage = pathname === '/' || pathname === '/faq' || pathname?.startsWith('/blog') || pathname?.startsWith('/lokasi');
+  // Cookie banner only renders on public pages, so only offset on those pages.
+  // Mirror predicate must stay in sync with cookie-consent.tsx isPublicPage()
+  // (SEO Batch 1 QA correction #1: include /pencairan-* pillar routes).
+  const isPublicPage = pathname === '/' || pathname === '/faq' || pathname?.startsWith('/blog') || pathname?.startsWith('/lokasi') || pathname?.startsWith('/pencairan-');
   const shouldOffsetCookie = cookieBannerVisible && isPublicPage;
 
   // Align right with WA FAB: right-4 sm:right-5 md:right-6

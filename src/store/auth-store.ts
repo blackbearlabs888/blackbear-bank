@@ -76,22 +76,66 @@ export const useAuthStore = create<AuthState>()(
 
       hydrate: async () => {
         const state = get();
-        
+
         // Don't re-hydrate if already done
         if (state.hasHydrated) {
           set({ isLoading: false });
           return;
         }
 
-        // Always verify with server
+        // Guest-safe optimization (Homepage Mobile Performance correction):
+        // The persisted `isAuthenticated` flag from localStorage is our only
+        // client-side session hint (the `sessionId` cookie is httpOnly, so
+        // `document.cookie` cannot be sniffed). On PUBLIC routes, if the last
+        // known state was "not authenticated", skip the `/api/auth/me` round-
+        // trip entirely — it would only return 401 and pollute the guest console.
+        //
+        // ROUTE-AWARE GUARD (Scenario C correction):
+        //   On PROTECTED APPLICATION routes only (/owner, /partner, /dashboard),
+        //   NEVER skip the server verification — even if localStorage is stale/
+        //   empty, a valid httpOnly `sessionId` cookie may still exist. Skipping
+        //   here would cause the dashboard to see `isAuthenticated: false` and
+        //   redirect a validly-logged-in user to /login.
+        //
+        //   /login and /register are PUBLIC auth pages, NOT protected routes.
+        //   A logged-out visitor on those pages must NOT trigger /api/auth/me
+        //   (which would 401 and pollute the console). Authenticated-user
+        //   redirect away from /login /register is handled by existing
+        //   middleware/server logic + the login/register client components
+        //   themselves — NOT by this hydrate() skip.
+        //
+        // Security is NOT weakened:
+        //   - Authenticated users (persisted `isAuthenticated: true`) STILL
+        //     hit the server for verification on every load.
+        //   - Protected application routes ALWAYS verify with the server.
+        //   - The `/api/auth/me` endpoint contract is unchanged (still 401
+        //     for unauthenticated callers).
+        const PROTECTED_PREFIXES = ['/owner', '/partner', '/dashboard'];
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+        const isProtectedRoute = PROTECTED_PREFIXES.some(
+          (prefix) => currentPath === prefix || currentPath.startsWith(prefix + '/') || currentPath.startsWith(prefix)
+        );
+
+        if (!isProtectedRoute && !state.isAuthenticated && !state.user) {
+          set({
+            user: null,
+            partner: null,
+            isAuthenticated: false,
+            isLoading: false,
+            hasHydrated: true,
+          });
+          return;
+        }
+
+        // Verify with server (authenticated hint present OR protected route)
         set({ isLoading: true });
         try {
           const response = await fetch('/api/auth/me');
           if (response.ok) {
             const data = await response.json();
             if (data.success && data.user) {
-              set({ 
-                user: data.user, 
+              set({
+                user: data.user,
                 partner: data.partner || null,
                 isAuthenticated: true,
                 isLoading: false,
@@ -101,16 +145,16 @@ export const useAuthStore = create<AuthState>()(
             }
           }
           // No valid session - clear everything
-          set({ 
-            user: null, 
-            partner: null, 
+          set({
+            user: null,
+            partner: null,
             isAuthenticated: false,
             isLoading: false,
             hasHydrated: true,
           });
         } catch (error) {
           console.error('Hydration error:', error);
-          set({ 
+          set({
             isLoading: false,
             hasHydrated: true,
           });

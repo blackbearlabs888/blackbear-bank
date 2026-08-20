@@ -9,8 +9,10 @@ import { DashboardMobileNav } from "@/components/shared/dashboard-mobile-nav";
 import { ConditionalFooter } from "@/components/shared/conditional-footer";
 import { MaintenanceWrapper } from "@/components/shared/maintenance-wrapper";
 import PageLoader from "@/components/shared/page-loader";
-import WhatsAppFab from "@/components/landing/whatsapp-fab";
-import ScrollToTop from "@/components/landing/scroll-to-top";
+// Homepage Mobile Performance correction: WhatsAppFab + ScrollToTop moved to
+// a client wrapper (deferred-floating-widgets.tsx) that dynamically imports
+// them with ssr:false, so they don't ship in the main bundle of every route.
+import DeferredFloatingWidgets from "@/components/shared/deferred-floating-widgets";
 import GlobalFloatingComponents from "@/components/shared/global-floating-components";
 import { db } from "@/lib/db";
 import { ServerSiteConfigProvider } from "@/lib/server-site-config";
@@ -223,8 +225,7 @@ export default async function RootLayout({
             </div>
             <MobileBottomNav />
             <DashboardMobileNav />
-            <ScrollToTop />
-            <WhatsAppFab />
+            <DeferredFloatingWidgets />
             <GlobalFloatingComponents />
             <Toaster position="top-center" />
           </MaintenanceWrapper>

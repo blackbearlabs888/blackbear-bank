@@ -102,8 +102,10 @@ export default function WhatsAppFab() {
 
   if (!isVisible || isHiddenPage) return null;
 
-  // Cookie banner only renders on public pages, so only offset on those pages
-  const isPublicPage = pathname === '/' || pathname === '/faq' || pathname?.startsWith('/blog') || pathname?.startsWith('/lokasi');
+  // Cookie banner only renders on public pages, so only offset on those pages.
+  // Mirror predicate must stay in sync with cookie-consent.tsx isPublicPage()
+  // (SEO Batch 1 QA correction #1: include /pencairan-* pillar routes).
+  const isPublicPage = pathname === '/' || pathname === '/faq' || pathname?.startsWith('/blog') || pathname?.startsWith('/lokasi') || pathname?.startsWith('/pencairan-');
   const shouldOffsetCookie = cookieBannerVisible && isPublicPage;
 
   // Dynamic positioning: above cookie banner when visible, normal when hidden

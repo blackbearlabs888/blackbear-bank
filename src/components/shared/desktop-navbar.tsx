@@ -129,11 +129,17 @@ export function DesktopNavbar() {
             <Link href="/" className="flex items-center gap-2.5 tap-highlight group">
               {config.logoUrl && !logoError ? (
                 <div className="w-8 h-8 rounded-lg bg-black border border-border flex items-center justify-center p-1 dark:bg-transparent dark:border-transparent transition-transform duration-300 group-hover:scale-105">
+                  {/* Homepage Mobile Performance correction: above-fold
+                      navbar logo — eager + fetchPriority high + decoding
+                      async. Explicit width/height prevents CLS. */}
                   <img
                     src={config.logoUrl}
                     alt={config.websiteTitle}
                     width={32}
                     height={32}
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
                     className="w-full h-full object-contain"
                     onError={() => setLogoError(true)}
                   />

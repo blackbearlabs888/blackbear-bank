@@ -109,7 +109,7 @@ export function FAQJsonLd() {
         name: 'Apa itu layanan tarik tunai?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Layanan tarik tunai adalah jasa pencairan dana dari kartu kredit atau paylater menjadi uang tunai. Prosesnya cepat, aman, dan transparan dengan biaya yang kompetitif.',
+          text: 'Layanan pencairan dana dari limit kartu kredit atau paylater. Prosedur verifikasi data berstruktur dengan biaya yang ditampilkan di kalkulator.',
         },
       },
       {
@@ -117,7 +117,7 @@ export function FAQJsonLd() {
         name: 'Berapa lama proses tarik tunai?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Proses tarik tunai biasanya memakan waktu 15-30 menit setelah verifikasi. Untuk transaksi COD, proses bisa lebih cepat. Dana akan langsung ditransfer ke rekening yang Anda tentukan.',
+          text: 'Proses pencairan dimulai setelah verifikasi data selesai. Estimasi waktu akan diberikan setelah verifikasi. Dana ditransfer ke rekening yang Anda tentukan.',
         },
       },
       {
@@ -125,7 +125,7 @@ export function FAQJsonLd() {
         name: 'Apakah layanan ini aman?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Ya, layanan kami aman dan terpercaya. Setiap transaksi dapat dilacak melalui sistem tracking order kami, dan data Anda disimpan dengan enkripsi.',
+          text: 'Layanan kami menerapkan prosedur verifikasi data berstruktur. Setiap transaksi dapat dilacak melalui sistem tracking order, dan data disimpan dengan enkripsi.',
         },
       },
       {
@@ -133,7 +133,7 @@ export function FAQJsonLd() {
         name: 'Apa saja metode pembayaran yang didukung?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Kami mendukung berbagai metode termasuk Kartu Kredit (semua bank), GoPay Paylater, Shopee Paylater, Akulaku Paylater, dan COD (Cash on Delivery).',
+          text: 'Metode yang didukung mencakup pencairan limit kartu kredit, pencairan limit paylater dari provider yang aktif terdaftar, dan COD (Cash on Delivery). Daftar provider paylater aktif dapat dilihat di kalkulator biaya.',
         },
       },
       {

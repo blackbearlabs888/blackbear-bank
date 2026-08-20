@@ -7,7 +7,9 @@ import dynamic from 'next/dynamic';
 // import CookieConsent from '@/components/landing/cookie-consent';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+// Accordion moved to faq-section.tsx (dynamically imported below) — Homepage
+// Mobile Performance correction: deferring @radix-ui/react-accordion (~14 KB)
+// out of the main client chunk.
 import {
   CreditCard, Wallet, Truck, Shield, Clock, Users, ArrowRight,
   Zap, Star, TrendingUp, MessageCircle, Wifi,
@@ -112,6 +114,28 @@ const CitiesSection = dynamic(
   }
 );
 
+// Homepage Mobile Performance correction: extract FAQ section into a dynamic
+// component. This moves @radix-ui/react-accordion (~14 KB) + the FAQ JSX
+// out of the ~271 KiB main client chunk into a separate below-fold chunk.
+// The FAQ questions/answers are still passed as props from the SSR parent,
+// so they remain in the initial HTML for SEO.
+const FaqSection = dynamic(
+  () => import('@/components/landing/faq-section'),
+  {
+    loading: () => (
+      <section className="relative py-12 md:py-20 bg-muted/30 below-fold-auto">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <div className="h-4 w-16 rounded bg-muted/50 animate-pulse mx-auto mb-3" />
+            <div className="h-9 w-72 rounded bg-muted/50 animate-pulse mx-auto" />
+          </div>
+        </div>
+      </section>
+    ),
+    ssr: false,
+  }
+);
+
 
 /* ====== Types ====== */
 
@@ -171,13 +195,16 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
   const [cardSpotlight, setCardSpotlight] = useState<React.CSSProperties>({});
   const [cardTilt, setCardTilt] = useState<React.CSSProperties>({});
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [allFaqOpen, setAllFaqOpen] = useState(false);
-  const [activeFaqCategory, setActiveFaqCategory] = useState('semua');
+  // allFaqOpen / activeFaqCategory moved to faq-section.tsx (dynamic component)
   const [typedText, setTypedText] = useState('Gestun profesional untuk Kartu Kredit & Paylater. Proses instan, rate bersaing, aman & terpercaya.');
   const subtitleRef = useRef<HTMLParagraphElement>(null);
   const marqueeRow1Ref = useRef<HTMLDivElement>(null);
   const marqueeRow2Ref = useRef<HTMLDivElement>(null);
   const sectionHeadersRef = useRef<IntersectionObserver | null>(null);
+  // Homepage Mobile Performance correction: rAF handle for hero card
+  // mousemove — coalesces multiple mousemove events into one frame to
+  // avoid forced layout + double state update per event.
+  const cardTiltRafRef = useRef<number | null>(null);
 
   // IntersectionObserver for section header underline animation
   useEffect(() => {
@@ -263,9 +290,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
     setPtLogoErrors(prev => new Set(prev).add(ptId));
   }, []);
 
-  // Get unique FAQ categories
-  const faqCategories = ['semua', ...Array.from(new Set(faqs.map(f => f.category || 'umum')))];
-  const filteredFaqs = activeFaqCategory === 'semua' ? faqs : faqs.filter(f => (f.category || 'umum') === activeFaqCategory);
+  // faqCategories / filteredFaqs moved to faq-section.tsx (dynamic component)
 
   return (
     <>
@@ -311,12 +336,12 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   {/* Badge */}
                   <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/15 bg-primary/5 text-primary text-sm font-medium shadow-sm shadow-primary/5">
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Layanan Gestun No #1</span>
+                    <span>Layanan Pencairan Limit Kredit &amp; Paylater Online</span>
                   </div>
                   {/* Trust badge with pulse */}
                   <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 text-xs font-semibold animate-trust-pulse">
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Terbaik</span>
+                    <span>Simulasi Biaya Transparan</span>
                   </div>
                 </div>
 
@@ -359,20 +384,36 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   </Button>
                 </div>
 
-                {/* Trust indicators */}
+                {/* Trust indicators — SEO Batch 1 compliance: visual rating
+                    claim removed (no verified testimonial source); replaced
+                    copy to reflect actual structured process. */}
                 <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 pt-1 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1.5">
                     <Shield className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>100% Aman</span>
+                    <span>Prosedur Verifikasi Data Berstruktur</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-primary" />
-                    <span>Proses 15-30 menit</span>
+                    <span>Estimasi Waktu Setelah Verifikasi</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                    <span>Rating Pelanggan</span>
-                  </div>
+                </div>
+
+                {/* Contextual internal links to service pillars — SEO Batch 1 */}
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-3 gap-y-1 pt-2 text-xs text-muted-foreground">
+                  <span className="font-medium">Layanan kami:</span>
+                  <Link
+                    href="/pencairan-kartu-kredit"
+                    className="text-primary hover:text-primary/80 hover:underline underline-offset-4 transition-colors"
+                  >
+                    Pencairan Limit Kartu Kredit
+                  </Link>
+                  <span aria-hidden="true">·</span>
+                  <Link
+                    href="/pencairan-paylater"
+                    className="text-primary hover:text-primary/80 hover:underline underline-offset-4 transition-colors"
+                  >
+                    Pencairan Limit Paylater
+                  </Link>
                 </div>
               </div>
 
@@ -382,20 +423,34 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                   className="hero-card-wrapper relative w-full max-w-[260px] sm:max-w-[340px] lg:max-w-[380px]"
                   style={{ perspective: '1000px' }}
                   onMouseMove={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const x = ((e.clientX - rect.left) / rect.width) * 100;
-                    const y = ((e.clientY - rect.top) / rect.height) * 100;
-                    const rotateX = ((y - 50) / 50) * -8;
-                    const rotateY = ((x - 50) / 50) * 8;
-                    setCardSpotlight({
-                      background: `radial-gradient(circle at ${x}% ${y}%, oklch(0.7 0.2 300 / 0.12) 0%, transparent 60%)`,
-                    });
-                    setCardTilt({
-                      transform: `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`,
-                      transition: 'transform 0.1s ease-out',
+                    // Homepage Mobile Performance correction: throttle mousemove
+                    // via rAF to avoid forced layout (getBoundingClientRect) +
+                    // double state update on every mousemove event. Only the
+                    // latest rect per frame is read; intermediate events are
+                    // coalesced. Reduced-motion users get a no-op.
+                    if (cardTiltRafRef.current !== null) return;
+                    const ev = e;
+                    cardTiltRafRef.current = requestAnimationFrame(() => {
+                      cardTiltRafRef.current = null;
+                      const rect = ev.currentTarget.getBoundingClientRect();
+                      const x = ((ev.clientX - rect.left) / rect.width) * 100;
+                      const y = ((ev.clientY - rect.top) / rect.height) * 100;
+                      const rotateX = ((y - 50) / 50) * -8;
+                      const rotateY = ((x - 50) / 50) * 8;
+                      setCardSpotlight({
+                        background: `radial-gradient(circle at ${x}% ${y}%, oklch(0.7 0.2 300 / 0.12) 0%, transparent 60%)`,
+                      });
+                      setCardTilt({
+                        transform: `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`,
+                        transition: 'transform 0.1s ease-out',
+                      });
                     });
                   }}
                   onMouseLeave={() => {
+                    if (cardTiltRafRef.current !== null) {
+                      cancelAnimationFrame(cardTiltRafRef.current);
+                      cardTiltRafRef.current = null;
+                    }
                     setCardSpotlight({ background: 'transparent' });
                     setCardTilt({
                       transform: 'rotateX(0deg) rotateY(0deg) scale(1)',
@@ -432,7 +487,20 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                           <div className="flex items-center gap-1.5">
                             {config.logoUrl && !logoError ? (
                               <div className="w-8 h-8 rounded-md overflow-hidden">
-                                <img src={config.logoUrl} alt="" width={32} height={32} className="w-full h-full object-contain" onError={() => setLogoError(true)} />
+                                {/* Homepage Mobile Performance correction: above-fold
+                                    logo — eager + fetchPriority high to avoid delaying
+                                    LCP-adjacent paint. Explicit width/height prevents CLS. */}
+                                <img
+                                  src={config.logoUrl}
+                                  alt=""
+                                  width={32}
+                                  height={32}
+                                  loading="eager"
+                                  decoding="async"
+                                  fetchPriority="high"
+                                  className="w-full h-full object-contain"
+                                  onError={() => setLogoError(true)}
+                                />
                               </div>
                             ) : (
                               <div className="w-8 h-8 rounded-md gradient-primary flex items-center justify-center">
@@ -504,12 +572,15 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
           {/* Bottom fade edge */}
           <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent z-[1]" />
           <FadeInSection className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-[2] py-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 max-w-4xl mx-auto">
+            {/* SEO Batch 1: removed the 'Rating' stat card (index 3) because
+                the 5★ value was a fabricated metric with no verified
+                testimonial source. Grid reduced to 3 cols to preserve
+                layout parity without leaving an empty cell. */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 max-w-4xl mx-auto">
               {[
                 { label: 'Transaksi', icon: CreditCard, target: 10000 },
                 { label: 'Sukses Rate', icon: TrendingUp, target: 99 },
                 { label: 'Support', icon: Clock, target: 24 },
-                { label: 'Rating', icon: Star, target: 5 },
               ].map((stat, i) => (
                 <Card key={i} className={`group relative overflow-hidden bg-background/60 backdrop-blur-sm border-border/20 py-0 gap-0 rounded-xl stat-card-hover ${i < 3 ? 'stat-card-divider' : ''}`}>
                   <div className="absolute top-0 left-4 right-4 h-0.5 w-0 group-hover:w-full bg-gradient-to-r from-primary/40 to-fuchsia-500/40 transition-all duration-500 rounded-full" />
@@ -590,7 +661,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                         >
                           {isFirstOriginal && (
                             <span className="px-2 py-0.5 rounded-full gradient-primary text-white text-[10px] font-bold shadow-sm whitespace-nowrap flex-shrink-0">
-                              Rate terbaik!
+                              Simulasi Biaya
                             </span>
                           )}
                           {hasLogo ? (
@@ -686,7 +757,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                 Layanan Lengkap untuk Anda
               </h2>
               <p className="text-sm text-muted-foreground max-w-lg mx-auto leading-relaxed mb-2">
-                Kami menyediakan berbagai layanan gestun dengan proses cepat dan aman.
+                Kami menyediakan berbagai layanan pencairan limit dengan proses yang terstruktur.
               </p>
             </div>
 
@@ -698,31 +769,31 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                 {
                   icon: CreditCard,
                   title: 'Kartu Kredit',
-                  description: 'Gestun semua jenis kartu kredit — Visa, Mastercard, JCB. Rate terbaik, proses cepat, dan dana langsung cair ke rekening Anda.',
+                  description: 'Layanan pencairan limit kartu kredit untuk berbagai jenis kartu yang terdaftar. Biaya ditampilkan di kalkulator sebelum Anda melanjutkan.',
                   accent: 'from-primary to-purple-500',
                   iconBg: 'bg-gradient-to-br from-primary/10 to-purple-500/10',
                   iconColor: 'text-primary',
-                  tags: ['Visa', 'Mastercard', 'JCB', 'BCA', 'BNI', 'Mandiri'],
+                  tags: ['Pencairan Online', 'Verifikasi Data'],
                   tagStyle: 'bg-muted/80 text-muted-foreground',
                 },
                 {
                   icon: Wallet,
                   title: 'Paylater',
-                  description: 'Tarik dana dari GoPay Paylater, Shopee Paylater, Akulaku, dan berbagai paylater lainnya dengan mudah.',
+                  description: 'Pencairan limit dari berbagai provider paylater yang aktif terdaftar. Daftar provider dapat dilihat di kalkulator biaya.',
                   accent: 'from-fuchsia-500 to-pink-500',
                   iconBg: 'bg-gradient-to-br from-fuchsia-500/10 to-pink-500/10',
                   iconColor: 'text-fuchsia-500',
-                  tags: ['GoPay', 'Shopee', 'Akulaku'],
+                  tags: ['Provider Aktif', 'Biaya Transparan'],
                   tagStyle: 'bg-fuchsia-500/5 text-fuchsia-500/80 border border-fuchsia-500/10',
                 },
                 {
                   icon: Shield,
-                  title: 'Aman & Terpercaya',
-                  description: 'Transaksi dilindungi sistem tracking real-time. Proses transparan dan terpercaya.',
+                  title: 'Verifikasi & Tracking',
+                  description: 'Setiap permintaan melewati prosedur verifikasi data berstruktur. Status transaksi dapat dipantau melalui sistem tracking order.',
                   accent: 'from-emerald-500 to-teal-500',
                   iconBg: 'bg-gradient-to-br from-emerald-500/10 to-teal-500/10',
                   iconColor: 'text-emerald-500',
-                  tags: ['Tracking Real-time', 'Proses Andal', '<30 Menit'],
+                  tags: ['Tracking Real-time', 'Verifikasi Data', 'Setelah Verifikasi'],
                   tagStyle: 'bg-emerald-500/5 text-emerald-500/80 border border-emerald-500/10',
                 },
               ].map((f, i) => (
@@ -760,25 +831,25 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                 {
                   icon: CreditCard,
                   title: 'Kartu Kredit',
-                  description: 'Gestun semua jenis kartu kredit — Visa, Mastercard, JCB. Rate terbaik dan proses cepat.',
+                  description: 'Layanan pencairan limit kartu kredit untuk berbagai jenis kartu yang terdaftar. Biaya dapat dilihat di kalkulator.',
                   iconBg: 'bg-gradient-to-br from-primary/10 to-purple-500/10', iconColor: 'text-primary',
-                  tags: ['Visa', 'Mastercard', 'JCB'],
+                  tags: ['Pencairan Online', 'Verifikasi Data'],
                   tagStyle: 'bg-muted/80 text-muted-foreground',
                 },
                 {
                   icon: Wallet,
                   title: 'Paylater',
-                  description: 'Tarik dana dari GoPay, Shopee, Akulaku, dan paylater lainnya.',
+                  description: 'Pencairan limit dari provider paylater yang aktif terdaftar.',
                   iconBg: 'bg-gradient-to-br from-fuchsia-500/10 to-pink-500/10', iconColor: 'text-fuchsia-500',
-                  tags: ['GoPay', 'Shopee', 'Akulaku'],
+                  tags: ['Provider Aktif', 'Biaya Transparan'],
                   tagStyle: 'bg-fuchsia-500/5 text-fuchsia-500/80 border border-fuchsia-500/10',
                 },
                 {
                   icon: Shield,
-                  title: 'Aman & Terpercaya',
-                  description: 'Tracking real-time, proses transparan.',
+                  title: 'Verifikasi & Tracking',
+                  description: 'Prosedur verifikasi data berstruktur dan tracking order.',
                   iconBg: 'bg-gradient-to-br from-emerald-500/10 to-teal-500/10', iconColor: 'text-emerald-500',
-                  tags: ['Tracking Real-time', 'Proses Andal'],
+                  tags: ['Tracking Real-time', 'Verifikasi Data'],
                   tagStyle: 'bg-emerald-500/5 text-emerald-500/80 border border-emerald-500/10',
                 },
               ].map((f, i) => (
@@ -917,11 +988,12 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         <div className="relative py-6 bg-gradient-to-r from-primary/[0.02] via-fuchsia-500/[0.015] to-primary/[0.02] border-y border-primary/[0.05]">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10">
+              {/* SEO Batch 1: removed the 'Rating Pelanggan' trust
+                  indicator (no verified review source). */}
               {[
                 { icon: Shield, label: 'SSL Secured', sub: 'Enkripsi 256-bit' },
-                { icon: Clock, label: 'Proses Instan', sub: '15-30 menit' },
+                { icon: Clock, label: 'Proses Instan', sub: 'Setelah verifikasi' },
                 { icon: Users, label: 'Pelanggan Terpercaya', sub: 'Layanan aktif' },
-                { icon: Star, label: 'Rating Pelanggan', sub: 'Berdasarkan ulasan' },
                 { icon: Zap, label: '24/7 Support', sub: 'Siap membantu' },
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-2.5 group">
@@ -949,7 +1021,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                 <span className="bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">Kami?</span>
               </h2>
               <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
-                Kami berkomitmen memberikan layanan terbaik untuk setiap transaksi Anda.
+                Kami berkomitmen memberikan layanan yang terstruktur untuk setiap transaksi Anda.
               </p>
             </div>
 
@@ -958,20 +1030,20 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
               {[
                 {
                   num: '01',
-                  title: 'Rate Terbaik',
-                  description: 'Dapatkan rate gestun paling kompetitif di pasar. Kami menjamin harga terbaik untuk setiap transaksi Anda.',
+                  title: 'Biaya Transparan',
+                  description: 'Simulasi biaya layanan ditampilkan secara terbuka di kalkulator sebelum Anda melanjutkan. Setiap komponen biaya dapat dilihat di awal.',
                   gradient: 'from-primary to-purple-500',
                 },
                 {
                   num: '02',
                   title: 'Proses Instan',
-                  description: 'Dana cair ke rekening Anda dalam waktu 15-30 menit. Tidak perlu menunggu lama.',
+                  description: 'Pencairan ke rekening Anda diproses setelah verifikasi data selesai. Estimasi waktu akan diberikan setelah verifikasi.',
                   gradient: 'from-fuchsia-500 to-pink-500',
                 },
                 {
                   num: '03',
-                  title: 'Aman 100%',
-                  description: 'Semua transaksi dilindungi sistem keamanan berlapis. Data Anda tersimpan aman dan terenkripsi.',
+                  title: 'Verifikasi Berstruktur',
+                  description: 'Setiap permintaan melewati prosedur verifikasi data berstruktur sebelum diproses lebih lanjut.',
                   gradient: 'from-emerald-500 to-teal-500',
                 },
                 {
@@ -1007,119 +1079,14 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
         <TestimonialsSection />
 
         {/* ==================== FAQ SECTION ==================== */}
-        {faqs.length > 0 && (
-          <section className="relative py-12 md:py-20 bg-muted/30 below-fold-auto">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-              {/* Section Header */}
-              <div className="text-center mb-8">
-                <p className="text-sm font-medium text-primary mb-3">FAQ</p>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 section-header-underline">
-                  Pertanyaan yang Sering Diajukan
-                </h2>
-                <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed mb-6">
-                  Temukan jawaban untuk pertanyaan umum tentang layanan kami.
-                </p>
-
-                {/* Category Filter Tabs */}
-                <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
-                  {faqCategories.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => { setActiveFaqCategory(cat); setAllFaqOpen(false); }}
-                      className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
-                        activeFaqCategory === cat
-                          ? 'gradient-primary text-white shadow-md shadow-primary/20'
-                          : 'bg-background border border-border/60 text-muted-foreground hover:border-primary/30 hover:text-primary'
-                      }`}
-                    >
-                      {cat === 'semua' ? 'Semua' : cat.charAt(0).toUpperCase() + cat.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Desktop: 2-column grid */}
-              <div className="hidden md:grid md:grid-cols-2 gap-4 max-w-5xl mx-auto">
-                {filteredFaqs.map((faq, index) => (
-                  <Card key={faq.id} className="faq-card-hover border-border/50 bg-background py-0 gap-0 overflow-hidden">
-                    <Accordion
-                      key={`${String(allFaqOpen)}-${activeFaqCategory}`}
-                      type={allFaqOpen ? 'multiple' : 'single'}
-                      collapsible
-                      defaultValue={allFaqOpen ? [faq.id] : undefined}
-                      className="w-full"
-                    >
-                      <AccordionItem value={faq.id} className="border-none">
-                        <AccordionTrigger className="faq-trigger text-left text-sm font-medium hover:text-primary hover:no-underline transition-colors duration-200 py-4 px-5 gap-3">
-                          <div className="flex items-start gap-3 text-left">
-                            <span className="mt-0.5 w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary">
-                              {String(index + 1).padStart(2, '0')}
-                            </span>
-                            <span className="leading-snug">{faq.question}</span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="text-muted-foreground text-sm leading-relaxed px-5 pb-4 pl-[3.25rem]">
-                          {faq.answer}
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Mobile: single column */}
-              <div className="md:hidden max-w-2xl mx-auto space-y-3">
-                {filteredFaqs.map((faq, index) => (
-                  <Card key={faq.id} className="faq-card-hover border-border/50 bg-background py-0 gap-0 overflow-hidden">
-                    <Accordion
-                      key={`${String(allFaqOpen)}-${activeFaqCategory}`}
-                      type={allFaqOpen ? 'multiple' : 'single'}
-                      collapsible
-                      defaultValue={allFaqOpen ? [faq.id] : undefined}
-                      className="w-full"
-                    >
-                      <AccordionItem value={faq.id} className="border-none">
-                        <AccordionTrigger className="faq-trigger text-left text-sm font-medium hover:text-primary hover:no-underline transition-colors duration-200 py-4 px-5 gap-3">
-                          <div className="flex items-start gap-3 text-left">
-                            <span className="mt-0.5 w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary">
-                              {String(index + 1).padStart(2, '0')}
-                            </span>
-                            <span className="leading-snug">{faq.question}</span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="text-muted-foreground text-sm leading-relaxed px-5 pb-4 pl-[3.25rem]">
-                          {faq.answer}
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Bottom help text — Still have questions CTA */}
-              <div className="mt-8 text-center">
-                <p className="text-sm text-muted-foreground mb-3">
-                  Masih ada pertanyaan?{' '}
-                </p>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="rounded-xl px-6 h-10 text-sm font-medium border-primary/30 text-primary hover:bg-primary hover:text-white transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <a
-                    href={config.footerWhatsapp ? `https://wa.me/${config.footerWhatsapp}` : '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => trackEvent('click_wa', { page_path: '/', page_type: 'landing_hero' })}
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    Tanyakan via WhatsApp
-                  </a>
-                </Button>
-              </div>
-            </div>
-          </section>
-        )}
+        {/* Homepage Mobile Performance correction: FAQ section extracted to a
+            dynamic component (faq-section.tsx) so @radix-ui/react-accordion
+            (~14 KB) is deferred out of the main client chunk. FAQ Q&A remain
+            in the initial SSR HTML because the parent passes `faqs` as props. */}
+        <FaqSection
+          faqs={faqs}
+          whatsappUrl={config.footerWhatsapp ? `https://wa.me/${config.footerWhatsapp}` : '#'}
+        />
 
         {/* Section Divider */}
         <div className="section-divider" />
@@ -1247,7 +1214,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                     feature: 'Proses',
                     icon: Clock,
                     others: '1–3 hari',
-                    ours: '15–30 menit',
+                    ours: 'Setelah verifikasi',
                   },
                   {
                     feature: 'Rate Fee',
@@ -1319,7 +1286,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                     </span>
                   </h2>
                   <p className="text-muted-foreground text-base leading-relaxed">
-                    Proses cepat, rate terbaik, dan dana langsung cair. Ribuan pelanggan telah membuktikan.
+                    Prosedur verifikasi data berstruktur, biaya ditampilkan di kalkulator, dan status transaksi dapat dipantau melalui tracking order.
                   </p>
                 </div>
 

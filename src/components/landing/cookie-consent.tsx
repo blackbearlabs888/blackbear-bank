@@ -19,14 +19,19 @@ function getInitialVisibility(): boolean {
   return !localStorage.getItem(CONSENT_STORAGE_KEY);
 }
 
-// Only show on public pages: landing, blog, lokasi, FAQ
+// Only show on public pages: landing, blog, lokasi, FAQ, pencairan-* pillar routes
+// (SEO Batch 1 QA correction #1: extend coverage to /pencairan-kartu-kredit
+//  and /pencairan-paylater so GA4 consent + conversion attribution works for
+//  visitors landing directly on the pillars from Google. Consent semantics
+//  unchanged — only the predicate list is extended.)
 function isPublicPage(pathname: string | null): boolean {
   if (!pathname) return false;
   return (
     pathname === '/' ||
     pathname === '/faq' ||
     pathname.startsWith('/blog') ||
-    pathname.startsWith('/lokasi')
+    pathname.startsWith('/lokasi') ||
+    pathname.startsWith('/pencairan-')
   );
 }
 

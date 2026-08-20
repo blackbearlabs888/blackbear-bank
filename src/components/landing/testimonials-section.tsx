@@ -15,16 +15,12 @@ interface PublicTestimonial {
   paymentType: string;
 }
 
-const fallbackTestimonials: PublicTestimonial[] = [
-  { rating: 5, review: 'Proses sangat cepat dan transparan! Dana langsung masuk ke rekening saya.', customerName: 'J***', createdAt: new Date(Date.now() - 86400000).toISOString(), nominal: 5000000, paymentType: 'Kartu Kredit' },
-  { rating: 5, review: 'Sudah beberapa kali pakai layanan ini, selalu memuaskan. Recommended!', customerName: 'A****', createdAt: new Date(Date.now() - 172800000).toISOString(), nominal: 3000000, paymentType: 'Paylater' },
-  { rating: 4, review: 'Pelayanan ramah dan profesional. Tracking real-time sangat membantu.', customerName: 'R****', createdAt: new Date(Date.now() - 259200000).toISOString(), nominal: 10000000, paymentType: 'Kartu Kredit' },
-  { rating: 5, review: 'Rate terbaik dibanding yang lain. Pasti langganan!', customerName: 'D******', createdAt: new Date(Date.now() - 345600000).toISOString(), nominal: 7500000, paymentType: 'Gestun' },
-  { rating: 5, review: 'Aman dan terpercaya. Tidak ada biaya tersembunyi.', customerName: 'S*******', createdAt: new Date(Date.now() - 432000000).toISOString(), nominal: 2000000, paymentType: 'Paylater' },
-  { rating: 4, review: 'CS responsif, proses cepat. Top banget!', customerName: 'M****', createdAt: new Date(Date.now() - 518400000).toISOString(), nominal: 8000000, paymentType: 'Kartu Kredit' },
-  { rating: 5, review: 'Sudah recommendation ke teman-teman. Semua puas!', customerName: 'B****', createdAt: new Date(Date.now() - 604800000).toISOString(), nominal: 4500000, paymentType: 'COD' },
-  { rating: 5, review: 'Gampang banget prosesnya, tinggal order duduk manis dana langsung cair.', customerName: 'T****', createdAt: new Date(Date.now() - 691200000).toISOString(), nominal: 6000000, paymentType: 'Paylater' },
-];
+// SEO Batch 1 QA correction #2: removed the hardcoded `fallbackTestimonials`
+// array entirely. Customer reviews must originate from verified DB records
+// (Testimonial table rows with isApproved=true via /api/testimonials/public).
+// When the DB returns zero approved testimonials, the entire section is hidden
+// via the `loaded && testimonials.length === 0` guard below — no fabricated
+// names, quotes, ratings, or star-distribution bars are ever rendered.
 
 function TestimonialCard({ t }: { t: PublicTestimonial }) {
   return (
@@ -240,7 +236,7 @@ function StarRatingBars({ distribution }: { distribution: { stars: number; perce
 }
 
 export default function TestimonialsSection() {
-  const [testimonials, setTestimonials] = useState<PublicTestimonial[]>(fallbackTestimonials);
+  const [testimonials, setTestimonials] = useState<PublicTestimonial[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -248,11 +244,14 @@ export default function TestimonialsSection() {
       try {
         const res = await fetch('/api/testimonials/public');
         const data = await res.json();
-        if (data.success && data.data && data.data.length > 0) {
+        // Set whatever the API returned (DB rows or empty array). No fallback
+        // data is ever injected client-side. When `data.data` is empty, the
+        // `loaded && testimonials.length === 0` guard below hides the section.
+        if (data.success && Array.isArray(data.data)) {
           setTestimonials(data.data);
         }
       } catch {
-        // Use fallback
+        // Network/parse error — leave testimonials as [] (empty state).
       } finally {
         setLoaded(true);
       }
@@ -264,18 +263,9 @@ export default function TestimonialsSection() {
   const row1 = testimonials.slice(0, mid);
   const row2 = testimonials.slice(mid);
 
+  // Neutral empty state: when the DB has zero approved testimonials (or the
+  // API failed), hide the entire section. No fabricated names/quotes/ratings.
   if (loaded && testimonials.length === 0) return null;
-
-  const ensureMin = (arr: PublicTestimonial[]): PublicTestimonial[] => {
-    if (arr.length < 3) {
-      const padded = [...arr];
-      while (padded.length < 3) {
-        padded.push(arr[padded.length % arr.length] || fallbackTestimonials[padded.length % fallbackTestimonials.length]);
-      }
-      return padded;
-    }
-    return arr;
-  };
 
   // Compute a real aggregate from the testimonial set we actually have.
   // We do NOT publish a hardcoded rating/review count — that would be a fake
@@ -346,8 +336,8 @@ export default function TestimonialsSection() {
 
       {/* Auto-scrolling marquee rows (all screen sizes) */}
       <div className="space-y-4">
-        <ScrollingRow testimonials={ensureMin(row1)} speed={45} />
-        <ScrollingRow testimonials={ensureMin(row2)} reverse speed={50} />
+        <ScrollingRow testimonials={row1} speed={45} />
+        <ScrollingRow testimonials={row2} reverse speed={50} />
       </div>
 
       <style jsx global>{`

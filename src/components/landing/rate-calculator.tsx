@@ -210,7 +210,10 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                         setShowResults(false);
                       }}
                     >
-                      <SelectTrigger className="w-full h-12 rounded-xl border-2 border-border/60 bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                      <SelectTrigger
+                        aria-label="Pilih jenis pembayaran"
+                        className="w-full h-12 rounded-xl border-2 border-border/60 bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                      >
                         <SelectValue placeholder="Pilih jenis pembayaran..." />
                       </SelectTrigger>
                       <SelectContent className="max-h-64 overflow-y-auto">

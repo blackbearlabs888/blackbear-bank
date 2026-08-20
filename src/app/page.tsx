@@ -5,15 +5,14 @@ import LandingPage from '@/components/landing/landing-page';
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
 
 export const metadata: Metadata = {
-  title: 'Jasa Gestun & Tarik Tunai Kartu Kredit - Proses Cepat Aman',
-  description: 'Layanan tarik tunai kartu kredit dan paylater terpercaya di Indonesia. Gestun BCA, Mandiri, BRI, GoPay Paylater, Shopee Paylater. Proses 15-30 menit, fee transparan, dana langsung cair.',
+  title: 'Layanan Pencairan Limit Kartu Kredit & Paylater Online | Black Bear',
+  description: 'Layanan pencairan limit kartu kredit dan paylater secara online. Simulasi biaya tersedia di kalkulator, prosedur verifikasi data berstruktur, dan status transaksi dapat dipantau melalui sistem tracking order.',
   keywords: [
-    'jasa gestun', 'tarik tunai kartu kredit', 'gestun online', 'gestun aman',
-    'tarik tunai BCA', 'tarik tunai Mandiri', 'gestun BRI', 'gestun BNI',
-    'GoPay Paylater gestun', 'Shopee Paylater gestun', 'Akulaku gestun',
+    'pencairan limit kartu kredit', 'pencairan limit paylater', 'gestun online',
+    'tarik tunai kartu kredit', 'tarik tunai paylater', 'simulasi biaya gestun',
+    'jasa pencairan limit', 'pencairan limit online',
     'gestun Jakarta', 'gestun Surabaya', 'gestun Bandung',
-    'tarik tunai online', 'jasa tarik tunai terpercaya',
-    'gestun cepat', 'gestun murah', 'gestun 24 jam',
+    'tarik tunai online', 'kalkulator biaya gestun',
   ],
   alternates: {
     canonical: siteUrl,
