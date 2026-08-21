@@ -135,6 +135,33 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
     // Uses pt.minTransaction (active config) — NOT a hardcoded threshold.
     const meetsMinTransaction = pt.minTransaction <= 0 || nominal >= pt.minTransaction;
 
+    // P0 hotfix: compute the ACTUAL discount that would apply at minTransaction
+    // by re-running the shared calculateTransaction at the threshold nominal.
+    // This avoids showing "hemat Rp0" when the user is below the discount
+    // minimum — calculateTransaction returns discountAmount=0 there, so the
+    // old Math.max(onlineDiscountAmount, codDiscountAmount) was always 0.
+    // Mirrors calculateTransaction's percent-or-nominal exclusivity (never sums).
+    let potentialOnlineDiscount = 0;
+    let potentialCodDiscount = 0;
+    if (!meetsMinTransaction && pt.minTransaction > 0) {
+      const onlineAtMin = calculateTransaction({
+        nominal: pt.minTransaction,
+        paymentType: pt,
+        marketplace: null,
+        partner: null,
+        methodTransaction: 'Online',
+      });
+      const codAtMin = calculateTransaction({
+        nominal: pt.minTransaction,
+        paymentType: pt,
+        marketplace: null,
+        partner: null,
+        methodTransaction: 'COD',
+      });
+      potentialOnlineDiscount = onlineAtMin.discountAmount;
+      potentialCodDiscount = codAtMin.discountAmount;
+    }
+
     return {
       nominal,
       // Gross fee (before discount) — strikethrough when discount applies.
@@ -149,6 +176,10 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
       // Discount amounts from the shared calculator.
       onlineDiscountAmount: onlineCalc.discountAmount,
       codDiscountAmount: codCalc.discountAmount,
+      // Potential discount at minTransaction (P0 hotfix — used for the
+      // promotional hint so it never says "hemat Rp0").
+      potentialOnlineDiscount,
+      potentialCodDiscount,
       // Net fee (after discount) — what the customer actually pays.
       onlineDiscountedFee: onlineCalc.paymentFee,
       codDiscountedFee: codCalc.paymentFee,
@@ -371,20 +402,42 @@ export default function RateCalculator({ paymentTypes }: RateCalculatorProps) {
                       </p>
                     </div>
 
-                    {/* Discount recommendation when min not met */}
+                    {/* Discount recommendation when min not met — P0 hotfix:
+                        never says "hemat Rp0". Shows the actual configured
+                        discount value available at minTransaction. When
+                        potentialSavings <= 0, shows neutral availability copy. */}
                     {results.hasDiscount && !results.meetsMinTransaction && (
-                      <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-amber-500/8 border border-amber-500/20">
-                        <span className="text-base leading-none mt-0.5">💡</span>
-                        <p className="text-xs text-amber-700 dark:text-amber-400 font-medium leading-relaxed">
-                          Tambah nominal ke{' '}
-                          <span className="font-bold">Rp{formatCurrency(results.minTransaction)}</span>{' '}
-                          untuk hemat{' '}
-                          <span className="font-bold">
-                            Rp{formatCurrency(Math.max(results.onlineDiscountAmount, results.codDiscountAmount))}
-                          </span>{' '}
-                          lebih banyak!
-                        </p>
-                      </div>
+                      (() => {
+                        const potentialSavings = Math.max(
+                          results.potentialOnlineDiscount,
+                          results.potentialCodDiscount,
+                        );
+                        return (
+                          <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-amber-500/8 border border-amber-500/20">
+                            <span className="text-base leading-none mt-0.5">💡</span>
+                            <p className="text-xs text-amber-700 dark:text-amber-400 font-medium leading-relaxed">
+                              {potentialSavings > 0 ? (
+                                <>
+                                  Tambah nominal ke{' '}
+                                  <span className="font-bold">Rp{formatCurrency(results.minTransaction)}</span>{' '}
+                                  untuk hemat{' '}
+                                  <span className="font-bold">
+                                    Rp{formatCurrency(potentialSavings)}
+                                  </span>{' '}
+                                  lebih banyak!
+                                </>
+                              ) : (
+                                <>
+                                  Diskon{' '}
+                                  <span className="font-bold">{results.discountLabel}</span>{' '}
+                                  tersedia untuk transaksi mulai{' '}
+                                  <span className="font-bold">Rp{formatCurrency(results.minTransaction)}</span>.
+                                </>
+                              )}
+                            </p>
+                          </div>
+                        );
+                      })()
                     )}
 
                     {/* Mobile: stack vertically, Desktop: side by side */}

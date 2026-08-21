@@ -52,6 +52,7 @@ import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { CitySearch } from '@/components/ui/city-search';
+import { calculateTransaction } from '@/lib/transaction/fee';
 import { Suspense } from 'react';
 import { trackEvent } from '@/lib/analytics/track';
 import { amountBucket } from '@/lib/analytics/buckets';
@@ -897,18 +898,20 @@ function StepCalculation({
             {!calculation.meetsMin && calculation.ptMinTransaction > 0 && (() => {
               const pt = paymentTypes.find((p) => p.id === formData.paymentTypeId);
               if (!pt) return null;
-              const feePercent = formData.methodTransaction === 'Online' ? pt.onlineFeePercent : pt.codFeePercent;
-              const feeAtMin = (calculation.ptMinTransaction * feePercent) / 100;
-              let discountedFee = feeAtMin;
-              if (pt.discountPercent) {
-                discountedFee -= (feeAtMin * pt.discountPercent) / 100;
-              }
-              if (pt.discountNominal) {
-                discountedFee -= pt.discountNominal;
-              }
-              discountedFee = Math.max(0, discountedFee);
+              // P0 hotfix: use the shared calculateTransaction to compute the
+              // actual discount at minTransaction — mirrors percent-or-nominal
+              // exclusivity (never sums both). Previously this inline block
+              // subtracted BOTH discountPercent AND discountNominal, diverging
+              // from calculateTransaction and producing wrong potentialSavings.
+              const calcAtMin = calculateTransaction({
+                nominal: calculation.ptMinTransaction,
+                paymentType: pt as unknown as Parameters<typeof calculateTransaction>[0]['paymentType'],
+                marketplace: null,
+                partner: null,
+                methodTransaction: formData.methodTransaction === 'COD' ? 'COD' : 'Online',
+              });
               const extraNeeded = calculation.ptMinTransaction - nominal;
-              const potentialSavings = feeAtMin - discountedFee;
+              const potentialSavings = calcAtMin.discountAmount;
               return (
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 px-3 py-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">

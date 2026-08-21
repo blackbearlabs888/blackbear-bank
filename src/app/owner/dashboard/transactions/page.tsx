@@ -225,7 +225,15 @@ export default function OwnerTransactionsPage() {
         fetchAnalytics();
         setDetailOpen(false);
         setSelectedTransaction(null);
-      } else toast.error(data.error || 'Gagal');
+      } else {
+        // P0 hotfix: same toast.error(object) crash risk as confirmDelete —
+        // data.error is an object, not a string.
+        const errMsg =
+          typeof data.error === 'string'
+            ? data.error
+            : (data.error?.message || 'Gagal');
+        toast.error(errMsg);
+      }
     } catch (e) { toast.error('Gagal'); }
     finally { setUpdatingStatus(false); }
   };
@@ -241,7 +249,19 @@ export default function OwnerTransactionsPage() {
     if (!deletingTx) return;
     try {
       const res = await fetch(`/api/transactions/${deletingTx.id}`, { method: 'DELETE' });
-      const data = await res.json();
+      // P0 hotfix (delete client-side crash): the API error shape is
+      // `{ success: false, error: { code, message, requestId } }` — an OBJECT.
+      // Passing it to toast.error() crashed React ("Objects are not valid as a
+      // React child"). Also guard against empty/non-JSON responses (redirects,
+      // proxy 502, dev HMR races) that throw on res.json().
+      if (!res.ok) {
+        toast.error('Gagal menghapus transaksi');
+        setDeleteConfirmOpen(false);
+        setDeletingTx(null);
+        return;
+      }
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
       if (data.success) {
         toast.success('Transaksi berhasil dihapus');
         fetchTransactions();
@@ -249,7 +269,17 @@ export default function OwnerTransactionsPage() {
         setDetailOpen(false);
         setDeleteConfirmOpen(false);
         setDeletingTx(null);
-      } else toast.error(data.error || 'Gagal menghapus');
+        // Clear the dangling selectedTransaction reference (was missing —
+        // matched the updateStatus pattern at line 227).
+        setSelectedTransaction(null);
+      } else {
+        // Safely extract the message string from the apiError object shape.
+        const errMsg =
+          typeof data.error === 'string'
+            ? data.error
+            : (data.error?.message || 'Gagal menghapus transaksi');
+        toast.error(errMsg);
+      }
     } catch (e) {
       console.error('Delete error:', e);
       toast.error('Gagal menghapus transaksi');
@@ -1745,7 +1775,10 @@ function TxDetailDialogContent({ tx, onUpdate, onDelete, updating }: {
       }
     }
 
-    const newPaymentFee = originalPaymentFee - discountAmount;
+    // P0 hotfix: clamp final fee to >= 0 (mirrors calculateTransaction line 216).
+    // Previously this was `originalPaymentFee - discountAmount` with no clamp,
+    // which could go negative if discount > gross fee.
+    const newPaymentFee = Math.max(0, originalPaymentFee - discountAmount);
     const newTotalFee = newPaymentFee + originalPlatformFee;
     const newNetMargin = newPaymentFee - originalPlatformFee;
 
