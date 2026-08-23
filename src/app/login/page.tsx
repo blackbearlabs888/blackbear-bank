@@ -16,7 +16,7 @@ import {
   Lock, Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getErrorMessage } from '@/lib/get-error-message';
+import { getLoginErrorMessage, LOGIN_NETWORK_ERROR } from '@/lib/get-login-error-message';
 import { useSiteConfig } from '@/hooks/use-site-config';
 
 // Floating particle component
@@ -131,10 +131,10 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password, role }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
 
-      if (!response.ok || !data.success) {
-        setError(getErrorMessage(data.error, 'Email atau password salah'));
+      if (!response.ok || !data?.success) {
+        setError(getLoginErrorMessage(response.status, data?.error));
         setLoading(false);
         return;
       }
@@ -148,7 +148,7 @@ export default function LoginPage() {
         router.replace('/partner/dashboard');
       }
     } catch {
-      setError('Terjadi kesalahan. Silakan coba lagi.');
+      setError(LOGIN_NETWORK_ERROR);
       setLoading(false);
     }
   };

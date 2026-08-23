@@ -195,10 +195,9 @@ describe('getErrorMessage', () => {
       requestId: 'req_test_123',
     });
 
-    it('login wrong password → shows server message, NOT account-specific info', () => {
-      // Server returns specific message like 'Email tidak ditemukan' or 'Password salah'
-      // The login page ALWAYS uses 'Email atau password salah' as fallback to prevent
-      // account enumeration, but if server provides a safe message, that is shown instead.
+    it('getErrorMessage with login-like API error → extracts server message (generic fn)', () => {
+      // NOTE: This tests getErrorMessage in isolation. The login page uses
+      // getLoginErrorMessage() which overrides 401 to prevent enumeration.
       const serverMsg = 'Password salah';
       expect(getErrorMessage(apiError(serverMsg), 'Email atau password salah'))
         .toBe('Password salah');
@@ -210,7 +209,9 @@ describe('getErrorMessage', () => {
         .toBe('Email atau password salah');
     });
 
-    it('login never leaks requestId even with API object', () => {
+    it('getErrorMessage never leaks requestId even with API object', () => {
+      // NOTE: In the login 401 path, getLoginErrorMessage() bypasses this
+      // entirely — server message is never shown. This tests the generic fn.
       const result = getErrorMessage(
         { error: { code: 'UNAUTHENTICATED', message: 'Tidak terautentikasi', requestId: 'req_secret' } },
         'Email atau password salah',
