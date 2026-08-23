@@ -68,7 +68,7 @@ export function useSiteConfig() {
         setConfig(result.data);
         setError(null);
       } else {
-        setError(getErrorMessage(result.error, 'Failed to load config'));
+        setError(getErrorMessage(result.error, 'Gagal memuat konfigurasi'));
         setConfig(defaultConfig);
       }
     } catch (err) {

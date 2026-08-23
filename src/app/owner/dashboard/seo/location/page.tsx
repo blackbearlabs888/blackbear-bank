@@ -209,7 +209,7 @@ export default function LocationManagementPage() {
         setShowDialog(false);
         fetchLocations();
       } else {
-        toast.error(getErrorMessage(result.error, 'Gagal menyimpan location'));
+        toast.error(getErrorMessage(result.error, 'Gagal memproses data lokasi'));
       }
     } catch (error) {
       console.error('Save error:', error);
@@ -236,7 +236,7 @@ export default function LocationManagementPage() {
         setDeletingLocation(null);
         fetchLocations();
       } else {
-        toast.error(getErrorMessage(result.error, 'Gagal menghapus location'));
+        toast.error(getErrorMessage(result.error, 'Gagal memproses data lokasi'));
       }
     } catch (error) {
       console.error('Delete error:', error);
@@ -260,7 +260,7 @@ export default function LocationManagementPage() {
         toast.success(getErrorMessage(result.message, 'Berhasil'));
         fetchLocations();
       } else {
-        toast.error(getErrorMessage(result.error, 'Gagal sync lokasi'));
+        toast.error(getErrorMessage(result.error, 'Gagal memproses data lokasi'));
       }
     } catch (error) {
       console.error('Sync error:', error);

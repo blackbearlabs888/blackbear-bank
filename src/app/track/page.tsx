@@ -360,7 +360,7 @@ function TestimonialForm({
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        toast.error(getErrorMessage(data.error, 'Terjadi kesalahan'));
+        toast.error(getErrorMessage(data.error, 'Gagal memproses data tracking'));
         return;
       }
 

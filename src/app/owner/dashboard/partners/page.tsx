@@ -1253,7 +1253,7 @@ function EditPartnerDialog({
         onOpenChange(false);
         onSuccess();
       } else {
-        toast.error(getErrorMessage(result.error, 'Gagal memperbarui partner'));
+        toast.error(getErrorMessage(result.error, 'Gagal memperbarui data partner'));
       }
     } catch (err) {
       console.error('Failed to update partner:', err);
@@ -1496,7 +1496,7 @@ function NewPartnerDialog({ onCreated }: { onCreated: () => void }) {
           toast.error('Password sementara tidak diterima dari server. Hubungi admin.');
         }
       } else {
-        toast.error(getErrorMessage(result.error, 'Gagal membuat partner'));
+        toast.error(getErrorMessage(result.error, 'Gagal menambahkan data partner'));
       }
     } catch (err) {
       console.error('Failed to create partner:', err);

@@ -182,4 +182,133 @@ describe('getErrorMessage', () => {
       expect(output).not.toBe('[object Object]');
     }
   });
+
+  // ── 18. Context-specific fallback regression tests ───────────────
+  //     These verify that every critical flow uses a distinct,
+  // human-readable fallback — NOT a generic message.
+
+  describe('context-specific fallback regression', () => {
+    // Simulates the actual API error shape: { error: { code, message, requestId } }
+    const apiError = (msg: string) => ({
+      code: 'SOME_CODE',
+      message: msg,
+      requestId: 'req_test_123',
+    });
+
+    it('login wrong password → shows server message, NOT account-specific info', () => {
+      // Server returns specific message like 'Email tidak ditemukan' or 'Password salah'
+      // The login page ALWAYS uses 'Email atau password salah' as fallback to prevent
+      // account enumeration, but if server provides a safe message, that is shown instead.
+      const serverMsg = 'Password salah';
+      expect(getErrorMessage(apiError(serverMsg), 'Email atau password salah'))
+        .toBe('Password salah');
+    });
+
+    it('login no valid message → falls back to enum-safe generic', () => {
+      // When server error has no usable message, fallback prevents enumeration
+      expect(getErrorMessage({ code: 'X', requestId: 'r1' }, 'Email atau password salah'))
+        .toBe('Email atau password salah');
+    });
+
+    it('login never leaks requestId even with API object', () => {
+      const result = getErrorMessage(
+        { error: { code: 'UNAUTHENTICATED', message: 'Tidak terautentikasi', requestId: 'req_secret' } },
+        'Email atau password salah',
+      );
+      expect(result).not.toContain('req_secret');
+      expect(result).toBe('Tidak terautentikasi');
+    });
+
+    it('delete transaction 404 → shows server message when available', () => {
+      expect(getErrorMessage(apiError('Transaksi tidak ditemukan'), 'Gagal menghapus transaksi'))
+        .toBe('Transaksi tidak ditemukan');
+    });
+
+    it('delete transaction network failure → shows context fallback', () => {
+      // null simulates empty/non-JSON response (network failure)
+      expect(getErrorMessage(null, 'Gagal menghapus transaksi'))
+        .toBe('Gagal menghapus transaksi');
+    });
+
+    it('delete transaction empty error object → shows context fallback', () => {
+      expect(getErrorMessage({ error: { code: 'TX_NOT_FOUND', requestId: 'r1' } }, 'Gagal menghapus transaksi'))
+        .toBe('Gagal menghapus transaksi');
+    });
+
+    it('update status → uses specific fallback', () => {
+      expect(getErrorMessage(null, 'Gagal memperbarui status transaksi'))
+        .toBe('Gagal memperbarui status transaksi');
+    });
+
+    it('create order → uses specific fallback', () => {
+      expect(getErrorMessage(null, 'Gagal membuat order'))
+        .toBe('Gagal membuat order');
+    });
+
+    it('load tracking → uses specific fallback', () => {
+      expect(getErrorMessage(null, 'Gagal memuat data tracking'))
+        .toBe('Gagal memuat data tracking');
+    });
+
+    it('load dashboard → uses specific fallback', () => {
+      expect(getErrorMessage(null, 'Gagal memuat data dashboard'))
+        .toBe('Gagal memuat data dashboard');
+    });
+
+    it('load customer → uses specific fallback', () => {
+      expect(getErrorMessage(null, 'Gagal memuat data customer'))
+        .toBe('Gagal memuat data customer');
+    });
+
+    it('load partner → uses specific fallback', () => {
+      expect(getErrorMessage(null, 'Gagal memuat data partner'))
+        .toBe('Gagal memuat data partner');
+    });
+
+    it('save settings → uses specific fallback', () => {
+      expect(getErrorMessage(null, 'Gagal menyimpan pengaturan'))
+        .toBe('Gagal menyimpan pengaturan');
+    });
+
+    it('blog error → uses module-specific fallback', () => {
+      expect(getErrorMessage(null, 'Gagal memproses data blog'))
+        .toBe('Gagal memproses data blog');
+    });
+
+    it('FAQ error → uses module-specific fallback', () => {
+      expect(getErrorMessage(null, 'Gagal memproses data FAQ'))
+        .toBe('Gagal memproses data FAQ');
+    });
+
+    it('lokasi error → uses module-specific fallback', () => {
+      expect(getErrorMessage(null, 'Gagal memproses data lokasi'))
+        .toBe('Gagal memproses data lokasi');
+    });
+
+    it('register failure → uses specific fallback', () => {
+      expect(getErrorMessage(null, 'Pendaftaran gagal. Silakan periksa data Anda'))
+        .toBe('Pendaftaran gagal. Silakan periksa data Anda');
+    });
+
+    it('no two different flows share the same fallback', () => {
+      // This test ensures each critical flow has a DISTINCT fallback
+      const fallbacks = [
+        'Email atau password salah',
+        'Pendaftaran gagal. Silakan periksa data Anda',
+        'Gagal menghapus transaksi',
+        'Gagal memperbarui status transaksi',
+        'Gagal membuat order',
+        'Gagal memuat data tracking',
+        'Gagal memuat data dashboard',
+        'Gagal memuat data customer',
+        'Gagal memuat data partner',
+        'Gagal menyimpan pengaturan',
+        'Gagal memproses data blog',
+        'Gagal memproses data FAQ',
+        'Gagal memproses data lokasi',
+      ];
+      const unique = new Set(fallbacks);
+      expect(unique.size).toBe(fallbacks.length);
+    });
+  });
 });

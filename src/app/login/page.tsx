@@ -134,7 +134,7 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        setError(getErrorMessage(data.error, 'Login gagal'));
+        setError(getErrorMessage(data.error, 'Email atau password salah'));
         setLoading(false);
         return;
       }

@@ -733,7 +733,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
           toast.success('Customer berhasil ditambahkan');
         }
       } else {
-        toast.error(getErrorMessage(result.error, 'Gagal menambahkan customer'));
+        toast.error(getErrorMessage(result.error, 'Gagal menambahkan data customer'));
       }
     } catch (err) {
       console.error('Failed to create customer:', err);

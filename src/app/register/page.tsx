@@ -249,7 +249,7 @@ export default function RegisterPage() {
       }
 
       if (!response.ok || !data.success) {
-        setError(getErrorMessage(data.error, 'Registrasi gagal'));
+        setError(getErrorMessage(data.error, 'Pendaftaran gagal. Silakan periksa data Anda'));
         setLoading(false);
         return;
       }

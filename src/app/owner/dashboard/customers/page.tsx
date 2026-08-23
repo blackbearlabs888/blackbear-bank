@@ -1058,7 +1058,7 @@ function CustomerActionsDialogContent({
         toast.success('Customer berhasil diperbarui');
         onUpdated();
       } else {
-        setError(getErrorMessage(result.error, 'Gagal memperbarui customer'));
+        setError(getErrorMessage(result.error, 'Gagal memperbarui data customer'));
       }
     } catch (err) {
       console.error('Failed to update customer:', err);
@@ -1109,7 +1109,7 @@ function CustomerActionsDialogContent({
         toast.success(newLabel === 'Blacklist' ? 'Customer ditambahkan ke blacklist' : 'Customer dihapus dari blacklist');
         onUpdated();
       } else {
-        setError(getErrorMessage(result.error, 'Gagal mengubah status blacklist'));
+        setError(getErrorMessage(result.error, 'Gagal mengubah status customer'));
       }
     } catch (err) {
       console.error('Failed to toggle blacklist:', err);
@@ -1500,7 +1500,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
           toast.success('Customer berhasil ditambahkan');
         }
       } else {
-        toast.error(getErrorMessage(result.error, 'Gagal menambahkan customer'));
+        toast.error(getErrorMessage(result.error, 'Gagal menambahkan data customer'));
       }
     } catch (err) {
       console.error('Failed to create customer:', err);

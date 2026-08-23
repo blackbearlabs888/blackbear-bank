@@ -712,7 +712,7 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
         setCustomBankName('');
         setForm({ customerId: '', customerName: '', customerPhone: '', customerCity: '', customerBankName: '', customerBankAccount: '', customerBankHolder: '', nominal: '', paymentTypeId: '', methodTransaction: 'Online' });
         toast.success('Transaksi dibuat (Status: Process)');
-      } else toast.error(getErrorMessage(d.error, 'Gagal'));
+      } else toast.error(getErrorMessage(d.error, 'Gagal membuat transaksi'));
     } catch (e) { toast.error('Gagal'); }
     finally { setLoading(false); }
   };

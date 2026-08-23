@@ -162,7 +162,7 @@ export default function PartnerDashboardPage() {
       if (result.success) {
         setData(result.data);
       } else {
-        setError(getErrorMessage(result.error, 'Gagal memuat data'));
+        setError(getErrorMessage(result.error, 'Gagal memuat data dashboard'));
       }
     } catch {
       setError('Terjadi kesalahan');

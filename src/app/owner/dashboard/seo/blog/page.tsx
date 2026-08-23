@@ -383,7 +383,7 @@ export default function BlogManagementPage() {
         setShowDialog(false);
         fetchPosts();
       } else {
-        toast.error(getErrorMessage(result.error, 'Gagal menyimpan blog post'));
+        toast.error(getErrorMessage(result.error, 'Gagal memproses data blog'));
       }
     } catch (error) {
       console.error('Save error:', error);
@@ -405,7 +405,7 @@ export default function BlogManagementPage() {
         setDeletingPost(null);
         fetchPosts();
       } else {
-        toast.error(getErrorMessage(result.error, 'Gagal menghapus blog post'));
+        toast.error(getErrorMessage(result.error, 'Gagal memproses data blog'));
       }
     } catch (error) {
       console.error('Delete error:', error);

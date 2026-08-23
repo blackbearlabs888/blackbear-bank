@@ -191,7 +191,7 @@ export default function FAQManagementPage() {
         setShowDialog(false);
         fetchFaqs();
       } else {
-        toast.error(getErrorMessage(result.error, 'Gagal menyimpan FAQ'));
+        toast.error(getErrorMessage(result.error, 'Gagal memproses data FAQ'));
       }
     } catch (error) {
       console.error('Save error:', error);
@@ -218,7 +218,7 @@ export default function FAQManagementPage() {
         setDeletingFaq(null);
         fetchFaqs();
       } else {
-        toast.error(getErrorMessage(result.error, 'Gagal menghapus FAQ'));
+        toast.error(getErrorMessage(result.error, 'Gagal memproses data FAQ'));
       }
     } catch (error) {
       console.error('Delete error:', error);
