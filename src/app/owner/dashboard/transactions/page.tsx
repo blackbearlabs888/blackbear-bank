@@ -33,6 +33,7 @@ import {
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 interface AnalyticsData {
   forecast: {
@@ -226,13 +227,7 @@ export default function OwnerTransactionsPage() {
         setDetailOpen(false);
         setSelectedTransaction(null);
       } else {
-        // P0 hotfix: same toast.error(object) crash risk as confirmDelete —
-        // data.error is an object, not a string.
-        const errMsg =
-          typeof data.error === 'string'
-            ? data.error
-            : (data.error?.message || 'Gagal');
-        toast.error(errMsg);
+        toast.error(getErrorMessage(data.error, 'Gagal'));
       }
     } catch (e) { toast.error('Gagal'); }
     finally { setUpdatingStatus(false); }
@@ -273,12 +268,7 @@ export default function OwnerTransactionsPage() {
         // matched the updateStatus pattern at line 227).
         setSelectedTransaction(null);
       } else {
-        // Safely extract the message string from the apiError object shape.
-        const errMsg =
-          typeof data.error === 'string'
-            ? data.error
-            : (data.error?.message || 'Gagal menghapus transaksi');
-        toast.error(errMsg);
+        toast.error(getErrorMessage(data.error, 'Gagal menghapus transaksi'));
       }
     } catch (e) {
       console.error('Delete error:', e);
@@ -1286,7 +1276,7 @@ function NewTxDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenC
         setCustomBankName('');
         setForm({ customerId: '', customerName: '', customerPhone: '', customerCity: '', customerBankName: '', customerBankAccount: '', customerBankHolder: '', nominal: '', paymentTypeId: '', methodTransaction: 'Online', marketplaceId: '', partnerId: '' });
         toast.success('Transaksi dibuat (Status: Process)');
-      } else toast.error(d.error || 'Gagal');
+      } else toast.error(getErrorMessage(d.error, 'Gagal'));
     } catch (e) { toast.error('Gagal'); }
     finally { setLoading(false); }
   };

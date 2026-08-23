@@ -32,6 +32,7 @@ import {
 import { formatCurrency, formatShort } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 interface PaymentType {
   id: string;
@@ -946,7 +947,7 @@ function NewPaymentTypeDialog({ onCreated }: { onCreated: () => void }) {
         resetForm();
         toast.success('Payment type berhasil dibuat');
       } else {
-        toast.error(result.error || 'Gagal membuat payment type');
+        toast.error(getErrorMessage(result.error, 'Gagal membuat payment type'));
       }
     } catch (err) {
       console.error('Failed to create payment type:', err);
@@ -1241,7 +1242,7 @@ function EditPaymentTypeDialog({
         onUpdated();
         toast.success('Payment type berhasil diperbarui');
       } else {
-        toast.error(result.error || 'Gagal memperbarui payment type');
+        toast.error(getErrorMessage(result.error, 'Gagal memperbarui payment type'));
       }
     } catch (err) {
       console.error('Failed to update payment type:', err);
@@ -1488,7 +1489,7 @@ function NewMarketplaceDialog({ onCreated }: { onCreated: () => void }) {
         resetForm();
         toast.success('Marketplace berhasil dibuat');
       } else {
-        toast.error(result.error || 'Gagal membuat marketplace');
+        toast.error(getErrorMessage(result.error, 'Gagal membuat marketplace'));
       }
     } catch (err) {
       console.error('Failed to create marketplace:', err);
@@ -1641,7 +1642,7 @@ function EditMarketplaceDialog({
         onUpdated();
         toast.success('Marketplace berhasil diperbarui');
       } else {
-        toast.error(result.error || 'Gagal memperbarui marketplace');
+        toast.error(getErrorMessage(result.error, 'Gagal memperbarui marketplace'));
       }
     } catch (err) {
       console.error('Failed to update marketplace:', err);

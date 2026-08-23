@@ -58,6 +58,7 @@ import {
 } from 'recharts';
 import { formatCurrency, formatCompactCurrency, formatDateAgo, cn } from '@/lib/utils';
 import Link from 'next/link';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /* ===== INTERFACES (unchanged) ===== */
 
@@ -373,7 +374,7 @@ export default function OwnerDashboardPage() {
       const response = await fetch(`/api/dashboard?transactionsPage=${page}`);
       const result = await response.json();
       if (result.success) { setData(result.data); setLastUpdated(new Date()); }
-      else { setError(result.error || 'Gagal memuat data'); }
+      else { setError(getErrorMessage(result.error, 'Gagal memuat data')); }
     } catch { setError('Terjadi kesalahan'); }
     finally { setDataLoading(false); setIsRefreshing(false); }
   };
@@ -390,7 +391,7 @@ export default function OwnerDashboardPage() {
       });
       const result = await response.json();
       if (result.success) { fetchDashboard(transactionsPage); }
-      else { setError(result.error || 'Gagal memperbarui status'); }
+      else { setError(getErrorMessage(result.error, 'Gagal memperbarui status')); }
     } catch { setError('Terjadi kesalahan'); }
     finally { setUpdatingStatus(null); }
   }, [transactionsPage]);

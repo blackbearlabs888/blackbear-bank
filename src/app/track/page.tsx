@@ -46,6 +46,7 @@ import {
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { trackEvent } from '@/lib/analytics/track';
 
 interface OrderData {
@@ -359,7 +360,7 @@ function TestimonialForm({
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        toast.error(data.error || 'Terjadi kesalahan');
+        toast.error(getErrorMessage(data.error, 'Terjadi kesalahan'));
         return;
       }
 
@@ -638,7 +639,7 @@ function TrackOrderContent() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        setError(data.error || 'Order tidak ditemukan');
+        setError(getErrorMessage(data.error, 'Order tidak ditemukan'));
         setLoading(false);
         return;
       }
@@ -948,7 +949,7 @@ function TrackOrderContent() {
                         trackEvent('click_wa', { page_path: '/track', page_type: 'track' });
                         window.open(data.data.redirectUrl, '_blank', 'noopener,noreferrer');
                       } else {
-                        toast.error(data.error || 'Gagal menghubungi kontak');
+                        toast.error(getErrorMessage(data.error, 'Gagal menghubungi kontak'));
                       }
                     } catch {
                       toast.error('Terjadi kesalahan saat menghubungi kontak');

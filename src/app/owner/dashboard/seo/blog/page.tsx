@@ -74,6 +74,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 // ── Types ──────────────────────────────────────────────────────────
 interface BlogPost {
@@ -378,11 +379,11 @@ export default function BlogManagementPage() {
       });
       const result = await response.json();
       if (result.success) {
-        toast.success(result.message || 'Blog post berhasil disimpan');
+        toast.success(getErrorMessage(result.message, 'Blog post berhasil disimpan'));
         setShowDialog(false);
         fetchPosts();
       } else {
-        toast.error(result.error || 'Gagal menyimpan blog post');
+        toast.error(getErrorMessage(result.error, 'Gagal menyimpan blog post'));
       }
     } catch (error) {
       console.error('Save error:', error);
@@ -399,12 +400,12 @@ export default function BlogManagementPage() {
       const response = await fetch(`/api/seo/blog/${deletingPost.slug}`, { method: 'DELETE' });
       const result = await response.json();
       if (result.success) {
-        toast.success(result.message || 'Blog post berhasil dihapus');
+        toast.success(getErrorMessage(result.message, 'Blog post berhasil dihapus'));
         setShowDeleteDialog(false);
         setDeletingPost(null);
         fetchPosts();
       } else {
-        toast.error(result.error || 'Gagal menghapus blog post');
+        toast.error(getErrorMessage(result.error, 'Gagal menghapus blog post'));
       }
     } catch (error) {
       console.error('Delete error:', error);

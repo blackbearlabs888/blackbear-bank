@@ -17,6 +17,7 @@ import {
   Mail, Phone, Building2, ChevronRight, Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { CitySearch } from '@/components/ui/city-search';
 import { trackEvent } from '@/lib/analytics/track';
@@ -242,13 +243,13 @@ export default function RegisterPage() {
 
       // Handle rate limit (429)
       if (response.status === 429) {
-        setError(data.error || 'Terlalu banyak percobaan. Tunggu beberapa saat.');
+        setError(getErrorMessage(data.error, 'Terlalu banyak percobaan. Tunggu beberapa saat.'));
         setLoading(false);
         return;
       }
 
       if (!response.ok || !data.success) {
-        setError(data.error || 'Registrasi gagal');
+        setError(getErrorMessage(data.error, 'Registrasi gagal'));
         setLoading(false);
         return;
       }

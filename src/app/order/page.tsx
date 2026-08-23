@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { CitySearch } from '@/components/ui/city-search';
 import { calculateTransaction } from '@/lib/transaction/fee';
@@ -1345,13 +1346,13 @@ function OrderPage() {
 
       // Handle rate limit (429)
       if (response.status === 429) {
-        setError(data.error || 'Terlalu banyak request. Tunggu beberapa saat.');
+        setError(getErrorMessage(data.error, 'Terlalu banyak request. Tunggu beberapa saat.'));
         setLoading(false);
         return;
       }
 
       if (!response.ok || !data.success) {
-        setError(data.error || 'Gagal membuat order');
+        setError(getErrorMessage(data.error, 'Gagal membuat order'));
         setLoading(false);
         return;
       }

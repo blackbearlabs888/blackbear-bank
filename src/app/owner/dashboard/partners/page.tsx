@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/get-error-message';
 import {
   Users,
   Search,
@@ -1219,7 +1220,7 @@ function EditPartnerDialog({
         setNewPassword(result.newPassword);
         toast.success('Password baru berhasil dibuat');
       } else {
-        toast.error(result.error || 'Gagal membuat password');
+        toast.error(getErrorMessage(result.error, 'Gagal membuat password'));
       }
     } catch (err) {
       console.error('Failed to generate password:', err);
@@ -1252,7 +1253,7 @@ function EditPartnerDialog({
         onOpenChange(false);
         onSuccess();
       } else {
-        toast.error(result.error || 'Gagal memperbarui partner');
+        toast.error(getErrorMessage(result.error, 'Gagal memperbarui partner'));
       }
     } catch (err) {
       console.error('Failed to update partner:', err);
@@ -1495,7 +1496,7 @@ function NewPartnerDialog({ onCreated }: { onCreated: () => void }) {
           toast.error('Password sementara tidak diterima dari server. Hubungi admin.');
         }
       } else {
-        toast.error(result.error || 'Gagal membuat partner');
+        toast.error(getErrorMessage(result.error, 'Gagal membuat partner'));
       }
     } catch (err) {
       console.error('Failed to create partner:', err);

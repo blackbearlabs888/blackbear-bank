@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { useServerSiteConfig } from '@/lib/server-site-config';
 
 export interface SiteConfig {
@@ -67,7 +68,7 @@ export function useSiteConfig() {
         setConfig(result.data);
         setError(null);
       } else {
-        setError(result.error || 'Failed to load config');
+        setError(getErrorMessage(result.error, 'Failed to load config'));
         setConfig(defaultConfig);
       }
     } catch (err) {

@@ -16,6 +16,7 @@ import {
   Lock, Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { useSiteConfig } from '@/hooks/use-site-config';
 
 // Floating particle component
@@ -133,7 +134,7 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        setError(data.error || 'Login gagal');
+        setError(getErrorMessage(data.error, 'Login gagal'));
         setLoading(false);
         return;
       }

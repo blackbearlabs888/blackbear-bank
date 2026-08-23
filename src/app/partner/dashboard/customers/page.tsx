@@ -36,6 +36,7 @@ import {
 import { formatCurrency, formatCompactCurrency, formatDateAgo } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { CitySearch } from '@/components/ui/city-search';
 import { isValidIndonesianPhone, normalizePhone } from '@/lib/customer-utils';
 import AnalyticsBubbleMap from '@/components/map/analytics-bubble-map';
@@ -727,12 +728,12 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
         setFormData({ name: '', phone: '', bankName: '', bankAccount: '', bankHolder: '', city: '', notes: '' });
         setCustomBankName('');
         if (result.isExisting) {
-          toast.info(result.message || 'Customer sudah ada, data diperbarui');
+          toast.info(getErrorMessage(result.message, 'Customer sudah ada, data diperbarui'));
         } else {
           toast.success('Customer berhasil ditambahkan');
         }
       } else {
-        toast.error(result.error || 'Gagal menambahkan customer');
+        toast.error(getErrorMessage(result.error, 'Gagal menambahkan customer'));
       }
     } catch (err) {
       console.error('Failed to create customer:', err);

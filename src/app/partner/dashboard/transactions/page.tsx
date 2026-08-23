@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { CitySearch } from '@/components/ui/city-search';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -711,7 +712,7 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
         setCustomBankName('');
         setForm({ customerId: '', customerName: '', customerPhone: '', customerCity: '', customerBankName: '', customerBankAccount: '', customerBankHolder: '', nominal: '', paymentTypeId: '', methodTransaction: 'Online' });
         toast.success('Transaksi dibuat (Status: Process)');
-      } else toast.error(d.error || 'Gagal');
+      } else toast.error(getErrorMessage(d.error, 'Gagal'));
     } catch (e) { toast.error('Gagal'); }
     finally { setLoading(false); }
   };
@@ -1039,7 +1040,7 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
         setEditNominal(false);
         onUpdate?.();
       } else {
-        toast.error(data.error || 'Gagal mengupdate nominal');
+        toast.error(getErrorMessage(data.error, 'Gagal mengupdate nominal'));
       }
     } catch {
       toast.error('Gagal mengupdate nominal');
@@ -1069,7 +1070,7 @@ function TxDetailDialogContent({ tx, onUpdate }: { tx: Transaction; onUpdate?: (
         toast.success('Pesan terkirim ke Owner');
         setMessage('');
       } else {
-        toast.error(data.error || 'Gagal mengirim pesan');
+        toast.error(getErrorMessage(data.error, 'Gagal mengirim pesan'));
       }
     } catch {
       toast.error('Gagal mengirim pesan');

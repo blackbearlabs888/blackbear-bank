@@ -47,6 +47,7 @@ import {
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { invalidateSiteConfigCache } from '@/hooks/use-site-config';
 
 interface OwnerProfile {
@@ -262,7 +263,7 @@ export default function OwnerSettingsPage() {
         // Invalidate cache so other components get fresh data
         invalidateSiteConfigCache();
       } else {
-        toast.error(result.error || 'Gagal menyimpan pengaturan');
+        toast.error(getErrorMessage(result.error, 'Gagal menyimpan pengaturan'));
       }
     } catch (err) {
       // Ignore abort errors
@@ -314,7 +315,7 @@ export default function OwnerSettingsPage() {
           }));
         }
       } else {
-        toast.error(result.error || 'Gagal menyimpan pengaturan notifikasi');
+        toast.error(getErrorMessage(result.error, 'Gagal menyimpan pengaturan notifikasi'));
       }
     } catch (err) {
       console.error('Save notification settings error:', err);
@@ -347,7 +348,7 @@ export default function OwnerSettingsPage() {
         toast.success('Webhook berhasil diset!');
         fetchWebhookInfo();
       } else {
-        toast.error(result.error || 'Gagal set webhook');
+        toast.error(getErrorMessage(result.error, 'Gagal set webhook'));
       }
     } catch {
       toast.error('Gagal menghubungi server');
@@ -366,7 +367,7 @@ export default function OwnerSettingsPage() {
         toast.success('Webhook berhasil dihapus');
         setWebhookInfo(null);
       } else {
-        toast.error(result.error || 'Gagal hapus webhook');
+        toast.error(getErrorMessage(result.error, 'Gagal hapus webhook'));
       }
     } catch {
       toast.error('Gagal menghubungi server');
@@ -434,7 +435,7 @@ export default function OwnerSettingsPage() {
         setNewPassword('');
         setConfirmPassword('');
       } else {
-        toast.error(result.error || 'Gagal mengubah password');
+        toast.error(getErrorMessage(result.error, 'Gagal mengubah password'));
       }
     } catch {
       toast.error('Terjadi kesalahan');

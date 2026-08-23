@@ -39,6 +39,7 @@ import {
 import { formatCurrency, formatDate } from '@/lib/utils';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 interface Announcement {
   id: string;
@@ -161,7 +162,7 @@ export default function PartnerDashboardPage() {
       if (result.success) {
         setData(result.data);
       } else {
-        setError(result.error || 'Gagal memuat data');
+        setError(getErrorMessage(result.error, 'Gagal memuat data'));
       }
     } catch {
       setError('Terjadi kesalahan');

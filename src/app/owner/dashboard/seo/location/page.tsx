@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 interface Location {
   id: string;
@@ -204,11 +205,11 @@ export default function LocationManagementPage() {
       const result = await response.json();
 
       if (result.success) {
-        toast.success(result.message || 'Location berhasil disimpan');
+        toast.success(getErrorMessage(result.message, 'Location berhasil disimpan'));
         setShowDialog(false);
         fetchLocations();
       } else {
-        toast.error(result.error || 'Gagal menyimpan location');
+        toast.error(getErrorMessage(result.error, 'Gagal menyimpan location'));
       }
     } catch (error) {
       console.error('Save error:', error);
@@ -230,12 +231,12 @@ export default function LocationManagementPage() {
       const result = await response.json();
 
       if (result.success) {
-        toast.success(result.message || 'Location berhasil dihapus');
+        toast.success(getErrorMessage(result.message, 'Location berhasil dihapus'));
         setShowDeleteDialog(false);
         setDeletingLocation(null);
         fetchLocations();
       } else {
-        toast.error(result.error || 'Gagal menghapus location');
+        toast.error(getErrorMessage(result.error, 'Gagal menghapus location'));
       }
     } catch (error) {
       console.error('Delete error:', error);
@@ -256,10 +257,10 @@ export default function LocationManagementPage() {
       const result = await response.json();
 
       if (result.success) {
-        toast.success(result.message);
+        toast.success(getErrorMessage(result.message, 'Berhasil'));
         fetchLocations();
       } else {
-        toast.error(result.error || 'Gagal sync lokasi');
+        toast.error(getErrorMessage(result.error, 'Gagal sync lokasi'));
       }
     } catch (error) {
       console.error('Sync error:', error);

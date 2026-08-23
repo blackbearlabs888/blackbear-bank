@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 interface FAQ {
   id: string;
@@ -186,11 +187,11 @@ export default function FAQManagementPage() {
       const result = await response.json();
 
       if (result.success) {
-        toast.success(result.message || 'FAQ berhasil disimpan');
+        toast.success(getErrorMessage(result.message, 'FAQ berhasil disimpan'));
         setShowDialog(false);
         fetchFaqs();
       } else {
-        toast.error(result.error || 'Gagal menyimpan FAQ');
+        toast.error(getErrorMessage(result.error, 'Gagal menyimpan FAQ'));
       }
     } catch (error) {
       console.error('Save error:', error);
@@ -212,12 +213,12 @@ export default function FAQManagementPage() {
       const result = await response.json();
 
       if (result.success) {
-        toast.success(result.message || 'FAQ berhasil dihapus');
+        toast.success(getErrorMessage(result.message, 'FAQ berhasil dihapus'));
         setShowDeleteDialog(false);
         setDeletingFaq(null);
         fetchFaqs();
       } else {
-        toast.error(result.error || 'Gagal menghapus FAQ');
+        toast.error(getErrorMessage(result.error, 'Gagal menghapus FAQ'));
       }
     } catch (error) {
       console.error('Delete error:', error);

@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { toast } from 'sonner';
 import { CitySearch } from '@/components/ui/city-search';
 import { isValidIndonesianPhone, normalizePhone } from '@/lib/customer-utils';
@@ -1057,7 +1058,7 @@ function CustomerActionsDialogContent({
         toast.success('Customer berhasil diperbarui');
         onUpdated();
       } else {
-        setError(result.error || 'Gagal memperbarui customer');
+        setError(getErrorMessage(result.error, 'Gagal memperbarui customer'));
       }
     } catch (err) {
       console.error('Failed to update customer:', err);
@@ -1081,7 +1082,7 @@ function CustomerActionsDialogContent({
         toast.success('Customer berhasil dihapus');
         onUpdated();
       } else {
-        setError(result.error || 'Gagal menghapus customer');
+        setError(getErrorMessage(result.error, 'Gagal menghapus customer'));
       }
     } catch (err) {
       console.error('Failed to delete customer:', err);
@@ -1108,7 +1109,7 @@ function CustomerActionsDialogContent({
         toast.success(newLabel === 'Blacklist' ? 'Customer ditambahkan ke blacklist' : 'Customer dihapus dari blacklist');
         onUpdated();
       } else {
-        setError(result.error || 'Gagal mengubah status blacklist');
+        setError(getErrorMessage(result.error, 'Gagal mengubah status blacklist'));
       }
     } catch (err) {
       console.error('Failed to toggle blacklist:', err);
@@ -1494,12 +1495,12 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
         setFormData({ name: '', phone: '', email: '', bankName: '', bankAccount: '', bankHolder: '', city: '' });
         setCustomBankName('');
         if (result.isExisting) {
-          toast.info(result.message || 'Customer sudah ada, data diperbarui');
+          toast.info(getErrorMessage(result.message, 'Customer sudah ada, data diperbarui'));
         } else {
           toast.success('Customer berhasil ditambahkan');
         }
       } else {
-        toast.error(result.error || 'Gagal menambahkan customer');
+        toast.error(getErrorMessage(result.error, 'Gagal menambahkan customer'));
       }
     } catch (err) {
       console.error('Failed to create customer:', err);
