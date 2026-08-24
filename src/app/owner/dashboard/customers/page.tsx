@@ -1504,7 +1504,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
       }
     } catch (err) {
       console.error('Failed to create customer:', err);
-      toast.error('Gagal menambahkan customer');
+      toast.error('Gagal menambahkan data customer');
     } finally {
       setLoading(false);
     }

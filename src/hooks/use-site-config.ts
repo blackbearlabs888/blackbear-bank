@@ -73,7 +73,7 @@ export function useSiteConfig() {
       }
     } catch (err) {
       console.error('Failed to fetch site config:', err);
-      setError('Failed to load config');
+      setError('Gagal memuat konfigurasi');
       setConfig(defaultConfig);
     } finally {
       setLoading(false);

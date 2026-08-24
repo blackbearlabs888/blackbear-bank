@@ -713,7 +713,7 @@ function NewTxDialog({ open, onOpenChange, onCreated, partnerId, commission }: {
         setForm({ customerId: '', customerName: '', customerPhone: '', customerCity: '', customerBankName: '', customerBankAccount: '', customerBankHolder: '', nominal: '', paymentTypeId: '', methodTransaction: 'Online' });
         toast.success('Transaksi dibuat (Status: Process)');
       } else toast.error(getErrorMessage(d.error, 'Gagal membuat transaksi'));
-    } catch (e) { toast.error('Gagal'); }
+    } catch (e) { toast.error('Gagal membuat transaksi'); }
     finally { setLoading(false); }
   };
 
