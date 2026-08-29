@@ -5,6 +5,11 @@ import { useState, useEffect, useRef, type ReactNode } from 'react';
 interface FadeInSectionProps {
   children: ReactNode;
   className?: string;
+  /**
+   * @deprecated No-op since the blank-content fix: a numeric threshold is
+   * unreachable for elements taller than the viewport, so the observer now
+   * always uses threshold 0 + rootMargin. Kept for API compatibility only.
+   */
   threshold?: number;
   triggerOnce?: boolean;
   style?: React.CSSProperties;
@@ -13,7 +18,6 @@ interface FadeInSectionProps {
 export function FadeInSection({
   children,
   className = '',
-  threshold = 0.1,
   triggerOnce = true,
   style,
 }: FadeInSectionProps) {
@@ -37,7 +41,22 @@ export function FadeInSection({
           }
         });
       },
-      { threshold }
+      {
+        // BUG FIX (blank content on tall elements): a numeric threshold > 0
+        // can be physically unreachable for elements TALLER than the
+        // viewport — the maximum achievable intersection ratio is
+        // viewportHeight / elementHeight. Long article bodies (10k+ px on
+        // /blog/[slug]) therefore never fired the observer and stayed at
+        // opacity:0 forever ("blank body" while title/image/TOC appeared).
+        //
+        // threshold: 0 (any 1px intersection triggers) + a small negative
+        // bottom rootMargin keeps the reveal point visually similar
+        // (element starts fading in as it enters the viewport) while
+        // GUARANTEEING the callback can fire, no matter how tall the
+        // wrapped content is or grows later (e.g. images loading).
+        threshold: 0,
+        rootMargin: '0px 0px -10% 0px',
+      }
     );
 
     observer.observe(node);
@@ -45,7 +64,7 @@ export function FadeInSection({
     return () => {
       observer.disconnect();
     };
-  }, [threshold, triggerOnce]);
+  }, [triggerOnce]);
 
   return (
     <div
