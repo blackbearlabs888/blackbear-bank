@@ -195,9 +195,11 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
   const [cardSpotlight, setCardSpotlight] = useState<React.CSSProperties>({});
   const [cardTilt, setCardTilt] = useState<React.CSSProperties>({});
   const [scrollProgress, setScrollProgress] = useState(0);
-  // allFaqOpen / activeFaqCategory moved to faq-section.tsx (dynamic component)
-  const [typedText, setTypedText] = useState('Gestun profesional untuk Kartu Kredit & Paylater. Proses instan, rate bersaing, aman & terpercaya.');
-  const subtitleRef = useRef<HTMLParagraphElement>(null);
+  // Correctness cleanup: the hero subtitle is now rendered statically.
+  // The previous typewriter effect (useState(typedText) + 18ms setInterval
+  // that reset the text to '' on mount and retyped it) caused a full→empty
+  // flash on hydration and ~150 setState-driven re-renders during typing.
+  // Static text removes the flash, the interval, and the re-render storm.
   const marqueeRow1Ref = useRef<HTMLDivElement>(null);
   const marqueeRow2Ref = useRef<HTMLDivElement>(null);
   const sectionHeadersRef = useRef<IntersectionObserver | null>(null);
@@ -227,27 +229,11 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
     };
   }, []);
 
-  // Hero subtitle text. Phase 4: the full text is part of the initial HTML
-  // (server-rendered) so crawlers and users without JS still see the SEO
-  // content. The typewriter effect runs only after client hydration and
-  // progressively reveals the same string — no content is hidden from SEO.
+  // Hero subtitle text — rendered statically (no typewriter animation).
+  // Correctness: SSR HTML and post-hydration content are identical, so
+  // there is no full→empty flash and no hydration mismatch. SEO content
+  // remains fully visible to crawlers and no-JS clients.
   const heroSubtitle = 'Gestun profesional untuk Kartu Kredit & Paylater. Proses instan, rate bersaing, aman & terpercaya.';
-
-  // Typewriter effect for hero subtitle (client-only progressive enhancement)
-  useEffect(() => {
-    let i = 0;
-    // Reset to empty on client mount so the typewriter can reveal it.
-    setTypedText('');
-    const timer = setInterval(() => {
-      if (i <= heroSubtitle.length) {
-        setTypedText(heroSubtitle.slice(0, i));
-        i++;
-      } else {
-        clearInterval(timer);
-      }
-    }, 18);
-    return () => clearInterval(timer);
-  }, []);
 
   // Marquee touch pause for mobile
   const handleTouchStart = useCallback((el: HTMLDivElement | null) => {
@@ -353,9 +339,8 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                       Cepat & Aman
                     </span>
                   </h1>
-                  <p ref={subtitleRef} className="text-sm sm:text-xl text-muted-foreground max-w-xs sm:max-w-lg mx-auto lg:mx-0 leading-relaxed min-h-[2.75rem] sm:min-h-[4rem]">
-                    {typedText}
-                    <span className="inline-block w-[2px] h-[1.1em] bg-primary/70 ml-0.5 align-middle animate-typewriter-blink" />
+                  <p className="text-sm sm:text-xl text-muted-foreground max-w-xs sm:max-w-lg mx-auto lg:mx-0 leading-relaxed min-h-[2.75rem] sm:min-h-[4rem]">
+                    {heroSubtitle}
                   </p>
                 </div>
 
@@ -666,7 +651,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                           )}
                           {hasLogo ? (
                             <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-background/50 border border-border/30">
-                              <img src={pt.logoUrl} alt={pt.name} width={32} height={32} loading="lazy" className="w-full h-full object-contain" onError={() => handlePtLogoError(pt.id)} />
+                              <img src={pt.logoUrl} alt={pt.name} width={32} height={32} loading="lazy" decoding="async" className="w-full h-full object-contain" onError={() => handlePtLogoError(pt.id)} />
                             </div>
                           ) : (
                             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
@@ -717,7 +702,7 @@ export default function LandingPage({ paymentTypes, faqs, announcements }: Landi
                           >
                             {hasLogo ? (
                               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-background/50 border border-border/30">
-                                <img src={pt.logoUrl} alt={pt.name} width={32} height={32} loading="lazy" className="w-full h-full object-contain" onError={() => handlePtLogoError(pt.id)} />
+                                <img src={pt.logoUrl} alt={pt.name} width={32} height={32} loading="lazy" decoding="async" className="w-full h-full object-contain" onError={() => handlePtLogoError(pt.id)} />
                               </div>
                             ) : (
                               <div className="w-8 h-8 rounded-lg bg-fuchsia-500/10 flex items-center justify-center flex-shrink-0">

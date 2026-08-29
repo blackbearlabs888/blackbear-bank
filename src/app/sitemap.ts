@@ -141,22 +141,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .filter((c): c is string => !!c),
     );
 
-    const blogPages: MetadataRoute.Sitemap = blogPosts.map((post) => ({
-      url: `${siteUrl}/blog/${post.slug}`,
-      lastModified: post.updatedAt,
-      changeFrequency: 'weekly' as const,
-      priority: 0.8,
-      ...(post.featuredImage
-        ? {
-            images: [
-              {
-                loc: post.featuredImage,
-                title: post.title,
-              },
-            ],
-          }
-        : {}),
-    }));
+    // Next.js 16 MetadataRoute.Sitemap: `images` is `string[]` (URL strings
+    // only). The framework serializer interpolates each entry directly into
+    // `<image:loc>${image}</image:loc>`, so passing an object would render
+    // as the literal text `[object Object]` (an invalid image URL that
+    // Google Search Console rejects). Guard so only a real absolute
+    // http(s) URL string is emitted; any other shape is skipped entirely
+    // (the blog <url> entry itself is unaffected).
+    const blogPages: MetadataRoute.Sitemap = blogPosts.map((post) => {
+      const entry: MetadataRoute.Sitemap[number] = {
+        url: `${siteUrl}/blog/${post.slug}`,
+        lastModified: post.updatedAt,
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      };
+      if (
+        typeof post.featuredImage === 'string' &&
+        post.featuredImage.trim() !== '' &&
+        post.featuredImage !== '[object Object]' &&
+        /^https?:\/\//i.test(post.featuredImage)
+      ) {
+        entry.images = [post.featuredImage];
+      }
+      return entry;
+    });
 
     // Deduplicate by normalized slug so one city only has one landing page.
     const seenSlugs = new Set<string>();

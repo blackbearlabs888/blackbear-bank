@@ -61,10 +61,16 @@ export default function SocialProofToast() {
   const [phase, setPhase] = useState<'hidden' | 'entering' | 'visible' | 'exiting'>('hidden');
   const [currentOrder, setCurrentOrder] = useState(sampleOrders[0]);
   const [isDismissed, setIsDismissed] = useState(false);
-  const [progress, setProgress] = useState(100);
+  // Correctness cleanup (Stream B §3.3 — Social proof progress):
+  // The previous implementation ran a React setInterval at 50ms that called
+  // setProgress() ~100 times per 5s toast cycle (per-frame React state for a
+  // decorative progress bar). The progress bar is now driven by a pure CSS
+  // transform animation (scaleX 1→0 over SHOW_MS) — GPU-accelerated, no
+  // main-thread React re-renders, and stopped automatically by
+  // prefers-reduced-motion. Item switching still uses state, but only at
+  // the item-switch cadence (one setState per cycle), not per-frame.
   const cookieBannerVisible = useCookieBannerVisible();
 
-  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const isPublic = isPublicPage(pathname);
@@ -76,7 +82,6 @@ export default function SocialProofToast() {
   const clearAllTimers = () => {
     timersRef.current.forEach(t => clearTimeout(t));
     timersRef.current = [];
-    if (progressRef.current) { clearInterval(progressRef.current); progressRef.current = null; }
   };
 
   const pushTimer = (t: ReturnType<typeof setTimeout>) => { timersRef.current.push(t); };
@@ -84,14 +89,14 @@ export default function SocialProofToast() {
   // Handle dismiss
   const handleDismiss = () => {
     setPhase('exiting');
-    if (progressRef.current) { clearInterval(progressRef.current); progressRef.current = null; }
     pushTimer(setTimeout(() => {
       setIsDismissed(true);
       setPhase('hidden');
     }, 400));
   };
 
-  // Main lifecycle effect — self-contained async cycle
+  // Main lifecycle effect — self-contained async cycle. Only item-switch
+  // state transitions (one per cycle); no per-frame progress state.
   useEffect(() => {
     if (!isPublic || isDismissed) {
       clearAllTimers();
@@ -102,32 +107,16 @@ export default function SocialProofToast() {
     let cancelled = false;
     let lastName = currentOrder.name;
 
-    const startProgress = () => {
-      setProgress(100);
-      if (progressRef.current) clearInterval(progressRef.current);
-      const step = 50;
-      const dec = (step / SHOW_MS) * 100;
-      progressRef.current = setInterval(() => {
-        setProgress(prev => {
-          const next = prev - dec;
-          if (next <= 0) {
-            if (progressRef.current) clearInterval(progressRef.current);
-            return 0;
-          }
-          return next;
-        });
-      }, step);
-    };
-
     const runCycle = async () => {
       if (cancelled) return;
 
-      // FADE IN
+      // FADE IN — pick a new order and reveal the toast. The progress bar
+      // CSS animation auto-starts because the bar element remounts with a
+      // new key (currentOrder.name) each cycle.
       const order = getRandomOrder(lastName);
       lastName = order.name;
       setCurrentOrder(order);
       setPhase('entering');
-      startProgress();
 
       await wait(ENTER_MS);
       if (cancelled) return;
@@ -138,7 +127,6 @@ export default function SocialProofToast() {
 
       // FADE OUT
       setPhase('exiting');
-      if (progressRef.current) { clearInterval(progressRef.current); progressRef.current = null; }
 
       await wait(EXIT_MS);
       if (cancelled) return;
@@ -176,6 +164,12 @@ export default function SocialProofToast() {
     willChange: 'opacity, transform',
   };
 
+  // The progress bar runs its CSS transform animation only while the toast
+  // is showing. key=currentOrder.name forces a fresh element per cycle so
+  // the animation restarts each time a new order appears.
+  const progressKey = currentOrder.name;
+  const progressClassName = isShowing ? 'social-proof-progress' : '';
+
   return (
     <>
       {/* ===== MOBILE ===== */}
@@ -190,8 +184,11 @@ export default function SocialProofToast() {
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
-          <div className="h-[2px] bg-muted/30">
-            <div className="h-full bg-emerald-500 transition-[width] duration-100 ease-linear" style={{ width: `${progress}%` }} />
+          <div className="h-[2px] bg-muted/30 overflow-hidden">
+            <div
+              key={`m-${progressKey}`}
+              className={`h-full w-full bg-emerald-500 origin-left ${progressClassName}`}
+            />
           </div>
           <div className="p-3">
             <div className="flex items-center gap-2.5">
@@ -230,8 +227,11 @@ export default function SocialProofToast() {
               </button>
             </div>
           </div>
-          <div className="h-[2px] bg-muted/30">
-            <div className="h-full bg-emerald-500 transition-[width] duration-100 ease-linear" style={{ width: `${progress}%` }} />
+          <div className="h-[2px] bg-muted/30 overflow-hidden">
+            <div
+              key={`d-${progressKey}`}
+              className={`h-full w-full bg-emerald-500 origin-left ${progressClassName}`}
+            />
           </div>
           <div className="p-4">
             <div className="flex items-start gap-3">

@@ -1,6 +1,21 @@
-'use client';
+import { memo } from 'react';
 
-import { useState, useEffect, useRef } from 'react';
+// Correctness cleanup (Stream B §3.3 — Counter):
+// The previous implementation started at value=0 on SSR, then ran a 2000ms
+// rAF loop on hydration that called setValue() every frame (~120 re-renders
+// across 3 stat cards). That produced a final→zero flash on hydration and
+// high main-thread work on mobile.
+//
+// The counter now renders the FINAL value statically from SSR. No useState,
+// no rAF, no IntersectionObserver, no direct textContent mutation. Screen
+// readers read the final value exactly once (it is plain text content).
+//
+// The component interface (props) is preserved so the call site is unchanged.
+// `duration` and `startOnView` are accepted but intentionally unused — they
+// remain in the type for backwards compatibility with existing JSX.
+//
+// Format/suffix/label/layout are unchanged: formatter(target) is exactly
+// what the animation converged to, so the visible result is identical.
 
 interface AnimatedCounterProps {
   target: number;
@@ -9,72 +24,11 @@ interface AnimatedCounterProps {
   formatter: (value: number) => string;
 }
 
-export function AnimatedCounter({
+function AnimatedCounterBase({
   target,
-  duration = 2000,
-  startOnView = false,
   formatter,
 }: AnimatedCounterProps) {
-  const [value, setValue] = useState(0);
-  const hasStarted = useRef(false);
-  const elementRef = useRef<HTMLDivElement>(null);
-
-  const startAnimation = () => {
-    if (hasStarted.current) return;
-    hasStarted.current = true;
-
-    const startTime = performance.now();
-    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easedProgress = easeOutCubic(progress);
-      const currentValue = Math.floor(target * easedProgress);
-
-      setValue(currentValue);
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        setValue(target);
-      }
-    };
-
-    requestAnimationFrame(animate);
-  };
-
-  useEffect(() => {
-    if (!startOnView) {
-      startAnimation();
-    }
-  }, [startOnView]);
-
-  useEffect(() => {
-    if (!startOnView || !elementRef.current) return;
-
-    const node = elementRef.current;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            startAnimation();
-            observer.disconnect();
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(node);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [startOnView]);
-
-  return (
-    <span ref={elementRef}>{formatter(value)}</span>
-  );
+  return <span>{formatter(target)}</span>;
 }
+
+export const AnimatedCounter = memo(AnimatedCounterBase);

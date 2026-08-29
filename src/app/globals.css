@@ -1751,6 +1751,20 @@ select:focus {
   background: conic-gradient(from var(--cta-angle), oklch(0.7 0.22 295 / 0.3), oklch(0.65 0.2 310 / 0.15), oklch(0.7 0.22 295 / 0.1), oklch(0.65 0.2 310 / 0.25));
 }
 
+/* Social-proof toast progress bar — CSS transform (scaleX) driven, not React
+   state. GPU-accelerated (no layout thrash), runs once per toast cycle for
+   SHOW_MS, and is disabled by prefers-reduced-motion (see block below). */
+@keyframes social-proof-progress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+.social-proof-progress {
+  transform: scaleX(1);
+  transform-origin: left center;
+  animation: social-proof-progress 5000ms linear forwards;
+  will-change: transform;
+}
+
 /* Reduced motion: disable heavy/decorative animations only (preserve essential UI transitions) */
 @media (prefers-reduced-motion: reduce) {
   .hero-card-wrapper,
@@ -1781,7 +1795,8 @@ select:focus {
   .animate-loading-bar,
   .animate-marquee,
   .announcement-shimmer::after,
-  .will-change-transform {
+  .will-change-transform,
+  .social-proof-progress {
     animation: none !important;
   }
 
