@@ -1,6 +1,10 @@
 import { MetadataRoute } from 'next';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
+// Canonical host fallback. Production must set NEXT_PUBLIC_SITE_URL; the
+// fallback below matches the canonical www host so a missing env var can
+// never emit a non-canonical (apex) sitemap URL in robots.txt.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || 'https://www.blackbear.cc';
 
 /**
  * Robots policy — Black Bear
@@ -49,7 +53,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: DISALLOWED,
       },
     ],
-    sitemap: `${siteUrl}/sitemap.xml`,
-    host: siteUrl,
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    host: SITE_URL,
   };
 }

@@ -1,8 +1,13 @@
 import { MetadataRoute } from 'next';
 import { db } from '@/lib/db';
 import { normalizeSlug } from '@/lib/slug-utils';
+import { canonicalCityName } from '@/lib/city-utils';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
+// Canonical host fallback. Production must set NEXT_PUBLIC_SITE_URL; the
+// fallback below matches the canonical www host so a missing env var can
+// never emit non-canonical (apex) URLs into sitemap.xml.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || 'https://www.blackbear.cc';
 
 /**
  * Route-level ISR — cache the generated sitemap for 1 hour so crawlers
@@ -33,8 +38,17 @@ export const revalidate = 3600;
  * without an active partner is excluded from the sitemap (no hardcoded
  * city list).
  *
- * Slug dedup: locations are deduplicated by normalized slug so that one
- * city only has one landing page, even if duplicate rows exist.
+ * Location dedup: locations are grouped by canonical city name
+ * (canonicalCityName resolves legacy spellings, e.g. "Palangkaraya" →
+ * "Palangka Raya"). Within a duplicate group the row whose slug IS the
+ * canonical slug wins (e.g. /lokasi/palangka-raya), so legacy alias slugs
+ * (e.g. /lokasi/palangkaraya) are never emitted. Solo rows (no duplicate)
+ * are emitted unchanged so no real location page is dropped.
+ *
+ * lastmod policy: static routes have no content timestamp source, so their
+ * entries OMIT <lastmod> entirely (a missing lastmod is preferable to a
+ * fabricated one — never use request/build time). Blog and location
+ * entries use their real database updatedAt.
  *
  * Excluded by design (never in sitemap):
  *   - /api/*, /login, /register, /dashboard, /owner/*, /partner/*
@@ -63,50 +77,43 @@ export const revalidate = 3600;
  *   path; dedup + partner-sync filter are applied in JS after the fetch.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
-
+  // Static routes: no lastModified — see lastmod policy in the header
+  // comment. Never fabricate a content timestamp with new Date().
   const staticPages: MetadataRoute.Sitemap = [
     {
-      url: siteUrl,
-      lastModified: now,
+      url: SITE_URL,
       changeFrequency: 'daily',
       priority: 1,
     },
     {
-      url: `${siteUrl}/order`,
-      lastModified: now,
+      url: `${SITE_URL}/order`,
       changeFrequency: 'monthly',
       priority: 0.9,
     },
     {
-      url: `${siteUrl}/blog`,
-      lastModified: now,
+      url: `${SITE_URL}/blog`,
       changeFrequency: 'daily',
       priority: 0.9,
     },
     {
-      url: `${siteUrl}/faq`,
-      lastModified: now,
+      url: `${SITE_URL}/faq`,
       changeFrequency: 'weekly',
       priority: 0.7,
     },
     {
-      url: `${siteUrl}/lokasi`,
-      lastModified: now,
+      url: `${SITE_URL}/lokasi`,
       changeFrequency: 'weekly',
       priority: 0.8,
     },
     // SEO Batch 1 — service pillar pages. Self-canonical, indexable,
     // SSR-first, unique metadata, structured data via safeJsonLd().
     {
-      url: `${siteUrl}/pencairan-kartu-kredit`,
-      lastModified: now,
+      url: `${SITE_URL}/pencairan-kartu-kredit`,
       changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
-      url: `${siteUrl}/pencairan-paylater`,
-      lastModified: now,
+      url: `${SITE_URL}/pencairan-paylater`,
       changeFrequency: 'weekly',
       priority: 0.9,
     },
@@ -150,7 +157,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // (the blog <url> entry itself is unaffected).
     const blogPages: MetadataRoute.Sitemap = blogPosts.map((post) => {
       const entry: MetadataRoute.Sitemap[number] = {
-        url: `${siteUrl}/blog/${post.slug}`,
+        url: `${SITE_URL}/blog/${post.slug}`,
         lastModified: post.updatedAt,
         changeFrequency: 'weekly' as const,
         priority: 0.8,
@@ -166,22 +173,40 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       return entry;
     });
 
-    // Deduplicate by normalized slug so one city only has one landing page.
-    const seenSlugs = new Set<string>();
-    const locationPages: MetadataRoute.Sitemap = locations
-      .filter((loc) => activeCities.has(loc.name.trim().toLowerCase()))
-      .filter((loc) => {
-        const normalized = normalizeSlug(loc.slug);
-        if (seenSlugs.has(normalized)) return false;
-        seenSlugs.add(normalized);
-        return true;
-      })
-      .map((loc) => ({
-        url: `${siteUrl}/lokasi/${loc.slug}`,
-        lastModified: loc.updatedAt,
-        changeFrequency: 'weekly' as const,
-        priority: 0.8,
-      }));
+    // Group surviving locations by CANONICAL city name so one city only
+    // has one landing page entry, and legacy alias slugs are dropped when
+    // the canonical-slug row exists in the same group.
+    const cityGroups = new Map<
+      string,
+      Array<{ slug: string; name: string; updatedAt: Date }>
+    >();
+    for (const loc of locations) {
+      if (!activeCities.has(loc.name.trim().toLowerCase())) continue;
+      const key = canonicalCityName(loc.name).trim().toLowerCase();
+      const bucket = cityGroups.get(key);
+      if (bucket) bucket.push(loc);
+      else cityGroups.set(key, [loc]);
+    }
+
+    const locationPages: MetadataRoute.Sitemap = [...cityGroups.values()].map(
+      (rows) => {
+        const canonicalSlug = normalizeSlug(canonicalCityName(rows[0].name));
+        const canonicalRows = rows.filter(
+          (r) => normalizeSlug(r.slug) === canonicalSlug,
+        );
+        // Exactly one canonical-slug row → legacy aliases (e.g.
+        // /lokasi/palangkaraya) in this group are NOT emitted. Otherwise
+        // fall back to the first row (newest updatedAt) — the previous
+        // normalized-slug dedup behavior for exact duplicates.
+        const chosen = canonicalRows.length === 1 ? canonicalRows[0] : rows[0];
+        return {
+          url: `${SITE_URL}/lokasi/${chosen.slug}`,
+          lastModified: chosen.updatedAt,
+          changeFrequency: 'weekly' as const,
+          priority: 0.8,
+        };
+      },
+    );
 
     return [...staticPages, ...blogPages, ...locationPages];
   } catch (error) {
