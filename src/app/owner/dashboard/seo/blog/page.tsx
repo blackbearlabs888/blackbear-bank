@@ -55,6 +55,8 @@ import {
   Globe,
   ScanEye,
   X,
+  AlertTriangle,
+  Check,
   Clock,
   Maximize2,
   Minimize2,
@@ -185,6 +187,29 @@ function formatNumber(num: number) {
   return num.toString();
 }
 
+// Cover image guidance: the public blog hero previews covers with a
+// center crop at 3:1 (desktop) / 21:9 (mobile). Uploading at the
+// recommended 3:1 dimensions means NOTHING gets cropped on publish.
+const COVER_RECOMMENDED = { width: 1600, height: 540 };
+
+function formatRatio(ratio: number): string {
+  const commons: Array<[string, number]> = [
+    ['3:1', 3],
+    ['16:9', 16 / 9],
+    ['16:10', 1.6],
+    ['3:2', 1.5],
+    ['4:3', 4 / 3],
+    ['1:1', 1],
+    ['4:5', 0.8],
+    ['9:16', 9 / 16],
+    ['21:9', 21 / 9],
+  ];
+  for (const [label, value] of commons) {
+    if (Math.abs(ratio - value) / value < 0.03) return label;
+  }
+  return `${ratio.toFixed(2)} : 1`;
+}
+
 function timeAgo(date: string) {
   const now = new Date().getTime();
   const then = new Date(date).getTime();
@@ -231,6 +256,12 @@ export default function BlogManagementPage() {
   const [formData, setFormData] = useState(emptyForm);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [editorTab, setEditorTab] = useState<'content' | 'media' | 'seo' | 'publish'>('content');
+
+  // Detected natural dimensions of the cover image URL (anti-crop guidance)
+  const [coverMeta, setCoverMeta] = useState<{ w: number; h: number } | null>(null);
+  const coverRatio = coverMeta ? coverMeta.w / coverMeta.h : null;
+  // Blog hero crops at 3:1 — accept a small tolerance band around it
+  const coverRatioGood = coverRatio !== null && coverRatio >= 2.7 && coverRatio <= 3.3;
 
   // ── Auth ──
   useEffect(() => { hydrate(); }, [hydrate]);
@@ -772,19 +803,80 @@ export default function BlogManagementPage() {
                   </Label>
                   <Input
                     value={formData.featuredImage}
-                    onChange={(e) => setFormData(prev => ({ ...prev, featuredImage: e.target.value }))}
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, featuredImage: e.target.value }));
+                      setCoverMeta(null);
+                    }}
                     placeholder="https://example.com/image.jpg"
                     className="h-10 text-xs rounded-xl"
                   />
+
+                  {/* Rekomendasi dimensi cover (anti-crop) */}
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 space-y-1">
+                    <p className="text-[11px] font-medium flex items-center gap-1.5">
+                      <ImageIcon className="w-3 h-3 text-primary" />
+                      Rekomendasi cover:{' '}
+                      <span className="font-mono text-primary">
+                        {COVER_RECOMMENDED.width} × {COVER_RECOMMENDED.height} px
+                      </span>{' '}
+                      (rasio 3:1)
+                    </p>
+                    <p className="text-[10px] leading-relaxed text-muted-foreground">
+                      Hero blog menampilkan cover dengan crop 3:1 (desktop) / 21:9 (mobile).
+                      Upload dengan rasio 3:1 agar tidak ter-crop. Minimal 1200 × 400 px, format JPG/WebP.
+                    </p>
+                  </div>
+
                   {formData.featuredImage && (
-                    <div className="relative w-full h-40 rounded-xl overflow-hidden bg-muted mt-2">
-                      <img src={formData.featuredImage} alt="Preview" className="w-full h-full object-cover" />
-                      <button
-                        onClick={() => setFormData(prev => ({ ...prev, featuredImage: '' }))}
-                        className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+                    <div className="space-y-2 mt-2">
+                      <div className="relative w-full aspect-[3/1] rounded-xl overflow-hidden bg-muted">
+                        <img
+                          src={formData.featuredImage}
+                          alt="Preview cover"
+                          className="w-full h-full object-cover"
+                          onLoad={(e) => setCoverMeta({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+                          onError={() => setCoverMeta(null)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, featuredImage: '' }));
+                            setCoverMeta(null);
+                          }}
+                          aria-label="Hapus featured image"
+                          className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {coverMeta && coverRatio !== null && (
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[11px]">
+                          <span className="text-muted-foreground">
+                            Dimensi asli: <span className="font-mono text-foreground">{coverMeta.w} × {coverMeta.h} px</span>
+                          </span>
+                          <span className="text-muted-foreground">·</span>
+                          <span className="text-muted-foreground">
+                            Rasio: <span className="font-mono text-foreground">{formatRatio(coverRatio)}</span>
+                          </span>
+                          {coverRatioGood ? (
+                            <Badge className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                              <Check className="w-3 h-3" />
+                              Pas — tidak akan ter-crop
+                            </Badge>
+                          ) : (
+                            <Badge className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                              <AlertTriangle className="w-3 h-3" />
+                              Akan ter-crop di hero — ideal rasio 3:1
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+
+                      <p className="text-[10px] text-muted-foreground">
+                        Preview di atas = tampilan persis di hero blog (crop bagian tengah 3:1).
+                        Pembaca tetap bisa klik gambar di blog untuk melihat versi ukuran penuh.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -967,6 +1059,12 @@ export default function BlogManagementPage() {
                     <CheckItem label="Judul & slug sudah diisi" done={!!formData.title && !!formData.slug} />
                     <CheckItem label="Konten minimal 100 karakter" done={formData.content.length >= 100} />
                     <CheckItem label="Featured image sudah ditambahkan" done={!!formData.featuredImage} />
+                    {formData.featuredImage && (
+                      <CheckItem
+                        label={`Rasio cover sesuai rekomendasi 3:1 (mis. ${COVER_RECOMMENDED.width} × ${COVER_RECOMMENDED.height} px)`}
+                        done={coverRatioGood}
+                      />
+                    )}
                     <CheckItem label="Ringkasan/excerpt ditambahkan" done={!!formData.excerpt} />
                     <CheckItem label="Meta title & description diisi" done={!!formData.metaTitle && !!formData.metaDescription} />
                   </div>

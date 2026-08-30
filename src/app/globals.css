@@ -2031,3 +2031,17 @@ select:focus {
     display: none;
   }
 }
+
+/* ── Blog article images: click-to-zoom affordance ─────────────────────
+   Body images are tagged with data-blog-img by markdownToHtml() and open
+   the ImageLightbox full-view viewer on click (natural aspect ratio,
+   never cropped). The cursor + hover dim makes the interaction
+   discoverable without altering the reading layout. */
+.prose img[data-blog-img] {
+  cursor: zoom-in;
+  transition: opacity 0.25s ease;
+}
+
+.prose img[data-blog-img]:hover {
+  opacity: 0.9;
+}

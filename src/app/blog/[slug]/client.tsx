@@ -26,11 +26,13 @@ import {
   ArrowRight,
   BookOpen,
   ChevronLeft,
+  Expand,
 } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { safeJsonLd } from '@/lib/json-ld-safe';
 import { toast } from 'sonner';
 import { FadeInSection } from '@/components/landing/fade-in-section';
+import { ImageLightbox } from '@/components/blog/image-lightbox';
 
 interface BlogPost {
   id: string;
@@ -111,7 +113,7 @@ function markdownToHtml(content: string): string {
     // Ensure paragraphs have explicit spacing via data attributes
     html = html.replace(/<p>/g, '<p data-blog-p>');
     html = html.replace(/<p\s+([^>]*)>/g, '<p $1 data-blog-p>');
-    return addHeadingIds(html);
+    return enhanceImages(addHeadingIds(html));
   }
 
   // Has some inline HTML tags (bold, italic, links, etc.) but no block tags
@@ -127,7 +129,7 @@ function markdownToHtml(content: string): string {
       })
       .filter(Boolean)
       .join('\n');
-    return addHeadingIds(html);
+    return enhanceImages(addHeadingIds(html));
   }
 
   // Convert markdown-style formatting to HTML
@@ -170,7 +172,7 @@ function markdownToHtml(content: string): string {
   }).join('\n');
 
   // Add heading IDs
-  return addHeadingIds(html);
+  return enhanceImages(addHeadingIds(html));
 }
 
 // Add IDs to headings in HTML
@@ -179,6 +181,20 @@ function addHeadingIds(html: string): string {
     const text = content.replace(/<[^>]*>/g, '').trim();
     const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     return `<h${level} id="${id}"${attrs}>${content}</h${level}>`;
+  });
+}
+
+// Normalize article body images:
+//  - lazy-load below-the-fold images
+//  - tag with data-blog-img so CSS can show the zoom-in affordance and the
+//    click handler can distinguish article images (they open ImageLightbox,
+//    the full-view "klik untuk perbesar" viewer)
+function enhanceImages(html: string): string {
+  return html.replace(/<img\b([^>]*?)\/??>/gi, (_match, attrs: string) => {
+    let next = attrs;
+    if (!/\bloading\s*=/.test(next)) next += ' loading="lazy"';
+    if (!/\bdata-blog-img\b/.test(next)) next += ' data-blog-img="1"';
+    return `<img${next}>`;
   });
 }
 
@@ -195,6 +211,29 @@ export default function BlogDetailClient({ post, relatedPosts: initialRelatedPos
   const [copied, setCopied] = useState(false);
   const relatedPosts = initialRelatedPosts;
   const [activeHeading, setActiveHeading] = useState('');
+
+  // Full-view image viewer state ("klik untuk perbesar")
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+
+  // Event delegation: any <img> inside the article body opens the lightbox.
+  // The body HTML is injected via dangerouslySetInnerHTML, so attaching
+  // per-image React handlers is not possible — delegation keeps it simple
+  // and works for every image the author embeds (Tiptap or markdown).
+  const handleArticleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const img = target.closest('img');
+    if (!img) return;
+
+    const srcs = Array.from(e.currentTarget.querySelectorAll('img'))
+      .map((el) => el.getAttribute('src'))
+      .filter((src): src is string => !!src);
+    const src = img.getAttribute('src');
+    if (!src) return;
+
+    const idx = srcs.indexOf(src);
+    e.preventDefault();
+    setLightbox({ images: srcs, index: idx >= 0 ? idx : 0 });
+  };
 
   const siteName = config.websiteTitle || 'Black Bear';
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://blackbear.cc';
@@ -322,10 +361,15 @@ export default function BlogDetailClient({ post, relatedPosts: initialRelatedPos
           </Breadcrumb>
         </div>
 
-        {/* Featured Image (full width) */}
+        {/* Featured Image (cover preview — click to open the FULL, uncropped image) */}
         {post.featuredImage && (
           <div className="container mx-auto px-4 sm:px-6 relative z-10">
-            <div className="relative aspect-[21/9] md:aspect-[3/1] rounded-2xl overflow-hidden bg-muted max-w-5xl mx-auto shadow-2xl shadow-black/10">
+            <button
+              type="button"
+              onClick={() => setLightbox({ images: [post.featuredImage as string], index: 0 })}
+              aria-label="Klik untuk melihat gambar ukuran penuh"
+              className="group relative block w-full aspect-[21/9] md:aspect-[3/1] rounded-2xl overflow-hidden bg-muted max-w-5xl mx-auto shadow-2xl shadow-black/10 cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
+            >
               <img
                 src={post.featuredImage}
                 alt={post.title}
@@ -334,7 +378,11 @@ export default function BlogDetailClient({ post, relatedPosts: initialRelatedPos
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10" />
-            </div>
+              <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-black/50 backdrop-blur-sm text-white text-[11px] font-medium px-3 py-1.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+                <Expand className="w-3.5 h-3.5" />
+                Lihat ukuran penuh
+              </span>
+            </button>
           </div>
         )}
 
@@ -436,10 +484,11 @@ export default function BlogDetailClient({ post, relatedPosts: initialRelatedPos
                     prose-blockquote p:text-foreground/80 prose-blockquote p:italic
                     prose-code:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
                     prose-pre:bg-muted prose-pre:border prose-pre:border-border/50 prose-pre:rounded-xl prose-pre:shadow-sm
-                    prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8
+                    prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8 prose-img:cursor-zoom-in prose-img:h-auto prose-img:max-w-full
                     prose-hr:border-border/30 prose-hr:my-10
                     blog-prose-fallback
                   "
+                  onClick={handleArticleImageClick}
                   dangerouslySetInnerHTML={{ __html: processedContent }}
                 />
               </FadeInSection>
@@ -613,6 +662,15 @@ export default function BlogDetailClient({ post, relatedPosts: initialRelatedPos
           </div>
         </div>
       </section>
+
+      {/* Full-view image lightbox (cover + article body images) */}
+      <ImageLightbox
+        images={lightbox?.images ?? []}
+        index={lightbox?.index ?? null}
+        alt={post.title}
+        onClose={() => setLightbox(null)}
+        onNavigate={(i) => setLightbox((prev) => (prev ? { ...prev, index: i } : prev))}
+      />
     </div>
   );
 }
